@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Investment Portfolio Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#07070e;--bg2:#0d0d1a;--bg3:#111120;--bg4:#181830;
+  --border:#1a1a30;--border2:#262640;--cb:#1e1e38;
+  --income:#00d4a0;--expense:#ff4060;--savings:#7c6fec;--debt:#ff9500;
+  --white:#ffffff;--text:#dcdcf0;--muted:#5a5a8a;--muted2:#8080b0;
+  --gain:#00d4a0;--loss:#ff4060;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.03) 2px,rgba(0,0,0,.03) 4px)}
+
+/* Upload */
+#up{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;padding:24px}
+.logo-mark{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:.4em;color:var(--muted);text-transform:uppercase;margin-bottom:8px}
+.upload-title{font-family:'Syne',sans-serif;font-size:clamp(26px,5vw,48px);font-weight:800;line-height:1.1;text-align:center;letter-spacing:-.02em}
+.upload-title span{color:var(--savings)}
+.upload-zone{width:100%;max-width:480px;border:1px dashed var(--border2);border-radius:16px;padding:40px 24px;text-align:center;cursor:pointer;transition:all .2s;background:var(--bg2)}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--savings);background:rgba(124,111,236,.04)}
+.upload-zone input{display:none}
+.upload-icon{font-size:32px;margin-bottom:12px;opacity:.5}
+.upload-label{font-size:13px;color:var(--muted2);line-height:1.7}
+.upload-label strong{color:var(--text)}
+.upload-note{font-size:11px;color:var(--muted);margin-top:6px}
+.upload-error{color:var(--expense);font-size:12px;display:none;margin-top:8px}
+
+/* Shell */
+#dash{display:none;position:relative;z-index:1}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--border2);background:var(--bg3);position:sticky;top:0;z-index:50;gap:12px;flex-wrap:wrap}
+.brand{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;letter-spacing:.08em;color:var(--savings)}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--savings);animation:pulse 2s infinite;display:inline-block;margin-right:6px}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.btn-sm{background:transparent;border:1px solid var(--border2);color:var(--muted2);padding:7px 14px;border-radius:8px;cursor:pointer;font-family:'DM Mono',monospace;font-size:11px;transition:all .15s;display:flex;align-items:center;gap:6px}
+.btn-sm:hover{border-color:var(--savings);color:var(--savings)}
+
+.main{padding:24px 20px;max-width:1400px;margin:0 auto}
+.sl{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--white);margin:0 0 12px;display:flex;align-items:center;gap:10px;padding-left:10px;border-left:3px solid var(--savings);border-radius:0}
+.sl::after{content:'';flex:1;height:1px;background:var(--border)}
+.sl-mt{margin-top:28px}
+
+/* Summary cards */
+.sg{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:20px}
+.sc{background:var(--bg3);border:1px solid var(--cb);border-radius:14px;padding:16px;position:relative;overflow:hidden;transition:all .2s}
+.sc:hover{border-color:var(--border2);background:var(--bg4)}
+.sc::after{content:'';position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at top left,var(--g,rgba(0,0,0,0)) 0%,transparent 70%);opacity:.5}
+.sc-lbl{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--white);opacity:.7;margin-bottom:10px}
+.sc-val{font-size:clamp(15px,2.2vw,22px);font-weight:500;letter-spacing:-.02em;line-height:1}
+.sc-sub{font-size:11px;color:var(--muted2);margin-top:6px}
+.gain{color:var(--gain)}
+.loss{color:var(--loss)}
+
+/* Chart cards */
+.cc{background:var(--bg3);border:1px solid var(--cb);border-radius:14px;padding:20px}
+.ct{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--white);margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px}
+.ct span{font-size:10px;color:var(--muted);font-weight:400;font-family:'DM Mono',monospace;letter-spacing:0;text-transform:none}
+
+/* Alloc donut */
+.dw{position:relative;height:175px;display:flex;align-items:center;justify-content:center}
+.dc{position:absolute;text-align:center;pointer-events:none}
+.dc-val{font-size:15px;font-weight:500;color:var(--white)}
+.dc-lbl{font-size:9px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-top:2px}
+.al{margin-top:10px;display:flex;flex-direction:column;gap:5px}
+.ar{display:flex;align-items:center;justify-content:space-between;font-size:11px}
+.al-left{display:flex;align-items:center;gap:7px;color:var(--muted2)}
+.al-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+.al-pct{color:var(--white);font-weight:500;min-width:34px;text-align:right}
+
+/* Group bars */
+.gl{display:flex;flex-direction:column;gap:7px}
+.gr{background:var(--bg4);border:1px solid var(--border);border-radius:10px;padding:11px 14px;transition:border-color .15s}
+.gr:hover{border-color:var(--border2)}
+.gr-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;flex-wrap:wrap;gap:4px}
+.gr-name{font-size:12px;color:var(--white);font-weight:500;display:flex;align-items:center;gap:7px}
+.gr-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.gr-meta{display:flex;gap:10px;font-size:11px;flex-wrap:wrap}
+.bt{height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:2px}
+.bf{height:4px;border-radius:2px}
+
+/* Platform cards */
+.plat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:0}
+.plat-card{background:var(--bg4);border:1px solid var(--border);border-radius:10px;padding:12px 14px;transition:all .2s}
+.plat-card:hover{border-color:var(--border2)}
+.plat-name{font-size:11px;color:var(--white);font-weight:500;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.plat-val{font-size:16px;font-weight:500;color:var(--white)}
+.plat-sub{font-size:10px;color:var(--muted2);margin-top:3px;display:flex;align-items:center;justify-content:space-between}
+.plat-bar-wrap{margin-top:7px;height:3px;background:var(--border);border-radius:2px;overflow:hidden}
+.plat-bar{height:3px;border-radius:2px;background:var(--savings)}
+
+/* Health Score */
+.health-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.health-item{background:var(--bg4);border:1px solid var(--border);border-radius:10px;padding:12px 14px;display:flex;align-items:flex-start;gap:12px}
+.health-signal{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:3px}
+.signal-green{background:var(--gain)}
+.signal-yellow{background:#ffd166}
+.signal-red{background:var(--loss)}
+.health-title{font-size:12px;color:var(--white);font-weight:500;margin-bottom:3px}
+.health-desc{font-size:11px;color:var(--muted2);line-height:1.5}
+
+/* Realized PnL table */
+.real-table-wrap{overflow-x:auto;border-radius:10px;border:1px solid var(--border)}
+.real-table{width:100%;border-collapse:collapse;font-size:12px}
+.real-table th{background:var(--bg3);color:var(--white);font-weight:600;font-size:10px;letter-spacing:.07em;text-transform:uppercase;padding:9px 12px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}
+.real-table th.r{text-align:right}
+.real-table td{padding:9px 12px;border-bottom:1px solid var(--border);color:var(--muted2)}
+.real-table tr:last-child td{border-bottom:none}
+.real-table tr:hover td{background:rgba(255,255,255,.02)}
+.real-total{background:var(--bg3) !important}
+.real-total td{color:var(--white) !important;font-weight:500;border-top:1px solid var(--border2)}
+
+/* Flow chart tabs + year filter */
+.tab-row{display:flex;gap:2px;background:var(--bg4);border-radius:8px;padding:3px;border:1px solid var(--border)}
+.tab{flex:1;padding:5px 10px;border:none;border-radius:6px;cursor:pointer;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted2);background:transparent;transition:all .15s;text-align:center;white-space:nowrap}
+.tab.active{background:var(--bg3);color:var(--white);border:1px solid var(--border2)}
+.yr-row{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px}
+.yr-btn{background:var(--bg3);border:1px solid var(--border);color:var(--muted);padding:3px 10px;border-radius:20px;cursor:pointer;font-family:'DM Mono',monospace;font-size:10px;transition:all .15s}
+.yr-btn.active{border-color:var(--savings);color:var(--savings);background:rgba(124,111,236,.1)}
+
+/* Grid layouts */
+.cr3{display:grid;grid-template-columns:250px 1fr;gap:12px;margin-bottom:20px}
+.cr2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+@media(max-width:800px){.cr3,.cr2{grid-template-columns:1fr}}
+
+/* Asset table */
+.fb{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px}
+.fb-btn{background:var(--bg3);border:1px solid var(--border);color:var(--muted);padding:4px 11px;border-radius:20px;cursor:pointer;font-family:'DM Mono',monospace;font-size:10px;transition:all .15s}
+.fb-btn.active{border-color:var(--savings);color:var(--savings);background:rgba(124,111,236,.1)}
+.fb-btn.active.all{border-color:var(--white);color:var(--white);background:transparent}
+.tw{overflow-x:auto;border-radius:10px;border:1px solid var(--border)}
+.at{width:100%;border-collapse:collapse;font-size:12px}
+.at th{background:var(--bg3);color:var(--white);font-weight:600;letter-spacing:.06em;text-transform:uppercase;font-size:10px;padding:9px 12px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}
+.at th.r{text-align:right}
+.at td{padding:9px 12px;border-bottom:1px solid var(--border);color:var(--muted2);white-space:nowrap}
+.at tr:last-child td{border-bottom:none}
+.at tr:hover td{background:rgba(255,255,255,.02)}
+.tk{color:var(--white);font-weight:500;font-size:13px}
+.tb{display:inline-block;padding:2px 6px;border-radius:4px;font-size:10px;border:1px solid}
+.nr{text-align:right}
+.pp{color:var(--gain);text-align:right;font-weight:500}
+.pn{color:var(--loss);text-align:right;font-weight:500}
+.pz{color:var(--muted2);text-align:right}
+.tx-badge{display:inline-block;padding:1px 5px;border-radius:3px;font-size:9px;margin-left:3px;letter-spacing:.03em;vertical-align:middle}
+.tx-div{background:rgba(0,212,160,.12);color:var(--gain);border:1px solid rgba(0,212,160,.3)}
+.tx-sell{background:rgba(255,64,96,.1);color:var(--loss);border:1px solid rgba(255,64,96,.3)}
+.tx-xfer{background:rgba(128,128,176,.1);color:var(--muted2);border:1px solid rgba(128,128,176,.3)}
+.fx-tag{font-size:9px;color:var(--muted);margin-left:3px}
+.ind{color:var(--muted);font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nd{text-align:center;padding:40px;color:var(--muted);font-size:13px}
+.badge-thai{color:#4cc9f0;border-color:rgba(76,201,240,.3);background:rgba(76,201,240,.07)}
+.badge-us{color:#00d4a0;border-color:rgba(0,212,160,.3);background:rgba(0,212,160,.07)}
+.badge-crypto{color:#ff9500;border-color:rgba(255,149,0,.3);background:rgba(255,149,0,.07)}
+.badge-mutual{color:#7c6fec;border-color:rgba(124,111,236,.3);background:rgba(124,111,236,.07)}
+.badge-provident{color:#ffd166;border-color:rgba(255,209,102,.3);background:rgba(255,209,102,.07)}
+.badge-gold{color:#ffa94d;border-color:rgba(255,169,77,.3);background:rgba(255,169,77,.07)}
+.badge-other{color:#8080b0;border-color:rgba(128,128,176,.3);background:rgba(128,128,176,.07)}
+.div-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-top:4px}
+.div-card{background:var(--bg4);border:1px solid var(--border);border-radius:8px;padding:10px 12px;text-align:center}
+.div-yr{font-size:10px;color:var(--muted2);margin-bottom:4px}
+.div-val{font-size:14px;font-weight:500;color:var(--gain)}
+
+@media(max-width:600px){.main{padding:12px}.topbar{padding:10px 14px}}
+</style>
+</head>
+<body>
+
+<div id="up">
+  <div>
+    <div class="logo-mark">Portfolio Tracker</div>
+    <div class="upload-title">Your<br><span>investments.</span></div>
+  </div>
+  <div class="upload-zone" id="uz">
+    <input type="file" id="fi" accept=".xlsx,.xls">
+    <div class="upload-icon">↑</div>
+    <div class="upload-label"><strong>Drop your Excel file here</strong><br>ใช้ Asset_Tracker + Asset_Dashboard sheet</div>
+    <div class="upload-note">ทุก asset แสดงเป็น THB · คำนวณ WACC, Fee, Realized P&L อัตโนมัติ</div>
+  </div>
+  <div class="upload-error" id="ue"></div>
+</div>
+
+<div id="dash">
+  <div class="topbar">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div class="brand">PORTFOLIO//</div>
+      <div style="font-size:11px;color:var(--muted)"><span class="dot"></span><span id="st">—</span></div>
+    </div>
+    <button class="btn-sm" onclick="document.getElementById('fi2').click()">↑ New file<input type="file" id="fi2" accept=".xlsx,.xls" style="display:none"></button>
+  </div>
+
+  <div class="main">
+
+    <!-- ── Overview ── -->
+    <div class="sl">Portfolio Overview</div>
+    <div class="sg">
+      <div class="sc" style="--g:rgba(124,111,236,.12)">
+        <div class="sc-lbl">Total Value</div>
+        <div class="sc-val" id="sv-val" style="color:var(--white)">฿0</div>
+        <div class="sc-sub" id="sv-assets">0 assets</div>
+      </div>
+      <div class="sc" style="--g:rgba(128,128,176,.06)">
+        <div class="sc-lbl">True Cost (incl. fee)</div>
+        <div class="sc-val" id="sv-truecost" style="color:var(--muted2)">฿0</div>
+        <div class="sc-sub" id="sv-fee-sub">fee ฿0</div>
+      </div>
+      <div class="sc" style="--g:rgba(0,212,160,.08)">
+        <div class="sc-lbl">Unrealized P&L</div>
+        <div class="sc-val" id="sv-upnl">฿0</div>
+        <div class="sc-sub" id="sv-upnl-pct"></div>
+      </div>
+      <div class="sc" style="--g:rgba(255,149,0,.08)">
+        <div class="sc-lbl">Realized P&L</div>
+        <div class="sc-val" id="sv-rpnl">฿0</div>
+        <div class="sc-sub" id="sv-rpnl-sub">จาก sell transactions</div>
+      </div>
+      <div class="sc" style="--g:rgba(0,212,160,.06)">
+        <div class="sc-lbl">Dividend income</div>
+        <div class="sc-val" id="sv-div" style="color:var(--gain)">฿0</div>
+        <div class="sc-sub">ผลตอบแทนสะสม</div>
+      </div>
+      <div class="sc" style="--g:rgba(255,209,102,.06)">
+        <div class="sc-lbl">Total return</div>
+        <div class="sc-val" id="sv-total-ret">฿0</div>
+        <div class="sc-sub">unrealized + realized + div</div>
+      </div>
+    </div>
+
+    <!-- ── Allocation + Groups ── -->
+    <div class="sl sl-mt">Allocation & P&L by Class</div>
+    <div class="cr3">
+      <div class="cc">
+        <div class="ct">Allocation</div>
+        <div class="dw">
+          <canvas id="alloc-chart" width="175" height="175"></canvas>
+          <div class="dc"><div class="dc-val" id="donut-val">฿0</div><div class="dc-lbl">total value</div></div>
+        </div>
+        <div class="al" id="alloc-legend"></div>
+      </div>
+      <div class="cc">
+        <div class="ct">P&L by asset class<span>true cost (incl. fee) basis</span></div>
+        <div class="gl" id="group-list"></div>
+      </div>
+    </div>
+
+    <!-- ── Platform ── -->
+    <div class="sl sl-mt">Where Are Your Assets</div>
+    <div class="cc" style="margin-bottom:20px">
+      <div class="ct">Platform breakdown<span>current market value</span></div>
+      <div class="plat-grid" id="plat-grid"></div>
+    </div>
+
+    <!-- ── Health Score ── -->
+    <div class="sl sl-mt">Portfolio Health</div>
+    <div class="health-grid" id="health-grid" style="margin-bottom:20px"></div>
+
+    <!-- ── Investment Flow ── -->
+    <div class="sl sl-mt">Investment Flow</div>
+    <div class="cc" style="margin-bottom:20px">
+      <div class="ct">
+        Investment by period
+        <div class="tab-row" id="period-tabs" style="margin-bottom:0;border:1px solid var(--border)">
+          <button class="tab active" data-p="monthly">Monthly</button>
+          <button class="tab" data-p="yearly">Yearly</button>
+        </div>
+      </div>
+      <div class="yr-row" id="yr-row"></div>
+      <div style="position:relative;height:230px"><canvas id="flow-chart"></canvas></div>
+    </div>
+
+    <!-- ── Realized P&L detail ── -->
+    <div class="sl sl-mt">Realized P&L Detail</div>
+    <div class="cc" style="margin-bottom:20px;padding:0;overflow:hidden">
+      <div class="real-table-wrap">
+        <table class="real-table">
+          <thead><tr>
+            <th>Date</th><th>Ticker</th><th>Group</th>
+            <th class="r">Qty sold</th><th class="r">WACC (฿)</th>
+            <th class="r">Cost basis</th><th class="r">Proceeds</th>
+            <th class="r">Realized P&L</th>
+          </tr></thead>
+          <tbody id="real-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── Dividend ── -->
+    <div class="sl sl-mt">Dividend Income</div>
+    <div class="cc" style="margin-bottom:20px">
+      <div class="ct">Payout by year<span>Thai Stock + US Stock</span></div>
+      <div class="div-grid" id="div-grid"></div>
+    </div>
+
+    <!-- ── Holdings Table ── -->
+    <div class="sl sl-mt">Holdings Detail</div>
+    <div class="fb" id="fb">
+      <button class="fb-btn active all" data-g="all">All</button>
+      <button class="fb-btn" data-g="Thai Stock">Thai Stock</button>
+      <button class="fb-btn" data-g="US Stock">US Stock</button>
+      <button class="fb-btn" data-g="Crypto">Crypto</button>
+      <button class="fb-btn" data-g="Mutual Fund">Mutual Fund</button>
+      <button class="fb-btn" data-g="Provident Fund">Provident Fund</button>
+      <button class="fb-btn" data-g="Gold">Gold</button>
+      <button class="fb-btn" data-g="Other">Other</button>
+    </div>
+    <div class="tw">
+      <table class="at">
+        <thead><tr>
+          <th>Ticker</th><th>Type</th><th>Platform</th><th>Industry</th>
+          <th class="r">Qty</th><th class="r">WACC</th><th class="r">Current</th>
+          <th class="r">True Cost</th><th class="r">Value</th>
+          <th class="r">P&L (฿)</th><th class="r">P&L %</th><th class="r">Ccy</th>
+        </tr></thead>
+        <tbody id="at-body"></tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── Constants ───────────────────────────────────────────────────────
+const GC = {'Thai Stock':'#4cc9f0','US Stock':'#00d4a0','Crypto':'#ff9500',
+             'Mutual Fund':'#7c6fec','Provident Fund':'#ffd166','Gold':'#ffa94d','Other':'#5a5a8a'};
+const BADGE = {'Thai Stock':'badge-thai','US Stock':'badge-us','Crypto':'badge-crypto',
+               'Mutual Fund':'badge-mutual','Provident Fund':'badge-provident',
+               'Gold':'badge-gold','Other':'badge-other'};
+const TM = {'Thai_Stock':'Thai Stock','US_Stock':'US Stock','Cryptocurrency':'Crypto',
+            'Mutual_Fund':'Mutual Fund','Provident_Fund':'Provident Fund','Gold':'Gold','Not Found':'Other'};
+const TX_BUY=['Buy'], TX_SELL=['Sell'], TX_DIV=['Dividend Payout'],
+      TX_XFER=['Transfer','Send','Recieved','Stake','Used'];
+
+// ── State ────────────────────────────────────────────────────────────
+let assets=[], tracker=[], fxMap={}, waccMap={}, platMap={};
+let realized=[], totalFee=0;
+let activeGroup='all', activePeriod='monthly', charts={};
+
+// ── Formatters ───────────────────────────────────────────────────────
+const fmt     = v=>'฿'+Math.abs(v).toLocaleString('th-TH',{maximumFractionDigits:0});
+const fmtN    = (v,d=2)=>v.toLocaleString('th-TH',{minimumFractionDigits:d,maximumFractionDigits:d});
+const fmtSign = v=>(v>=0?'+฿':'-฿')+Math.abs(v).toLocaleString('th-TH',{maximumFractionDigits:0});
+const fmtPct  = v=>(v>=0?'+':'')+v.toFixed(1)+'%';
+
+// ── Parse ────────────────────────────────────────────────────────────
+function parseFile(file){
+  return new Promise((res,rej)=>{
+    const reader=new FileReader();
+    reader.onload=e=>{
+      try{
+        const wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
+
+        // ── Asset_Tracker ──
+        const atS=wb.Sheets['Asset_Tracker'];
+        if(!atS){rej('ไม่พบ Asset_Tracker sheet');return;}
+        const atR=XLSX.utils.sheet_to_json(atS,{header:1,raw:true,defval:null});
+        const atH=atR[0].map(h=>h?String(h).trim():'');
+        const ai=k=>atH.indexOf(k);
+        const C={date:ai('Date'),txType:ai('Transaction_Type'),ticker:ai('Ticker'),
+          assetType:ai('Asset_Type'),industry:ai('Industry'),platform:ai('Platform'),
+          fxRate:ai('FX_Rate'),qty:ai('Quatity'),price:ai('Price'),
+          commUS:ai('Commission_Fee-Tax_US'),commTHB:ai('Commission_Fee-Tax_THB'),
+          amtTHB:ai('Total_Amout_THB')};
+
+        const rows=[]; const fxAcc={};
+        for(let i=1;i<atR.length;i++){
+          const r=atR[i]; if(!r||!r[C.ticker]) continue;
+          const ticker=String(r[C.ticker]).trim();
+          const txType=r[C.txType]?String(r[C.txType]).trim():'';
+          let d; const rd=r[C.date];
+          if(rd instanceof Date) d=rd;
+          else if(typeof rd==='number'){const t=new Date(Math.round((rd-25569)*86400*1000));d=new Date(t.getUTCFullYear(),t.getUTCMonth(),t.getUTCDate());}
+          else d=new Date(rd);
+          if(!d||isNaN(d.getTime())) continue;
+          const fx=parseFloat(r[C.fxRate])||1;
+          const qty=parseFloat(r[C.qty])||0;
+          const amtTHB=parseFloat(r[C.amtTHB])||0;
+          const commTHB=parseFloat(r[C.commTHB])||0;
+          const group=TM[r[C.assetType]?String(r[C.assetType]).trim():'Other']||'Other';
+          const platform=r[C.platform]?String(r[C.platform]).trim():'Unknown';
+          const industry=r[C.industry]?String(r[C.industry]).trim():'—';
+          if(fx>1&&!fxAcc[ticker]) fxAcc[ticker]=[];
+          if(fx>1) fxAcc[ticker].push(fx);
+          rows.push({date:d,ym:`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`,
+            year:d.getFullYear(),ticker,txType,group,platform,industry,
+            fx,qty,amtTHB,commTHB,trueCost:amtTHB+commTHB});
+        }
+        tracker=rows;
+        fxMap={};
+        for(const [t,vals] of Object.entries(fxAcc))
+          fxMap[t]=parseFloat((vals.reduce((s,v)=>s+v,0)/vals.length).toFixed(2));
+
+        // WACC per ticker (Buy only, use trueCost)
+        waccMap={};
+        const buyRows=rows.filter(r=>TX_BUY.includes(r.txType));
+        const waccAcc={};
+        buyRows.forEach(r=>{
+          if(!waccAcc[r.ticker]) waccAcc[r.ticker]={cost:0,qty:0};
+          waccAcc[r.ticker].cost+=r.trueCost;
+          waccAcc[r.ticker].qty+=r.qty;
+        });
+        for(const [t,v] of Object.entries(waccAcc))
+          waccMap[t]=v.qty>0?v.cost/v.qty:0;
+
+        // Total fee
+        totalFee=buyRows.reduce((s,r)=>s+r.commTHB,0);
+
+        // Latest platform per ticker
+        platMap={};
+        rows.filter(r=>TX_BUY.includes(r.txType)).sort((a,b)=>a.date-b.date)
+            .forEach(r=>{platMap[r.ticker]=r.platform;});
+
+        // Realized P&L from Sell
+        const sellRows=rows.filter(r=>TX_SELL.includes(r.txType));
+        realized=sellRows.map(r=>({
+          date:r.date.toISOString().slice(0,10),
+          ticker:r.ticker, group:r.group,
+          qty:Math.abs(r.qty),
+          wacc:waccMap[r.ticker]||0,
+          proceeds:Math.abs(r.amtTHB),
+          costBasis:Math.abs(r.qty)*(waccMap[r.ticker]||0),
+          pnl:Math.abs(r.amtTHB)-Math.abs(r.qty)*(waccMap[r.ticker]||0)
+        }));
+
+        // ── Asset_Dashboard ──
+        const adS=wb.Sheets['Asset_Dashboard'];
+        if(!adS){rej('ไม่พบ Asset_Dashboard sheet');return;}
+        const adR=XLSX.utils.sheet_to_json(adS,{header:1,raw:true,defval:null});
+        const adH=adR[0].map(h=>h?String(h).trim():'');
+        const D={ticker:adH.indexOf('Ticker'),assetType:adH.indexOf('Asset_Type'),
+          industry:adH.indexOf('Industry'),qty:adH.indexOf('Total Qty'),
+          avg:adH.indexOf('Average_Price'),cur:adH.indexOf('Current_Price'),
+          cost:adH.indexOf('Total_Cost_(THB)'),val:adH.indexOf('Total_Market_Value_(THB)')};
+
+        const list=[];
+        for(let i=1;i<adR.length;i++){
+          const r=adR[i]; if(!r||!r[D.ticker]) continue;
+          const ticker=String(r[D.ticker]).trim(); if(!ticker) continue;
+          const group=TM[r[D.assetType]?String(r[D.assetType]).trim():'Other']||'Other';
+          const qty=parseFloat(r[D.qty])||0;
+          const avg=parseFloat(r[D.avg])||0;
+          const cur=parseFloat(r[D.cur])||0;
+          const cost=parseFloat(r[D.cost])||0;
+          const val=parseFloat(r[D.val])||0;
+          // true cost = from WACC * qty (includes fee); fallback to sheet cost
+          const wacc=waccMap[ticker]||0;
+          const trueCostAdj=wacc>0?wacc*qty:cost;
+          const pnl=val-trueCostAdj;
+          const pnlPct=trueCostAdj!==0?pnl/trueCostAdj*100:0;
+          const currency=fxMap[ticker]?'USD':'THB';
+          const platform=platMap[ticker]||'Unknown';
+          const industry=r[D.industry]?String(r[D.industry]).trim():'—';
+          list.push({ticker,group,industry,platform,qty,avg,cur,wacc,
+            cost:trueCostAdj,val,pnl,pnlPct,currency,hasPrice:cur>0});
+        }
+        res(list);
+      }catch(err){rej(err.message||'Parse error');}
+    };
+    reader.onerror=()=>rej('File read error');
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+// ── Render Summary ───────────────────────────────────────────────────
+function renderSummary(){
+  const totalVal  =assets.reduce((s,a)=>s+a.val,0);
+  const totalCost =assets.reduce((s,a)=>s+a.cost,0);
+  const unrealPnl =totalVal-totalCost;
+  const realPnl   =realized.reduce((s,r)=>s+r.pnl,0);
+  const totalDiv  =tracker.filter(r=>TX_DIV.includes(r.txType)).reduce((s,r)=>s+r.amtTHB,0);
+  const totalRet  =unrealPnl+realPnl+totalDiv;
+
+  document.getElementById('sv-val').textContent=fmt(totalVal);
+  document.getElementById('sv-assets').textContent=`${assets.length} assets`;
+  document.getElementById('sv-truecost').textContent=fmt(totalCost);
+  document.getElementById('sv-fee-sub').textContent=`fee paid ฿${totalFee.toLocaleString('th-TH',{maximumFractionDigits:0})}`;
+  document.getElementById('donut-val').textContent=fmt(totalVal);
+
+  const uEl=document.getElementById('sv-upnl');
+  uEl.textContent=fmtSign(unrealPnl);
+  uEl.className='sc-val '+(unrealPnl>=0?'gain':'loss');
+  const uPct=document.getElementById('sv-upnl-pct');
+  uPct.textContent=fmtPct(totalCost?unrealPnl/totalCost*100:0);
+  uPct.className='sc-sub '+(unrealPnl>=0?'gain':'loss');
+
+  const rEl=document.getElementById('sv-rpnl');
+  rEl.textContent=fmtSign(realPnl);
+  rEl.className='sc-val '+(realPnl>=0?'gain':'loss');
+  document.getElementById('sv-rpnl-sub').textContent=`${realized.length} sell transactions`;
+
+  document.getElementById('sv-div').textContent=fmt(totalDiv);
+
+  const tEl=document.getElementById('sv-total-ret');
+  tEl.textContent=fmtSign(totalRet);
+  tEl.className='sc-val '+(totalRet>=0?'gain':'loss');
+
+  document.getElementById('st').textContent=`${assets.length} assets loaded`;
+}
+
+// ── Allocation ───────────────────────────────────────────────────────
+function renderAlloc(){
+  const gm={};
+  assets.forEach(a=>{if(!gm[a.group])gm[a.group]=0;gm[a.group]+=a.val;});
+  const sorted=Object.entries(gm).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
+  const total=sorted.reduce((s,[,v])=>s+v,0);
+  const labels=sorted.map(([k])=>k), values=sorted.map(([,v])=>v);
+  const colors=labels.map(l=>GC[l]||'#555');
+  if(charts.alloc)charts.alloc.destroy();
+  charts.alloc=new Chart(document.getElementById('alloc-chart').getContext('2d'),{
+    type:'doughnut',data:{labels,datasets:[{data:values,backgroundColor:colors,borderWidth:0,hoverOffset:4}]},
+    options:{cutout:'72%',responsive:true,maintainAspectRatio:true,
+      plugins:{legend:{display:false},
+        tooltip:{backgroundColor:'#12121a',borderColor:'#1e1e35',borderWidth:1,
+          titleColor:'#e2e2f0',bodyColor:'#9090c0',titleFont:{family:'DM Mono'},bodyFont:{family:'DM Mono',size:11},
+          callbacks:{label:c=>`฿${c.raw.toLocaleString('th-TH',{maximumFractionDigits:0})} (${(c.raw/total*100).toFixed(1)}%)`}
+        }
+      }
+    }
+  });
+  document.getElementById('alloc-legend').innerHTML=sorted.map(([g,v],i)=>`
+    <div class="ar"><div class="al-left"><div class="al-dot" style="background:${colors[i]}"></div><span>${g}</span></div>
+    <div class="al-pct">${total>0?(v/total*100).toFixed(1):0}%</div></div>`).join('');
+}
+
+// ── Groups ───────────────────────────────────────────────────────────
+function renderGroups(){
+  const gm={};
+  assets.forEach(a=>{
+    if(!gm[a.group])gm[a.group]={val:0,cost:0,n:0};
+    gm[a.group].val+=a.val; gm[a.group].cost+=a.cost; gm[a.group].n++;
+  });
+  const sorted=Object.entries(gm).sort((a,b)=>b[1].val-a[1].val);
+  const maxV=Math.max(...sorted.map(([,v])=>v.val),1);
+  document.getElementById('group-list').innerHTML=sorted.map(([g,v])=>{
+    const pnl=v.val-v.cost, pct=v.cost>0?(pnl/v.cost*100).toFixed(1):0;
+    const bw=Math.round(v.val/maxV*100), col=GC[g]||'#555';
+    const cls=pnl>0?'gain':pnl<0?'loss':'';
+    return `<div class="gr"><div class="gr-top">
+      <div class="gr-name"><div class="gr-dot" style="background:${col}"></div>${g}<span style="color:var(--muted);font-size:10px">${v.n}</span></div>
+      <div class="gr-meta"><span style="color:var(--white)">${fmt(v.val)}</span>
+      <span class="${cls}">${pnl>=0?'+':''}${fmt(pnl)} (${pct}%)</span></div></div>
+      <div class="bt"><div class="bf" style="width:${bw}%;background:${col}"></div></div></div>`;
+  }).join('');
+}
+
+// ── Platform ─────────────────────────────────────────────────────────
+function renderPlatform(){
+  const pm={};
+  assets.forEach(a=>{
+    if(!pm[a.platform])pm[a.platform]={val:0,n:0};
+    pm[a.platform].val+=a.val; pm[a.platform].n++;
+  });
+  const sorted=Object.entries(pm).sort((a,b)=>b[1].val-a[1].val);
+  const totalV=sorted.reduce((s,[,v])=>s+v.val,0);
+  const PLAT_ICONS={'K - MYPVD':'KBank PVD','Streming':'Streaming','KBANK - Fund':'KBank Fund',
+    'Dime':'Dime App','Binance TH - Spot':'Binance TH','OKX-Exchange':'OKX',
+    'Binance - Spot':'Binance','Bitkub-Exchange':'Bitkub','Metamask':'MetaMask'};
+  document.getElementById('plat-grid').innerHTML=sorted.map(([p,v])=>{
+    const pct=totalV>0?(v.val/totalV*100).toFixed(1):0;
+    const label=PLAT_ICONS[p]||p;
+    return `<div class="plat-card">
+      <div class="plat-name">${label}</div>
+      <div class="plat-val">${fmt(v.val)}</div>
+      <div class="plat-sub"><span>${v.n} assets</span><span style="color:var(--white)">${pct}%</span></div>
+      <div class="plat-bar-wrap"><div class="plat-bar" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
+}
+
+// ── Health Score ─────────────────────────────────────────────────────
+function renderHealth(){
+  const items=[];
+  const totalVal=assets.reduce((s,a)=>s+a.val,0);
+  const gm={};
+  assets.forEach(a=>{if(!gm[a.group])gm[a.group]=0;gm[a.group]+=a.val;});
+  const topGroup=Object.entries(gm).sort((a,b)=>b[1]-a[1])[0];
+  const topPct=totalVal>0?(topGroup[1]/totalVal*100):0;
+
+  // 1. Concentration risk
+  if(topPct>50)
+    items.push({sig:'red',title:`Concentration risk: ${topGroup[0]} ${topPct.toFixed(0)}%`,
+      desc:`${topGroup[0]} ครอง ${topPct.toFixed(0)}% ของพอร์ต — ควรกระจายความเสี่ยงเพิ่มเติม`});
+  else if(topPct>35)
+    items.push({sig:'yellow',title:`Moderate concentration: ${topGroup[0]} ${topPct.toFixed(0)}%`,
+      desc:`${topGroup[0]} ครอง ${topPct.toFixed(0)}% — ระดับปานกลาง ควรติดตาม`});
+  else
+    items.push({sig:'green',title:'Diversification: Good',desc:'ไม่มี asset class ไหนครองเกิน 35% ของพอร์ต'});
+
+  // 2. Stale prices
+  const stale=assets.filter(a=>!a.hasPrice&&a.val===0);
+  if(stale.length>0)
+    items.push({sig:'yellow',title:`${stale.length} assets ที่ยังไม่มีราคา`,
+      desc:'Ticker: '+stale.map(a=>a.ticker).join(', ')+' — อัปเดตราคาใน Asset_Dashboard เพื่อให้ P&L แม่นยำ'});
+  else
+    items.push({sig:'green',title:'ราคาครบทุก asset',desc:'Current price อัปเดตแล้วทุกตัว'});
+
+  // 3. Realized loss
+  const realPnl=realized.reduce((s,r)=>s+r.pnl,0);
+  if(realPnl<-5000)
+    items.push({sig:'red',title:`Realized loss: ${fmtSign(realPnl)}`,
+      desc:'มีการขายขาดทุนสะสมเกิน ฿5,000 — ตรวจสอบ Realized P&L detail'});
+  else if(realPnl<0)
+    items.push({sig:'yellow',title:`Realized loss: ${fmtSign(realPnl)}`,
+      desc:'มีการขายขาดทุนบ้าง แต่ยังอยู่ในระดับที่ควบคุมได้'});
+  else
+    items.push({sig:'green',title:`Realized gain: +${fmt(realPnl)}`,desc:'Sell transactions ทั้งหมดให้ผลบวก'});
+
+  // 4. Fee efficiency
+  const totalInvested=tracker.filter(r=>TX_BUY.includes(r.txType)).reduce((s,r)=>s+r.amtTHB,0);
+  const feeRatio=totalInvested>0?totalFee/totalInvested*100:0;
+  if(feeRatio>0.5)
+    items.push({sig:'yellow',title:`Fee ratio: ${feeRatio.toFixed(3)}%`,
+      desc:`จ่าย fee รวม ${fmt(totalFee)} จากเงินลงทุน ${fmt(totalInvested)}`});
+  else
+    items.push({sig:'green',title:`Fee ratio: ${feeRatio.toFixed(3)}% — Efficient`,
+      desc:`จ่าย fee รวม ${fmt(totalFee)} — ต้นทุนการลงทุนต่ำมาก`});
+
+  // 5. Crypto allocation
+  const cryptoPct=totalVal>0?((gm['Crypto']||0)/totalVal*100):0;
+  if(cryptoPct>20)
+    items.push({sig:'red',title:`Crypto allocation: ${cryptoPct.toFixed(1)}%`,
+      desc:'Crypto เกิน 20% ของพอร์ต — ความเสี่ยงสูง ควรพิจารณา rebalance'});
+  else if(cryptoPct>10)
+    items.push({sig:'yellow',title:`Crypto allocation: ${cryptoPct.toFixed(1)}%`,
+      desc:'Crypto อยู่ที่ 10–20% — ระดับที่ต้องติดตาม'});
+  else
+    items.push({sig:'green',title:`Crypto allocation: ${cryptoPct.toFixed(1)}%`,
+      desc:'Crypto น้อยกว่า 10% ของพอร์ต'});
+
+  document.getElementById('health-grid').innerHTML=items.map(it=>`
+    <div class="health-item">
+      <div class="health-signal signal-${it.sig}"></div>
+      <div><div class="health-title">${it.title}</div><div class="health-desc">${it.desc}</div></div>
+    </div>`).join('');
+}
+
+// ── Flow Chart ───────────────────────────────────────────────────────
+function buildFlowChart(){
+  const buyRows=tracker.filter(r=>TX_BUY.includes(r.txType));
+  const groups=[...new Set(buyRows.map(r=>r.group))];
+
+  if(activePeriod==='monthly'){
+    document.getElementById('yr-row').style.display='flex';
+    const allYrs=[...new Set(buyRows.map(r=>r.year))].sort();
+    const yrRow=document.getElementById('yr-row');
+    if(!yrRow.dataset.init){
+      yrRow.innerHTML=['All',...allYrs].map(y=>`<button class="yr-btn${y==='All'?' active':''}" data-yr="${y}">${y}</button>`).join('');
+      yrRow.dataset.init='1';
+      yrRow.addEventListener('click',e=>{
+        const b=e.target.closest('.yr-btn');if(!b)return;
+        yrRow.querySelectorAll('.yr-btn').forEach(x=>x.classList.remove('active'));
+        b.classList.add('active'); buildFlowChart();
+      });
+    }
+    const ayr=yrRow.querySelector('.yr-btn.active')?.dataset.yr||'All';
+    const allYms=[...new Set(buyRows.map(r=>r.ym))].sort().filter(m=>ayr==='All'||m.startsWith(ayr));
+    const datasets=groups.map(g=>({
+      label:g, backgroundColor:(GC[g]||'#555')+'bb',borderRadius:3,borderSkipped:false,
+      data:allYms.map(m=>buyRows.filter(r=>r.ym===m&&r.group===g).reduce((s,r)=>s+r.trueCost,0))
+    }));
+    const labels=allYms.map(m=>{const[y,mo]=m.split('-');return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+mo-1]+' '+y.slice(2)});
+    buildBar(labels,datasets,'flow-chart');
+  } else {
+    document.getElementById('yr-row').style.display='none';
+    const allYrs=[...new Set(buyRows.map(r=>r.year))].sort();
+    const datasets=groups.map(g=>({
+      label:g, backgroundColor:(GC[g]||'#555')+'bb',borderRadius:3,borderSkipped:false,
+      data:allYrs.map(y=>buyRows.filter(r=>r.year===y&&r.group===g).reduce((s,r)=>s+r.trueCost,0))
+    }));
+    buildBar(allYrs.map(String),datasets,'flow-chart');
+  }
+}
+
+function buildBar(labels,datasets,id){
+  if(charts.flow)charts.flow.destroy();
+  charts.flow=new Chart(document.getElementById(id).getContext('2d'),{
+    type:'bar',data:{labels,datasets},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#6060a0',font:{family:'DM Mono',size:10},boxWidth:10,padding:10}},
+        tooltip:{backgroundColor:'#12121a',borderColor:'#1e1e35',borderWidth:1,
+          titleColor:'#e2e2f0',bodyColor:'#9090c0',titleFont:{family:'DM Mono'},bodyFont:{family:'DM Mono',size:11},
+          callbacks:{label:c=>` ${c.dataset.label}: ฿${c.raw.toLocaleString('th-TH',{maximumFractionDigits:0})}`}
+        }
+      },
+      scales:{
+        x:{stacked:true,grid:{color:'rgba(30,30,53,.8)',lineWidth:.5},ticks:{color:'#6060a0',font:{family:'DM Mono',size:9}}},
+        y:{stacked:true,grid:{color:'rgba(30,30,53,.8)',lineWidth:.5},
+           ticks:{color:'#6060a0',font:{family:'DM Mono',size:9},callback:v=>v>=1000?(v/1000).toFixed(0)+'k':v}}
+      }
+    }
+  });
+}
+
+// ── Realized P&L table ───────────────────────────────────────────────
+function renderRealized(){
+  const totalRPnl=realized.reduce((s,r)=>s+r.pnl,0);
+  const badge=BADGE;
+  document.getElementById('real-body').innerHTML=[...realized].sort((a,b)=>a.date.localeCompare(b.date))
+    .map(r=>{
+      const cls=r.pnl>0?'pp':r.pnl<0?'pn':'pz';
+      return `<tr>
+        <td>${r.date}</td>
+        <td class="tk">${r.ticker}</td>
+        <td><span class="tb ${badge[r.group]||'badge-other'}">${r.group}</span></td>
+        <td class="nr">${r.qty%1===0?r.qty.toLocaleString():fmtN(r.qty)}</td>
+        <td class="nr">${r.wacc>0?fmtN(r.wacc):'—'}</td>
+        <td class="nr">${r.costBasis>0?fmt(r.costBasis):'—'}</td>
+        <td class="nr">${fmt(r.proceeds)}</td>
+        <td class="${cls}">${fmtSign(r.pnl)}</td>
+      </tr>`;
+    }).join('')+
+    `<tr class="real-total">
+      <td colspan="7" style="text-align:right;font-size:11px;letter-spacing:.06em;text-transform:uppercase">Total Realized P&L</td>
+      <td class="${totalRPnl>=0?'pp':'pn'}">${fmtSign(totalRPnl)}</td>
+    </tr>`;
+}
+
+// ── Dividend ─────────────────────────────────────────────────────────
+function renderDividend(){
+  const byYr={};
+  tracker.filter(r=>TX_DIV.includes(r.txType)).forEach(r=>{byYr[r.year]=(byYr[r.year]||0)+r.amtTHB;});
+  document.getElementById('div-grid').innerHTML=Object.keys(byYr).sort().map(y=>`
+    <div class="div-card"><div class="div-yr">${y}</div><div class="div-val">+${fmt(byYr[y])}</div></div>`).join('');
+}
+
+// ── Holdings Table ───────────────────────────────────────────────────
+function renderTable(){
+  const filtered=activeGroup==='all'?assets:assets.filter(a=>a.group===activeGroup);
+  const sorted=[...filtered].sort((a,b)=>b.val-a.val);
+
+  const specials={};
+  tracker.forEach(r=>{
+    if(!specials[r.ticker])specials[r.ticker]=new Set();
+    if(TX_DIV.includes(r.txType))specials[r.ticker].add('div');
+    if(TX_SELL.includes(r.txType))specials[r.ticker].add('sell');
+    if(TX_XFER.includes(r.txType)&&r.group==='Crypto')specials[r.ticker].add('xfer');
+  });
+
+  const body=document.getElementById('at-body');
+  if(!sorted.length){body.innerHTML=`<tr><td colspan="12" class="nd">No assets</td></tr>`;return;}
+  body.innerHTML=sorted.map(a=>{
+    const pnlCls=a.pnl>0?'pp':a.pnl<0?'pn':'pz';
+    const pctCls=a.pnlPct>0?'pp':a.pnlPct<0?'pn':'pz';
+    const pnlTxt=a.pnl===0&&a.cost===0?'—':fmtSign(a.pnl);
+    const pctTxt=a.pnlPct===0&&a.cost===0?'—':fmtPct(a.pnlPct);
+    const badges=[...(specials[a.ticker]||[])].map(t=>
+      t==='div'?`<span class="tx-badge tx-div">DIV</span>`:
+      t==='sell'?`<span class="tx-badge tx-sell">SELL</span>`:
+      `<span class="tx-badge tx-xfer">XFER</span>`).join('');
+    const fx=a.currency==='USD'&&fxMap[a.ticker]?`<span class="fx-tag">~${fxMap[a.ticker]}</span>`:'';
+    const waccStr=a.wacc>0?fmtN(a.wacc):'—';
+    return `<tr>
+      <td class="tk">${a.ticker}${badges}</td>
+      <td><span class="tb ${BADGE[a.group]||'badge-other'}">${a.group}</span></td>
+      <td style="font-size:11px;color:var(--muted2)">${a.platform}</td>
+      <td class="ind" title="${a.industry}">${a.industry}</td>
+      <td class="nr">${a.qty%1===0?a.qty.toLocaleString():fmtN(a.qty)}</td>
+      <td class="nr">${waccStr}</td>
+      <td class="nr">${a.cur>0?fmtN(a.cur):'—'}</td>
+      <td class="nr">${a.cost>0?fmt(a.cost):'—'}</td>
+      <td class="nr" style="color:var(--white)">${a.val>0?fmt(a.val):'—'}</td>
+      <td class="${pnlCls}">${pnlTxt}</td>
+      <td class="${pctCls}">${pctTxt}</td>
+      <td class="nr" style="font-size:10px;color:var(--muted2)">${a.currency}${fx}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Load ─────────────────────────────────────────────────────────────
+async function loadData(file){
+  const ue=document.getElementById('ue');ue.style.display='none';
+  try{
+    const list=await parseFile(file);
+    if(!list.length)throw new Error('ไม่พบข้อมูลใน Asset_Dashboard sheet');
+    assets=list;
+    document.getElementById('up').style.display='none';
+    document.getElementById('dash').style.display='block';
+    renderSummary(); renderAlloc(); renderGroups();
+    renderPlatform(); renderHealth();
+    buildFlowChart(); renderRealized();
+    renderDividend(); renderTable();
+  }catch(e){ue.textContent='Error: '+(e.message||e);ue.style.display='block';}
+}
+
+// ── Events ───────────────────────────────────────────────────────────
+const uz=document.getElementById('uz');
+uz.addEventListener('click',()=>document.getElementById('fi').click());
+uz.addEventListener('dragover',e=>{e.preventDefault();uz.classList.add('drag')});
+uz.addEventListener('dragleave',()=>uz.classList.remove('drag'));
+uz.addEventListener('drop',e=>{e.preventDefault();uz.classList.remove('drag');const f=e.dataTransfer.files[0];if(f)loadData(f)});
+document.getElementById('fi').addEventListener('change',e=>{if(e.target.files[0])loadData(e.target.files[0])});
+document.getElementById('fi2').addEventListener('change',e=>{if(e.target.files[0])loadData(e.target.files[0])});
+
+document.getElementById('period-tabs').addEventListener('click',e=>{
+  const b=e.target.closest('.tab');if(!b)return;
+  activePeriod=b.dataset.p;
+  document.querySelectorAll('#period-tabs .tab').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active');buildFlowChart();
+});
+document.getElementById('fb').addEventListener('click',e=>{
+  const b=e.target.closest('.fb-btn');if(!b)return;
+  activeGroup=b.dataset.g;
+  document.querySelectorAll('.fb-btn').forEach(x=>x.classList.remove('active','all'));
+  b.classList.add('active');if(activeGroup==='all')b.classList.add('all');
+  renderTable();
+});
+</script>
+</body>
+</html>
