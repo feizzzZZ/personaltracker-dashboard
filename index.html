@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Finance Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#07070e;--bg2:#0d0d1a;--bg3:#111120;
+  --bg4:#181830;
+  --border:#1a1a30;--border2:#262640;
+  --income:#00d4a0;--expense:#ff4060;--savings:#7c6fec;--debt:#ff9500;
+  --white:#ffffff;
+  --text:#dcdcf0;
+  --label:#ffffff;
+  --muted:#5a5a8a;--muted2:#8080b0;
+  --card-border:#1e1e38;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.03) 2px,rgba(0,0,0,.03) 4px)}
+
+/* ── Upload ── */
+#upload-screen{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;padding:24px}
+.logo-mark{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:.4em;color:var(--muted);text-transform:uppercase;margin-bottom:8px}
+.upload-title{font-family:'Syne',sans-serif;font-size:clamp(28px,6vw,52px);font-weight:800;line-height:1.1;text-align:center;letter-spacing:-.02em}
+.upload-title span{color:var(--income)}
+.upload-zone{width:100%;max-width:480px;border:1px dashed var(--border2);border-radius:16px;padding:40px 24px;text-align:center;cursor:pointer;transition:all .2s;background:var(--bg2)}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--income);background:rgba(0,212,160,.04)}
+.upload-zone input{display:none}
+.upload-icon{font-size:36px;margin-bottom:12px;opacity:.5}
+.upload-label{font-size:13px;color:var(--muted2);line-height:1.6}
+.upload-label strong{color:var(--text)}
+.upload-formats{font-size:11px;color:var(--muted);margin-top:8px;letter-spacing:.05em}
+.upload-error{color:var(--expense);font-size:12px;display:none}
+
+/* ── Dashboard ── */
+#dashboard{display:none;position:relative;z-index:1}
+
+/* ── Topbar ── */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--border2);background:var(--bg3);position:sticky;top:0;z-index:50;gap:12px;flex-wrap:wrap;backdrop-filter:blur(8px)}
+.topbar-left{display:flex;align-items:center;gap:12px}
+.brand{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;letter-spacing:.08em;color:var(--income)}
+.data-status{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.dot-live{width:6px;height:6px;border-radius:50%;background:var(--income);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.topbar-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.month-nav{display:flex;align-items:center;gap:4px}
+.month-btn{background:var(--bg3);border:1px solid var(--border);color:var(--muted2);padding:6px 10px;border-radius:8px;cursor:pointer;font-family:'DM Mono',monospace;font-size:12px;transition:all .15s}
+.month-btn:hover{border-color:var(--border2);color:var(--text)}
+.month-display{background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:6px 14px;border-radius:8px;font-family:'Syne',sans-serif;font-size:12px;font-weight:600;min-width:130px;text-align:center}
+.btn-upload{background:transparent;border:1px solid var(--border2);color:var(--muted2);padding:7px 14px;border-radius:8px;cursor:pointer;font-family:'DM Mono',monospace;font-size:11px;transition:all .15s;display:flex;align-items:center;gap:6px}
+.btn-upload:hover{border-color:var(--income);color:var(--income)}
+
+/* ── Main ── */
+.main{padding:24px 20px;max-width:1400px;margin:0 auto}
+.section-label{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--white);margin:0 0 12px;display:flex;align-items:center;gap:10px;padding-left:10px;border-left:3px solid var(--income)}
+.section-label::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* ── Cards ── */
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:20px}
+.card{background:var(--bg3);border:1px solid var(--card-border);border-radius:14px;padding:16px;position:relative;overflow:hidden;transition:all .2s}
+.card:hover{border-color:var(--border2);background:var(--bg4)}
+.card::after{content:'';position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at top left,var(--card-glow,.05) 0%,transparent 70%);opacity:.4}
+.card.income{--card-glow:rgba(0,212,160,.15)}
+.card.expense{--card-glow:rgba(255,64,96,.15)}
+.card.savings{--card-glow:rgba(124,111,236,.15)}
+.card-label{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--white);margin-bottom:10px;display:flex;align-items:center;gap:6px;opacity:.85}
+.card-dot{width:6px;height:6px;border-radius:50%}
+.card-amount{font-size:clamp(18px,2.5vw,26px);font-weight:500;letter-spacing:-.02em;line-height:1}
+.card-sub{font-size:11px;color:var(--muted2);margin-top:6px}
+.card-delta{font-size:11px;margin-top:4px}
+.card-delta.pos{color:var(--income)}
+.card-delta.neg{color:var(--expense)}
+
+/* ── Charts ── */
+.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+@media(max-width:768px){.charts-row{grid-template-columns:1fr}}
+.chart-card{background:var(--bg3);border:1px solid var(--card-border);border-radius:14px;padding:20px}
+.chart-title{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--white);margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;padding-bottom:12px;border-bottom:1px solid var(--border)}
+
+/* ── Bank Balances ── */
+.bank-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:20px}
+.bank-card{background:var(--bg3);border:1px solid var(--card-border);border-radius:10px;padding:12px 14px;transition:all .2s}
+.bank-card:hover{border-color:var(--income);background:var(--bg4)}
+.bank-name{font-size:10px;color:var(--white);letter-spacing:.04em;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.8}
+.bank-balance{font-size:16px;font-weight:500;letter-spacing:-.01em}
+.bank-balance.pos{color:var(--text)}
+.bank-balance.neg{color:var(--expense)}
+.bank-type{font-size:9px;color:var(--muted);margin-top:3px;letter-spacing:.06em;text-transform:uppercase}
+.bank-total-row{background:rgba(0,212,160,.07);border:1px solid rgba(0,212,160,.25);border-radius:10px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between}
+.bank-total-lbl{font-size:12px;color:var(--white);letter-spacing:.06em;font-weight:600;opacity:.75}
+.bank-total-val{font-size:22px;font-weight:500;color:var(--income)}
+
+/* ── Yearly Summary ── */
+.yearly-table{width:100%;border-collapse:collapse;font-size:12px}
+.yearly-table th{color:var(--white);font-weight:600;font-size:10px;letter-spacing:.09em;text-transform:uppercase;padding:10px 14px;text-align:right;border-bottom:1px solid var(--border);background:var(--bg3)}
+.yearly-table th:first-child{text-align:left;color:var(--white)}
+.yearly-table td{padding:10px 12px;border-bottom:1px solid var(--border);text-align:right;color:var(--muted2)}
+.yearly-table td:first-child{text-align:left;color:var(--text);font-family:'Syne',sans-serif;font-weight:600}
+.yearly-table tr:last-child td{border-bottom:none}
+.yearly-table tr:hover td{background:rgba(255,255,255,.02)}
+.yr-income{color:var(--income) !important}
+.yr-expense{color:var(--expense) !important}
+.yr-savings{color:var(--savings) !important}
+.yr-debt{color:var(--debt) !important}
+.yr-net-pos{color:var(--income) !important;font-weight:500}
+.yr-net-neg{color:var(--expense) !important;font-weight:500}
+.yr-rate{font-size:11px}
+.yr-rate.good{color:var(--income)}
+.yr-rate.ok{color:var(--debt)}
+.yr-rate.bad{color:var(--expense)}
+.savrate-bar{width:100%;height:4px;background:var(--border);border-radius:2px;margin-top:4px;overflow:hidden}
+.savrate-fill{height:4px;border-radius:2px;background:var(--savings)}
+
+/* ── Bottom Row ── */
+.bottom-row{display:grid;grid-template-columns:300px 1fr;gap:12px;margin-bottom:20px}
+@media(max-width:900px){.bottom-row{grid-template-columns:1fr}}
+
+/* ── Donut ── */
+.donut-wrap{position:relative;height:190px;display:flex;align-items:center;justify-content:center}
+.donut-center{position:absolute;text-align:center;pointer-events:none}
+.donut-center-val{font-size:18px;font-weight:500;color:var(--expense)}
+.donut-center-lbl{font-size:10px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+.legend{margin-top:10px;display:flex;flex-direction:column;gap:5px;max-height:160px;overflow-y:auto}
+.legend::-webkit-scrollbar{width:3px}
+.legend::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.legend-item{display:flex;align-items:center;justify-content:space-between;font-size:11px}
+.legend-left{display:flex;align-items:center;gap:8px;color:var(--muted2)}
+.legend-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+.legend-val{color:var(--text);font-weight:500}
+
+/* ── Top Spend Days ── */
+.top-days-list{display:flex;flex-direction:column;gap:6px;margin-top:4px}
+.top-day-row{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg3);border-radius:8px;border:1px solid var(--border)}
+.top-day-rank{font-size:10px;color:var(--white);width:16px;flex-shrink:0;text-align:center;opacity:.5}
+.top-day-date{font-size:11px;color:var(--white);width:44px;flex-shrink:0;opacity:.75}
+.top-day-bar-wrap{flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden}
+.top-day-bar{height:4px;background:var(--expense);border-radius:2px}
+.top-day-amt{font-size:12px;font-weight:500;color:var(--expense);text-align:right;white-space:nowrap;min-width:72px}
+
+/* ── Transaction Table ── */
+.tx-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:8px;flex-wrap:wrap}
+.tx-title{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--white)}
+.filter-row{display:flex;gap:5px;flex-wrap:wrap}
+.filter-btn{background:var(--bg3);border:1px solid var(--border);color:var(--muted);padding:4px 10px;border-radius:20px;cursor:pointer;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.04em;transition:all .15s}
+.filter-btn.active.all{border-color:var(--muted2);color:var(--text)}
+.filter-btn.active.Income{border-color:var(--income);color:var(--income)}
+.filter-btn.active.Expense,.filter-btn.active.Bills{border-color:var(--expense);color:var(--expense)}
+.filter-btn.active.Savings{border-color:var(--savings);color:var(--savings)}
+.filter-btn.active.Debt{border-color:var(--debt);color:var(--debt)}
+.tx-table-wrap{overflow-x:auto;border-radius:10px;border:1px solid var(--border)}
+.tx-table{width:100%;border-collapse:collapse;font-size:12px}
+.tx-table th{background:var(--bg3);color:var(--white);font-weight:600;letter-spacing:.07em;text-transform:uppercase;font-size:10px;padding:10px 14px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}
+.tx-table td{padding:9px 12px;border-bottom:1px solid var(--border);color:var(--muted2)}
+.tx-table tr:last-child td{border-bottom:none}
+.tx-table tr:hover td{background:rgba(255,255,255,.02)}
+.tx-date{color:var(--muted);font-size:11px}
+.tx-details{color:var(--text);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tx-amount{font-weight:500;text-align:right;white-space:nowrap}
+.tx-amount.pos{color:var(--income)}
+.tx-amount.neg{color:var(--expense)}
+.tx-amount.sav{color:var(--savings)}
+.tx-amount.dbt{color:var(--debt)}
+.type-pill{display:inline-block;padding:2px 7px;border-radius:4px;font-size:10px;border:1px solid}
+.pill-Income{color:var(--income);border-color:rgba(0,212,160,.3);background:rgba(0,212,160,.07)}
+.pill-Expense{color:var(--expense);border-color:rgba(255,64,96,.3);background:rgba(255,64,96,.07)}
+.pill-Bills{color:var(--expense);border-color:rgba(255,64,96,.3);background:rgba(255,64,96,.07)}
+.pill-Savings{color:var(--savings);border-color:rgba(124,111,236,.3);background:rgba(124,111,236,.07)}
+.pill-Debt{color:var(--debt);border-color:rgba(255,149,0,.3);background:rgba(255,149,0,.07)}
+.pill-Transfer{color:var(--muted2);border-color:rgba(150,150,200,.3);background:rgba(150,150,200,.05)}
+.tx-pagination{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-top:1px solid var(--border);font-size:11px;color:var(--muted)}
+.page-btns{display:flex;gap:4px}
+.page-btn{background:var(--bg3);border:1px solid var(--border);color:var(--muted2);width:28px;height:28px;border-radius:6px;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.page-btn:hover{border-color:var(--border2);color:var(--text)}
+.page-btn:disabled{opacity:.3;cursor:default}
+.no-data{text-align:center;padding:40px 20px;color:var(--muted);font-size:13px}
+
+@media(max-width:600px){
+  .topbar{padding:10px 14px}
+  .main{padding:12px}
+  .cards-grid{grid-template-columns:1fr 1fr}
+  .card{padding:12px}
+  .card-amount{font-size:18px}
+}
+</style>
+</head>
+<body>
+
+<!-- Upload Screen -->
+<div id="upload-screen">
+  <div>
+    <div class="logo-mark">Personal Finance</div>
+    <div class="upload-title">Track your<br><span>cashflow.</span></div>
+  </div>
+  <div class="upload-zone" id="upload-zone">
+    <input type="file" id="file-input" accept=".xlsx,.xls,.csv">
+    <div class="upload-icon">↑</div>
+    <div class="upload-label"><strong>Drop your Excel file here</strong><br>or click to browse</div>
+    <div class="upload-formats">XLSX · XLS · CSV</div>
+  </div>
+  <div class="upload-error" id="upload-error"></div>
+</div>
+
+<!-- Dashboard -->
+<div id="dashboard">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="brand">FINANCE//</div>
+      <div class="data-status"><span class="dot-live"></span><span id="status-text">— rows loaded</span></div>
+    </div>
+    <div class="topbar-right">
+      <div class="month-nav">
+        <button class="month-btn" id="prev-month">‹</button>
+        <div class="month-display" id="month-display">—</div>
+        <button class="month-btn" id="next-month">›</button>
+      </div>
+      <button class="btn-upload" onclick="document.getElementById('file-input2').click()">
+        ↑ New file
+        <input type="file" id="file-input2" accept=".xlsx,.xls,.csv" style="display:none">
+      </button>
+    </div>
+  </div>
+
+  <div class="main">
+
+    <!-- ── Section: Monthly Summary ── -->
+    <div class="section-label">Monthly Summary</div>
+    <div class="cards-grid">
+      <div class="card income">
+        <div class="card-label"><span class="card-dot" style="background:var(--income)"></span>Income</div>
+        <div class="card-amount" id="c-income" style="color:var(--income)">฿0</div>
+        <div class="card-sub" id="c-income-sub">0 transactions</div>
+      </div>
+      <div class="card expense">
+        <div class="card-label"><span class="card-dot" style="background:var(--expense)"></span>Expense + Bills</div>
+        <div class="card-amount" id="c-expense" style="color:var(--expense)">฿0</div>
+        <div class="card-sub" id="c-expense-sub">0 transactions</div>
+      </div>
+      <div class="card savings">
+        <div class="card-label"><span class="card-dot" style="background:var(--savings)"></span>Savings / Invest</div>
+        <div class="card-amount" id="c-savings" style="color:var(--savings)">฿0</div>
+        <div class="card-sub" id="c-savings-sub">0 transactions</div>
+      </div>
+      <div class="card net">
+        <div class="card-label"><span class="card-dot" style="background:var(--muted)"></span>Net Cashflow</div>
+        <div class="card-amount" id="c-net">฿0</div>
+        <div class="card-sub">income − exp − inv − debt</div>
+        <div class="card-delta" id="c-net-rate"></div>
+      </div>
+      <div class="card" style="--card-glow:rgba(255,149,0,.1)">
+        <div class="card-label"><span class="card-dot" style="background:var(--debt)"></span>Debt</div>
+        <div class="card-amount" id="c-debt" style="color:var(--debt)">฿0</div>
+        <div class="card-sub" id="c-debt-sub">0 transactions</div>
+      </div>
+      <div class="card">
+        <div class="card-label"><span class="card-dot" style="background:var(--muted)"></span>Saving rate</div>
+        <div class="card-amount" id="c-savrate" style="color:var(--muted2)">0%</div>
+        <div class="card-sub">savings ÷ income</div>
+      </div>
+    </div>
+
+    <!-- ── Section: Bank Balances ── -->
+    <div class="section-label">Account Balances</div>
+    <div id="bank-total-row" class="bank-total-row" style="margin-bottom:10px">
+      <span class="bank-total-lbl">All Cash Balance</span>
+      <span class="bank-total-val" id="bank-total">฿0</span>
+    </div>
+    <div class="bank-grid" id="bank-grid" style="margin-bottom:20px"></div>
+
+    <!-- ── Section: Charts ── -->
+    <div class="section-label" style="margin-top:28px">Cashflow Analysis</div>
+    <div class="charts-row">
+      <div class="chart-card">
+        <div class="chart-title"><span>Daily cashflow</span><span id="daily-range" style="font-size:10px;color:var(--muted)"></span></div>
+        <div style="position:relative;height:200px"><canvas id="daily-chart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title"><span>Monthly trend</span><span style="font-size:10px;color:var(--muted)">6 months</span></div>
+        <div style="position:relative;height:200px"><canvas id="monthly-chart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- ── Section: Yearly Summary ── -->
+    <div class="section-label" style="margin-top:28px">Yearly Summary</div>
+    <div class="chart-card" style="margin-bottom:20px;padding:0;overflow:hidden">
+      <table class="yearly-table">
+        <thead>
+          <tr>
+            <th>Year</th>
+            <th>Income</th>
+            <th>Expense</th>
+            <th>Savings</th>
+            <th>Debt paid</th>
+            <th>Net</th>
+            <th>Save rate</th>
+          </tr>
+        </thead>
+        <tbody id="yearly-body"></tbody>
+      </table>
+    </div>
+
+    <!-- ── Section: Bottom ── -->
+    <div class="section-label" style="margin-top:28px">Breakdown & Transactions</div>
+    <div class="bottom-row">
+
+      <!-- Expense Donut + Top Days -->
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="chart-card">
+          <div class="chart-title"><span>Expense breakdown</span></div>
+          <div class="donut-wrap">
+            <canvas id="donut-chart" width="190" height="190"></canvas>
+            <div class="donut-center">
+              <div class="donut-center-val" id="donut-total">฿0</div>
+              <div class="donut-center-lbl">total</div>
+            </div>
+          </div>
+          <div class="legend" id="donut-legend"></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title"><span>Top 3 spend days</span><span id="top-days-month" style="font-size:10px;color:var(--muted)"></span></div>
+          <div class="top-days-list" id="top-days-list"></div>
+        </div>
+      </div>
+
+      <!-- Transaction Table -->
+      <div class="chart-card" style="padding:14px">
+        <div class="tx-header">
+          <div class="tx-title">Transactions</div>
+          <div class="filter-row" id="filter-row">
+            <button class="filter-btn active all" data-type="all">All</button>
+            <button class="filter-btn" data-type="Income">Income</button>
+            <button class="filter-btn" data-type="Expense">Expense</button>
+            <button class="filter-btn" data-type="Bills">Bills</button>
+            <button class="filter-btn" data-type="Savings">Savings</button>
+            <button class="filter-btn" data-type="Debt">Debt</button>
+          </div>
+        </div>
+        <div class="tx-table-wrap">
+          <table class="tx-table">
+            <thead>
+              <tr>
+                <th>Date</th><th>Type</th><th>Category</th><th>Details</th>
+                <th style="text-align:right">Amount</th>
+              </tr>
+            </thead>
+            <tbody id="tx-body"></tbody>
+          </table>
+          <div class="tx-pagination">
+            <span id="tx-count">0 transactions</span>
+            <div class="page-btns">
+              <button class="page-btn" id="prev-page" disabled>‹</button>
+              <button class="page-btn" id="next-page" disabled>›</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /dashboard -->
+
+<script>
+// ── State ──────────────────────────────────────────────────────────
+let allData = [];
+let bankBalances = [];       // [{name, balance, type}]
+let currentMonthIndex = 0;
+let availableMonths = [];
+let activeFilter = 'all';
+let currentPage = 0;
+const PAGE_SIZE = 15;
+let charts = {};
+
+// ── Palette ────────────────────────────────────────────────────────
+const EXPENSE_COLORS = [
+  '#ff4060','#ff6b35','#ffd166','#06d6a0','#118ab2',
+  '#7b61ff','#ef476f','#4cc9f0','#f72585','#b5179e',
+  '#3f37c9','#4895ef','#06ffa5','#ffd166','#560bad',
+];
+
+// ── Formatters ─────────────────────────────────────────────────────
+const fmt     = v => '฿' + Math.abs(v).toLocaleString('th-TH', {minimumFractionDigits:0, maximumFractionDigits:0});
+const fmtSign = v => (v >= 0 ? '+฿' : '-฿') + Math.abs(v).toLocaleString('th-TH', {minimumFractionDigits:0, maximumFractionDigits:0});
+
+// ── Date helpers ───────────────────────────────────────────────────
+function parseDate(val) {
+  if (!val) return null;
+  if (val instanceof Date) return val;
+  if (typeof val === 'number') {
+    const d = new Date(Math.round((val - 25569) * 86400 * 1000));
+    return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+  }
+  const d = new Date(val);
+  return isNaN(d) ? null : d;
+}
+const monthKey   = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+const monthLabel = key => { const [y,m]=key.split('-'); return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m-1]+' '+y; };
+
+// ── Parse Excel ────────────────────────────────────────────────────
+function parseFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const wb = XLSX.read(e.target.result, {type:'array', cellDates:true});
+        const sheetName = wb.SheetNames.includes('Transaction') ? 'Transaction' : wb.SheetNames[0];
+        const ws = wb.Sheets[sheetName];
+        const raw = XLSX.utils.sheet_to_json(ws, {header:1, raw:true, defval:null});
+
+        // ── Read bank balances from rows 0-2 ──────────────────────
+        // Row 0: account type | Row 1: bank name | Row 2: current balance
+        const banks = [];
+        const BANK_START_COL = 6;
+        if (raw[1] && raw[2]) {
+          for (let c = BANK_START_COL; c < raw[1].length; c++) {
+            const name    = raw[1][c] ? String(raw[1][c]).trim() : null;
+            const accType = raw[0] && raw[0][c] ? String(raw[0][c]).trim() : 'Account';
+            const bal     = parseFloat(raw[2][c]);
+            if (name && !isNaN(bal)) {
+              banks.push({ name, balance: Math.round(bal * 100) / 100, type: accType });
+            }
+          }
+        }
+        bankBalances = banks;
+
+        // ── Find header row (Date + Transactions) ─────────────────
+        let headerRow = -1;
+        for (let i = 0; i < Math.min(30, raw.length); i++) {
+          const r = raw[i];
+          if (r && r.some(c => c && String(c).trim() === 'Date') &&
+                  r.some(c => c && String(c).trim() === 'Transactions')) {
+            headerRow = i; break;
+          }
+        }
+        if (headerRow === -1) { reject('ไม่พบ header row ที่มีคอลัมน์ Date และ Transactions'); return; }
+
+        const headers = raw[headerRow].map(h => h ? String(h).trim() : '');
+        const dateIdx = headers.indexOf('Date');
+        const typeIdx = headers.indexOf('Transactions');
+        const catIdx  = headers.indexOf('Type');
+        const detIdx  = headers.indexOf('Details');
+        const bankCols = [];
+        for (let i = detIdx + 1; i < headers.length; i++) {
+          if (headers[i]) bankCols.push(i);
+        }
+
+        const VALID = new Set(['Expense','Income','Transfer','Savings','Bills','Debt']);
+        const rows  = [];
+        for (let i = headerRow + 1; i < raw.length; i++) {
+          const r = raw[i];
+          if (!r || !r[typeIdx]) continue;
+          const txType = String(r[typeIdx]).trim();
+          if (!VALID.has(txType)) continue;
+          const d = parseDate(r[dateIdx]);
+          if (!d || isNaN(d.getTime())) continue;
+          let amount = 0;
+          for (const ci of bankCols) { const v = parseFloat(r[ci]); if (!isNaN(v)) amount += v; }
+          if (amount === 0 && txType !== 'Transfer') continue;
+          const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+          rows.push({
+            date: d, dateStr,
+            month: monthKey(d),
+            year: d.getFullYear(),
+            type: txType,
+            category: r[catIdx] ? String(r[catIdx]).trim() : 'Other',
+            details:  r[detIdx]  ? String(r[detIdx]).trim()  : '',
+            amount: Math.round(amount * 100) / 100,
+          });
+        }
+        resolve(rows);
+      } catch(err) { reject(err.message || 'Parse error'); }
+    };
+    reader.onerror = () => reject('File read error');
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+// ── Compute summary ────────────────────────────────────────────────
+function computeSummary(rows) {
+  let income=0,incomeCount=0,expense=0,expenseCount=0,savings=0,savingsCount=0,debt=0,debtCount=0;
+  for (const r of rows) {
+    if (r.type==='Income')                         { income  +=r.amount; incomeCount++;  }
+    if (r.type==='Expense'||r.type==='Bills')      { expense +=r.amount; expenseCount++; }
+    if (r.type==='Savings')                        { savings +=r.amount; savingsCount++; }
+    if (r.type==='Debt')                           { debt    +=r.amount; debtCount++;    }
+  }
+  const net     = income + expense + savings + debt;
+  const savRate = income > 0 ? Math.round(Math.abs(savings)/income*100) : 0;
+  return {income,incomeCount,expense,expenseCount,savings,savingsCount,debt,debtCount,net,savRate};
+}
+
+// ── Bank Balances section ──────────────────────────────────────────
+function renderBankBalances() {
+  const grid  = document.getElementById('bank-grid');
+  const total = bankBalances.reduce((s,b) => s + b.balance, 0);
+  document.getElementById('bank-total').textContent = fmt(total);
+
+  const ACC_LABELS = {
+    'Account #': 'ACCOUNT', 'Credit Card #': 'CREDIT CARD',
+    'Travel Card #': 'TRAVEL CARD', 'Account': 'ACCOUNT'
+  };
+
+  grid.innerHTML = bankBalances
+    .filter(b => b.balance !== 0)
+    .map(b => `
+      <div class="bank-card">
+        <div class="bank-name">${b.name}</div>
+        <div class="bank-balance ${b.balance >= 0 ? 'pos' : 'neg'}">${fmt(b.balance)}</div>
+        <div class="bank-type">${ACC_LABELS[b.type] || b.type}</div>
+      </div>`)
+    .join('');
+}
+
+// ── Yearly Summary table ───────────────────────────────────────────
+function renderYearlySummary() {
+  const years = [...new Set(allData.map(r => r.year))].sort();
+  const tbody = document.getElementById('yearly-body');
+  tbody.innerHTML = years.map(yr => {
+    const rows = allData.filter(r => r.year === yr);
+    const s    = computeSummary(rows);
+    const rateClass = s.savRate >= 20 ? 'good' : s.savRate >= 10 ? 'ok' : 'bad';
+    const barW = Math.min(s.savRate * 2, 100);
+    return `<tr>
+      <td>${yr}</td>
+      <td class="yr-income">${fmt(s.income)}</td>
+      <td class="yr-expense">${fmt(Math.abs(s.expense))}</td>
+      <td class="yr-savings">${fmt(Math.abs(s.savings))}</td>
+      <td class="yr-debt">${fmt(Math.abs(s.debt))}</td>
+      <td class="${s.net >= 0 ? 'yr-net-pos' : 'yr-net-neg'}">${fmtSign(s.net)}</td>
+      <td>
+        <div class="yr-rate ${rateClass}">${s.savRate}%</div>
+        <div class="savrate-bar"><div class="savrate-fill" style="width:${barW}%"></div></div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Top 3 spend days ───────────────────────────────────────────────
+function renderTopDays(rows) {
+  const byDay = {};
+  for (const r of rows) {
+    if (r.type !== 'Expense' && r.type !== 'Bills') continue;
+    byDay[r.dateStr] = (byDay[r.dateStr] || 0) + Math.abs(r.amount);
+  }
+  const sorted = Object.entries(byDay).sort((a,b) => b[1]-a[1]).slice(0,3);
+  const max    = sorted[0]?.[1] || 1;
+  const list   = document.getElementById('top-days-list');
+
+  if (!sorted.length) {
+    list.innerHTML = `<div style="color:var(--muted);font-size:12px;padding:8px">ไม่มีข้อมูล</div>`;
+    return;
+  }
+
+  list.innerHTML = sorted.map(([date,amt], i) => {
+    const barW = Math.round(amt / max * 100);
+    const dd   = date.slice(5);  // MM-DD
+    return `<div class="top-day-row">
+      <span class="top-day-rank">#${i+1}</span>
+      <span class="top-day-date">${dd}</span>
+      <div class="top-day-bar-wrap"><div class="top-day-bar" style="width:${barW}%"></div></div>
+      <span class="top-day-amt">${fmt(amt)}</span>
+    </div>`;
+  }).join('');
+}
+
+// ── Monthly Summary Cards ──────────────────────────────────────────
+function updateCards(s) {
+  document.getElementById('c-income').textContent     = fmt(s.income);
+  document.getElementById('c-income-sub').textContent = `${s.incomeCount} transactions`;
+  document.getElementById('c-expense').textContent    = fmt(s.expense);
+  document.getElementById('c-expense-sub').textContent= `${s.expenseCount} transactions`;
+  document.getElementById('c-savings').textContent    = fmt(s.savings);
+  document.getElementById('c-savings-sub').textContent= `${s.savingsCount} transactions`;
+  document.getElementById('c-debt').textContent       = fmt(s.debt);
+  document.getElementById('c-debt-sub').textContent   = `${s.debtCount} transactions`;
+
+  const netEl = document.getElementById('c-net');
+  netEl.textContent  = fmtSign(s.net);
+  netEl.style.color  = s.net >= 0 ? 'var(--income)' : 'var(--expense)';
+  const rateEl = document.getElementById('c-net-rate');
+  rateEl.textContent = s.net >= 0 ? '▲ surplus' : '▼ deficit';
+  rateEl.className   = 'card-delta ' + (s.net >= 0 ? 'pos' : 'neg');
+
+  const srEl = document.getElementById('c-savrate');
+  srEl.textContent   = s.savRate + '%';
+  srEl.style.color   = s.savRate >= 20 ? 'var(--income)' : s.savRate >= 10 ? 'var(--debt)' : 'var(--expense)';
+}
+
+// ── Daily Chart ────────────────────────────────────────────────────
+function buildDailyChart(rows) {
+  const byDay = {};
+  for (const r of rows) {
+    if (!byDay[r.dateStr]) byDay[r.dateStr] = {income:0,expense:0};
+    if (r.type==='Income')                    byDay[r.dateStr].income  += r.amount;
+    if (r.type==='Expense'||r.type==='Bills') byDay[r.dateStr].expense += r.amount;
+  }
+  const days    = Object.keys(byDay).sort();
+  const labels  = days.map(d => d.slice(8));
+  const CHART_OPTS = {
+    responsive:true, maintainAspectRatio:false,
+    plugins:{
+      legend:{labels:{color:'#6060a0',font:{family:'DM Mono',size:10},boxWidth:10,padding:12}},
+      tooltip:{backgroundColor:'#12121a',borderColor:'#1e1e35',borderWidth:1,
+        titleColor:'#e2e2f0',bodyColor:'#9090c0',
+        titleFont:{family:'DM Mono'},bodyFont:{family:'DM Mono',size:11},
+        callbacks:{label:ctx=>` ${ctx.dataset.label}: ฿${ctx.raw.toLocaleString()}`}}
+    },
+    scales:{
+      x:{grid:{color:'rgba(30,30,53,.8)',lineWidth:.5},ticks:{color:'#6060a0',font:{family:'DM Mono',size:9}}},
+      y:{grid:{color:'rgba(30,30,53,.8)',lineWidth:.5},
+         ticks:{color:'#6060a0',font:{family:'DM Mono',size:9},callback:v=>v>=1000?(v/1000).toFixed(0)+'k':v}}
+    }
+  };
+
+  if (charts.daily) charts.daily.destroy();
+  charts.daily = new Chart(document.getElementById('daily-chart').getContext('2d'), {
+    type:'bar',
+    data:{labels, datasets:[
+      {label:'Income', data:days.map(d=>byDay[d].income), backgroundColor:'rgba(0,212,160,.7)', borderRadius:3, borderSkipped:false},
+      {label:'Expense',data:days.map(d=>Math.abs(byDay[d].expense)), backgroundColor:'rgba(255,64,96,.7)', borderRadius:3, borderSkipped:false}
+    ]},
+    options: CHART_OPTS
+  });
+  document.getElementById('daily-range').textContent = `${days.length} days`;
+}
+
+// ── Monthly Trend ──────────────────────────────────────────────────
+function buildMonthlyChart() {
+  const last6 = availableMonths.slice(-6);
+  const labels = last6.map(monthLabel);
+  const inc=[], exp=[], sav=[];
+  for (const mk of last6) {
+    const s = computeSummary(allData.filter(r => r.month === mk));
+    inc.push(s.income); exp.push(Math.abs(s.expense)); sav.push(Math.abs(s.savings));
+  }
+  if (charts.monthly) charts.monthly.destroy();
+  charts.monthly = new Chart(document.getElementById('monthly-chart').getContext('2d'), {
+    type:'line',
+    data:{labels, datasets:[
+      {label:'Income', data:inc, borderColor:'#00d4a0', backgroundColor:'rgba(0,212,160,.07)', tension:.3, pointRadius:3, borderWidth:1.5, fill:true},
+      {label:'Expense',data:exp, borderColor:'#ff4060', backgroundColor:'rgba(255,64,96,.05)',  tension:.3, pointRadius:3, borderWidth:1.5, fill:true},
+      {label:'Savings',data:sav, borderColor:'#7c6fec', backgroundColor:'rgba(124,111,236,.05)',tension:.3, pointRadius:3, borderWidth:1.5, fill:true},
+    ]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{labels:{color:'#6060a0',font:{family:'DM Mono',size:10},boxWidth:10,padding:12}},
+        tooltip:{backgroundColor:'#12121a',borderColor:'#1e1e35',borderWidth:1,
+          titleColor:'#e2e2f0',bodyColor:'#9090c0',
+          titleFont:{family:'DM Mono'},bodyFont:{family:'DM Mono',size:11},
+          callbacks:{label:ctx=>` ${ctx.dataset.label}: ฿${ctx.raw.toLocaleString()}`}}
+      },
+      scales:{
+        x:{grid:{color:'rgba(30,30,53,.8)',lineWidth:.5},ticks:{color:'#6060a0',font:{family:'DM Mono',size:9}}},
+        y:{grid:{color:'rgba(30,30,53,.8)',lineWidth:.5},
+           ticks:{color:'#6060a0',font:{family:'DM Mono',size:9},callback:v=>v>=1000?(v/1000).toFixed(0)+'k':v}}
+      }
+    }
+  });
+}
+
+// ── Donut ──────────────────────────────────────────────────────────
+function buildDonut(rows) {
+  const catMap = {};
+  for (const r of rows) {
+    if (r.type!=='Expense' && r.type!=='Bills') continue;
+    catMap[r.category||'Other'] = (catMap[r.category||'Other']||0) + Math.abs(r.amount);
+  }
+  const sorted = Object.entries(catMap).sort((a,b)=>b[1]-a[1]);
+  const labels = sorted.map(x=>x[0]);
+  const values = sorted.map(x=>x[1]);
+  const colors = labels.map((_,i)=>EXPENSE_COLORS[i%EXPENSE_COLORS.length]);
+  const total  = values.reduce((a,b)=>a+b,0);
+  document.getElementById('donut-total').textContent = fmt(total);
+  if (charts.donut) charts.donut.destroy();
+  charts.donut = new Chart(document.getElementById('donut-chart').getContext('2d'), {
+    type:'doughnut',
+    data:{labels, datasets:[{data:values, backgroundColor:colors, borderWidth:0, hoverOffset:4}]},
+    options:{
+      cutout:'70%', responsive:true, maintainAspectRatio:true,
+      plugins:{legend:{display:false},
+        tooltip:{backgroundColor:'#12121a',borderColor:'#1e1e35',borderWidth:1,
+          titleColor:'#e2e2f0',bodyColor:'#9090c0',
+          titleFont:{family:'DM Mono'},bodyFont:{family:'DM Mono',size:11},
+          callbacks:{label:ctx=>`฿${ctx.raw.toLocaleString()} (${(ctx.raw/total*100).toFixed(1)}%)`}}
+      }
+    }
+  });
+  document.getElementById('donut-legend').innerHTML = sorted.slice(0,10).map(([cat,val],i) =>
+    `<div class="legend-item">
+      <div class="legend-left"><div class="legend-dot" style="background:${colors[i]}"></div><span>${cat}</span></div>
+      <div class="legend-val">${fmt(val)}</div>
+    </div>`).join('');
+}
+
+// ── Transaction Table ──────────────────────────────────────────────
+function renderTxTable(rows) {
+  const filtered = (activeFilter==='all' ? rows.filter(r=>r.type!=='Transfer') : rows.filter(r=>r.type===activeFilter))
+    .sort((a,b)=>b.date-a.date);
+  const total = filtered.length;
+  const start = currentPage * PAGE_SIZE;
+  const page  = filtered.slice(start, start+PAGE_SIZE);
+  const body  = document.getElementById('tx-body');
+  body.innerHTML = total === 0
+    ? `<tr><td colspan="5" class="no-data">No transactions</td></tr>`
+    : page.map(r => {
+        const amtClass = r.type==='Income' ? 'pos' : r.type==='Savings' ? 'sav' : r.type==='Debt' ? 'dbt' : 'neg';
+        const amtTxt   = r.amount >= 0 ? '+฿'+Math.abs(r.amount).toLocaleString() : '฿'+Math.abs(r.amount).toLocaleString();
+        return `<tr>
+          <td class="tx-date">${r.dateStr.slice(5)}</td>
+          <td><span class="type-pill pill-${r.type}">${r.type}</span></td>
+          <td style="color:var(--muted2);font-size:11px">${r.category}</td>
+          <td class="tx-details" title="${r.details}">${r.details||'—'}</td>
+          <td class="tx-amount ${amtClass}">${amtTxt}</td>
+        </tr>`;
+      }).join('');
+  document.getElementById('tx-count').textContent = `${total} transactions`;
+  document.getElementById('prev-page').disabled = currentPage===0;
+  document.getElementById('next-page').disabled = start+PAGE_SIZE>=total;
+}
+
+// ── Full month render ──────────────────────────────────────────────
+function renderMonth(monthK) {
+  const rows = allData.filter(r => r.month === monthK);
+  const s    = computeSummary(rows);
+  updateCards(s);
+  buildDailyChart(rows);
+  buildMonthlyChart();
+  buildDonut(rows);
+  renderTopDays(rows);
+  currentPage = 0;
+  renderTxTable(rows);
+  document.getElementById('month-display').textContent = monthLabel(monthK);
+  document.getElementById('top-days-month').textContent = monthLabel(monthK);
+}
+
+// ── Load ───────────────────────────────────────────────────────────
+async function loadData(file) {
+  const errEl = document.getElementById('upload-error');
+  errEl.style.display = 'none';
+  try {
+    const rows = await parseFile(file);
+    if (!rows.length) throw new Error('ไม่พบข้อมูล transaction ในไฟล์นี้');
+    allData = rows;
+    const monthSet = new Set(rows.map(r=>r.month));
+    availableMonths = Array.from(monthSet).sort();
+    currentMonthIndex = availableMonths.length - 1;
+    document.getElementById('status-text').textContent = `${rows.length.toLocaleString()} rows loaded`;
+    document.getElementById('upload-screen').style.display  = 'none';
+    document.getElementById('dashboard').style.display      = 'block';
+    renderBankBalances();
+    renderYearlySummary();
+    renderMonth(availableMonths[currentMonthIndex]);
+  } catch(e) {
+    errEl.textContent   = 'Error: ' + (e.message||e);
+    errEl.style.display = 'block';
+  }
+}
+
+// ── Events ─────────────────────────────────────────────────────────
+const zone = document.getElementById('upload-zone');
+zone.addEventListener('click',    () => document.getElementById('file-input').click());
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag'); });
+zone.addEventListener('dragleave',() => zone.classList.remove('drag'));
+zone.addEventListener('drop',     e => { e.preventDefault(); zone.classList.remove('drag'); const f=e.dataTransfer.files[0]; if(f) loadData(f); });
+document.getElementById('file-input').addEventListener('change',  e => { if(e.target.files[0]) loadData(e.target.files[0]); });
+document.getElementById('file-input2').addEventListener('change', e => { if(e.target.files[0]) loadData(e.target.files[0]); });
+
+document.getElementById('prev-month').addEventListener('click', () => {
+  if (currentMonthIndex > 0) { currentMonthIndex--; renderMonth(availableMonths[currentMonthIndex]); }
+});
+document.getElementById('next-month').addEventListener('click', () => {
+  if (currentMonthIndex < availableMonths.length-1) { currentMonthIndex++; renderMonth(availableMonths[currentMonthIndex]); }
+});
+
+document.getElementById('filter-row').addEventListener('click', e => {
+  const btn = e.target.closest('.filter-btn'); if (!btn) return;
+  activeFilter = btn.dataset.type; currentPage = 0;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active','all','Income','Expense','Bills','Savings','Debt','Transfer'));
+  btn.classList.add('active', activeFilter);
+  renderTxTable(allData.filter(r => r.month === availableMonths[currentMonthIndex]));
+});
+document.getElementById('prev-page').addEventListener('click', () => {
+  if (currentPage > 0) { currentPage--; renderTxTable(allData.filter(r=>r.month===availableMonths[currentMonthIndex])); }
+});
+document.getElementById('next-page').addEventListener('click', () => {
+  currentPage++;
+  renderTxTable(allData.filter(r=>r.month===availableMonths[currentMonthIndex]));
+});
+</script>
+</body>
+</html>
