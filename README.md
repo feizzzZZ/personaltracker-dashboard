@@ -13,14 +13,5 @@ Personal finance tracker and investment dashboard built with vanilla HTML/JS.
 - 📄 Monthly Report PDF Export
 - 🔔 Budget Notification
 
-## How to use
-1. Open `index.html` (or visit the GitHub Pages URL)
-2. Upload your Excel file (`.xlsx`)
-3. Required sheets: `Transaction`, `Asset_Tracker`, `Asset_Dashboard`, `Asset_Live_Price_Feed`
-4. Optional sheets: `Insurance_Policies`, `Insurance_Coverage`
-
-## Live Demo
-→ [feizzzzz.github.io/cashflow-truth](https://feizzzzz.github.io/cashflow-truth)
-
 ---
 Built with: Chart.js · SheetJS (XLSX) · Google Sans font
