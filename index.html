@@ -2,7 +2,16 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#09090f">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Finance OS">
+<meta name="description" content="Personal finance tracker: cash flow, investments, insurance, budget alerts">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180x180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192x192.png">
 <title>Finance OS</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&family=Google+Sans+Mono:wght@300;400;500&display=swap" rel="stylesheet">
@@ -2409,6 +2418,32 @@ ${budgetAlerts.length>0?`
 </div>
 
 <scr\ipt>window.onload=()=>window.print();</scr\ipt>
+  <script>
+    if('serviceWorker' in navigator){
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js')
+          .then(reg => {
+            console.log('[SW] Registered:', reg.scope);
+            // Check for updates every 60s
+            setInterval(() => reg.update(), 60000);
+            reg.addEventListener('updatefound', () => {
+              const newWorker = reg.installing;
+              newWorker.addEventListener('statechange', () => {
+                if(newWorker.state === 'installed' && navigator.serviceWorker.controller){
+                  // New version available — show update toast
+                  const toast = document.createElement('div');
+                  toast.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#00d4a0;color:#000;padding:10px 20px;border-radius:8px;font-size:12px;font-weight:600;z-index:9999;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.3)';
+                  toast.textContent = '✦ มีเวอร์ชันใหม่ — คลิกเพื่ออัปเดต';
+                  toast.onclick = () => { newWorker.postMessage('SKIP_WAITING'); location.reload(); };
+                  document.body.appendChild(toast);
+                  setTimeout(() => toast.remove(), 8000);
+                }
+              });
+            });
+          }).catch(err => console.warn('[SW] Registration failed:', err));
+      });
+    }
+  </script>
 </body>
 </html>`;
 
@@ -3487,5 +3522,31 @@ async function loadData(file){
   }catch(e){ue.textContent='Error: '+(e.message||e);ue.style.display='block';}
 }
 </script>
+  <script>
+    if('serviceWorker' in navigator){
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js')
+          .then(reg => {
+            console.log('[SW] Registered:', reg.scope);
+            // Check for updates every 60s
+            setInterval(() => reg.update(), 60000);
+            reg.addEventListener('updatefound', () => {
+              const newWorker = reg.installing;
+              newWorker.addEventListener('statechange', () => {
+                if(newWorker.state === 'installed' && navigator.serviceWorker.controller){
+                  // New version available — show update toast
+                  const toast = document.createElement('div');
+                  toast.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#00d4a0;color:#000;padding:10px 20px;border-radius:8px;font-size:12px;font-weight:600;z-index:9999;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.3)';
+                  toast.textContent = '✦ มีเวอร์ชันใหม่ — คลิกเพื่ออัปเดต';
+                  toast.onclick = () => { newWorker.postMessage('SKIP_WAITING'); location.reload(); };
+                  document.body.appendChild(toast);
+                  setTimeout(() => toast.remove(), 8000);
+                }
+              });
+            });
+          }).catch(err => console.warn('[SW] Registration failed:', err));
+      });
+    }
+  </script>
 </body>
 </html>

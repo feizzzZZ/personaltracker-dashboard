@@ -9,8 +9,8 @@ const SHELL_FILES = [
   BASE + '/',
   BASE + '/index.html',
   BASE + '/manifest.json',
-  BASE + '/pwa-icons/icon-192x192.png',
-  BASE + '/pwa-icons/icon-512x512.png',
+  BASE + '/icon-192x192.png',
+  BASE + '/icon-512x512.png',
 ];
 
 // CDN assets — cache on first use
