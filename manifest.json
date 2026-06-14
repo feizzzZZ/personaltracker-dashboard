@@ -1,0 +1,25 @@
+{
+  "name": "Finance OS — Personal Finance Dashboard",
+  "short_name": "Finance OS",
+  "description": "Personal finance tracker: cash flow, investments, insurance, budget alerts",
+  "start_url": "/personaltracker-dashboard/",
+  "scope": "/personaltracker-dashboard/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#09090f",
+  "background_color": "#09090f",
+  "lang": "th",
+  "categories": ["finance", "productivity"],
+  "icons": [
+    { "src": "pwa-icons/icon-48x48.png",   "sizes": "48x48",   "type": "image/png" },
+    { "src": "pwa-icons/icon-72x72.png",   "sizes": "72x72",   "type": "image/png" },
+    { "src": "pwa-icons/icon-96x96.png",   "sizes": "96x96",   "type": "image/png" },
+    { "src": "pwa-icons/icon-144x144.png", "sizes": "144x144", "type": "image/png" },
+    { "src": "pwa-icons/icon-180x180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "pwa-icons/icon-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable any" },
+    { "src": "pwa-icons/icon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable any" }
+  ],
+  "screenshots": [
+    { "src": "pwa-icons/icon-512x512.png", "sizes": "512x512", "type": "image/png", "form_factor": "narrow" }
+  ]
+}
