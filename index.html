@@ -539,9 +539,46 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 .gs-status-row{background:var(--bg3);border:1px solid var(--border);
   border-radius:8px;padding:10px 12px;font-size:11px;color:var(--muted2);
   margin-top:12px;display:flex;align-items:center;gap:8px}
+
+/* ── Top App Switcher ─────────────────────────────── */
+.top-nav{
+  position:fixed;top:0;left:0;right:0;z-index:200;height:40px;
+  background:rgba(7,7,14,.92);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 16px;gap:4px;
+}
+.top-nav-brand{
+  font-family:'Google Sans',sans-serif;font-size:11px;font-weight:700;
+  color:var(--muted);letter-spacing:.12em;text-transform:uppercase;
+  padding-right:16px;border-right:1px solid var(--border);margin-right:8px;
+  white-space:nowrap;
+}
+.top-nav-tab{
+  display:flex;align-items:center;gap:7px;padding:5px 14px;border-radius:7px;
+  font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;
+  text-decoration:none;color:var(--muted2);border:1px solid transparent;
+  font-family:'Google Sans',monospace;white-space:nowrap;
+}
+.top-nav-tab:hover{background:var(--bg3);color:var(--text);border-color:var(--border);}
+.top-nav-tab.active{background:var(--bg3);color:var(--white);border-color:var(--border2);}
+.top-nav-tab.active .tn-icon{color:var(--income);}
+.tn-icon{font-size:14px;line-height:1}
+.sidebar{top:40px !important;height:calc(100vh - 40px) !important}
+.main-content{padding-top:40px}
+
 </style>
 </head>
 <body>
+<nav class="top-nav">
+  <span class="top-nav-brand">🚀 PERSONAL OS</span>
+  <a href="index.html" class="top-nav-tab active">
+    <span class="tn-icon">💰</span>Finance OS
+  </a>
+  <a href="investment-analysis.html" class="top-nav-tab">
+    <span class="tn-icon">📈</span>Investment Analysis
+  </a>
+</nav>
+
 
 <!-- Upload -->
 <div id="up">

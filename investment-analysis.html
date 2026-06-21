@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#09090f">
+<title>Investment Analysis OS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700;800&family=Google+Sans+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#07070e;--bg2:#0d0d1a;--bg3:#111120;--bg4:#181830;
+  --border:#1a1a30;--border2:#262640;--cb:#1e1e38;
+  --income:#00d4a0;--expense:#ff4060;--savings:#7c6fec;--debt:#ff9500;
+  --white:#ffffff;--text:#dcdcf0;--muted:#5a5a8a;--muted2:#8080b0;
+  --gain:#00d4a0;--loss:#ff4060;
+  --accent1:#4cc9f0;--accent2:#f72585;--accent3:#ffd166;
+  --sidebar-w:200px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Google Sans Mono',monospace;min-height:100vh;display:flex;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.03) 2px,rgba(0,0,0,.03) 4px)}
+
+/* ── Sidebar ── */
+.sidebar{width:var(--sidebar-w);background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:100;transition:transform .2s}
+.sb-brand{padding:20px 16px 16px;border-bottom:1px solid var(--border)}
+.sb-logo{font-family:'Google Sans',sans-serif;font-size:14px;font-weight:800;color:var(--income);letter-spacing:.04em}
+.sb-sub{font-size:10px;color:var(--muted);margin-top:2px;letter-spacing:.06em}
+.sb-status{font-size:10px;color:var(--muted);margin-top:8px;display:flex;align-items:center;gap:5px}
+.dot-live{width:5px;height:5px;border-radius:50%;background:var(--income);animation:pulse 2s infinite;display:inline-block}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.sb-nav{padding:12px 8px;flex:1;display:flex;flex-direction:column;gap:2px;overflow-y:auto}
+.sb-section{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:10px 8px 4px;margin-top:4px}
+.sb-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;cursor:pointer;transition:all .15s;color:var(--muted2);font-size:12px;border:1px solid transparent}
+.sb-item:hover{background:var(--bg3);color:var(--text)}
+.sb-item.active{background:var(--bg3);border-color:var(--border);color:var(--white)}
+.sb-item.active .sb-icon{color:var(--income)}
+.sb-icon{font-size:16px;flex-shrink:0;display:inline-block;width:20px;text-align:center}
+.sb-badge{margin-left:auto;font-size:9px;padding:1px 5px;border-radius:4px;background:rgba(0,212,160,.15);color:var(--income)}
+.sb-badge-warn{background:rgba(255,64,96,.2);color:var(--expense)}
+.sb-badge-hot{background:rgba(247,37,133,.2);color:#f72585}
+.sb-bottom{padding:12px 8px;border-top:1px solid var(--border)}
+.sb-date{font-size:10px;color:var(--muted);padding:8px 10px;text-align:center}
+
+/* ── Main content ── */
+.main-content{margin-left:var(--sidebar-w);flex:1;min-height:100vh;position:relative;z-index:1}
+.page{display:none;padding:24px;max-width:1280px}
+.page.active{display:block}
+
+/* ── Page header ── */
+.pg-hdr{margin-bottom:20px;display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.pg-title{font-family:'Google Sans',sans-serif;font-size:22px;font-weight:800;color:var(--white);letter-spacing:-.02em}
+.pg-sub{font-size:12px;color:var(--muted);margin-top:3px}
+
+/* ── Section label ── */
+.sl{font-family:'Google Sans',sans-serif;font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--white);margin:0 0 10px;display:flex;align-items:center;gap:10px;padding-left:10px;border-left:3px solid var(--income);border-radius:0}
+.sl::after{content:'';flex:1;height:1px;background:var(--border)}
+.sl.purple{border-left-color:var(--savings)}
+.sl.orange{border-left-color:var(--debt)}
+.sl.red{border-left-color:var(--expense)}
+.sl.blue{border-left-color:var(--accent1)}
+.sl-mt{margin-top:24px}
+
+/* ── Cards ── */
+.sg{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:18px}
+.sc{background:var(--bg3);border:1px solid var(--cb);border-radius:12px;padding:14px;position:relative;overflow:hidden;transition:all .2s}
+.sc:hover{border-color:var(--border2);background:var(--bg4)}
+.sc::after{content:'';position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at top left,var(--g,transparent) 0%,transparent 70%);opacity:.5}
+.sc-lbl{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--white);opacity:.7;margin-bottom:8px}
+.sc-val{font-size:clamp(16px,2vw,22px);font-weight:500;letter-spacing:-.02em;line-height:1}
+.sc-sub{font-size:11px;color:var(--muted2);margin-top:5px}
+.gain{color:var(--gain)}
+.loss{color:var(--loss)}
+
+/* ── Chart cards ── */
+.cc{background:var(--bg3);border:1px solid var(--cb);border-radius:12px;padding:18px}
+.ct{font-family:'Google Sans',sans-serif;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--white);margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px}
+.ct span{font-size:10px;color:var(--muted);font-weight:400;font-family:'Google Sans Mono',monospace;letter-spacing:0;text-transform:none}
+.cr2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px}
+.cr3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:18px}
+@media(max-width:900px){.cr2,.cr3{grid-template-columns:1fr}}
+
+/* ── Situation Banner ── */
+.situation-banner{border-radius:14px;padding:20px 24px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;border:1px solid}
+.sit-bull{background:rgba(0,212,160,.07);border-color:rgba(0,212,160,.3)}
+.sit-bear{background:rgba(255,64,96,.07);border-color:rgba(255,64,96,.3)}
+.sit-neutral{background:rgba(124,111,236,.07);border-color:rgba(124,111,236,.3)}
+.sit-crisis{background:rgba(255,149,0,.07);border-color:rgba(255,149,0,.3)}
+.sit-left{display:flex;align-items:center;gap:16px}
+.sit-icon{font-size:36px;line-height:1}
+.sit-label{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2);margin-bottom:4px}
+.sit-title{font-family:'Google Sans',sans-serif;font-size:22px;font-weight:800;letter-spacing:-.02em}
+.sit-desc{font-size:12px;color:var(--muted2);margin-top:4px;max-width:500px;line-height:1.6}
+.sit-right{display:flex;flex-direction:column;gap:10px;min-width:200px}
+.sit-action{background:var(--bg4);border:1px solid var(--border2);border-radius:10px;padding:10px 14px}
+.sit-action-lbl{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
+.sit-action-val{font-size:13px;font-weight:600}
+
+/* ── Regime Meter ── */
+.regime-meter{background:var(--bg3);border:1px solid var(--cb);border-radius:12px;padding:18px;margin-bottom:18px}
+.meter-track{height:12px;background:linear-gradient(to right,#ff4060,#ff9500,#ffd166,#00d4a0,#4cc9f0);border-radius:6px;position:relative;margin:14px 0 6px}
+.meter-thumb{width:16px;height:20px;border-radius:4px;position:absolute;top:-4px;transform:translateX(-50%);background:var(--white);border:2px solid var(--bg);box-shadow:0 2px 8px rgba(0,0,0,.5);transition:left 1s ease}
+.meter-labels{display:flex;justify-content:space-between;font-size:9px;color:var(--muted);letter-spacing:.05em}
+
+/* ── Macro signals grid ── */
+.signal-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-bottom:18px}
+.signal-card{background:var(--bg4);border:1px solid var(--border);border-radius:10px;padding:12px 14px;transition:all .2s}
+.signal-card:hover{border-color:var(--border2)}
+.sig-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.sig-name{font-size:10px;color:var(--muted2);letter-spacing:.05em;text-transform:uppercase}
+.sig-dot{width:8px;height:8px;border-radius:50%}
+.sig-val{font-size:18px;font-weight:600;line-height:1}
+.sig-change{font-size:11px;margin-top:3px}
+.sig-note{font-size:10px;color:var(--muted);margin-top:4px;line-height:1.4}
+
+/* ── Strategy cards ── */
+.strat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-bottom:18px}
+.strat-card{background:var(--bg3);border:1px solid var(--cb);border-radius:12px;padding:16px;transition:all .2s;position:relative;overflow:hidden}
+.strat-card:hover{border-color:var(--border2);background:var(--bg4)}
+.strat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:12px 12px 0 0}
+.strat-buy::before{background:var(--gain)}
+.strat-hold::before{background:var(--savings)}
+.strat-avoid::before{background:var(--loss)}
+.strat-watch::before{background:var(--debt)}
+.strat-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.strat-badge{font-size:9px;padding:3px 8px;border-radius:4px;letter-spacing:.06em;font-weight:600}
+.badge-buy{background:rgba(0,212,160,.15);color:var(--gain);border:1px solid rgba(0,212,160,.3)}
+.badge-hold{background:rgba(124,111,236,.15);color:var(--savings);border:1px solid rgba(124,111,236,.3)}
+.badge-avoid{background:rgba(255,64,96,.15);color:var(--loss);border:1px solid rgba(255,64,96,.3)}
+.badge-watch{background:rgba(255,149,0,.15);color:var(--debt);border:1px solid rgba(255,149,0,.3)}
+.strat-title{font-family:'Google Sans',sans-serif;font-size:15px;font-weight:700;color:var(--white);margin-bottom:4px}
+.strat-sub{font-size:11px;color:var(--muted2);margin-bottom:10px}
+.strat-reasons{list-style:none;display:flex;flex-direction:column;gap:4px}
+.strat-reasons li{font-size:11px;color:var(--muted2);display:flex;gap:6px;align-items:flex-start}
+.strat-reasons li::before{content:'→';color:var(--income);flex-shrink:0;font-size:10px;margin-top:1px}
+.strat-alloc{margin-top:12px;padding-top:10px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.strat-alloc-lbl{font-size:10px;color:var(--muted)}
+.strat-alloc-val{font-size:14px;font-weight:600}
+
+/* ── Fear & Greed ── */
+.fg-display{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 0 4px}
+.fg-arc{width:160px;height:80px;position:relative;margin:0 auto 8px}
+.fg-number{font-family:'Google Sans',sans-serif;font-size:40px;font-weight:800;text-align:center;line-height:1}
+.fg-label{font-size:11px;text-align:center;letter-spacing:.06em;text-transform:uppercase;color:var(--muted2);margin-top:4px}
+
+/* ── Timeline ── */
+.timeline{display:flex;flex-direction:column;gap:0}
+.tl-item{display:flex;gap:14px;position:relative}
+.tl-item:not(:last-child)::before{content:'';position:absolute;left:15px;top:30px;bottom:-4px;width:1px;background:var(--border)}
+.tl-dot-wrap{flex-shrink:0;width:30px;display:flex;flex-direction:column;align-items:center;padding-top:4px}
+.tl-dot{width:10px;height:10px;border-radius:50%;border:2px solid}
+.tl-content{flex:1;background:var(--bg4);border:1px solid var(--border);border-radius:10px;padding:10px 13px;margin-bottom:8px}
+.tl-date{font-size:10px;color:var(--muted);margin-bottom:3px}
+.tl-title{font-size:12px;color:var(--white);font-weight:500;margin-bottom:3px}
+.tl-desc{font-size:11px;color:var(--muted2);line-height:1.5}
+
+/* ── Portfolio weights ── */
+.weight-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.weight-label{font-size:12px;color:var(--text);min-width:120px}
+.weight-bar-wrap{flex:1;height:6px;background:var(--bg4);border-radius:3px;overflow:hidden}
+.weight-bar{height:6px;border-radius:3px;transition:width 1s ease}
+.weight-pct{font-size:12px;font-weight:600;min-width:38px;text-align:right}
+.weight-change{font-size:10px;min-width:40px;text-align:right}
+
+/* ── Risk meter cards ── */
+.risk-card{background:var(--bg4);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+.risk-title{font-size:10px;color:var(--muted);letter-spacing:.07em;text-transform:uppercase;margin-bottom:8px}
+.risk-value{font-size:20px;font-weight:700}
+.risk-bar{height:4px;border-radius:2px;background:var(--border);margin-top:8px;overflow:hidden}
+.risk-fill{height:4px;border-radius:2px;transition:width 1s ease}
+.risk-note{font-size:10px;color:var(--muted);margin-top:5px}
+
+/* ── Sector rotation ── */
+.sector-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:6px}
+.sector-item{background:var(--bg4);border:1px solid var(--border);border-radius:9px;padding:10px 12px;text-align:center;transition:all .2s;cursor:default}
+.sector-item:hover{border-color:var(--border2)}
+.sec-icon{font-size:22px;margin-bottom:4px}
+.sec-name{font-size:10px;color:var(--muted2);letter-spacing:.04em;margin-bottom:4px}
+.sec-rating{font-size:11px;font-weight:600}
+.sec-bar{height:3px;border-radius:2px;margin-top:6px}
+
+/* ── Alert items ── */
+.alert-list{display:flex;flex-direction:column;gap:6px}
+.alert-item{background:var(--bg4);border:1px solid var(--border);border-radius:9px;padding:10px 13px;display:flex;gap:10px;align-items:flex-start}
+.alert-icon{font-size:16px;flex-shrink:0;margin-top:1px}
+.alert-title{font-size:12px;color:var(--white);font-weight:500;margin-bottom:2px}
+.alert-desc{font-size:11px;color:var(--muted2);line-height:1.5}
+.alert-tag{display:inline-block;font-size:9px;padding:1px 6px;border-radius:3px;margin-right:4px;margin-top:4px}
+
+/* ── Mobile ── */
+.menu-toggle{display:none;position:fixed;top:14px;left:14px;z-index:150;background:var(--bg3);border:1px solid var(--border2);color:var(--text);width:36px;height:36px;border-radius:8px;cursor:pointer;font-size:16px;align-items:center;justify-content:center}
+@media(max-width:700px){
+  .sidebar{transform:translateX(-100%)}
+  .sidebar.open{transform:translateX(0)}
+  .main-content{margin-left:0}
+  .menu-toggle{display:flex}
+  .page{padding:14px;padding-top:60px}
+}
+
+/* ── Tabs ── */
+.tab-row{display:flex;gap:2px;background:var(--bg4);border-radius:7px;padding:2px;border:1px solid var(--border);width:fit-content;margin-bottom:14px}
+.tab{padding:4px 12px;border:none;border-radius:5px;cursor:pointer;font-family:'Google Sans Mono',monospace;font-size:11px;color:var(--muted2);background:transparent;transition:all .15s}
+.tab.active{background:var(--bg3);color:var(--white);border:1px solid var(--border2)}
+
+/* ── Trend indicator ── */
+.trend-up{color:var(--gain)}
+.trend-down{color:var(--loss)}
+.trend-flat{color:var(--muted2)}
+
+/* ── Advice box ── */
+.advice-box{background:var(--bg4);border:1px solid var(--border2);border-radius:10px;padding:14px 16px;margin-bottom:10px}
+.advice-header{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.advice-icon{font-size:18px}
+.advice-title{font-size:12px;font-weight:600;color:var(--white)}
+.advice-body{font-size:12px;color:var(--muted2);line-height:1.7}
+.advice-body strong{color:var(--text)}
+
+/* scrollbar */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+/* ── Top App Switcher ─────────────────────────────── */
+.top-nav{
+  position:fixed;top:0;left:0;right:0;z-index:200;height:40px;
+  background:rgba(7,7,14,.92);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 16px;gap:4px;
+}
+.top-nav-brand{
+  font-family:'Google Sans',sans-serif;font-size:11px;font-weight:700;
+  color:var(--muted);letter-spacing:.12em;text-transform:uppercase;
+  padding-right:16px;border-right:1px solid var(--border);margin-right:8px;
+  white-space:nowrap;
+}
+.top-nav-tab{
+  display:flex;align-items:center;gap:7px;padding:5px 14px;border-radius:7px;
+  font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;
+  text-decoration:none;color:var(--muted2);border:1px solid transparent;
+  font-family:'Google Sans',monospace;white-space:nowrap;
+}
+.top-nav-tab:hover{background:var(--bg3);color:var(--text);border-color:var(--border);}
+.top-nav-tab.active{background:var(--bg3);color:var(--white);border-color:var(--border2);}
+.top-nav-tab.active .tn-icon{color:var(--income);}
+.tn-icon{font-size:14px;line-height:1}
+.sidebar{top:40px !important;height:calc(100vh - 40px) !important}
+.main-content{padding-top:40px}
+
+</style>
+</head>
+<body>
+<nav class="top-nav">
+  <span class="top-nav-brand">🚀 PERSONAL OS</span>
+  <a href="index.html" class="top-nav-tab">
+    <span class="tn-icon">💰</span>Finance OS
+  </a>
+  <a href="investment-analysis.html" class="top-nav-tab active">
+    <span class="tn-icon">📈</span>Investment Analysis
+  </a>
+</nav>
+
+
+<button class="menu-toggle" id="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+
+<div class="sidebar" id="sidebar">
+  <div class="sb-brand">
+    <div class="sb-logo">INVEST OS</div>
+    <div class="sb-sub">Investment Analysis</div>
+    <div class="sb-status"><span class="dot-live"></span><span id="live-date">Loading...</span></div>
+  </div>
+  <div class="sb-nav">
+    <div class="sb-section">Overview</div>
+    <div class="sb-item active" onclick="switchPage('situation')">
+      <span class="sb-icon">🌐</span>Situation
+      <span class="sb-badge">LIVE</span>
+    </div>
+    <div class="sb-item" onclick="switchPage('signals')">
+      <span class="sb-icon">📡</span>Macro Signals
+    </div>
+    <div class="sb-item" onclick="switchPage('feargreed')">
+      <span class="sb-icon">🧠</span>Market Mood
+      <span class="sb-badge-warn sb-badge" id="fg-badge">!</span>
+    </div>
+
+    <div class="sb-section">Strategy</div>
+    <div class="sb-item" onclick="switchPage('strategy')">
+      <span class="sb-icon">🎯</span>Playbook
+    </div>
+    <div class="sb-item" onclick="switchPage('sectors')">
+      <span class="sb-icon">🏭</span>Sectors
+    </div>
+    <div class="sb-item" onclick="switchPage('portfolio')">
+      <span class="sb-icon">⚖️</span>Allocation
+    </div>
+
+    <div class="sb-section">Intelligence</div>
+    <div class="sb-item" onclick="switchPage('alerts')">
+      <span class="sb-icon">🔔</span>Alerts
+      <span class="sb-badge-hot sb-badge" id="alert-badge">3</span>
+    </div>
+    <div class="sb-item" onclick="switchPage('calendar')">
+      <span class="sb-icon">📆</span>Events
+    </div>
+  </div>
+  <div class="sb-bottom">
+    <div class="sb-date" id="last-update">อัปเดต: —</div>
+  </div>
+</div>
+
+<div class="main-content">
+
+<!-- ══ SITUATION ══ -->
+<div class="page active" id="page-situation">
+  <div class="pg-hdr">
+    <div><div class="pg-title">Market Situation</div><div class="pg-sub">สถานการณ์ตลาดโลกและการอ่านสัญญาณ — อัปเดต มิ.ย. 2569</div></div>
+    <div class="tab-row">
+      <button class="tab active" onclick="setTimeframe('now',this)">ตอนนี้</button>
+      <button class="tab" onclick="setTimeframe('3m',this)">3 เดือน</button>
+      <button class="tab" onclick="setTimeframe('6m',this)">6 เดือน</button>
+    </div>
+  </div>
+
+  <!-- Regime Banner -->
+  <div class="situation-banner sit-neutral" id="regime-banner">
+    <div class="sit-left">
+      <div class="sit-icon" id="regime-icon">⚖️</div>
+      <div>
+        <div class="sit-label">Market Regime · Jun 2026</div>
+        <div class="sit-title" id="regime-title" style="color:var(--savings)">Late-Cycle Uncertainty</div>
+        <div class="sit-desc" id="regime-desc">ตลาดอยู่ในช่วงปลายวัฏจักร — Fed หยุดขึ้นดอกเบี้ยแล้วแต่ยังไม่ลด, Inflation ลงช้า, Earnings growth ชะลอ. ไม่ใช่เวลา aggressive แต่ยังไม่ต้อง defensive 100%</div>
+      </div>
+    </div>
+    <div class="sit-right">
+      <div class="sit-action">
+        <div class="sit-action-lbl">Risk Appetite</div>
+        <div class="sit-action-val" style="color:var(--savings)">Moderate ⚖️</div>
+      </div>
+      <div class="sit-action">
+        <div class="sit-action-lbl">Suggested Posture</div>
+        <div class="sit-action-val" style="color:var(--accent3)">Quality + Income</div>
+      </div>
+      <div class="sit-action">
+        <div class="sit-action-lbl">Cash Reserve</div>
+        <div class="sit-action-val" style="color:var(--gain)">15–20%</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Regime Meter -->
+  <div class="regime-meter">
+    <div class="ct" style="margin-bottom:0;padding-bottom:0;border-bottom:none">Market Regime Spectrum<span>Bear ← → Bull</span></div>
+    <div class="meter-track">
+      <div class="meter-thumb" id="regime-thumb" style="left:55%"></div>
+    </div>
+    <div class="meter-labels">
+      <span style="color:var(--loss)">Deep Bear</span>
+      <span>Recession</span>
+      <span style="color:var(--muted2)">Flat</span>
+      <span>Recovery</span>
+      <span style="color:var(--gain)">Bull Run</span>
+    </div>
+  </div>
+
+  <!-- Key metrics -->
+  <div class="sg">
+    <div class="sc" style="--g:rgba(0,212,160,.08)">
+      <div class="sc-lbl">S&P 500</div>
+      <div class="sc-val gain" id="sp500-val">5,482</div>
+      <div class="sc-sub"><span class="gain">▲ +12.4% YTD</span></div>
+    </div>
+    <div class="sc" style="--g:rgba(76,201,240,.08)">
+      <div class="sc-lbl">SET Index</div>
+      <div class="sc-val loss" id="set-val">1,198</div>
+      <div class="sc-sub"><span class="loss">▼ -8.3% YTD</span></div>
+    </div>
+    <div class="sc" style="--g:rgba(255,149,0,.08)">
+      <div class="sc-lbl">US 10Y Yield</div>
+      <div class="sc-val" style="color:var(--debt)">4.28%</div>
+      <div class="sc-sub"><span class="loss">▼ -42bps YTD</span></div>
+    </div>
+    <div class="sc" style="--g:rgba(255,209,102,.08)">
+      <div class="sc-lbl">Gold (XAU)</div>
+      <div class="sc-val gain">$3,312</div>
+      <div class="sc-sub"><span class="gain">▲ +28.1% YTD</span></div>
+    </div>
+    <div class="sc" style="--g:rgba(255,149,0,.08)">
+      <div class="sc-lbl">USD/THB</div>
+      <div class="sc-val" style="color:var(--debt)">33.8</div>
+      <div class="sc-sub"><span class="loss">Baht อ่อน YTD</span></div>
+    </div>
+    <div class="sc" style="--g:rgba(247,37,133,.08)">
+      <div class="sc-lbl">Bitcoin</div>
+      <div class="sc-val gain">$98,420</div>
+      <div class="sc-sub"><span class="gain">▲ +48.2% YTD</span></div>
+    </div>
+  </div>
+
+  <!-- Market Narrative -->
+  <div class="sl sl-mt blue">สถานการณ์หลัก 2026</div>
+  <div class="cr2">
+    <div>
+      <div class="advice-box">
+        <div class="advice-header"><div class="advice-icon">🇺🇸</div><div class="advice-title">US: AI Boom + Rate Cut Expectations</div></div>
+        <div class="advice-body">ตลาดหุ้น US ยังแข็งแกร่งจาก <strong>AI infrastructure spend</strong> — Nvidia, Microsoft, Meta ยังลงทุนหนัก. Fed ส่งสัญญาณลดดอกเบี้ย 1-2 ครั้งปลายปี 2026 ทำให้ growth stocks มี upside. <strong>แต่ระวัง valuation สูง</strong> — P/E S&P 500 อยู่ที่ ~22x สูงกว่าค่าเฉลี่ย 10 ปี</div>
+      </div>
+      <div class="advice-box">
+        <div class="advice-header"><div class="advice-icon">🇹🇭</div><div class="advice-title">ไทย: Domestic Weak, Tourism Recovery</div></div>
+        <div class="advice-body">SET ยังกดดันจาก <strong>การเมือง + การลงทุนต่างชาติไหลออก</strong>. GDP growth 2.8% ต่ำกว่าเพื่อนบ้าน. โอกาสในหุ้น <strong>Tourism (AOT, MINT), Export (USD/THB 33.8 ช่วย)</strong>. หลีกเลี่ยง banking ถ้ายังไม่มั่นใจ NPL</div>
+      </div>
+    </div>
+    <div>
+      <div class="advice-box">
+        <div class="advice-header"><div class="advice-icon">⚠️</div><div class="advice-title">ความเสี่ยงหลัก Q3-Q4 2026</div></div>
+        <div class="advice-body">
+          <strong>1. Recession Risk</strong> — Leading indicators (yield curve, LEI) ยังส่งสัญญาณระวัง<br><br>
+          <strong>2. Geopolitical</strong> — ตะวันออกกลาง + Trade war US-China รอบ 2<br><br>
+          <strong>3. Thai Political</strong> — ความไม่แน่นอนนโยบายเศรษฐกิจ, งบประมาณล่าช้า<br><br>
+          <strong>4. AI Valuation Bubble</strong> — ถ้า earnings ไม่ match กับ valuation
+        </div>
+      </div>
+      <div class="advice-box">
+        <div class="advice-header"><div class="advice-icon">💡</div><div class="advice-title">โอกาสที่น่าสนใจ</div></div>
+        <div class="advice-body">
+          <strong>Gold</strong> — ยังเป็น safe haven, Central bank buying แข็งแกร่ง<br><br>
+          <strong>US Tech (AI play)</strong> — Buy on dip, แต่ size เล็กลง<br><br>
+          <strong>Bonds/Fixed Income</strong> — ถ้า rate เริ่มลง, bond มี capital gain<br><br>
+          <strong>EM ex-China</strong> — India, Vietnam น่าสนใจระยะกลาง
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MACRO SIGNALS ══ -->
+<div class="page" id="page-signals">
+  <div class="pg-hdr">
+    <div><div class="pg-title">Macro Signals</div><div class="pg-sub">ตัวชี้วัดเศรษฐกิจหลักและการอ่านสัญญาณ</div></div>
+  </div>
+
+  <div class="sl">Global Economic Indicators</div>
+  <div class="signal-grid" id="macro-signals-global"></div>
+
+  <div class="sl sl-mt blue">Thailand Macro</div>
+  <div class="signal-grid" id="macro-signals-thai"></div>
+
+  <div class="sl sl-mt orange">Technical Signals</div>
+  <div class="signal-grid" id="macro-signals-tech"></div>
+
+  <div class="sl sl-mt purple">Fed Watch & Rate Expectations</div>
+  <div class="cc">
+    <div class="ct">Rate Path Expectation 2026–2027<span>CME FedWatch Implied</span></div>
+    <div style="position:relative;height:220px"><canvas id="fed-chart"></canvas></div>
+  </div>
+</div>
+
+<!-- ══ FEAR & GREED ══ -->
+<div class="page" id="page-feargreed">
+  <div class="pg-hdr">
+    <div><div class="pg-title">Market Mood</div><div class="pg-sub">Fear & Greed + Sentiment Analysis</div></div>
+  </div>
+
+  <div class="cr2">
+    <div class="cc">
+      <div class="ct">Fear & Greed Index<span>CNN Money Model — มิ.ย. 2026</span></div>
+      <div class="fg-display">
+        <canvas id="fg-gauge" width="200" height="110"></canvas>
+        <div class="fg-number" id="fg-number" style="color:var(--debt)">52</div>
+        <div class="fg-label" id="fg-mood">NEUTRAL</div>
+      </div>
+      <div style="margin-top:14px;display:flex;justify-content:space-between;font-size:11px;color:var(--muted)">
+        <span>1 เดือนก่อน: <strong style="color:var(--savings)">48</strong></span>
+        <span>3 เดือนก่อน: <strong style="color:var(--gain)">72</strong></span>
+        <span>1 ปีก่อน: <strong style="color:var(--loss)">31</strong></span>
+      </div>
+    </div>
+    <div class="cc">
+      <div class="ct">คอมโพเนนต์ Sentiment<span>ปัจจัยที่ใช้คำนวณ</span></div>
+      <div id="fg-components" style="display:flex;flex-direction:column;gap:8px;padding-top:4px"></div>
+    </div>
+  </div>
+
+  <div class="sl sl-mt orange">Historical Mood</div>
+  <div class="cc">
+    <div class="ct">Fear & Greed — 12 เดือน<span>ย้อนหลัง</span></div>
+    <div style="position:relative;height:200px"><canvas id="fg-history-chart"></canvas></div>
+  </div>
+
+  <div class="sl sl-mt">การตีความ & Action</div>
+  <div id="fg-interpretation" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px"></div>
+</div>
+
+<!-- ══ STRATEGY ══ -->
+<div class="page" id="page-strategy">
+  <div class="pg-hdr">
+    <div><div class="pg-title">Investment Playbook</div><div class="pg-sub">กลยุทธ์การลงทุนตามสถานการณ์ปัจจุบัน</div></div>
+  </div>
+
+  <div class="sl">What to BUY / HOLD / AVOID — มิ.ย. 2026</div>
+  <div class="strat-grid" id="strategy-cards"></div>
+
+  <div class="sl sl-mt purple">DCA Action Plan</div>
+  <div class="cr2">
+    <div class="cc">
+      <div class="ct">แผน DCA รายเดือน<span>สำหรับ Late-Cycle</span></div>
+      <div style="display:flex;flex-direction:column;gap:10px;padding-top:4px" id="dca-plan"></div>
+    </div>
+    <div class="cc">
+      <div class="ct">Portfolio Target Weights<span>Late-Cycle positioning</span></div>
+      <div style="padding-top:4px" id="target-weights"></div>
+    </div>
+  </div>
+
+  <div class="sl sl-mt orange">Scenario Analysis</div>
+  <div class="cr3" id="scenario-grid"></div>
+</div>
+
+<!-- ══ SECTORS ══ -->
+<div class="page" id="page-sectors">
+  <div class="pg-hdr">
+    <div><div class="pg-title">Sector Rotation</div><div class="pg-sub">Sector มีชีวิตตาม business cycle — ตอนนี้อยู่ช่วงไหน?</div></div>
+  </div>
+
+  <div class="sl">Business Cycle Position</div>
+  <div class="cc" style="margin-bottom:18px">
+    <div class="ct">ตำแหน่งใน Business Cycle<span>ปัจจุบัน: Late Expansion</span></div>
+    <div style="position:relative;height:240px"><canvas id="cycle-chart"></canvas></div>
+  </div>
+
+  <div class="sl sl-mt blue">Sector Rating — ตลาดโลก (US)</div>
+  <div class="sector-grid" id="sector-global"></div>
+
+  <div class="sl sl-mt">Sector Rating — ตลาดไทย (SET)</div>
+  <div class="sector-grid" id="sector-thai"></div>
+
+  <div class="sl sl-mt purple">Sector Flow (3M)</div>
+  <div class="cc">
+    <div class="ct">Fund Flow เข้า/ออก Sector<span>3 เดือนล่าสุด</span></div>
+    <div style="position:relative;height:220px"><canvas id="sector-flow-chart"></canvas></div>
+  </div>
+</div>
+
+<!-- ══ ALLOCATION ══ -->
+<div class="page" id="page-portfolio">
+  <div class="pg-hdr">
+    <div><div class="pg-title">Portfolio Allocation</div><div class="pg-sub">จัดสรรพอร์ตตาม Market Regime ปัจจุบัน</div></div>
+  </div>
+
+  <div class="sl">Suggested vs Current Allocation</div>
+  <div class="cr2">
+    <div class="cc">
+      <div class="ct">Target Allocation<span>Late-Cycle Neutral</span></div>
+      <div style="height:200px;position:relative"><canvas id="alloc-target-chart"></canvas></div>
+    </div>
+    <div class="cc">
+      <div class="ct">Asset Class Breakdown<span>แนะนำ vs ตัวอย่างพอร์ต</span></div>
+      <div style="display:flex;flex-direction:column;gap:6px;padding-top:4px" id="alloc-breakdown"></div>
+    </div>
+  </div>
+
+  <div class="sl sl-mt orange">Rebalancing Signals</div>
+  <div class="alert-list" id="rebalance-signals"></div>
+
+  <div class="sl sl-mt purple">Risk-Return Matrix</div>
+  <div class="cc">
+    <div class="ct">Expected Return vs Risk (Volatility)<span>ระยะ 12 เดือน</span></div>
+    <div style="height:220px;position:relative"><canvas id="rr-chart"></canvas></div>
+  </div>
+</div>
+
+<!-- ══ ALERTS ══ -->
+<div class="page" id="page-alerts">
+  <div class="pg-hdr">
+    <div><div class="pg-title">Investment Alerts</div><div class="pg-sub">สัญญาณที่ควรระวังและโอกาสที่น่าสนใจ</div></div>
+  </div>
+
+  <div class="sl red">🔴 Critical — ต้องตัดสินใจ</div>
+  <div class="alert-list" id="alerts-critical"></div>
+
+  <div class="sl sl-mt orange">🟠 Warning — ติดตามใกล้ชิด</div>
+  <div class="alert-list" id="alerts-warning"></div>
+
+  <div class="sl sl-mt">🟢 Opportunity — โอกาส</div>
+  <div class="alert-list" id="alerts-opportunity"></div>
+</div>
+
+<!-- ══ CALENDAR ══ -->
+<div class="page" id="page-calendar">
+  <div class="pg-hdr">
+    <div><div class="pg-title">Economic Calendar</div><div class="pg-sub">เหตุการณ์สำคัญที่จะเกิดขึ้น</div></div>
+  </div>
+
+  <div class="sl">Upcoming Events — Q3 2026</div>
+  <div class="timeline" id="event-timeline"></div>
+</div>
+
+</div><!-- end main-content -->
+
+<script>
+// ── Navigation ──
+function switchPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
+  const page = document.getElementById('page-'+id);
+  if(page) page.classList.add('active');
+  event.currentTarget.classList.add('active');
+  // lazy init charts
+  if(!rendered[id]){rendered[id]=true; renderPage(id);}
+}
+const rendered={situation:false,signals:false,feargreed:false,strategy:false,sectors:false,portfolio:false,alerts:false,calendar:false};
+
+function setTimeframe(tf,el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// ── Live date ──
+function updateDate(){
+  const now = new Date();
+  const opts = {year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'};
+  document.getElementById('live-date').textContent = now.toLocaleDateString('th-TH',opts);
+  document.getElementById('last-update').textContent = 'อัปเดต: '+now.toLocaleDateString('th-TH',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'});
+}
+updateDate();
+setInterval(updateDate,60000);
+
+// ── Chart defaults ──
+Chart.defaults.color='#6060a0';
+Chart.defaults.font.family="'Google Sans Mono', monospace";
+Chart.defaults.font.size=10;
+
+const gridColor='rgba(30,30,53,.8)';
+const tooltipDefaults={
+  backgroundColor:'#12121a',borderColor:'#1e1e35',borderWidth:1,
+  titleColor:'#e2e2f0',bodyColor:'#9090c0',
+  titleFont:{family:'Google Sans Mono'},bodyFont:{family:'Google Sans Mono',size:11}
+};
+
+// ── Page renderers ──
+function renderPage(id){
+  switch(id){
+    case 'signals': renderSignals(); break;
+    case 'feargreed': renderFearGreed(); break;
+    case 'strategy': renderStrategy(); break;
+    case 'sectors': renderSectors(); break;
+    case 'portfolio': renderPortfolio(); break;
+    case 'alerts': renderAlerts(); break;
+    case 'calendar': renderCalendar(); break;
+  }
+}
+
+// ── Situation page (rendered on load) ──
+rendered.situation = true;
+
+// ── SIGNALS ──
+function renderSignals(){
+  const globalSigs=[
+    {name:'US CPI YoY',val:'3.1%',change:'-0.2%',note:'ลดลงช้า, ยังเหนือ target 2%',status:'warn'},
+    {name:'US PCE',val:'2.6%',change:'-0.1%',note:'Fed ดู PCE เป็นหลัก',status:'warn'},
+    {name:'NFP (jobs)',val:'+175K',change:'vs est 180K',note:'Labor market เริ่มเย็นลง',status:'ok'},
+    {name:'US GDP Q1',val:'+2.1%',change:'QoQ ann.',note:'Solid แต่ชะลอ',status:'ok'},
+    {name:'ISM Manuf.',val:'49.2',change:'vs 50=neutral',note:'ยังหดตัว (ต่ำกว่า 50)',status:'bad'},
+    {name:'ISM Services',val:'52.4',change:'ยังขยาย',note:'Services ยังแข็ง',status:'ok'},
+    {name:'Yield Curve',val:'-18bps',change:'2Y-10Y inverted',note:'Recession signal ยังอยู่',status:'bad'},
+    {name:'Credit Spread',val:'1.8%',change:'HY-IG spread',note:'ปกติ, ไม่ตึง',status:'ok'},
+  ];
+  const thaiSigs=[
+    {name:'GDP ไทย Q1',val:'2.8%',change:'YoY',note:'ต่ำกว่า consensus 3.1%',status:'warn'},
+    {name:'CPI ไทย',val:'1.2%',change:'YoY',note:'ต่ำมาก, เงินฝืดแฝง',status:'warn'},
+    {name:'BOT Rate',val:'2.00%',change:'คงอยู่',note:'โอกาสลดเพิ่มในปีนี้',status:'ok'},
+    {name:'นักท่องเที่ยว',val:'3.2M/เดือน',change:'▲+18% YoY',note:'Recovery ชัดเจน',status:'ok'},
+    {name:'FDI ไทย',val:'฿82B',change:'Q1 2026',note:'ลดลง YoY, BOI ยังพยายาม',status:'warn'},
+    {name:'THB vs USD',val:'33.8',change:'อ่อนค่า YTD',note:'ดีสำหรับ Export',status:'ok'},
+  ];
+  const techSigs=[
+    {name:'S&P 500 RSI',val:'58',change:'14-day',note:'ไม่ Overbought, ยังมีแรงขึ้น',status:'ok'},
+    {name:'VIX',val:'18.4',change:'Fear index',note:'ต่ำ = ตลาดไม่กลัว',status:'ok'},
+    {name:'200-Day MA',val:'Above',change:'S&P 500',note:'Bullish trend ยังอยู่',status:'ok'},
+    {name:'PUT/CALL Ratio',val:'0.82',change:'Options market',note:'Slight bullish bias',status:'ok'},
+    {name:'SET RSI',val:'42',change:'14-day',note:'Oversold zone, bounce possible',status:'warn'},
+    {name:'SET vs MA200',val:'Below',change:'ต่ำกว่า',note:'Bearish trend ยังไม่หัก',status:'bad'},
+  ];
+
+  function renderSignalGrid(data,elId){
+    const el=document.getElementById(elId);
+    el.innerHTML = data.map(s=>{
+      const color=s.status==='ok'?'var(--gain)':s.status==='warn'?'var(--debt)':'var(--loss)';
+      const dotColor=color;
+      const changeColor=s.change.startsWith('▲')?'var(--gain)':s.change.startsWith('▼')?'var(--loss)':'var(--muted2)';
+      return `<div class="signal-card">
+        <div class="sig-header"><div class="sig-name">${s.name}</div><div class="sig-dot" style="background:${dotColor}"></div></div>
+        <div class="sig-val" style="color:${color}">${s.val}</div>
+        <div class="sig-change" style="color:${changeColor}">${s.change}</div>
+        <div class="sig-note">${s.note}</div>
+      </div>`;
+    }).join('');
+  }
+  renderSignalGrid(globalSigs,'macro-signals-global');
+  renderSignalGrid(thaiSigs,'macro-signals-thai');
+  renderSignalGrid(techSigs,'macro-signals-tech');
+
+  // Fed chart
+  const fedCtx=document.getElementById('fed-chart').getContext('2d');
+  new Chart(fedCtx,{
+    type:'line',
+    data:{
+      labels:['Mar 26','Jun 26','Sep 26','Dec 26','Mar 27','Jun 27'],
+      datasets:[
+        {label:'Current Rate',data:[5.25,5.25,5.0,4.75,4.5,4.25],borderColor:'#ff9500',backgroundColor:'rgba(255,149,0,.1)',fill:true,tension:.4,borderWidth:2,pointRadius:4,pointBackgroundColor:'#ff9500'},
+        {label:'Market Implied',data:[5.25,5.25,4.875,4.625,4.375,4.125],borderColor:'#7c6fec',backgroundColor:'rgba(124,111,236,.05)',fill:false,tension:.4,borderWidth:2,borderDash:[5,3],pointRadius:3},
+        {label:'Neutral Rate (r*)',data:[2.5,2.5,2.5,2.5,2.5,2.5],borderColor:'rgba(255,255,255,.2)',fill:false,tension:0,borderWidth:1,borderDash:[3,3],pointRadius:0},
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#9090c0',boxWidth:12,padding:12}},tooltip:tooltipDefaults},
+      scales:{
+        x:{grid:{color:gridColor,lineWidth:.5},ticks:{color:'#6060a0'}},
+        y:{grid:{color:gridColor,lineWidth:.5},ticks:{color:'#6060a0',callback:v=>v+'%'},
+          min:2,max:5.5,title:{display:true,text:'Rate %',color:'#5a5a8a',font:{size:10}}}
+      }
+    }
+  });
+}
+
+// ── FEAR & GREED ──
+function renderFearGreed(){
+  const score=52;
+  document.getElementById('fg-number').textContent=score;
+
+  // Gauge arc
+  const canvas=document.getElementById('fg-gauge');
+  const ctx=canvas.getContext('2d');
+  const cx=100,cy=95,r=75;
+  // Background arc
+  ctx.beginPath();ctx.arc(cx,cy,r,Math.PI,0);
+  ctx.strokeStyle='#1a1a30';ctx.lineWidth=18;ctx.stroke();
+  // Color gradient arc
+  const gradient=ctx.createLinearGradient(cx-r,cy,cx+r,cy);
+  gradient.addColorStop(0,'#ff4060');
+  gradient.addColorStop(0.25,'#ff9500');
+  gradient.addColorStop(0.5,'#ffd166');
+  gradient.addColorStop(0.75,'#00d4a0');
+  gradient.addColorStop(1,'#4cc9f0');
+  const angle=Math.PI+(score/100)*Math.PI;
+  ctx.beginPath();ctx.arc(cx,cy,r,Math.PI,angle);
+  ctx.strokeStyle=gradient;ctx.lineWidth=18;ctx.lineCap='round';ctx.stroke();
+  // Needle
+  const nx=cx+r*0.7*Math.cos(angle);
+  const ny=cy+r*0.7*Math.sin(angle);
+  ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(nx,ny);
+  ctx.strokeStyle='#ffffff';ctx.lineWidth=2.5;ctx.lineCap='round';ctx.stroke();
+  ctx.beginPath();ctx.arc(cx,cy,5,0,Math.PI*2);ctx.fillStyle='#ffffff';ctx.fill();
+
+  const moodColor=score<25?'var(--loss)':score<45?'var(--expense)':score<55?'var(--debt)':score<75?'var(--gain)':'#4cc9f0';
+  const moodText=score<25?'EXTREME FEAR':score<45?'FEAR':score<55?'NEUTRAL':score<75?'GREED':'EXTREME GREED';
+  document.getElementById('fg-number').style.color=moodColor;
+  document.getElementById('fg-mood').textContent=moodText;
+
+  // Components
+  const components=[
+    {name:'Market Momentum',val:62,note:'S&P 500 above 125-day MA'},
+    {name:'Stock Price Strength',val:55,note:'52-week highs vs lows'},
+    {name:'Stock Price Breadth',val:48,note:'McClellan Volume Summation'},
+    {name:'Put/Call Options',val:58,note:'Bearish options vs Bullish'},
+    {name:'Market Volatility (VIX)',val:60,note:'VIX = 18.4 (neutral-low)'},
+    {name:'Safe Haven Demand',val:42,note:'Bonds vs Stocks flow'},
+    {name:'Junk Bond Demand',val:50,note:'Yield spread HY-IG'},
+  ];
+  const compEl=document.getElementById('fg-components');
+  compEl.innerHTML=components.map(c=>{
+    const cc=c.val<40?'var(--loss)':c.val<55?'var(--debt)':c.val<70?'var(--gain)':'#4cc9f0';
+    return `<div style="display:flex;align-items:center;gap:10px">
+      <div style="min-width:160px;font-size:11px;color:var(--muted2)">${c.name}</div>
+      <div style="flex:1;height:5px;background:var(--bg4);border-radius:3px;overflow:hidden">
+        <div style="width:${c.val}%;height:5px;background:${cc};border-radius:3px"></div>
+      </div>
+      <div style="min-width:28px;font-size:11px;font-weight:600;color:${cc}">${c.val}</div>
+    </div>`;
+  }).join('');
+
+  // History chart
+  const months=['ก.ค. 25','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค. 25','ม.ค. 26','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.'];
+  const fgHistory=[31,38,44,55,68,72,65,58,45,42,48,52];
+  const histCtx=document.getElementById('fg-history-chart').getContext('2d');
+  new Chart(histCtx,{
+    type:'line',
+    data:{
+      labels:months,
+      datasets:[{
+        label:'Fear & Greed',data:fgHistory,
+        borderColor:'#7c6fec',backgroundColor:'rgba(124,111,236,.1)',fill:true,tension:.4,borderWidth:2,pointRadius:3,
+        pointBackgroundColor:fgHistory.map(v=>v<40?'#ff4060':v<55?'#ff9500':v<70?'#00d4a0':'#4cc9f0')
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{...tooltipDefaults,callbacks:{label:c=>' F&G Index: '+c.raw}}},
+      scales:{
+        x:{grid:{color:gridColor,lineWidth:.5}},
+        y:{grid:{color:gridColor,lineWidth:.5},min:0,max:100,
+          ticks:{callback:v=>v<25?'EXF':v<45?'Fear':v<55?'Neut':v<75?'Greed':'ExG'}}
+      }
+    }
+  });
+
+  // Interpretation
+  const interpretations=[
+    {score:'0–24',label:'Extreme Fear',color:'var(--loss)',desc:'โอกาสซื้อที่ดี ตลาดขาย oversold',action:'🟢 Aggressive Buy'},
+    {score:'25–44',label:'Fear',color:'var(--expense)',desc:'เริ่ม DCA เพิ่ม position ช้าๆ',action:'🟡 Buy Gradually'},
+    {score:'45–54',label:'Neutral',color:'var(--debt)',desc:'Hold ตาม plan, ไม่ต้องทำอะไรพิเศษ',action:'⚖️ Hold & DCA'},
+    {score:'55–74',label:'Greed',color:'var(--gain)',desc:'ระวัง FOMO, ลด size ใหม่',action:'⚠️ Reduce New Buys'},
+    {score:'75–100',label:'Extreme Greed',color:'#4cc9f0',desc:'Take profit บางส่วน, เพิ่ม cash',action:'🔴 Trim Positions'},
+  ];
+  document.getElementById('fg-interpretation').innerHTML=interpretations.map(i=>`
+    <div class="strat-card" style="border-color:${i.score==='45–54'?'var(--border2)':'var(--cb)'}">
+      ${i.score==='45–54'?'<div style="position:absolute;top:0;left:0;right:0;height:3px;background:var(--debt);border-radius:12px 12px 0 0"></div>':''}
+      <div style="font-size:10px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase">Index ${i.score}</div>
+      <div style="font-family:\'Google Sans\',sans-serif;font-size:16px;font-weight:700;color:${i.color};margin:6px 0">${i.label}</div>
+      <div style="font-size:12px;color:var(--muted2);margin-bottom:8px">${i.desc}</div>
+      <div style="font-size:12px;font-weight:600">${i.action}</div>
+      ${i.score==='45–54'?'<div style="margin-top:8px;font-size:10px;padding:4px 8px;background:rgba(255,149,0,.1);border:1px solid rgba(255,149,0,.3);border-radius:4px;color:var(--debt)">◀ ตอนนี้อยู่ที่นี่ (52)</div>':''}
+    </div>`).join('');
+}
+
+// ── STRATEGY ──
+function renderStrategy(){
+  const strategies=[
+    {type:'buy',label:'BUY',title:'Gold / XAU',sub:'Safe haven + Central bank demand',reasons:['Central bank ซื้อ 1,000+ ตันต่อปี','USD อ่อนค่าใน cycle นี้','Hedge จาก geopolitical risk','เหนือ 200-day MA แข็งแกร่ง'],alloc:'10–15%',allocColor:'var(--gain)'},
+    {type:'buy',label:'BUY',title:'US Quality Tech',sub:'AI infrastructure + Strong earnings',reasons:['Nvidia, Microsoft, Alphabet Earnings แข็ง','AI capex cycle ยังต่อเนื่อง','Buy on dip หลัง correction 5–10%','FCF yield ยังน่าสนใจ'],alloc:'20–25%',allocColor:'var(--gain)'},
+    {type:'hold',label:'HOLD',title:'US Broad Market ETF',sub:'S&P 500 / VTI — Core position',reasons:['Long-term DCA ยังสมเหตุสมผล','Bull trend ยังไม่หัก (above MA200)','ลด timing risk ด้วย DCA','Rebalance ถ้าน้ำหนักเกิน 40%'],alloc:'25–30%',allocColor:'var(--savings)'},
+    {type:'hold',label:'HOLD',title:'Mutual Fund (Thai)',sub:'กองทุนรวมหุ้นไทย + ตราสารหนี้',reasons:['Diversify risk จาก USD position','Fixed income ถ้า BOT ลดดอกเบี้ย','SSF/RMF เพื่อ tax benefit','ไม่ต้อง overweight ในภาวะนี้'],alloc:'10–15%',allocColor:'var(--savings)'},
+    {type:'watch',label:'WATCH',title:'Thai Tourism Stocks',sub:'AOT, MINT, ERW — Recovery play',reasons:['นักท่องเที่ยวฟื้น 3.2M/เดือน','Valuation ยัง reasonable','ขึ้นกับ Baht strength','ติดตาม NOK เข้าไทยเพิ่ม'],alloc:'5–8%',allocColor:'var(--debt)'},
+    {type:'watch',label:'WATCH',title:'Fixed Income / Bonds',sub:'ถ้า Fed เริ่มลดดอกเบี้ย',reasons:['Duration risk ลดลงถ้า rate ลง','Capital gain ถ้าซื้อก่อน cut','ตลาดสหรัฐ: TLT, BND','ไทย: กองทุนตราสารหนี้ระยะกลาง'],alloc:'10–15%',allocColor:'var(--debt)'},
+    {type:'avoid',label:'AVOID',title:'Small-cap Thai Stocks',sub:'High risk, Low liquidity',reasons:['Fund flow ไหลออกจาก EM','Trading thin = หนียาก','ไม่มี earnings ที่ดีรองรับ','ยกเว้นมีข้อมูลพิเศษจริงๆ'],alloc:'0–3%',allocColor:'var(--loss)'},
+    {type:'avoid',label:'AVOID',title:'Overleveraged Crypto',sub:'High volatility, Speculative',reasons:['Bitcoin ขึ้น 48% แล้ว YTD','Regulatory risk ยังสูง','ถ้าถือแล้ว Hold ได้ แต่อย่า oversize','ไม่ควรเกิน 5–10% ของพอร์ต'],alloc:'≤5%',allocColor:'var(--loss)'},
+  ];
+  document.getElementById('strategy-cards').innerHTML=strategies.map(s=>`
+    <div class="strat-card strat-${s.type}">
+      <div class="strat-top">
+        <span class="strat-badge badge-${s.type}">${s.label}</span>
+      </div>
+      <div class="strat-title">${s.title}</div>
+      <div class="strat-sub">${s.sub}</div>
+      <ul class="strat-reasons">${s.reasons.map(r=>`<li>${r}</li>`).join('')}</ul>
+      <div class="strat-alloc">
+        <span class="strat-alloc-lbl">Suggested weight</span>
+        <span class="strat-alloc-val" style="color:${s.allocColor}">${s.alloc}</span>
+      </div>
+    </div>`).join('');
+
+  // DCA Plan
+  const dcaPlan=[
+    {asset:'US Index ETF (QQQ/SPY)',amount:'฿5,000–8,000',freq:'ทุกเดือน ต้นเดือน',note:'Core DCA ไม่ว่าตลาดจะเป็นอะไร'},
+    {asset:'Gold (XAU / กองทุนทอง)',amount:'฿2,000–3,000',freq:'ทุกเดือน',note:'เพิ่ม size ถ้า dip มากกว่า 5%'},
+    {asset:'Thai Stock (TOP picks)',amount:'฿1,000–2,000',freq:'เลือกซื้อเมื่อ SET < 1,180',note:'Opportunistic — ไม่บังคับ DCA'},
+    {asset:'Cash Reserve',amount:'15–20%',freq:'ของพอร์ตรวม',note:'ไว้จับจังหวะ + Emergency buffer'},
+  ];
+  document.getElementById('dca-plan').innerHTML=dcaPlan.map(d=>`
+    <div class="advice-box">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+        <div>
+          <div style="font-size:12px;font-weight:600;color:var(--white);margin-bottom:2px">${d.asset}</div>
+          <div style="font-size:11px;color:var(--muted2)">${d.freq}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">${d.note}</div>
+        </div>
+        <div style="font-size:14px;font-weight:700;color:var(--gain);white-space:nowrap">${d.amount}</div>
+      </div>
+    </div>`).join('');
+
+  // Target Weights
+  const weights=[
+    {label:'US Stocks (Quality)',pct:28,color:'#00d4a0',suggested:25},
+    {label:'Mutual Fund',pct:15,color:'#7c6fec',suggested:15},
+    {label:'Gold',pct:12,color:'#ffd166',suggested:13},
+    {label:'Thai Stocks',pct:18,color:'#4cc9f0',suggested:10},
+    {label:'Crypto',pct:7,color:'#ff9500',suggested:5},
+    {label:'Cash / Fixed',pct:20,color:'#8080b0',suggested:22},
+  ];
+  document.getElementById('target-weights').innerHTML=weights.map(w=>{
+    const diff=w.pct-w.suggested;
+    const diffColor=Math.abs(diff)<3?'var(--muted2)':diff>0?'var(--debt)':'var(--savings)';
+    const diffText=diff>0?'▲+'+diff+'% (ลด)':diff<0?'▼'+diff+'% (เพิ่ม)':'✓ OK';
+    return `<div class="weight-row">
+      <div class="weight-label">${w.label}</div>
+      <div class="weight-bar-wrap"><div class="weight-bar" style="width:${w.pct}%;background:${w.color}"></div></div>
+      <div class="weight-pct" style="color:${w.color}">${w.pct}%</div>
+      <div class="weight-change" style="color:${diffColor};font-size:10px">${diffText}</div>
+    </div>`;
+  }).join('');
+
+  // Scenario grid
+  const scenarios=[
+    {name:'Bull Case',prob:'25%',color:'var(--gain)',bg:'rgba(0,212,160,.07)',bc:'rgba(0,212,160,.3)',
+      trigger:'Fed ลดดอกเบี้ย + AI earnings beat',
+      action:'เพิ่ม US Tech, ลด Cash',
+      spy:'▲ +18–22%',set:'▲ +10–15%',gold:'◆ Flat'},
+    {name:'Base Case',prob:'50%',color:'var(--savings)',bg:'rgba(124,111,236,.07)',bc:'rgba(124,111,236,.3)',
+      trigger:'Soft landing, rate cut ช้า',
+      action:'Hold & DCA ต่อตาม plan',
+      spy:'▲ +8–12%',set:'▼ -5–+5%',gold:'▲ +8–12%'},
+    {name:'Bear Case',prob:'25%',color:'var(--loss)',bg:'rgba(255,64,96,.07)',bc:'rgba(255,64,96,.3)',
+      trigger:'Recession + Credit event',
+      action:'เพิ่ม Cash, ลด equities',
+      spy:'▼ -15–25%',set:'▼ -20–30%',gold:'▲ +15–20%'},
+  ];
+  document.getElementById('scenario-grid').innerHTML=scenarios.map(s=>`
+    <div class="cc" style="background:${s.bg};border-color:${s.bc}">
+      <div class="ct" style="border-bottom-color:${s.bc}">${s.name} <span style="color:${s.color};font-weight:700">${s.prob}</span></div>
+      <div style="font-size:11px;color:var(--muted2);margin-bottom:10px;line-height:1.5">Trigger: ${s.trigger}</div>
+      <div style="font-size:11px;font-weight:600;color:${s.color};margin-bottom:10px">${s.action}</div>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <div style="display:flex;justify-content:space-between;font-size:11px"><span style="color:var(--muted)">S&P 500</span><span style="color:${s.color};font-weight:500">${s.spy}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:11px"><span style="color:var(--muted)">SET</span><span style="color:${s.color};font-weight:500">${s.set}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:11px"><span style="color:var(--muted)">Gold</span><span style="font-weight:500">${s.gold}</span></div>
+      </div>
+    </div>`).join('');
+}
+
+// ── SECTORS ──
+function renderSectors(){
+  const globalSectors=[
+    {icon:'🤖',name:'Technology',rating:'Overweight',note:'+AI spend',color:'#00d4a0',score:85},
+    {icon:'💊',name:'Healthcare',rating:'Overweight',note:'Defensive',color:'#00d4a0',score:78},
+    {icon:'⚡',name:'Utilities',rating:'Neutral',note:'Rate sensitive',color:'#ffd166',score:52},
+    {icon:'🏦',name:'Financials',rating:'Neutral',note:'Watch rates',color:'#ffd166',score:55},
+    {icon:'🛒',name:'Cons. Staples',rating:'Overweight',note:'Defensive late-cycle',color:'#00d4a0',score:72},
+    {icon:'🎮',name:'Cons. Disc.',rating:'Underweight',note:'Spending slow',color:'#ff9500',score:38},
+    {icon:'🏗',name:'Industrials',rating:'Neutral',note:'Infra spend OK',color:'#ffd166',score:58},
+    {icon:'🛢',name:'Energy',rating:'Underweight',note:'Oil price risk',color:'#ff9500',score:42},
+    {icon:'🏠',name:'Real Estate',rating:'Underweight',note:'Rate pressure',color:'#ff4060',score:30},
+    {icon:'🧪',name:'Materials',rating:'Neutral',note:'Commodity mixed',color:'#ffd166',score:50},
+  ];
+  const thaiSectors=[
+    {icon:'✈️',name:'Tourism',rating:'Overweight',note:'Recovery play',color:'#00d4a0',score:80},
+    {icon:'📦',name:'Export',rating:'Overweight',note:'Baht อ่อนช่วย',color:'#00d4a0',score:75},
+    {icon:'⚡',name:'Energy',rating:'Neutral',note:'PTT, PTTEP mixed',color:'#ffd166',score:55},
+    {icon:'🏦',name:'Banking',rating:'Underweight',note:'NPL risk ยัง',color:'#ff9500',score:40},
+    {icon:'🏪',name:'Commerce',rating:'Neutral',note:'CPALL, BJC stable',color:'#ffd166',score:52},
+    {icon:'🏗',name:'Property',rating:'Underweight',note:'Supply excess',color:'#ff4060',score:28},
+    {icon:'📡',name:'Telecom',rating:'Neutral',note:'Stable dividend',color:'#ffd166',score:55},
+    {icon:'🏥',name:'Healthcare',rating:'Overweight',note:'BDMS, BCH strong',color:'#00d4a0',score:78},
+  ];
+
+  function renderSectorGrid(data,elId){
+    document.getElementById(elId).innerHTML=data.map(s=>`
+      <div class="sector-item">
+        <div class="sec-icon">${s.icon}</div>
+        <div class="sec-name">${s.name}</div>
+        <div class="sec-rating" style="color:${s.color}">${s.rating}</div>
+        <div class="sec-bar" style="background:linear-gradient(to right,${s.color} ${s.score}%,var(--bg4) ${s.score}%)"></div>
+        <div style="font-size:9px;color:var(--muted);margin-top:4px">${s.note}</div>
+      </div>`).join('');
+  }
+  renderSectorGrid(globalSectors,'sector-global');
+  renderSectorGrid(thaiSectors,'sector-thai');
+
+  // Cycle chart
+  const cycleCtx=document.getElementById('cycle-chart').getContext('2d');
+  const cycleLabels=['Early Recovery','Expansion','Late Expansion','Slowdown','Recession','Early Recovery'];
+  const cycleData=[3,7,9,4,1,3];
+  new Chart(cycleCtx,{
+    type:'radar',
+    data:{
+      labels:cycleLabels,
+      datasets:[
+        {label:'เราอยู่ที่',data:[2,6,9,3,0,0],backgroundColor:'rgba(124,111,236,.15)',borderColor:'#7c6fec',borderWidth:2,pointBackgroundColor:'#7c6fec',pointRadius:4},
+        {label:'ปกติ',data:[4,7,9,6,2,4],backgroundColor:'rgba(255,255,255,.03)',borderColor:'rgba(255,255,255,.2)',borderWidth:1,borderDash:[3,3],pointRadius:0},
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#9090c0',boxWidth:12}},tooltip:tooltipDefaults},
+      scales:{r:{grid:{color:gridColor},angleLines:{color:gridColor},pointLabels:{color:'#9090c0',font:{size:10}},ticks:{display:false}}}
+    }
+  });
+
+  // Sector flow chart
+  const flowCtx=document.getElementById('sector-flow-chart').getContext('2d');
+  const sectors=['Tech','Healthcare','Staples','Financials','Energy','Property','Disc.'];
+  const flows=[+2.8,+1.4,+0.9,-0.3,-0.8,-1.4,-1.2];
+  new Chart(flowCtx,{
+    type:'bar',
+    data:{
+      labels:sectors,
+      datasets:[{
+        label:'Fund Flow ($B)',data:flows,
+        backgroundColor:flows.map(v=>v>0?'rgba(0,212,160,.6)':'rgba(255,64,96,.6)'),
+        borderRadius:4
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:tooltipDefaults},
+      scales:{
+        x:{grid:{color:gridColor,lineWidth:.5}},
+        y:{grid:{color:gridColor,lineWidth:.5},ticks:{callback:v=>(v>=0?'+':'')+v+'B'}}
+      }
+    }
+  });
+}
+
+// ── PORTFOLIO ──
+function renderPortfolio(){
+  const targetData=[28,15,13,10,12,5,17];
+  const labels=['US Stocks','Mutual Fund','Gold','Thai Stocks','Crypto','EM/Other','Cash'];
+  const colors=['#00d4a0','#7c6fec','#ffd166','#4cc9f0','#ff9500','#f72585','#5a5a8a'];
+  const allocCtx=document.getElementById('alloc-target-chart').getContext('2d');
+  new Chart(allocCtx,{
+    type:'doughnut',
+    data:{labels,datasets:[{data:targetData,backgroundColor:colors.map(c=>c+'bb'),borderColor:colors,borderWidth:1.5,hoverOffset:4}]},
+    options:{
+      responsive:true,maintainAspectRatio:false,cutout:'65%',
+      plugins:{legend:{position:'right',labels:{color:'#9090c0',boxWidth:10,font:{size:10},padding:8}},tooltip:tooltipDefaults}
+    }
+  });
+
+  const breakdown=[
+    {label:'US Stocks',target:25,current:28,color:'#00d4a0'},
+    {label:'Mutual Fund',target:15,current:15,color:'#7c6fec'},
+    {label:'Gold',target:13,current:12,color:'#ffd166'},
+    {label:'Thai Stocks',target:10,current:18,color:'#4cc9f0'},
+    {label:'Crypto',target:5,current:7,color:'#ff9500'},
+    {label:'Cash',target:22,current:20,color:'#8080b0'},
+  ];
+  document.getElementById('alloc-breakdown').innerHTML=breakdown.map(b=>{
+    const diff=b.current-b.target;
+    const status=Math.abs(diff)<=2?'✓':'⚠';
+    const sc=Math.abs(diff)<=2?'var(--muted)':diff>0?'var(--loss)':'var(--gain)';
+    return `<div style="display:flex;align-items:center;gap:8px">
+      <div style="width:8px;height:8px;border-radius:2px;background:${b.color};flex-shrink:0"></div>
+      <div style="flex:1;font-size:11px;color:var(--text)">${b.label}</div>
+      <div style="font-size:11px;color:var(--muted)">Target: ${b.target}%</div>
+      <div style="font-size:11px;font-weight:600;color:${b.color}">${b.current}%</div>
+      <div style="font-size:12px;color:${sc};min-width:14px">${status}</div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('rebalance-signals').innerHTML=[
+    {icon:'⚠️',title:'Thai Stocks Overweight (+8%)',desc:'Thai Stocks ปัจจุบัน 18% เกิน target 10% ในภาวะ Late-cycle แนะนำ Trim บางส่วน โดยเฉพาะ stocks ที่ขึ้นแล้ว',tag:'REBALANCE',tagColor:'var(--debt)'},
+    {icon:'✅',title:'Gold Underweight (-1%) — เพิ่มได้',desc:'Gold อยู่ที่ 12% ต่ำกว่า target 13% เล็กน้อย ในภาวะปัจจุบัน อาจพิจารณาซื้อเพิ่มเมื่อ dip',tag:'ADD',tagColor:'var(--gain)'},
+    {icon:'💡',title:'Cash ใกล้ target แต่เพิ่มได้',desc:'Cash 20% ใกล้ target 22% แต่ถ้ามี Bear scenario Cash 25% จะช่วยให้มีกระสุนซื้อได้มากกว่า',tag:'OPTIONAL',tagColor:'var(--muted2)'},
+  ].map(a=>`<div class="alert-item">
+    <div class="alert-icon">${a.icon}</div>
+    <div><div class="alert-title">${a.title}</div><div class="alert-desc">${a.desc}</div>
+    <div><span class="alert-tag" style="background:rgba(255,255,255,.05);border:1px solid ${a.tagColor};color:${a.tagColor}">${a.tag}</span></div></div>
+  </div>`).join('');
+
+  // Risk-Return chart
+  const rrCtx=document.getElementById('rr-chart').getContext('2d');
+  new Chart(rrCtx,{
+    type:'scatter',
+    data:{datasets:[
+      {label:'US Quality Tech',data:[{x:18,y:15}],backgroundColor:'#00d4a0',pointRadius:8,pointStyle:'circle'},
+      {label:'S&P 500 ETF',data:[{x:12,y:10}],backgroundColor:'#4cc9f0',pointRadius:8},
+      {label:'Gold',data:[{x:16,y:11}],backgroundColor:'#ffd166',pointRadius:8},
+      {label:'Thai Stocks',data:[{x:22,y:5}],backgroundColor:'#7c6fec',pointRadius:8},
+      {label:'Crypto',data:[{x:55,y:25}],backgroundColor:'#ff9500',pointRadius:8},
+      {label:'Cash/Bond',data:[{x:3,y:4.5}],backgroundColor:'#8080b0',pointRadius:8},
+      {label:'Mutual Fund',data:[{x:10,y:8}],backgroundColor:'#f72585',pointRadius:8},
+    ]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#9090c0',boxWidth:10,font:{size:10},padding:8}},tooltip:{...tooltipDefaults,callbacks:{label:c=>` ${c.dataset.label}: Risk ${c.raw.x}% | Return ${c.raw.y}%`}}},
+      scales:{
+        x:{grid:{color:gridColor,lineWidth:.5},title:{display:true,text:'Risk (Volatility %)',color:'#5a5a8a'},ticks:{callback:v=>v+'%'}},
+        y:{grid:{color:gridColor,lineWidth:.5},title:{display:true,text:'Expected Return %',color:'#5a5a8a'},ticks:{callback:v=>v+'%'}}
+      }
+    }
+  });
+}
+
+// ── ALERTS ──
+function renderAlerts(){
+  document.getElementById('alerts-critical').innerHTML=[
+    {icon:'🚨',title:'Thai Stocks Overweight — ควร Rebalance',desc:'น้ำหนักปัจจุบัน 18% สูงกว่า target 10% มาก ในช่วง Late-cycle ที่ SET ยังอ่อน ควรพิจารณา Trim บางส่วนในช่วงที่ตลาด bounce'},
+    {icon:'⚡',title:'Yield Curve ยังกลับหัว (-18bps)',desc:'2Y-10Y Treasury ยังกลับหัว สัญญาณ recession ในอดีต มักเกิดภายใน 12-18 เดือน ควรเพิ่ม Cash และ Defensive assets'},
+  ].map(a=>`<div class="alert-item"><div class="alert-icon">${a.icon}</div><div><div class="alert-title">${a.title}</div><div class="alert-desc">${a.desc}</div></div></div>`).join('');
+
+  document.getElementById('alerts-warning').innerHTML=[
+    {icon:'⚠️',title:'Fed Rate Decision — ก.ค. 2026',desc:'FOMC Meeting 29-30 ก.ค. 2026 Market expects rate คง แต่ถ้า surprise cut/hike จะมี volatility สูง ควรมี cash reserve ก่อนวันนั้น'},
+    {icon:'⚠️',title:'Bitcoin ขึ้นมา 48% แล้ว YTD',desc:'Crypto position อาจ Overvalued ระยะสั้น ถ้า BTC > $105K ให้พิจารณา Take profit บางส่วน ไม่ควรเกิน 5-10% ของพอร์ต'},
+    {icon:'📊',title:'SET ต่ำกว่า MA200 — Bearish',desc:'SET index ยังอยู่ต่ำกว่า 200-day MA ที่ ~1,230 หลีกเลี่ยง aggressive buy หุ้นไทย จนกว่าจะ break above'},
+  ].map(a=>`<div class="alert-item"><div class="alert-icon">${a.icon}</div><div><div class="alert-title">${a.title}</div><div class="alert-desc">${a.desc}</div></div></div>`).join('');
+
+  document.getElementById('alerts-opportunity').innerHTML=[
+    {icon:'💰',title:'Gold Dip < $3,200 = โอกาสซื้อ',desc:'ถ้า Gold dip มาต่ำกว่า $3,200 ถือเป็นจุดน่าสนใจ Central bank ยังซื้ออย่างต่อเนื่อง + USD อ่อนค่าเป็น catalyst'},
+    {icon:'🎯',title:'S&P 500 Dip 5-10% = DCA เพิ่ม',desc:'ถ้า S&P 500 ปรับลง 5-10% จากระดับนี้ (~5,100–5,200) เป็นโอกาส DCA US Tech ETF เพิ่ม'},
+    {icon:'🇮🇳',title:'India / EM ex-China น่าสนใจ',desc:'NIFTY 50 Valuation ยัง reasonable, GDP growth 6%+ Infrastructure boom ยังต่อเนื่อง พิจารณา ETF เช่น INDA หรือกองทุนรวม India'},
+  ].map(a=>`<div class="alert-item"><div class="alert-icon">${a.icon}</div><div><div class="alert-title">${a.title}</div><div class="alert-desc">${a.desc}</div></div></div>`).join('');
+}
+
+// ── CALENDAR ──
+function renderCalendar(){
+  const events=[
+    {date:'25 มิ.ย. 2026',title:'US Q1 Final GDP Revision',desc:'Final confirmation ของ GDP Q1 — ถ้าต่ำกว่า 2.1% อาจกดดันตลาด',type:'economic',color:'var(--accent1)',impact:'Medium'},
+    {date:'30 มิ.ย. 2026',title:'US PCE Inflation Data',desc:'ตัวชี้วัด inflation ที่ Fed ดูเป็นหลัก ถ้า PCE > 2.7% = Hawkish signal',type:'economic',color:'var(--loss)',impact:'High'},
+    {date:'5 ก.ค. 2026',title:'US NFP (Non-Farm Payrolls)',desc:'ข้อมูลตลาดแรงงาน ถ้า < 150K = slowdown signal, > 250K = still hot',type:'economic',color:'var(--loss)',impact:'High'},
+    {date:'15 ก.ค. 2026',title:'US CPI Inflation — มิ.ย.',desc:'Key inflation data — ตลาดคาด 2.9% ถ้าต่ำกว่านี้ = bullish bonds/stocks',type:'economic',color:'var(--debt)',impact:'High'},
+    {date:'22 ก.ค. 2026',title:'BOT Policy Meeting',desc:'Bank of Thailand อาจลดดอกเบี้ย ถ้าลดจาก 2.00% → 1.75% bullish สำหรับ Bond และ Property',type:'thai',color:'#4cc9f0',impact:'Medium'},
+    {date:'29–30 ก.ค. 2026',title:'FOMC Meeting — Fed Rate Decision',desc:'Critical event! Market expects HOLD แต่ถ้า surprise cut = bullish, ถ้า Hawkish signal = bearish',type:'economic',color:'var(--loss)',impact:'Critical'},
+    {date:'ส.ค. 2026',title:'US Earnings Season Q2',desc:'Nvidia, Apple, Microsoft, Alphabet รายงานผล Q2 — AI revenue จะเป็น key catalyst ว่า AI story ยังไป',type:'earnings',color:'var(--savings)',impact:'High'},
+    {date:'1 ก.ย. 2026',title:'Thai GDP Q2 2026',desc:'ถ้า GDP ต่ำกว่า 2.5% = pressure บน SET ต่อ. ถ้าสูงกว่า 3% = positive surprise',type:'thai',color:'#4cc9f0',impact:'Medium'},
+  ];
+  document.getElementById('event-timeline').innerHTML=events.map(e=>{
+    const impactBg=e.impact==='Critical'?'rgba(255,64,96,.15)':e.impact==='High'?'rgba(255,149,0,.1)':'rgba(124,111,236,.1)';
+    const impactColor=e.impact==='Critical'?'var(--loss)':e.impact==='High'?'var(--debt)':'var(--savings)';
+    return `<div class="tl-item">
+      <div class="tl-dot-wrap"><div class="tl-dot" style="border-color:${e.color};background:${e.color}44"></div></div>
+      <div class="tl-content">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:4px">
+          <div class="tl-date">${e.date}</div>
+          <span style="font-size:9px;padding:2px 7px;border-radius:3px;background:${impactBg};color:${impactColor};border:1px solid ${impactColor}44">${e.impact.toUpperCase()}</span>
+        </div>
+        <div class="tl-title">${e.title}</div>
+        <div class="tl-desc">${e.desc}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Initial render done ──
+</script>
+</body>
+</html>
