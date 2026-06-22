@@ -221,28 +221,96 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 ::-webkit-scrollbar-track{background:var(--bg)}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
 
-/* ── Top App Switcher ─────────────────────────────── */
-.top-nav{
-  position:fixed;top:0;left:0;right:0;z-index:200;height:40px;
+/* ── Scenario Planner ─────────────────────────── */
+.sc-tabs{display:flex;gap:4px;margin-bottom:20px;background:var(--bg2);
+  border:1px solid var(--border);border-radius:10px;padding:4px}
+.sc-tab{flex:1;padding:8px;text-align:center;border-radius:7px;cursor:pointer;
+  font-size:12px;font-weight:500;color:var(--muted2);transition:all .15s;border:none;background:transparent}
+.sc-tab.active{background:var(--bg3);color:var(--white);border:1px solid var(--border2)}
+.sc-tab:hover:not(.active){color:var(--text)}
+
+.sc-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:20px}
+@media(max-width:900px){.sc-grid{grid-template-columns:1fr}}
+
+.sc-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.sc-card.bull{border-top:3px solid #00d4a0}
+.sc-card.base{border-top:3px solid #7c6fec}
+.sc-card.bear{border-top:3px solid #ff4060}
+
+.sc-card-head{padding:14px 16px 10px;display:flex;align-items:center;justify-content:space-between}
+.sc-card-title{font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px}
+.sc-prob{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:600}
+.sc-prob.bull{background:rgba(0,212,160,.15);color:#00d4a0}
+.sc-prob.base{background:rgba(124,111,236,.15);color:#7c6fec}
+.sc-prob.bear{background:rgba(255,64,96,.15);color:#ff4060}
+
+.sc-card-body{padding:0 16px 16px}
+.sc-section-lbl{font-size:9px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--muted);margin:10px 0 6px;font-weight:500}
+.sc-macro-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:2px}
+.sc-macro-item{background:var(--bg3);border-radius:7px;padding:6px 9px}
+.sc-macro-key{font-size:9px;color:var(--muted);margin-bottom:2px}
+.sc-macro-val{font-size:12px;font-weight:600;color:var(--text)}
+
+.sc-impact-bar{margin:6px 0}
+.sc-impact-label{display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px}
+.sc-impact-label span:first-child{color:var(--muted2)}
+.sc-bar{height:6px;border-radius:3px;background:var(--border)}
+.sc-bar-fill{height:6px;border-radius:3px;transition:width .5s}
+
+.sc-rec-list{display:flex;flex-direction:column;gap:5px;margin-top:4px}
+.sc-rec-item{display:flex;align-items:center;gap:8px;font-size:11px;
+  background:var(--bg3);border-radius:7px;padding:7px 10px}
+.sc-rec-action{font-size:9px;font-weight:700;padding:2px 7px;border-radius:4px;flex-shrink:0}
+.sc-rec-action.add{background:rgba(0,212,160,.2);color:#00d4a0}
+.sc-rec-action.reduce{background:rgba(255,64,96,.2);color:#ff4060}
+.sc-rec-action.hold{background:rgba(150,150,200,.15);color:var(--muted2)}
+.sc-rec-text{color:var(--muted2);flex:1}
+.sc-rec-pct{font-weight:600;color:var(--text);white-space:nowrap}
+
+.sc-ai-btn{width:100%;margin-top:12px;padding:9px;border-radius:8px;border:none;
+  cursor:pointer;font-size:12px;font-weight:600;display:flex;align-items:center;
+  justify-content:center;gap:7px;transition:all .15s}
+.sc-ai-btn.gen{background:rgba(167,139,250,.15);border:1px solid rgba(167,139,250,.35);color:#a78bfa}
+.sc-ai-btn.gen:hover{background:rgba(167,139,250,.25)}
+.sc-ai-btn.edit{background:var(--bg3);border:1px solid var(--border);color:var(--muted2);margin-top:6px}
+.sc-ai-btn.edit:hover{border-color:var(--border2);color:var(--text)}
+.sc-ai-btn:disabled{opacity:.5;cursor:wait}
+
+.sc-loading{text-align:center;padding:32px 16px;color:var(--muted);font-size:12px}
+.sc-loading .spin{display:inline-block;animation:spin 1s linear infinite;font-size:20px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.sc-pf-strip{background:var(--bg3);border:1px solid var(--border);border-radius:10px;
+  padding:12px 16px;margin-bottom:18px;display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+.sc-pf-item{text-align:center}
+.sc-pf-lbl{font-size:9px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:3px}
+.sc-pf-val{font-size:15px;font-weight:600;color:var(--text)}
+
+.sc-edit-panel{background:var(--bg3);border:1px solid var(--border2);border-radius:10px;
+  padding:14px;margin-top:10px;display:none}
+.sc-edit-panel.show{display:block}
+.sc-edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.sc-edit-item label{font-size:10px;color:var(--muted2);display:block;margin-bottom:3px}
+.sc-edit-item input,.sc-edit-item select{width:100%;background:var(--bg2);border:1px solid var(--border);
+  color:var(--text);padding:5px 8px;border-radius:6px;font-size:11px;outline:none;
+  font-family:'Google Sans Mono',monospace}
+.sc-edit-item input:focus{border-color:var(--income)}
+
+
+.top-nav{position:fixed;top:0;left:0;right:0;z-index:200;height:40px;
   background:rgba(7,7,14,.92);backdrop-filter:blur(12px);
-  border-bottom:1px solid var(--border);
-  display:flex;align-items:center;padding:0 16px;gap:4px;
-}
-.top-nav-brand{
-  font-family:'Google Sans',sans-serif;font-size:11px;font-weight:700;
+  border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:4px}
+.top-nav-brand{font-family:'Google Sans',sans-serif;font-size:11px;font-weight:700;
   color:var(--muted);letter-spacing:.12em;text-transform:uppercase;
-  padding-right:16px;border-right:1px solid var(--border);margin-right:8px;
-  white-space:nowrap;
-}
-.top-nav-tab{
-  display:flex;align-items:center;gap:7px;padding:5px 14px;border-radius:7px;
+  padding-right:16px;border-right:1px solid var(--border);margin-right:8px;white-space:nowrap}
+.top-nav-tab{display:flex;align-items:center;gap:7px;padding:5px 14px;border-radius:7px;
   font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;
   text-decoration:none;color:var(--muted2);border:1px solid transparent;
-  font-family:'Google Sans',monospace;white-space:nowrap;
-}
-.top-nav-tab:hover{background:var(--bg3);color:var(--text);border-color:var(--border);}
-.top-nav-tab.active{background:var(--bg3);color:var(--white);border-color:var(--border2);}
-.top-nav-tab.active .tn-icon{color:var(--income);}
+  font-family:'Google Sans',monospace;white-space:nowrap}
+.top-nav-tab:hover{background:var(--bg3);color:var(--text);border-color:var(--border)}
+.top-nav-tab.active{background:var(--bg3);color:var(--white);border-color:var(--border2)}
+.top-nav-tab.active .tn-icon{color:var(--income)}
 .tn-icon{font-size:14px;line-height:1}
 .sidebar{top:40px !important;height:calc(100vh - 40px) !important}
 .main-content{padding-top:40px}
@@ -252,12 +320,8 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 <body>
 <nav class="top-nav">
   <span class="top-nav-brand">🚀 PERSONAL OS</span>
-  <a href="index.html" class="top-nav-tab">
-    <span class="tn-icon">💰</span>Finance OS
-  </a>
-  <a href="investment-analysis.html" class="top-nav-tab active">
-    <span class="tn-icon">📈</span>Investment Analysis
-  </a>
+  <a href="index.html" class="top-nav-tab"><span class="tn-icon">💰</span>Finance OS</a>
+  <a href="investment-analysis.html" class="top-nav-tab active"><span class="tn-icon">📈</span>Investment Analysis</a>
 </nav>
 
 
@@ -294,6 +358,11 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
       <span class="sb-icon">⚖️</span>Allocation
     </div>
 
+    <div class="sb-section">Planning</div>
+    <div class="sb-item" onclick="switchPage('scenario')">
+      <span class="sb-icon">🔮</span>Scenario Planner
+      <span class="sb-badge" style="background:rgba(167,139,250,.2);color:#a78bfa">AI</span>
+    </div>
     <div class="sb-section">Intelligence</div>
     <div class="sb-item" onclick="switchPage('alerts')">
       <span class="sb-icon">🔔</span>Alerts
@@ -644,8 +713,10 @@ function renderPage(id){
     case 'strategy': renderStrategy(); break;
     case 'sectors': renderSectors(); break;
     case 'portfolio': renderPortfolio(); break;
+    case 'scenario': scInit(); break;
     case 'alerts': renderAlerts(); break;
     case 'calendar': renderCalendar(); break;
+    case 'scenario': scInit(); break;
   }
 }
 
@@ -1120,6 +1191,363 @@ function renderCalendar(){
 }
 
 // ── Initial render done ──
+
+
+// ══ SCENARIO PLANNER ══════════════════════════════════════════════
+const SC_API_KEY_PLACEHOLDER = ''; // uses claude.ai proxy
+let scPeriod = 'now';
+let scPortfolio = null;
+let scCache = {}; // cache generated scenarios
+
+function scInit(){
+  // Load portfolio from localStorage (saved by Finance OS)
+  try {
+    const raw = localStorage.getItem('finOS_portfolio');
+    if(raw) {
+      scPortfolio = JSON.parse(raw);
+      document.getElementById('sc-pf-val').textContent =
+        '฿' + Number(scPortfolio.totalValue||0).toLocaleString('th-TH',{maximumFractionDigits:0});
+      const pnl = scPortfolio.pnl||0;
+      const pnlEl = document.getElementById('sc-pf-pnl');
+      pnlEl.textContent = (pnl>=0?'+':'')+'฿'+Math.abs(pnl).toLocaleString('th-TH',{maximumFractionDigits:0});
+      pnlEl.style.color = pnl>=0?'var(--income)':'var(--expense)';
+      const alloc = scPortfolio.allocation||{};
+      const top = Object.entries(alloc).sort((a,b)=>b[1].pct-a[1].pct)[0];
+      document.getElementById('sc-pf-alloc').textContent =
+        top ? top[0]+' '+top[1].pct+'%' : '—';
+      document.getElementById('sc-pf-src').textContent =
+        'Finance OS · '+(scPortfolio.lastUpdated||'—');
+    } else {
+      document.getElementById('sc-pf-src').textContent = 'ไม่มีข้อมูล — เปิด Finance OS แล้ว sync ก่อน';
+    }
+  } catch(e){ console.warn('scInit error:', e); }
+  scRenderGrid();
+}
+
+function scSetPeriod(period, btn){
+  scPeriod = period;
+  document.querySelectorAll('.sc-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  scRenderGrid();
+}
+
+function scRenderGrid(){
+  const grid = document.getElementById('sc-grid');
+  if(scPeriod === 'now'){
+    // Current portfolio analysis — no AI needed
+    grid.innerHTML = scNowHTML();
+    return;
+  }
+  // 3m / 6m — check cache first
+  const cacheKey = scPeriod;
+  if(scCache[cacheKey]){
+    grid.innerHTML = scScenariosHTML(scCache[cacheKey], scPeriod);
+    return;
+  }
+  // Show generate buttons
+  grid.innerHTML = ['bull','base','bear'].map(s=>scEmptyCardHTML(s, scPeriod)).join('');
+}
+
+function scEmptyCardHTML(scenario, period){
+  const meta = {
+    bull:{emoji:'🐂',label:'Bull Case',color:'#00d4a0',cls:'bull'},
+    base:{emoji:'📊',label:'Base Case',color:'#7c6fec',cls:'base'},
+    bear:{emoji:'🐻',label:'Bear Case',color:'#ff4060',cls:'bear'},
+  }[scenario];
+  const periodLabel = period==='3m'?'3 เดือนข้างหน้า':'6 เดือนข้างหน้า';
+  return `<div class="sc-card ${meta.cls}">
+    <div class="sc-card-head">
+      <div class="sc-card-title" style="color:${meta.color}">${meta.emoji} ${meta.label}</div>
+    </div>
+    <div class="sc-card-body">
+      <div class="sc-loading">
+        <div style="font-size:28px;margin-bottom:8px">${meta.emoji}</div>
+        <div style="margin-bottom:12px;color:var(--muted2)">วิเคราะห์ ${meta.label}<br>${periodLabel}</div>
+        <button class="sc-ai-btn gen" onclick="scGenerate('${period}','${scenario}',this)">
+          ✨ Generate with AI
+        </button>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function scGenerate(period, scenario, btn){
+  btn.disabled = true;
+  btn.textContent = '⏳ Generating...';
+
+  const periodLabel = period==='3m'?'3 months':'6 months';
+  const portfolioStr = scPortfolio
+    ? `Portfolio: Total ฿${Number(scPortfolio.totalValue||0).toLocaleString()}, P&L ฿${Number(scPortfolio.pnl||0).toLocaleString()} (${scPortfolio.pnlPct||0}%), Allocation: ${JSON.stringify(scPortfolio.allocation||{})}, Top holdings: ${JSON.stringify((scPortfolio.topHoldings||[]).slice(0,5))}`
+    : 'Portfolio data not available';
+
+  const scenarioDesc = {
+    bull:'optimistic — strong growth, risk-on sentiment, possible Fed cut, markets rally',
+    base:'neutral — moderate growth, Fed holds, mixed signals, sideways to slight upside',
+    bear:'pessimistic — slowdown, risk-off, possible rate hike or recession fears, markets decline'
+  }[scenario];
+
+  const prompt = `You are a portfolio scenario analyst. Analyze for a Thai retail investor.
+
+${portfolioStr}
+Timeframe: ${periodLabel}
+Scenario: ${scenario.toUpperCase()} — ${scenarioDesc}
+
+Return ONLY valid JSON (no markdown, no backticks) in this exact structure:
+{
+  "scenario": "${scenario}",
+  "period": "${period}",
+  "title": "short catchy scenario name in Thai/English mix (max 6 words)",
+  "probability": <number 0-100>,
+  "macro": {
+    "fed": "outlook string",
+    "sp500": "range/% string",
+    "set": "range/% string",
+    "crypto": "outlook string",
+    "thb_usd": "range string",
+    "key_risk": "1 sentence"
+  },
+  "portfolio_impact": {
+    "estimated_return_pct": <number, e.g. 12.5>,
+    "estimated_value_thb": <number>,
+    "risk_level": "Low|Medium|High",
+    "winners": ["asset1","asset2"],
+    "losers": ["asset1","asset2"]
+  },
+  "recommendations": [
+    {"action":"Add|Reduce|Hold","asset":"asset name","reason":"short reason","pct_change":"e.g. +5%"},
+    {"action":"Add|Reduce|Hold","asset":"asset name","reason":"short reason","pct_change":"e.g. -10%"},
+    {"action":"Add|Reduce|Hold","asset":"asset name","reason":"short reason","pct_change":"e.g. 0%"}
+  ],
+  "key_catalyst": "main event/factor to watch"
+}`;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-6',
+        max_tokens:1000,
+        messages:[{role:'user', content:prompt}]
+      })
+    });
+    const data = await resp.json();
+    const raw = data.content?.[0]?.text||'';
+    // Strip markdown if any
+    const jsonStr = raw.replace(/```json|```/g,'').trim();
+    const result = JSON.parse(jsonStr);
+
+    // Cache and update card
+    if(!scCache[period]) scCache[period]={};
+    scCache[period][scenario] = result;
+
+    // Re-render just this card
+    const cards = document.querySelectorAll('#sc-grid .sc-card');
+    const idx = ['bull','base','bear'].indexOf(scenario);
+    if(cards[idx]) cards[idx].outerHTML = scOneCardHTML(result);
+
+  } catch(e){
+    btn.disabled = false;
+    btn.textContent = '✨ Generate with AI';
+    alert('Error generating scenario: ' + e.message);
+    console.error(e);
+  }
+}
+
+function scScenariosHTML(cacheObj, period){
+  return ['bull','base','bear'].map(s =>
+    cacheObj[s] ? scOneCardHTML(cacheObj[s]) : scEmptyCardHTML(s, period)
+  ).join('');
+}
+
+function scOneCardHTML(r){
+  const meta={
+    bull:{emoji:'🐂',color:'#00d4a0',cls:'bull'},
+    base:{emoji:'📊',color:'#7c6fec',cls:'base'},
+    bear:{emoji:'🐻',color:'#ff4060',cls:'bear'},
+  }[r.scenario]||{emoji:'📊',color:'#7c6fec',cls:'base'};
+
+  const impact = r.portfolio_impact||{};
+  const est = impact.estimated_return_pct||0;
+  const barW = Math.min(Math.abs(est)*2, 100);
+  const barColor = est>=0?'var(--income)':'var(--expense)';
+  const recs = (r.recommendations||[]).map(rec=>`
+    <div class="sc-rec-item">
+      <span class="sc-rec-action ${(rec.action||'hold').toLowerCase()}">${rec.action||'Hold'}</span>
+      <span class="sc-rec-text">${rec.asset||''} — ${rec.reason||''}</span>
+      <span class="sc-rec-pct">${rec.pct_change||''}</span>
+    </div>`).join('');
+
+  const macro = r.macro||{};
+  const macroItems = [
+    {k:'Fed',v:macro.fed||'—'},{k:'S&P500',v:macro.sp500||'—'},
+    {k:'SET',v:macro.set||'—'},{k:'Crypto',v:macro.crypto||'—'},
+    {k:'THB/USD',v:macro.thb_usd||'—'},{k:'Key Risk',v:macro.key_risk||'—'}
+  ].map(m=>`<div class="sc-macro-item">
+    <div class="sc-macro-key">${m.k}</div>
+    <div class="sc-macro-val">${m.v}</div>
+  </div>`).join('');
+
+  return `<div class="sc-card ${meta.cls}" id="sc-card-${r.scenario}">
+    <div class="sc-card-head">
+      <div class="sc-card-title" style="color:${meta.color}">${meta.emoji} ${r.title||r.scenario}</div>
+      <span class="sc-prob ${meta.cls}">${r.probability||'—'}%</span>
+    </div>
+    <div class="sc-card-body">
+      <div class="sc-section-lbl">Macro Scenario</div>
+      <div class="sc-macro-grid">${macroItems}</div>
+
+      <div class="sc-section-lbl">Portfolio Impact</div>
+      <div class="sc-impact-bar">
+        <div class="sc-impact-label">
+          <span>Estimated Return</span>
+          <span style="color:${barColor};font-weight:600">${est>=0?'+':''}${est}%</span>
+        </div>
+        <div class="sc-bar"><div class="sc-bar-fill" style="width:${barW}%;background:${barColor}"></div></div>
+      </div>
+      <div style="font-size:11px;color:var(--muted2);margin-bottom:4px">
+        Risk: <b style="color:var(--text)">${impact.risk_level||'—'}</b> &nbsp;·&nbsp;
+        Winners: <b style="color:var(--income)">${(impact.winners||[]).join(', ')||'—'}</b>
+      </div>
+
+      <div class="sc-section-lbl">Recommendations</div>
+      <div class="sc-rec-list">${recs}</div>
+
+      <div style="font-size:10px;color:var(--muted);margin-top:10px">
+        🔑 Watch: ${r.key_catalyst||'—'}
+      </div>
+
+      <button class="sc-ai-btn gen" onclick="scRegenerate('${r.period}','${r.scenario}',this)">
+        🔄 Regenerate
+      </button>
+      <button class="sc-ai-btn edit" onclick="scToggleEdit('${r.scenario}')">
+        ✏️ Edit Assumptions
+      </button>
+      <div class="sc-edit-panel" id="sc-edit-${r.scenario}">
+        <div class="sc-section-lbl" style="margin-top:0">แก้ Macro Assumptions</div>
+        <div class="sc-edit-grid">
+          <div class="sc-edit-item"><label>Fed Rate Action</label>
+            <input id="sc-e-fed-${r.scenario}" value="${macro.fed||''}" placeholder="e.g. Cut 1x"></div>
+          <div class="sc-edit-item"><label>S&P 500</label>
+            <input id="sc-e-sp-${r.scenario}" value="${macro.sp500||''}" placeholder="e.g. +10-15%"></div>
+          <div class="sc-edit-item"><label>SET Index</label>
+            <input id="sc-e-set-${r.scenario}" value="${macro.set||''}" placeholder="e.g. +5-8%"></div>
+          <div class="sc-edit-item"><label>Crypto</label>
+            <input id="sc-e-crypto-${r.scenario}" value="${macro.crypto||''}" placeholder="e.g. +20%"></div>
+        </div>
+        <button class="sc-ai-btn gen" onclick="scRegenWithEdits('${r.period}','${r.scenario}',this)" style="margin-top:4px">
+          ✨ Re-analyze with my assumptions
+        </button>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function scRegenerate(period, scenario, btn){
+  // Clear cache and regenerate
+  if(scCache[period]) delete scCache[period][scenario];
+  const card = document.getElementById('sc-card-'+scenario);
+  if(card) card.outerHTML = scEmptyCardHTML(scenario, period);
+  // Find the new generate button
+  const newBtn = document.querySelector(`#sc-grid .sc-card.${scenario} .sc-ai-btn.gen`);
+  if(newBtn) scGenerate(period, scenario, newBtn);
+}
+
+async function scRegenWithEdits(period, scenario, btn){
+  const fed    = document.getElementById('sc-e-fed-'+scenario)?.value||'';
+  const sp     = document.getElementById('sc-e-sp-'+scenario)?.value||'';
+  const set_   = document.getElementById('sc-e-set-'+scenario)?.value||'';
+  const crypto = document.getElementById('sc-e-crypto-'+scenario)?.value||'';
+  // Store custom assumptions and regenerate
+  if(!scCache[period]) scCache[period]={};
+  if(!scCache[period][scenario]) scCache[period][scenario]={};
+  scCache[period][scenario]._userMacro = {fed,sp500:sp,set:set_,crypto};
+  // Clear and regen
+  if(scCache[period]) delete scCache[period][scenario];
+  await scRegenerate(period, scenario, btn);
+}
+
+function scToggleEdit(scenario){
+  const panel = document.getElementById('sc-edit-'+scenario);
+  if(panel) panel.classList.toggle('show');
+}
+
+function scNowHTML(){
+  if(!scPortfolio) return `<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted)">
+    ยังไม่มีข้อมูล Portfolio<br><small>เปิด Finance OS → Sync Google Sheets → กลับมาที่นี้</small>
+  </div>`;
+
+  const alloc = scPortfolio.allocation||{};
+  const holdings = scPortfolio.topHoldings||[];
+  const sorted = Object.entries(alloc).sort((a,b)=>b[1].pct-a[1].pct);
+
+  const allocCards = sorted.map(([name,data])=>{
+    const pct  = data.pct||0;
+    const pnl  = data.pnl||0;
+    const pnlC = pnl>=0?'var(--income)':'var(--expense)';
+    return `<div class="sc-card base" style="border-top-color:var(--income)">
+      <div class="sc-card-head">
+        <div class="sc-card-title">${name}</div>
+        <span style="font-size:16px;font-weight:700;color:var(--income)">${pct}%</span>
+      </div>
+      <div class="sc-card-body">
+        <div style="margin-bottom:6px">
+          <div class="sc-bar"><div class="sc-bar-fill" style="width:${pct}%;background:var(--income)"></div></div>
+        </div>
+        <div style="font-size:12px;color:var(--muted2)">
+          Value: <b style="color:var(--text)">฿${Number(data.value||0).toLocaleString('th-TH',{maximumFractionDigits:0})}</b><br>
+          P&L: <b style="color:${pnlC}">${pnl>=0?'+':''}฿${Math.abs(pnl).toLocaleString('th-TH',{maximumFractionDigits:0})}</b>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  return allocCards || `<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted)">ไม่มีข้อมูล Allocation</div>`;
+}
+
 </script>
+
+<!-- ══ SCENARIO PLANNER ══ -->
+<div class="page" id="page-scenario">
+  <div class="pg-hdr">
+    <div>
+      <div class="pg-title">🔮 Scenario Planner</div>
+      <div class="pg-sub">AI วิเคราะห์แนวโน้ม + Portfolio Impact · Bull / Base / Bear</div>
+    </div>
+  </div>
+
+  <!-- Portfolio strip -->
+  <div class="sc-pf-strip" id="sc-pf-strip">
+    <div class="sc-pf-item">
+      <div class="sc-pf-lbl">Portfolio Value</div>
+      <div class="sc-pf-val" id="sc-pf-val">—</div>
+    </div>
+    <div class="sc-pf-item">
+      <div class="sc-pf-lbl">Total P&L</div>
+      <div class="sc-pf-val" id="sc-pf-pnl">—</div>
+    </div>
+    <div class="sc-pf-item">
+      <div class="sc-pf-lbl">Top Allocation</div>
+      <div class="sc-pf-val" id="sc-pf-alloc">—</div>
+    </div>
+    <div class="sc-pf-item">
+      <div class="sc-pf-lbl">Data Source</div>
+      <div class="sc-pf-val" id="sc-pf-src" style="font-size:11px;color:var(--muted2)">—</div>
+    </div>
+  </div>
+
+  <!-- Timeframe tabs -->
+  <div class="sc-tabs">
+    <button class="sc-tab active" onclick="scSetPeriod('now',this)">📍 ตอนนี้</button>
+    <button class="sc-tab" onclick="scSetPeriod('3m',this)">📅 3 เดือน</button>
+    <button class="sc-tab" onclick="scSetPeriod('6m',this)">📅 6 เดือน</button>
+  </div>
+
+  <!-- Scenario grid (3 cards) -->
+  <div class="sc-grid" id="sc-grid">
+    <!-- Generated by JS -->
+  </div>
+</div>
+
 </body>
 </html>

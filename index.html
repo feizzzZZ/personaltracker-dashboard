@@ -2549,6 +2549,7 @@ function gsProcessData(map){
     renderedPages=new Set();
     loadGoals();
     updateBudgetBadge();
+    savePortfolioToStorage();
     switchPage('overview');
   } catch(e){
     console.error('[GS] Parse error:',e);
@@ -3164,6 +3165,44 @@ function bgtSaveOne(key,cat){
   renderBudget();
 }
 
+
+
+// ── Save portfolio summary to localStorage for Investment Analysis ──
+function savePortfolioToStorage(){
+  if(!assets.length)return;
+  try{
+    // Group by asset class
+    const groupMap={};
+    assets.forEach(a=>{
+      if(!a.val||a.val<=0)return;
+      if(!groupMap[a.group])groupMap[a.group]={value:0,cost:0,pct:0,pnl:0,pnlPct:0};
+      groupMap[a.group].value+=a.val;
+      groupMap[a.group].cost+=a.cost;
+      groupMap[a.group].pnl+=(a.val-a.cost);
+    });
+    const totalVal=Object.values(groupMap).reduce((s,v)=>s+v.value,0);
+    Object.values(groupMap).forEach(g=>{
+      g.pct=totalVal>0?Math.round(g.value/totalVal*100):0;
+      g.pnlPct=g.cost>0?Math.round(g.pnl/g.cost*100):0;
+    });
+    const topHoldings=assets.filter(a=>a.val>0).sort((a,b)=>b.val-a.val).slice(0,8).map(a=>({
+      ticker:a.ticker,value:Math.round(a.val),
+      pct:totalVal>0?Math.round(a.val/totalVal*100):0,
+      pnl:Math.round(a.val-a.cost),pnlPct:a.pnlPct||0,group:a.group
+    }));
+    const totalCost=assets.filter(a=>a.val>0).reduce((s,a)=>s+a.cost,0);
+    const totalPnl=totalVal-totalCost;
+    const summary={
+      totalValue:Math.round(totalVal),totalCost:Math.round(totalCost),
+      pnl:Math.round(totalPnl),pnlPct:totalCost>0?Math.round(totalPnl/totalCost*100):0,
+      allocation:groupMap,topHoldings,
+      cashBalance:bankBals.reduce((s,b)=>s+b.balance,0),
+      lastUpdated:new Date().toISOString().slice(0,10)
+    };
+    localStorage.setItem('finOS_portfolio',JSON.stringify(summary));
+    console.log('[FinOS] Portfolio saved to localStorage:',Object.keys(groupMap));
+  }catch(e){console.warn('[FinOS] savePortfolio error:',e);}
+}
 
 let pageRenderFns={
   overview:renderOverview,cashflow:renderCashflow,yearly:renderYearly,
