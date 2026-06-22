@@ -14,4 +14,3 @@ Personal finance tracker and investment dashboard built with vanilla HTML/JS.
 - 🔔 Budget Notification
 
 ---
-Built with: Chart.js · SheetJS (XLSX) · Google Sans font
