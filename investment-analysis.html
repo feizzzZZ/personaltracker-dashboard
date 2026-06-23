@@ -681,6 +681,24 @@ const rendered={situation:false,signals:false,feargreed:false,strategy:false,sec
 function setTimeframe(tf,el){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
+  if(tf==='now') return; // stay on Situation page
+
+  // 3m/6m → go to Scenario Planner with correct period pre-selected
+  const sbItem = document.querySelector(".sb-item[onclick*='scenario']");
+  if(sbItem){
+    // Switch to Scenario Planner page
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
+    const page = document.getElementById('page-scenario');
+    if(page) page.classList.add('active');
+    if(sbItem) sbItem.classList.add('active');
+    if(!rendered['scenario']){ rendered['scenario']=true; scInit(); }
+    // Pre-select the timeframe tab
+    setTimeout(()=>{
+      const tabBtn = document.querySelector(`.sc-tab[onclick*="${tf}"]`);
+      if(tabBtn){ scPeriod=tf; document.querySelectorAll('.sc-tab').forEach(b=>b.classList.remove('active')); tabBtn.classList.add('active'); scRenderGrid(); }
+    }, 100);
+  }
 }
 
 // ── Live date ──
@@ -1194,8 +1212,9 @@ function renderCalendar(){
 
 
 // ══ SCENARIO PLANNER ══════════════════════════════════════════════
-const SC_API_KEY_PLACEHOLDER = ''; // uses claude.ai proxy
 let scPeriod = 'now';
+function scGetKey(){ return localStorage.getItem('finOS_claude_key')||''; }
+function scSaveKey(k){ if(k) localStorage.setItem('finOS_claude_key',k); }
 let scPortfolio = null;
 let scCache = {}; // cache generated scenarios
 
@@ -1222,6 +1241,14 @@ function scInit(){
     }
   } catch(e){ console.warn('scInit error:', e); }
   scRenderGrid();
+  // Show API key notice if not set
+  const noticeEl = document.getElementById('sc-key-notice');
+  if(noticeEl) noticeEl.style.display = scGetKey() ? 'none' : 'block';
+}
+
+function scPromptKey(){
+  const k = prompt('ใส่ Anthropic API Key:\nhttps://console.anthropic.com/settings/keys\n\n(เก็บใน localStorage เครื่องนี้เท่านั้น ไม่ส่งไปที่ไหน)');
+  if(k){ scSaveKey(k); const n=document.getElementById('sc-key-notice'); if(n) n.style.display='none'; }
 }
 
 function scSetPeriod(period, btn){
@@ -1272,6 +1299,11 @@ function scEmptyCardHTML(scenario, period){
 }
 
 async function scGenerate(period, scenario, btn){
+  const apiKey = scGetKey();
+  if(!apiKey){
+    scPromptKey();
+    if(!scGetKey()){ btn.disabled=false; return; }
+  }
   btn.disabled = true;
   btn.textContent = '⏳ Generating...';
 
@@ -1324,7 +1356,12 @@ Return ONLY valid JSON (no markdown, no backticks) in this exact structure:
   try {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{
+        'Content-Type':'application/json',
+        'x-api-key': scGetKey(),
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-allow-browser': 'true',
+      },
       body: JSON.stringify({
         model:'claude-sonnet-4-6',
         max_tokens:1000,
@@ -1536,6 +1573,11 @@ function scNowHTML(){
     </div>
   </div>
 
+  <!-- API Key notice -->
+  <div id="sc-key-notice" style="display:none;background:rgba(255,149,0,.08);border:1px solid rgba(255,149,0,.3);border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:var(--debt)">
+    ⚠️ ยังไม่มี API Key — <a href="#" onclick="scPromptKey()" style="color:var(--debt);text-decoration:underline">คลิกเพื่อใส่ Anthropic API Key</a> ก่อนกด Generate
+    <span style="float:right;cursor:pointer;opacity:.6" onclick="this.parentElement.style.display='none'">✕</span>
+  </div>
   <!-- Timeframe tabs -->
   <div class="sc-tabs">
     <button class="sc-tab active" onclick="scSetPeriod('now',this)">📍 ตอนนี้</button>
