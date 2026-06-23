@@ -313,7 +313,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 .top-nav-tab.active .tn-icon{color:var(--income)}
 .tn-icon{font-size:14px;line-height:1}
 .sidebar{top:40px !important;height:calc(100vh - 40px) !important}
-.main-content{padding-top:40px}
+.main-content{padding-top:56px}
 
 </style>
 </head>
@@ -1298,14 +1298,75 @@ function scEmptyCardHTML(scenario, period){
   </div>`;
 }
 
+function scBuildPrompt(period, scenario, portfolioStr){
+  const periodLabel = period==='3m'?'3 months':'6 months';
+  const scenarioDesc = {
+    bull:'optimistic — strong growth, risk-on, possible Fed cut, markets rally',
+    base:'neutral — moderate growth, Fed holds, mixed signals, slight upside',
+    bear:'pessimistic — slowdown, risk-off, recession fears, markets decline'
+  }[scenario];
+  return `You are a portfolio scenario analyst. Analyze for a Thai retail investor.
+
+${portfolioStr}
+Timeframe: ${periodLabel}
+Scenario: ${scenario.toUpperCase()} — ${scenarioDesc}
+
+Return ONLY valid JSON (no markdown, no backticks):
+{"scenario":"${scenario}","period":"${period}","title":"short catchy name TH/EN mix max 6 words","probability":<0-100>,"macro":{"fed":"string","sp500":"string","set":"string","crypto":"string","thb_usd":"string","key_risk":"string"},"portfolio_impact":{"estimated_return_pct":<number>,"estimated_value_thb":<number>,"risk_level":"Low|Medium|High","winners":["asset1"],"losers":["asset1"]},"recommendations":[{"action":"Add|Reduce|Hold","asset":"name","reason":"short reason","pct_change":"e.g. +5%"}],"key_catalyst":"string"}`;
+}
+
+function scShowCopyModal(prompt, period, scenario, btn){
+  // Remove existing modal
+  const ex = document.getElementById('sc-copy-modal');
+  if(ex) ex.remove();
+  const m = document.createElement('div');
+  m.id = 'sc-copy-modal';
+  m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:999;display:flex;align-items:center;justify-content:center;padding:20px';
+  m.innerHTML = `<div style="background:#0d0d1a;border:1px solid #2a2a45;border-radius:16px;padding:24px;max-width:600px;width:100%;max-height:80vh;overflow-y:auto">
+    <div style="font-size:14px;font-weight:600;color:#fff;margin-bottom:8px">📋 Copy Prompt → Paste in Claude.ai → Copy JSON back</div>
+    <div style="font-size:11px;color:#6060a0;margin-bottom:12px">API ถูก block โดย browser security — ใช้วิธีนี้แทนครับ</div>
+    <textarea id="sc-prompt-box" style="width:100%;height:200px;background:#09090f;border:1px solid #1e1e35;color:#9090c0;padding:10px;border-radius:8px;font-family:monospace;font-size:11px;resize:vertical">${prompt}</textarea>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button onclick="navigator.clipboard.writeText(document.getElementById('sc-prompt-box').value).then(()=>this.textContent='✓ Copied!')" style="flex:1;padding:9px;background:rgba(167,139,250,.15);border:1px solid rgba(167,139,250,.4);color:#a78bfa;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600">
+        📋 Copy Prompt
+      </button>
+      <button onclick="window.open('https://claude.ai/new','_blank')" style="flex:1;padding:9px;background:rgba(0,212,160,.1);border:1px solid rgba(0,212,160,.3);color:#00d4a0;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600">
+        🔗 Open Claude.ai
+      </button>
+    </div>
+    <div style="margin-top:14px;font-size:12px;color:#9090c0;font-weight:500">วาง JSON ที่ได้จาก Claude กลับมาที่นี้:</div>
+    <textarea id="sc-result-box" placeholder='วาง JSON response จาก Claude ที่นี่...' style="width:100%;height:100px;background:#09090f;border:1px solid #1e1e35;color:#e2e2f0;padding:10px;border-radius:8px;font-family:monospace;font-size:11px;resize:vertical;margin-top:6px"></textarea>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button onclick="scApplyPastedResult('${period}','${scenario}')" style="flex:2;padding:9px;background:#00d4a0;border:none;color:#000;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700">
+        ✓ Apply Result
+      </button>
+      <button onclick="document.getElementById('sc-copy-modal').remove()" style="flex:1;padding:9px;background:transparent;border:1px solid #1e1e35;color:#6060a0;border-radius:8px;cursor:pointer;font-size:12px">
+        Cancel
+      </button>
+    </div>
+  </div>`;
+  document.body.appendChild(m);
+  if(btn){ btn.disabled=false; btn.textContent='✨ Generate with AI'; }
+}
+
+function scApplyPastedResult(period, scenario){
+  const raw = document.getElementById('sc-result-box').value.trim();
+  try {
+    const clean = raw.replace(/\`\`\`json|\`\`\`/g,'').trim();
+    const result = JSON.parse(clean);
+    if(!scCache[period]) scCache[period]={};
+    scCache[period][scenario] = result;
+    document.getElementById('sc-copy-modal').remove();
+    scRenderGrid();
+  } catch(e){
+    alert('JSON ไม่ถูกต้อง — ลองใหม่ครับ: ' + e.message);
+  }
+}
+
 async function scGenerate(period, scenario, btn){
   const apiKey = scGetKey();
-  if(!apiKey){
-    scPromptKey();
-    if(!scGetKey()){ btn.disabled=false; return; }
-  }
   btn.disabled = true;
-  btn.textContent = '⏳ Generating...';
+  btn.textContent = '⏳ Connecting...';
 
   const periodLabel = period==='3m'?'3 months':'6 months';
   const portfolioStr = scPortfolio
@@ -1354,11 +1415,12 @@ Return ONLY valid JSON (no markdown, no backticks) in this exact structure:
 }`;
 
   try {
+    if(!apiKey) throw new Error('NO_KEY');
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method:'POST',
       headers:{
         'Content-Type':'application/json',
-        'x-api-key': scGetKey(),
+        'x-api-key': apiKey,
         'anthropic-version': '2023-06-01',
         'anthropic-dangerous-allow-browser': 'true',
       },
@@ -1368,26 +1430,18 @@ Return ONLY valid JSON (no markdown, no backticks) in this exact structure:
         messages:[{role:'user', content:prompt}]
       })
     });
+    if(!resp.ok) throw new Error('HTTP_'+resp.status);
     const data = await resp.json();
-    const raw = data.content?.[0]?.text||'';
-    // Strip markdown if any
-    const jsonStr = raw.replace(/```json|```/g,'').trim();
-    const result = JSON.parse(jsonStr);
-
-    // Cache and update card
+    const raw  = data.content?.[0]?.text||'';
+    const result = JSON.parse(raw.replace(/\`\`\`json|\`\`\`/g,'').trim());
     if(!scCache[period]) scCache[period]={};
     scCache[period][scenario] = result;
-
-    // Re-render just this card
     const cards = document.querySelectorAll('#sc-grid .sc-card');
     const idx = ['bull','base','bear'].indexOf(scenario);
     if(cards[idx]) cards[idx].outerHTML = scOneCardHTML(result);
-
   } catch(e){
-    btn.disabled = false;
-    btn.textContent = '✨ Generate with AI';
-    alert('Error generating scenario: ' + e.message);
-    console.error(e);
+    console.warn('[SC] Direct API failed, showing copy-paste mode:', e.message);
+    scShowCopyModal(prompt, period, scenario, btn);
   }
 }
 
