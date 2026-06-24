@@ -313,7 +313,8 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 .top-nav-tab.active .tn-icon{color:var(--income)}
 .tn-icon{font-size:14px;line-height:1}
 .sidebar{top:40px !important;height:calc(100vh - 40px) !important}
-.main-content{padding-top:40px}
+.main-content{padding-top:56px}
+.pg-hdr{top:40px !important}
 
 </style>
 </head>
@@ -499,6 +500,42 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
       </div>
     </div>
   </div>
+
+  <!-- Forward-looking sections (shown by setTimeframe) -->
+  <div class="tf-section" data-tf="3m" style="display:none">
+    <div style="background:rgba(124,111,236,.08);border:1px solid rgba(124,111,236,.3);border-radius:14px;padding:20px;margin:0 0 16px">
+      <div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#7c6fec;margin-bottom:12px;font-weight:600">📅 3 เดือนข้างหน้า — คาดการณ์ Q3 2026</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <div style="background:var(--bg3);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--muted);margin-bottom:4px">FED ACTION</div><div style="font-size:14px;font-weight:600;color:var(--text)">Cut 1x (Jul/Sep)</div><div style="font-size:11px;color:var(--muted2)">Probability ~65%</div></div>
+        <div style="background:var(--bg3);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--muted);margin-bottom:4px">S&P 500</div><div style="font-size:14px;font-weight:600;color:var(--income)">5,600–5,900</div><div style="font-size:11px;color:var(--muted2)">AI + rate cut tailwind</div></div>
+        <div style="background:var(--bg3);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--muted);margin-bottom:4px">SET INDEX</div><div style="font-size:14px;font-weight:600;color:var(--debt)">1,200–1,280</div><div style="font-size:11px;color:var(--muted2)">ยังกดดัน Fund outflow</div></div>
+        <div style="background:var(--bg3);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--muted);margin-bottom:4px">CRYPTO</div><div style="font-size:14px;font-weight:600;color:var(--income)">+10–25%</div><div style="font-size:11px;color:var(--muted2)">Post-halving momentum</div></div>
+      </div>
+      <div style="background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:12px">
+        <div style="font-size:11px;color:var(--muted2);margin-bottom:6px;font-weight:500">🎯 แนะนำ Posture Q3 2026</div>
+        <div style="font-size:12px;color:var(--text);line-height:1.7">ยัง <b style="color:var(--income)">Risk-On</b> ได้ — เน้น US Tech + AI, Crypto ถือไว้, ลด Thai Stock<br><span style="color:var(--debt)">Watch:</span> FOMC Jul 29-30 · Q2 Earnings</div>
+      </div>
+      <button onclick="switchPage('scenario')" style="background:rgba(124,111,236,.15);border:1px solid rgba(124,111,236,.4);color:#7c6fec;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;width:100%">🔮 ดู AI Scenario Analysis แบบละเอียด →</button>
+    </div>
+  </div>
+
+  <div class="tf-section" data-tf="6m" style="display:none">
+    <div style="background:rgba(255,149,0,.08);border:1px solid rgba(255,149,0,.3);border-radius:14px;padding:20px;margin:0 0 16px">
+      <div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--debt);margin-bottom:12px;font-weight:600">📅 6 เดือนข้างหน้า — คาดการณ์ Q4 2026</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <div style="background:var(--bg3);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--muted);margin-bottom:4px">FED ACTION</div><div style="font-size:14px;font-weight:600;color:var(--text)">Cut 2–3x รวม</div><div style="font-size:11px;color:var(--muted2)">Rate ~4.75–5.00%</div></div>
+        <div style="background:var(--bg3);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--muted);margin-bottom:4px">S&P 500</div><div style="font-size:14px;font-weight:600;color:var(--income)">5,800–6,200</div><div style="font-size:11px;color:var(--muted2)">Election + rate cut combo</div></div>
+        <div style="background:var(--bg3);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--muted);margin-bottom:4px">SET INDEX</div><div style="font-size:14px;font-weight:600;color:var(--income)">1,280–1,400</div><div style="font-size:11px;color:var(--muted2)">Recovery ถ้า THB แข็ง</div></div>
+        <div style="background:var(--bg3);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--muted);margin-bottom:4px">CRYPTO</div><div style="font-size:14px;font-weight:600;color:var(--income)">+30–60%</div><div style="font-size:11px;color:var(--muted2)">Institutional + ETF flow</div></div>
+      </div>
+      <div style="background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:12px">
+        <div style="font-size:11px;color:var(--muted2);margin-bottom:6px;font-weight:500">🎯 แนะนำ Posture Q4 2026</div>
+        <div style="font-size:12px;color:var(--text);line-height:1.7"><b style="color:var(--income)">Accumulate</b> ในช่วง dip — เพิ่ม Crypto, กลับเข้า SET เมื่อ Trend กลับ<br><span style="color:var(--debt)">Watch:</span> US Election Nov · Fed Dec · China stimulus</div>
+      </div>
+      <button onclick="switchPage('scenario')" style="background:rgba(255,149,0,.15);border:1px solid rgba(255,149,0,.4);color:var(--debt);padding:8px 16px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;width:100%">🔮 ดู AI Scenario Analysis แบบละเอียด →</button>
+    </div>
+  </div>
+
 </div>
 
 <!-- ══ MACRO SIGNALS ══ -->
@@ -681,6 +718,24 @@ const rendered={situation:false,signals:false,feargreed:false,strategy:false,sec
 function setTimeframe(tf,el){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
+  if(tf==='now') return; // stay on Situation page
+
+  // 3m/6m → go to Scenario Planner with correct period pre-selected
+  const sbItem = document.querySelector(".sb-item[onclick*='scenario']");
+  if(sbItem){
+    // Switch to Scenario Planner page
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
+    const page = document.getElementById('page-scenario');
+    if(page) page.classList.add('active');
+    if(sbItem) sbItem.classList.add('active');
+    if(!rendered['scenario']){ rendered['scenario']=true; scInit(); }
+    // Pre-select the timeframe tab
+    setTimeout(()=>{
+      const tabBtn = document.querySelector(`.sc-tab[onclick*="${tf}"]`);
+      if(tabBtn){ scPeriod=tf; document.querySelectorAll('.sc-tab').forEach(b=>b.classList.remove('active')); tabBtn.classList.add('active'); scRenderGrid(); }
+    }, 100);
+  }
 }
 
 // ── Live date ──
@@ -1194,8 +1249,9 @@ function renderCalendar(){
 
 
 // ══ SCENARIO PLANNER ══════════════════════════════════════════════
-const SC_API_KEY_PLACEHOLDER = ''; // uses claude.ai proxy
 let scPeriod = 'now';
+function scGetKey(){ return localStorage.getItem('finOS_claude_key')||''; }
+function scSaveKey(k){ if(k) localStorage.setItem('finOS_claude_key',k); }
 let scPortfolio = null;
 let scCache = {}; // cache generated scenarios
 
@@ -1222,6 +1278,14 @@ function scInit(){
     }
   } catch(e){ console.warn('scInit error:', e); }
   scRenderGrid();
+  // Show API key notice if not set
+  const noticeEl = document.getElementById('sc-key-notice');
+  if(noticeEl) noticeEl.style.display = scGetKey() ? 'none' : 'block';
+}
+
+function scPromptKey(){
+  const k = prompt('ใส่ Anthropic API Key:\nhttps://console.anthropic.com/settings/keys\n\n(เก็บใน localStorage เครื่องนี้เท่านั้น ไม่ส่งไปที่ไหน)');
+  if(k){ scSaveKey(k); const n=document.getElementById('sc-key-notice'); if(n) n.style.display='none'; }
 }
 
 function scSetPeriod(period, btn){
@@ -1271,9 +1335,90 @@ function scEmptyCardHTML(scenario, period){
   </div>`;
 }
 
+function scBuildPrompt(period, scenario, portfolioStr){
+  const periodLabel = period==='3m'?'3 months':'6 months';
+  const scenarioDesc = {
+    bull:'optimistic — strong growth, risk-on, possible Fed cut, markets rally',
+    base:'neutral — moderate growth, Fed holds, mixed signals, slight upside',
+    bear:'pessimistic — slowdown, risk-off, recession fears, markets decline'
+  }[scenario];
+  return `You are a portfolio scenario analyst. Analyze for a Thai retail investor.
+
+${portfolioStr}
+Timeframe: ${periodLabel}
+Scenario: ${scenario.toUpperCase()} — ${scenarioDesc}
+
+Return ONLY valid JSON (no markdown, no backticks):
+{"scenario":"${scenario}","period":"${period}","title":"short catchy name TH/EN mix max 6 words","probability":<0-100>,"macro":{"fed":"string","sp500":"string","set":"string","crypto":"string","thb_usd":"string","key_risk":"string"},"portfolio_impact":{"estimated_return_pct":<number>,"estimated_value_thb":<number>,"risk_level":"Low|Medium|High","winners":["asset1"],"losers":["asset1"]},"recommendations":[{"action":"Add|Reduce|Hold","asset":"name","reason":"short reason","pct_change":"e.g. +5%"}],"key_catalyst":"string"}`;
+}
+
+function scShowCopyModal(prompt, period, scenario, btn){
+  // Remove existing modal
+  const ex = document.getElementById('sc-copy-modal');
+  if(ex) ex.remove();
+  const m = document.createElement('div');
+  m.id = 'sc-copy-modal';
+  m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:999;display:flex;align-items:center;justify-content:center;padding:20px';
+  m.innerHTML = `<div style="background:#0d0d1a;border:1px solid #2a2a45;border-radius:16px;padding:24px;max-width:600px;width:100%;max-height:80vh;overflow-y:auto">
+    <div style="font-size:14px;font-weight:600;color:#fff;margin-bottom:8px">📋 Copy Prompt → Paste in Claude.ai → Copy JSON back</div>
+    <div style="font-size:11px;color:#6060a0;margin-bottom:12px">API ถูก block โดย browser security — ใช้วิธีนี้แทนครับ</div>
+    <textarea id="sc-prompt-box" style="width:100%;height:200px;background:#09090f;border:1px solid #1e1e35;color:#9090c0;padding:10px;border-radius:8px;font-family:monospace;font-size:11px;resize:vertical">${prompt}</textarea>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button onclick="navigator.clipboard.writeText(document.getElementById('sc-prompt-box').value).then(()=>this.textContent='✓ Copied!')" style="flex:1;padding:9px;background:rgba(167,139,250,.15);border:1px solid rgba(167,139,250,.4);color:#a78bfa;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600">
+        📋 Copy Prompt
+      </button>
+      <button onclick="window.open('https://claude.ai/new','_blank')" style="flex:1;padding:9px;background:rgba(0,212,160,.1);border:1px solid rgba(0,212,160,.3);color:#00d4a0;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600">
+        🔗 Open Claude.ai
+      </button>
+    </div>
+    <div style="margin-top:14px;font-size:12px;color:#9090c0;font-weight:500">วาง JSON ที่ได้จาก Claude กลับมาที่นี้:</div>
+    <textarea id="sc-result-box" placeholder='วาง JSON response จาก Claude ที่นี่...' style="width:100%;height:100px;background:#09090f;border:1px solid #1e1e35;color:#e2e2f0;padding:10px;border-radius:8px;font-family:monospace;font-size:11px;resize:vertical;margin-top:6px"></textarea>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button onclick="scApplyPastedResult('${period}','${scenario}')" style="flex:2;padding:9px;background:#00d4a0;border:none;color:#000;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700">
+        ✓ Apply Result
+      </button>
+      <button onclick="document.getElementById('sc-copy-modal').remove()" style="flex:1;padding:9px;background:transparent;border:1px solid #1e1e35;color:#6060a0;border-radius:8px;cursor:pointer;font-size:12px">
+        Cancel
+      </button>
+    </div>
+  </div>`;
+  document.body.appendChild(m);
+  if(btn){ btn.disabled=false; btn.textContent='✨ Generate with AI'; }
+}
+
+function scExtractJSON(text){
+  // Try direct parse first
+  const clean = text.replace(/```json|```/g,'').trim();
+  try { return JSON.parse(clean); } catch(e){}
+  // Find { ... } block
+  const start = clean.indexOf('{');
+  const end   = clean.lastIndexOf('}');
+  if(start>=0 && end>start){
+    try { return JSON.parse(clean.slice(start, end+1)); } catch(e){}
+  }
+  throw new Error('ไม่พบ JSON ในข้อความ — ให้ copy เฉพาะ JSON block { ... } จาก Claude');
+}
+
+function scApplyPastedResult(period, scenario){
+  const raw = document.getElementById('sc-result-box').value.trim();
+  if(!raw){ alert('กรุณาวาง JSON จาก Claude ก่อนครับ'); return; }
+  try {
+    const result = scExtractJSON(raw);
+    if(!result.scenario) result.scenario = scenario;
+    if(!result.period)   result.period   = period;
+    if(!scCache[period]) scCache[period]={};
+    scCache[period][scenario] = result;
+    document.getElementById('sc-copy-modal').remove();
+    scRenderGrid();
+  } catch(e){
+    alert('❌ ' + e.message + '\n\nวิธีแก้: ใน Claude.ai ให้ copy เฉพาะข้อความที่เริ่มด้วย { และจบด้วย }');
+  }
+}
+
 async function scGenerate(period, scenario, btn){
+  const apiKey = scGetKey();
   btn.disabled = true;
-  btn.textContent = '⏳ Generating...';
+  btn.textContent = '⏳ Connecting...';
 
   const periodLabel = period==='3m'?'3 months':'6 months';
   const portfolioStr = scPortfolio
@@ -1322,35 +1467,33 @@ Return ONLY valid JSON (no markdown, no backticks) in this exact structure:
 }`;
 
   try {
+    if(!apiKey) throw new Error('NO_KEY');
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{
+        'Content-Type':'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-allow-browser': 'true',
+      },
       body: JSON.stringify({
         model:'claude-sonnet-4-6',
         max_tokens:1000,
         messages:[{role:'user', content:prompt}]
       })
     });
+    if(!resp.ok) throw new Error('HTTP_'+resp.status);
     const data = await resp.json();
-    const raw = data.content?.[0]?.text||'';
-    // Strip markdown if any
-    const jsonStr = raw.replace(/```json|```/g,'').trim();
-    const result = JSON.parse(jsonStr);
-
-    // Cache and update card
+    const raw  = data.content?.[0]?.text||'';
+    const result = JSON.parse(raw.replace(/\`\`\`json|\`\`\`/g,'').trim());
     if(!scCache[period]) scCache[period]={};
     scCache[period][scenario] = result;
-
-    // Re-render just this card
     const cards = document.querySelectorAll('#sc-grid .sc-card');
     const idx = ['bull','base','bear'].indexOf(scenario);
     if(cards[idx]) cards[idx].outerHTML = scOneCardHTML(result);
-
   } catch(e){
-    btn.disabled = false;
-    btn.textContent = '✨ Generate with AI';
-    alert('Error generating scenario: ' + e.message);
-    console.error(e);
+    console.warn('[SC] Direct API failed, showing copy-paste mode:', e.message);
+    scShowCopyModal(prompt, period, scenario, btn);
   }
 }
 
@@ -1536,6 +1679,11 @@ function scNowHTML(){
     </div>
   </div>
 
+  <!-- API Key notice -->
+  <div id="sc-key-notice" style="display:none;background:rgba(255,149,0,.08);border:1px solid rgba(255,149,0,.3);border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:var(--debt)">
+    ⚠️ ยังไม่มี API Key — <a href="#" onclick="scPromptKey()" style="color:var(--debt);text-decoration:underline">คลิกเพื่อใส่ Anthropic API Key</a> ก่อนกด Generate
+    <span style="float:right;cursor:pointer;opacity:.6" onclick="this.parentElement.style.display='none'">✕</span>
+  </div>
   <!-- Timeframe tabs -->
   <div class="sc-tabs">
     <button class="sc-tab active" onclick="scSetPeriod('now',this)">📍 ตอนนี้</button>
