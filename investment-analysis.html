@@ -718,24 +718,10 @@ const rendered={situation:false,signals:false,feargreed:false,strategy:false,sec
 function setTimeframe(tf,el){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
-  if(tf==='now') return; // stay on Situation page
-
-  // 3m/6m → go to Scenario Planner with correct period pre-selected
-  const sbItem = document.querySelector(".sb-item[onclick*='scenario']");
-  if(sbItem){
-    // Switch to Scenario Planner page
-    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-    document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
-    const page = document.getElementById('page-scenario');
-    if(page) page.classList.add('active');
-    if(sbItem) sbItem.classList.add('active');
-    if(!rendered['scenario']){ rendered['scenario']=true; scInit(); }
-    // Pre-select the timeframe tab
-    setTimeout(()=>{
-      const tabBtn = document.querySelector(`.sc-tab[onclick*="${tf}"]`);
-      if(tabBtn){ scPeriod=tf; document.querySelectorAll('.sc-tab').forEach(b=>b.classList.remove('active')); tabBtn.classList.add('active'); scRenderGrid(); }
-    }, 100);
-  }
+  // Show matching tf-section, hide others — stay on Situation page
+  document.querySelectorAll('.tf-section').forEach(s=>{
+    s.style.display = s.dataset.tf===tf ? 'block' : 'none';
+  });
 }
 
 // ── Live date ──
