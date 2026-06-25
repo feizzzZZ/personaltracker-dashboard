@@ -1735,13 +1735,18 @@ function renderOverview(){
   const gsorted=Object.entries(grpMap).sort((a,b)=>b[1].val-a[1].val);
   const maxV=Math.max(...gsorted.map(([,v])=>v.val),1);
   document.getElementById('ov-group-list').innerHTML=gsorted.map(([g,v])=>{
-    const pnl=v.val-v.cost,pct=v.cost>0?(pnl/v.cost*100).toFixed(1):0;
+    const noPrice=v.val===0&&v.cost>0;
+    const pnl=v.val-v.cost;
+    const pct=noPrice?null:(v.cost>0?(pnl/v.cost*100).toFixed(1):0);
     const bw=Math.round(v.val/maxV*100),col=GC[g]||'#555';
-    const cls=pnl>0?'gain':pnl<0?'loss':'';
+    const cls=noPrice?'':(pnl>0?'gain':pnl<0?'loss':'');
+    const pnlStr=noPrice
+      ?`<span style="color:var(--muted);font-size:10px">ไม่มีราคา</span>`
+      :`<span class="${cls}">${pnl>=0?'+':''}${fmt(pnl)} (${pct}%)</span>`;
     return `<div class="gr"><div class="gr-top">
       <div class="gr-name"><div class="gr-dot" style="background:${col}"></div>${g}<span style="color:var(--muted);font-size:10px">${v.n}</span></div>
-      <div style="display:flex;gap:10px;font-size:11px"><span style="color:var(--white)">${fmt(v.val)}</span>
-      <span class="${cls}">${pnl>=0?'+':''}${fmt(pnl)} (${pct}%)</span></div></div>
+      <div style="display:flex;gap:10px;font-size:11px"><span style="color:var(--white)">${noPrice?'฿—':fmt(v.val)}</span>
+      ${pnlStr}</div></div>
       <div class="bt"><div class="bf" style="width:${bw}%;background:${col}"></div></div></div>`;
   }).join('');
 
@@ -3049,7 +3054,7 @@ function renderBudget(){
     const cat=r.category||'Other';
     savMap[cat]=(savMap[cat]||0)+Math.abs(r.amount);
   });
-  const SAV_DEFAULTS={'US Stock':5000,'Cryptocurrency':3000,'Provident Funds':2000};
+  const SAV_DEFAULTS={'US Stock':5000,'Cryptocurrency':3000,'Provident Funds':2000,'Thai Stock':3000,'Gold':1000};
   const savCats=[...new Set([...Object.keys(savMap),...Object.keys(SAV_DEFAULTS)])].sort();
 
   // ── Overview ──
