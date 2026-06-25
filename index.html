@@ -354,12 +354,14 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 .bgt-card.over{border-color:rgba(255,64,96,.4);background:rgba(255,64,96,.04)}
 .bgt-card.warn{border-color:rgba(255,149,0,.4);background:rgba(255,149,0,.04)}
 .bgt-card.ok{border-color:var(--border)}
+.bgt-card.exact{border-color:rgba(128,128,176,.3);background:rgba(128,128,176,.03)}
 .bgt-card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
 .bgt-cat{font-size:13px;font-weight:500;color:var(--white)}
 .bgt-badge{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:500}
 .bgt-badge.ok{background:rgba(0,212,160,.12);color:var(--income);border:1px solid rgba(0,212,160,.25)}
 .bgt-badge.warn{background:rgba(255,149,0,.12);color:var(--debt);border:1px solid rgba(255,149,0,.25)}
 .bgt-badge.over{background:rgba(255,64,96,.12);color:var(--expense);border:1px solid rgba(255,64,96,.25)}
+.bgt-badge.exact{background:rgba(128,128,176,.12);color:var(--muted2);border:1px solid rgba(128,128,176,.25)}
 .bgt-badge.unset{background:var(--bg3);color:var(--muted);border:1px solid var(--border)}
 .bgt-amounts{display:flex;justify-content:space-between;font-size:12px;margin-bottom:8px}
 .bgt-spent{color:var(--text);font-weight:500}
@@ -3021,13 +3023,15 @@ function bgtSave(data){
 }
 
 function bgtColor(pct){
-  if(pct>=100) return 'var(--expense)';
-  if(pct>=80)  return 'var(--debt)';
+  if(pct>100)   return 'var(--expense)';
+  if(pct===100) return 'var(--muted2)';
+  if(pct>=80)   return 'var(--debt)';
   return 'var(--income)';
 }
 function bgtStatus(pct){
-  if(pct>=100) return {label:'เกินแล้ว!',cls:'over'};
-  if(pct>=80)  return {label:'ใกล้เกิน',cls:'warn'};
+  if(pct>100)   return {label:'เกินแล้ว!',cls:'over'};
+  if(pct===100) return {label:'ใช้เท่ากับเป้าหมาย',cls:'exact'};
+  if(pct>=80)   return {label:'ใกล้เกิน',cls:'warn'};
   return {label:'ปกติ',cls:'ok'};
 }
 

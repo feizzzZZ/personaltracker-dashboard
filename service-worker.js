@@ -1,7 +1,7 @@
 // Finance OS — Service Worker v1
 // Cache strategy: Cache-first for shell, Network-first for CDN
 
-const CACHE_NAME = 'finance-os-v1';
+const CACHE_NAME = 'finance-os-v2';
 const BASE = '/personaltracker-dashboard';
 
 // App shell — files to pre-cache on install
