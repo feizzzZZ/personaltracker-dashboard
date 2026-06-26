@@ -592,7 +592,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
     <input type="file" id="fi" accept=".xlsx,.xls">
     <div class="upload-icon">↑</div>
     <div class="upload-label"><strong>Drop your Excel file here</strong><br>ใช้ไฟล์เดียว — อ่านทุก sheet อัตโนมัติ</div>
-    <div class="upload-note">Transaction · Asset_Tracker · Asset_Dashboard</div>
+    <div class="upload-note">Transaction · Asset_Tracker · Asset_Live_Price_Feed</div>
   </div>
   <div class="upload-error" id="ue"></div>
   <div class="gs-upload-divider">หรือ</div>
@@ -1201,7 +1201,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
           <div class="bm-class-returns">
             <div class="bm-class-return-item">
               <div class="bm-class-return-lbl">My Thai Stock</div>
-              <div class="bm-class-return-val" id="bm-thai-ret">+50.9%</div>
+              <div class="bm-class-return-val" id="bm-thai-ret" style="color:var(--muted2)">—</div>
             </div>
             <div class="bm-class-return-item">
               <div class="bm-class-return-lbl">SET Index</div>
@@ -1218,7 +1218,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
           <div class="bm-class-returns">
             <div class="bm-class-return-item">
               <div class="bm-class-return-lbl">My US Stock</div>
-              <div class="bm-class-return-val" id="bm-us-ret">+96.6%</div>
+              <div class="bm-class-return-val" id="bm-us-ret" style="color:var(--muted2)">—</div>
             </div>
             <div class="bm-class-return-item">
               <div class="bm-class-return-lbl">S&P 500</div>
@@ -1448,11 +1448,14 @@ function parseFile(file){
 
         // ── 2. Transaction rows ──
         let hRow=-1;
-        for(let i=0;i<Math.min(30,txRaw.length);i++){
+        // Search up to row 40 — this Excel's header is at row 25 (0-indexed 24)
+        for(let i=0;i<Math.min(40,txRaw.length);i++){
           const r=txRaw[i];
           if(r&&r.some(c=>c&&String(c).trim()==='Date')&&r.some(c=>c&&String(c).trim()==='Transactions')){hRow=i;break;}
         }
-        if(hRow===-1){rej('ไม่พบ header row');return;}
+        // Search up to row 40 for the header containing 'Date' and 'Transactions'
+        // The actual header is at row 25 (0-indexed 24) in this Excel format
+        if(hRow===-1){rej('ไม่พบ header row (Date + Transactions)');return;}
         const txH=txRaw[hRow].map(h=>h?String(h).trim():'');
         const ti=k=>txH.indexOf(k);
         const VALID=new Set(['Expense','Income','Transfer','Savings','Bills','Debt']);
@@ -1518,7 +1521,9 @@ function parseFile(file){
           const qty=Math.abs(parseFloat(r[AT.qty])||0); // always positive, sign from txType
           const amtTHB=parseFloat(r[AT.amtTHB])||0;
           const commTHB=parseFloat(r[AT.commTHB])||0;
-          const trueCost=Math.abs(amtTHB)+commTHB;
+          // Total_Amout_THB already includes commission (price*qty + comm), so trueCost = amtTHB only
+          // Do NOT add commTHB again — that would double-count the fee
+          const trueCost=Math.abs(amtTHB);
           const group=TM[r[AT.assetType]?String(r[AT.assetType]).trim():'Other']||'Other';
           const platform=r[AT.platform]?String(r[AT.platform]).trim():'Unknown';
           const industry=r[AT.industry]?String(r[AT.industry]).trim():'—';
@@ -1526,7 +1531,7 @@ function parseFile(file){
           // FX tracking
           if(fx>1){if(!fxAcc[ticker])fxAcc[ticker]=[];fxAcc[ticker].push(fx);}
 
-          // WACC: Buy + Split both have real cost basis
+          // WACC: Buy + Split both have real cost basis (trueCost already inclusive of fee)
           if(IS_COST_TX.has(txType)&&qty>0){
             if(!waccAcc[ticker])waccAcc[ticker]={cost:0,qty:0};
             waccAcc[ticker].cost+=trueCost;
@@ -1541,6 +1546,8 @@ function parseFile(file){
           }
 
           // Push to tracker (for dividend, investment flow, realized P&L)
+          // Note: trueCost = Math.abs(amtTHB) which already includes commTHB
+          // commTHB is stored separately for fee-display only
           trackerRows2.push({date:d,ym:`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`,
             year:d.getFullYear(),ticker,txType,group,platform,industry,
             fx,qty,amtTHB,commTHB,trueCost});
@@ -1581,22 +1588,35 @@ function parseFile(file){
           for(let i=1;i<lpRaw.length;i++){
             const r=lpRaw[i];if(!r||!r[LP.ticker])continue;
             const ticker=String(r[LP.ticker]).trim();if(!ticker)continue;
-            const cur=parseFloat(r[LP.curTHB])||0;
+            // Skip Inactive rows if Active column exists
+            if(LP.active>=0&&r[LP.active]&&String(r[LP.active]).trim()==='Inactive')continue;
+            // parseFloat guards against #N/A formula errors from Google Sheets
+            const rawPrice=r[LP.curTHB];
+            if(rawPrice==null||String(rawPrice).includes('N/A'))continue;
+            const cur=parseFloat(rawPrice)||0;
             if(cur>0)curPriceMap[ticker]=cur;
           }
         }
         // Fallback: also read Asset_Dashboard in case Live_Price_Feed is missing
-        const adRaw=XLSX.utils.sheet_to_json(wb.Sheets['Asset_Dashboard'],{header:1,raw:true,defval:null});
-        const adH=adRaw[0]?adRaw[0].map(h=>h?String(h).trim():''):[];
-        const D={ticker:adH.indexOf('Ticker'),cur:adH.indexOf('Current_Price')};
-        for(let i=1;i<adRaw.length;i++){
-          const r=adRaw[i];if(!r||!r[D.ticker])continue;
-          const ticker=String(r[D.ticker]).trim();if(!ticker)continue;
-          if(!curPriceMap[ticker]){  // only fill if not already from Live_Price_Feed
-            const cur=parseFloat(r[D.cur])||0;
-            if(cur>0)curPriceMap[ticker]=cur;
+        // This sheet may not exist in all file versions — gracefully skip if absent
+        try {
+          const adSheet = wb.Sheets['Asset_Dashboard'];
+          if(adSheet){
+            const adRaw=XLSX.utils.sheet_to_json(adSheet,{header:1,raw:true,defval:null});
+            const adH=adRaw[0]?adRaw[0].map(h=>h?String(h).trim():''):[];
+            const D={ticker:adH.indexOf('Ticker'),cur:adH.indexOf('Current_Price')};
+            if(D.ticker>=0&&D.cur>=0){
+              for(let i=1;i<adRaw.length;i++){
+                const r=adRaw[i];if(!r||!r[D.ticker])continue;
+                const ticker=String(r[D.ticker]).trim();if(!ticker)continue;
+                if(!curPriceMap[ticker]){
+                  const cur=parseFloat(r[D.cur])||0;
+                  if(cur>0)curPriceMap[ticker]=cur;
+                }
+              }
+            }
           }
-        }
+        }catch(e){console.warn('[FinOS] Asset_Dashboard sheet not found or parse error — skipping fallback',e.message);}
 
         // ── Build assets[] from net qty × current price ──
         const assetList=[];
@@ -1760,7 +1780,7 @@ function renderOverview(){
   else if(topPct>35)healthItems.push({s:'y',title:`Concentration: ${topGrp[0]} ${topPct.toFixed(0)}%`,desc:'ระดับปานกลาง ควรติดตาม'});
   else healthItems.push({s:'g',title:'Diversification: Good',desc:'ไม่มี class ไหนเกิน 35%'});
   const stale=assets.filter(a=>!a.hasPrice&&a.val===0);
-  if(stale.length)healthItems.push({s:'y',title:`${stale.length} assets ไม่มีราคา`,desc:'อัปเดต Current Price ใน Asset_Dashboard'});
+  if(stale.length)healthItems.push({s:'y',title:`${stale.length} assets ไม่มีราคา`,desc:'อัปเดต Current_Price_THB ใน Asset_Live_Price_Feed'});
   else healthItems.push({s:'g',title:'ราคาครบทุก asset',desc:'Current price อัปเดตแล้ว'});
   const realPnl=realized.reduce((s,r)=>s+r.pnl,0);
   if(realPnl<-5000)healthItems.push({s:'r',title:`Realized loss: ${fmtSign(realPnl)}`,desc:'ขาดทุน realized เกิน ฿5,000'});
@@ -2312,8 +2332,8 @@ const GS_CONFIG = {
   clientId:    '3124311806-uobbvpafrslj4tni43hug8nkc73c7502.apps.googleusercontent.com',
   spreadsheetId: '1of-BLRV68WvIgvD3lBfMSt-67giRyddS49fywnda_mU',
   scope:       'https://www.googleapis.com/auth/spreadsheets.readonly',
-  sheets:      ['Transaction','Asset_Tracker','Asset_Dashboard',
-                'Asset_Live_Price_Feed','Insurance_Policies','Insurance_Coverage'],
+  // Asset_Dashboard removed — not present in current Excel version; Asset_Live_Price_Feed is the source of truth
+  sheets:      ['Transaction','Asset_Tracker','Asset_Live_Price_Feed','Insurance_Policies','Insurance_Coverage'],
 };
 
 let gsTokenClient = null;
@@ -2487,7 +2507,8 @@ function gsProcessData(map){
     const txRaw = map['Transaction']||[];
     bankBals=[];
     let hRow=-1;
-    for(let i=0;i<Math.min(30,txRaw.length);i++){
+    // Search up to row 40 — this Excel's Transaction header is at row 25 (0-indexed 24)
+    for(let i=0;i<Math.min(40,txRaw.length);i++){
       const r=txRaw[i]||[];
       if(r.some(c=>String(c||'').trim()==='Date')&&r.some(c=>String(c||'').trim()==='Transactions')){
         hRow=i; break;
@@ -2498,16 +2519,20 @@ function gsProcessData(map){
       const hArr = txRaw[hRow].map(h=>h?String(h).trim():'');
       const ti   = k=>hArr.indexOf(k);
       console.log('[GS] Transaction headers:', hArr.slice(0,10));
-      const balRow = txRaw[2]||[];
+      // bankStart: find first bank col from header row (SCB-Bank / SCB_Bank) or fallback=6
       const bankStart = ti('SCB_Bank')>=0?ti('SCB_Bank'):(hArr.indexOf('SCB-Bank')>=0?hArr.indexOf('SCB-Bank'):6);
-      console.log('[GS] bankStart col:', bankStart, 'balRow length:', balRow.length);
-      const BANK_NAMES=['SCB Bank','Kasikorn Bank','Krungsri Bank','Bangkok Bank',
-        'Make By Kbank','GSB Bank','SCB Up2ME CC','KBank Line Point','On Wallet','Rabbit Card'];
-      const BANK_TYPES=['Bank Account','Bank Account','Bank Account','Bank Account',
-        'Bank Account','Bank Account','Credit Card','Credit Card','E-Wallet','E-Wallet'];
+      // Row index 1 = bank display names (e.g. "SCB Bank", "Kasikorn Bank")
+      // Row index 2 = current balance values (numbers)
+      // Row index 0 = account type labels ("Account #", "Credit Card #", etc.)
+      const bankNameRow = txRaw[1]||[];
+      const bankBalRow  = txRaw[2]||[];
+      const bankTypeRow = txRaw[0]||[];
       for(let b=0;b<10;b++){
-        const val=parseFloat(balRow[bankStart+b])||0;
-        bankBals.push({name:BANK_NAMES[b],balance:val,type:BANK_TYPES[b]});
+        const col  = bankStart+b;
+        const name = bankNameRow[col]!=null?String(bankNameRow[col]).trim():null;
+        const bal  = parseFloat(bankBalRow[col]);
+        const accT = bankTypeRow[col]!=null?String(bankTypeRow[col]).trim():'Account #';
+        if(name && !isNaN(bal)) bankBals.push({name, balance:Math.round(bal*100)/100, type:accT});
       }
       const rows=[];
       for(let i=hRow+1;i<txRaw.length;i++){
@@ -2569,11 +2594,17 @@ function gsParseLivePrice(rows){
   if(!rows.length)return;
   const hArr=rows[0].map(h=>h?String(h).trim():'');
   const ti=k=>hArr.indexOf(k);
+  const activeIdx=ti('Active');
   for(let i=1;i<rows.length;i++){
     const r=rows[i]||[];
     const ticker=r[ti('Ticker')]?String(r[ti('Ticker')]).trim():'';
     if(!ticker)continue;
-    const cur=parseFloat(r[ti('Current_Price_THB')])||0;
+    // Skip Inactive rows
+    if(activeIdx>=0&&r[activeIdx]&&String(r[activeIdx]).trim()==='Inactive')continue;
+    // Guard against #N/A formula errors
+    const rawPrice=r[ti('Current_Price_THB')];
+    if(rawPrice==null||String(rawPrice).includes('N/A'))continue;
+    const cur=parseFloat(rawPrice)||0;
     if(cur>0)cpMap[ticker]=cur;
   }
   window._gsCurPriceMap=cpMap;
@@ -2603,7 +2634,8 @@ function gsParseAssetTracker(rows){
     const qty=Math.abs(parseFloat(r[AT.qty])||0);
     const amtTHB=parseFloat(r[AT.amtTHB])||0;
     const commTHB=parseFloat(r[AT.commTHB])||0;
-    const trueCost=Math.abs(amtTHB)+commTHB;
+    // Total_Amout_THB already includes commission — do NOT add commTHB again
+    const trueCost=Math.abs(amtTHB);
     const group=TM[r[AT.assetType]?String(r[AT.assetType]).trim():'Other']||'Other';
     const platform=r[AT.platform]?String(r[AT.platform]).trim():'Unknown';
     const industry=r[AT.industry]?String(r[AT.industry]).trim():'—';
@@ -4043,20 +4075,31 @@ function renderBenchmark(){
     }
   });
 
-  // Thai Stock verdict
-  const thaiRet   = 50.9;
+  // Thai Stock verdict — computed from real assets (not hardcoded)
+  const thaiAssets = assets.filter(a=>a.group==='Thai Stock');
+  const thaiCostCalc = thaiAssets.reduce((s,a)=>s+a.cost,0);
+  const thaiValCalc  = thaiAssets.reduce((s,a)=>s+a.val, 0);
+  const thaiRet      = thaiCostCalc>0 ? (thaiValCalc-thaiCostCalc)/thaiCostCalc*100 : 0;
+  const thaiRetEl    = document.getElementById('bm-thai-ret');
+  if(thaiRetEl){ thaiRetEl.textContent=(thaiRet>=0?'+':'')+thaiRet.toFixed(1)+'%'; thaiRetEl.style.color=thaiRet>0?'var(--gain)':thaiRet<0?'var(--loss)':'var(--muted2)'; }
   const thaiAlpha = thaiRet - setRet;
   const thaiEl    = document.getElementById('bm-thai-verdict');
   thaiEl.innerHTML = thaiAlpha >= 0
     ? `<span style="color:var(--gain)">▲ Beat SET by +${thaiAlpha.toFixed(1)}%</span> — Thai Stock ของคุณ outperform ดัชนี`
-    : `<span style="color:var(--loss)">▼ Underperform SET by ${thaiAlpha.toFixed(1)}%</span>`;
+    : `<span style="color:var(--loss)">▼ Underperform SET by ${Math.abs(thaiAlpha).toFixed(1)}%</span>`;
 
-  const usRet   = 96.6;
+  // US Stock verdict — computed from real assets (not hardcoded)
+  const usAssets = assets.filter(a=>a.group==='US Stock');
+  const usCostCalc = usAssets.reduce((s,a)=>s+a.cost,0);
+  const usValCalc  = usAssets.reduce((s,a)=>s+a.val, 0);
+  const usRet      = usCostCalc>0 ? (usValCalc-usCostCalc)/usCostCalc*100 : 0;
+  const usRetEl    = document.getElementById('bm-us-ret');
+  if(usRetEl){ usRetEl.textContent=(usRet>=0?'+':'')+usRet.toFixed(1)+'%'; usRetEl.style.color=usRet>0?'var(--gain)':usRet<0?'var(--loss)':'var(--muted2)'; }
   const usAlpha = usRet - spRet;
   const usEl    = document.getElementById('bm-us-verdict');
   usEl.innerHTML = usAlpha >= 0
     ? `<span style="color:var(--gain)">▲ Beat S&P 500 by +${usAlpha.toFixed(1)}%</span> — US Stock ของคุณ outperform ดัชนี`
-    : `<span style="color:var(--loss)">▼ Underperform S&P 500 by ${usAlpha.toFixed(1)}%</span>`;
+    : `<span style="color:var(--loss)">▼ Underperform S&P 500 by ${Math.abs(usAlpha).toFixed(1)}%</span>`;
 }
 
 
@@ -4075,6 +4118,15 @@ async function loadData(file){
     if(badge&&goals.length){badge.style.display='inline';badge.textContent=goals.length;}
     switchPage('overview');
   }catch(e){ue.textContent='Error: '+(e.message||e);ue.style.display='block';}
+}
+
+// ── Service Worker registration ───────────────────────────────────────
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./service-worker.js')
+      .then(reg => console.log('[SW] Registered, scope:', reg.scope))
+      .catch(err => console.warn('[SW] Registration failed:', err));
+  });
 }
 </script>
 </body>
