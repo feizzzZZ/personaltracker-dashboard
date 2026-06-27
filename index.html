@@ -156,16 +156,16 @@ select.month-display{text-align-last:center;outline:none}
 .bf{height:3px;border-radius:2px}
 
 /* ── Bank cards ── */
-.bank-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:8px;margin-bottom:18px}
+.bank-grid{display:grid;gap:8px;margin-bottom:18px}
 .bank-total{background:linear-gradient(135deg,rgba(0,212,160,.12),rgba(0,212,160,.04));border:1px solid rgba(0,212,160,.3);border-radius:12px;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-.bank-card{background:var(--bg3);border:1px solid var(--cb);border-radius:12px;padding:14px 15px;transition:all .2s;position:relative;overflow:hidden;display:flex;flex-direction:column;gap:2px}
+.bank-card{background:var(--bg3);border:1px solid var(--cb);border-radius:12px;padding:14px 16px;transition:all .2s;position:relative;overflow:hidden;display:flex;flex-direction:column;gap:2px;min-width:0}
 .bank-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:12px 12px 0 0;background:var(--bank-accent,var(--border2))}
 .bank-card:hover{border-color:var(--border2);background:var(--bg4);transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,0,0,.3)}
-.bank-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
-.bank-name{font-size:11px;color:var(--white);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:110px}
-.bank-val{font-size:18px;font-weight:600;margin:2px 0}
-.bank-type{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-top:2px}
-.bank-type-badge{font-size:9px;font-weight:600;padding:2px 6px;border-radius:4px;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap}
+.bank-card-header{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:6px}
+.bank-name{font-size:11px;color:var(--white);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1}
+.bank-val{font-size:18px;font-weight:600;margin:2px 0;letter-spacing:-.02em}
+.bank-type{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bank-type-badge{font-size:9px;font-weight:700;padding:2px 7px;border-radius:4px;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;flex-shrink:0}
 
 /* ── Tx table ── */
 .filter-row{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px}
@@ -2014,18 +2014,29 @@ function renderAccounts(){
     return 'Bank Account';
   };
 
+  // Compute symmetric grid columns — no orphaned cards
+  // e.g. 8 accounts → 4 cols (2 rows), 5 → 5 cols (1 row), 9 → 5+4
+  const n = active.length;
+  let cols;
+  if      (n <= 4)  cols = n;           // 1 row
+  else if (n <= 6)  cols = 3;           // 2 rows × 3
+  else if (n === 7) cols = 4;           // 4+3
+  else if (n <= 10) cols = Math.ceil(n/2); // 2 balanced rows
+  else              cols = Math.ceil(n/3); // 3 balanced rows
+  document.getElementById('acc-bank-grid').style.gridTemplateColumns=`repeat(${cols},1fr)`;
+
   document.getElementById('acc-bank-grid').innerHTML=active.map(b=>{
     const accType=getAccType(b);
     const meta=BANK_ACCENT[accType]||BANK_ACCENT['Bank Account'];
     const isNeg=b.balance<0;
-    const valColor=isNeg?'var(--loss)':'var(--gain)';
+    const valColor=isNeg?'var(--loss)':'var(--income)';
     return `<div class="bank-card" style="--bank-accent:${meta.color}">
       <div class="bank-card-header">
-        <div class="bank-name" title="${b.name}">${meta.icon} ${b.name}</div>
-        <span class="bank-type-badge" style="${meta.badge}">${accType==='Bank Account'?'Bank':accType==='Credit Card'?'Credit':accType==='E-Wallet'?'Wallet':'Travel'}</span>
+        <div class="bank-name" title="${b.name}">${b.name}</div>
+        <span class="bank-type-badge" style="${meta.badge}">${accType==='Bank Account'?'BANK':accType==='Credit Card'?'CREDIT':accType==='E-Wallet'?'WALLET':'TRAVEL'}</span>
       </div>
       <div class="bank-val" style="color:${valColor}">${fmt(b.balance)}</div>
-      <div class="bank-type">${b.name}</div>
+      <div class="bank-type" style="color:${meta.color};opacity:.7">${meta.icon} ${accType}</div>
     </div>`;
   }).join('');
 
