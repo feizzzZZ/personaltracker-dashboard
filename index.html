@@ -1118,7 +1118,9 @@ select.month-display{text-align-last:center;outline:none}
       <div class="bm-hero">
         <div class="bm-hero-title">
           Overall portfolio return vs benchmarks
-          <span class="bm-hero-note">ข้อมูล ณ มิ.ย. 2569 · WACC basis</span>
+          <button id="bm-basis-btn" onclick="toggleBmBasis()" style="font-size:10px;color:var(--muted);background:var(--bg4);padding:3px 10px;border-radius:6px;border:1px solid var(--border);cursor:pointer;font-family:'Google Sans Mono',monospace;transition:all .2s" title="สลับวิธีคำนวณ return">
+            ข้อมูล ณ มิ.ย. 2569 · <span id="bm-basis-label">WACC BASIS</span>
+          </button>
         </div>
         <!-- My Portfolio — full width -->
         <div class="bm-card" style="--bm-color:var(--savings);margin-bottom:12px">
@@ -1386,6 +1388,7 @@ const EXP_COLORS=['#ff4060','#ff6b35','#ffd166','#06d6a0','#118ab2','#7b61ff','#
 
 // ── State ────────────────────────────────────────────────────────────
 let txRows=[],assets=[],tracker=[],bankBals=[],fxMap={},waccMap={},platMap={},realized=[];
+let bmBasis='wacc'; // 'wacc' = WACC true cost | 'mkt' = current market price vs first-buy price
 let insPolicies=[],insCoverage=[];
 let totalFee=0,availableMonths=[],curMonthIdx=0,cfFilter='all',cfPage=0,pfFilter='all';
 let charts={},flowPeriod='monthly';
@@ -3945,11 +3948,39 @@ const BM = {
   asOf: 'มิ.ย. 2569'
 };
 
+// ── Benchmark basis toggle ─────────────────────────────────────────────
+function toggleBmBasis(){
+  bmBasis = bmBasis === 'wacc' ? 'mkt' : 'wacc';
+  const btn   = document.getElementById('bm-basis-btn');
+  const label = document.getElementById('bm-basis-label');
+  if(bmBasis === 'wacc'){
+    label.textContent = 'WACC BASIS';
+    btn.style.color   = 'var(--muted)';
+    btn.style.borderColor = 'var(--border)';
+  } else {
+    label.textContent = 'MKT PRICE BASIS';
+    btn.style.color   = '#ffd166';
+    btn.style.borderColor = 'rgba(255,209,102,.4)';
+  }
+  renderBenchmark();
+}
+
 function renderBenchmark(){
-  // Portfolio totals from assets (exclude Provident Fund — no cost basis)
+  // Portfolio totals — switch calculation basis
+  // WACC basis: cost = WACC true cost (includes fees), val = current market value
+  // MKT basis:  cost = first-buy price × current qty (no fee), val = current market value
   const validAssets = assets.filter(a => a.cost > 0 && a.group !== 'Provident Fund');
-  const totalCost  = validAssets.reduce((s,a) => s + a.cost, 0);
-  const totalVal   = validAssets.reduce((s,a) => s + a.val,  0);
+
+  let totalCost, totalVal;
+  if(bmBasis === 'wacc'){
+    totalCost = validAssets.reduce((s,a) => s + a.cost, 0);
+    totalVal  = validAssets.reduce((s,a) => s + a.val,  0);
+  } else {
+    // MKT basis: use first-buy WACC price × qty as "clean" cost (no commission)
+    // Approximate: cost_no_fee = WACC * qty (WACC already excludes commission after bug fix)
+    totalCost = validAssets.reduce((s,a) => s + (a.wacc||0) * (a.qty||0), 0) || validAssets.reduce((s,a) => s + a.cost, 0);
+    totalVal  = validAssets.reduce((s,a) => s + a.val, 0);
+  }
   const portPnl    = totalVal - totalCost;
   const portRet    = totalCost > 0 ? portPnl / totalCost * 100 : 0;
   const totalDiv   = tracker.filter(r => TX_DIV.includes(r.txType)).reduce((s,r) => s + r.amtTHB, 0);
@@ -4006,7 +4037,7 @@ function renderBenchmark(){
   const maxRet = Math.max(portRet, setRet, spRet, goldRet, cryptoRet);
   document.getElementById('set-winner-badge').innerHTML = setRet === maxRet ? '<span class="bm-winner">Best</span>' : '';
   document.getElementById('sp_winner_badge').innerHTML  = spRet  === maxRet ? '<span class="bm-winner">Best</span>' : '';
-  document.getElementById('bm-cost').textContent  = fmt(totalCost);
+  document.getElementById('bm-cost').textContent  = fmt(totalCost) + (bmBasis==='mkt'?' (mkt)':'');
   document.getElementById('bm-value').textContent = fmt(totalVal);
   const pnlEl = document.getElementById('bm-pnl');
   pnlEl.textContent  = fmtSign(portPnl);
