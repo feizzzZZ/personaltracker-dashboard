@@ -84,6 +84,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 .month-btn{background:var(--bg3);border:1px solid var(--border);color:var(--muted2);padding:5px 9px;border-radius:7px;cursor:pointer;font-family:'Google Sans Mono',monospace;font-size:12px;transition:all .15s}
 .month-btn:hover{border-color:var(--border2);color:var(--text)}
 .month-display{background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:5px 12px;border-radius:7px;font-family:'Google Sans',sans-serif;font-size:12px;font-weight:600;min-width:120px;text-align:center}
+select.month-display{text-align-last:center;outline:none}
 
 /* ── Section label ── */
 .sl{font-family:'Google Sans',sans-serif;font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--white);margin:0 0 10px;display:flex;align-items:center;gap:10px;padding-left:10px;border-left:3px solid var(--income);border-radius:0}
@@ -749,10 +750,9 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
         <div class="pg-controls">
           <div class="month-nav">
             <button class="month-btn" id="prev-month">‹</button>
-            <div class="month-display" id="month-display">—</div>
+            <select id="month-select" class="month-display" style="cursor:pointer;padding-right:24px;appearance:auto"></select>
             <button class="month-btn" id="next-month">›</button>
           </div>
-
         </div>
       </div>
       <div class="sg">
@@ -839,7 +839,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
           <th>Year</th><th>Income</th><th>Expense</th><th>Savings</th><th>Debt paid</th><th>Net</th><th>Save rate</th>
         </tr></thead><tbody id="yr-body"></tbody></table>
       </div>
-      <div class="sl sl-mt">Monthly trend (6 months)</div>
+      <div class="sl sl-mt">Monthly trend (12 months)</div>
       <div class="cc"><div class="ct">Income vs Expense vs Savings</div>
         <div style="position:relative;height:220px"><canvas id="yr-trend-chart"></canvas></div></div>
     </div>
@@ -1477,6 +1477,19 @@ function parseFile(file){
         const ms=new Set(rows.map(r=>r.month));
         availableMonths=Array.from(ms).sort();
         curMonthIdx=availableMonths.length-1;
+        // Populate month dropdown
+        const mSel=document.getElementById('month-select');
+        if(mSel){
+          mSel.innerHTML=availableMonths.map(mk=>`<option value="${mk}">${monthLabel(mk)}</option>`).join('');
+          mSel.value=availableMonths[curMonthIdx];
+          if(!mSel.dataset.init){
+            mSel.dataset.init='1';
+            mSel.addEventListener('change',()=>{
+              curMonthIdx=availableMonths.indexOf(mSel.value);
+              renderCashflow();
+            });
+          }
+        }
 
         // ── 3. Asset_Tracker ──
         const atRaw=XLSX.utils.sheet_to_json(wb.Sheets['Asset_Tracker'],{header:1,raw:true,defval:null});
@@ -1815,7 +1828,9 @@ function renderCashflow(){
   const mk=availableMonths[curMonthIdx];
   const rows=txRows.filter(r=>r.month===mk);
   const s=computeSummary(rows);
-  document.getElementById('month-display').textContent=monthLabel(mk);
+  // Sync dropdown to current month
+  const mSel=document.getElementById('month-select');
+  if(mSel) mSel.value=mk;
   document.getElementById('cf-inc').textContent=fmt(s.income);document.getElementById('cf-inc-s').textContent=`${s.incomeCount} transactions`;
   document.getElementById('cf-exp').textContent=fmt(s.expense);document.getElementById('cf-exp-s').textContent=`${s.expenseCount} transactions`;
   const svEl=document.getElementById('cf-sav');svEl.textContent=fmt(s.savings);
@@ -1855,6 +1870,8 @@ function renderCashflow(){
   }
 
   // top 3 spend days
+  const MONTHS_SHORT=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const fmtTopDate=ds=>{const[,m,d]=ds.split('-');return MONTHS_SHORT[+m-1]+'-'+d;};
   const dayExp={};
   rows.forEach(r=>{if(r.type==='Expense'||r.type==='Bills')dayExp[r.dateStr]=(dayExp[r.dateStr]||0)+Math.abs(r.amount);});
   const top3=Object.entries(dayExp).sort((a,b)=>b[1]-a[1]).slice(0,3);
@@ -1862,7 +1879,7 @@ function renderCashflow(){
   document.getElementById('cf-top-days').innerHTML=top3.map(([date,amt],i)=>
     `<div style="display:flex;align-items:center;gap:10px;padding:9px 13px;background:var(--bg3);border-radius:9px;border:1px solid var(--border)">
       <span style="font-size:10px;color:var(--muted);width:16px">${'#'+(i+1)}</span>
-      <span style="font-size:11px;color:var(--white);width:44px">${date.slice(5)}</span>
+      <span style="font-size:11px;color:var(--white);width:52px;font-weight:600">${fmtTopDate(date)}</span>
       <div style="flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden"><div style="height:4px;width:${Math.round(amt/maxA*100)}%;background:var(--expense);border-radius:2px"></div></div>
       <span style="font-size:12px;font-weight:500;color:var(--expense)">${fmt(amt)}</span>
     </div>`).join('');
@@ -1878,7 +1895,9 @@ function renderTxTable(rows){
     page.map(r=>{
       const ac=r.type==='Income'?'pp':r.type==='Savings'?'pz':r.type==='Debt'?'pz':'pn';
       const at=r.amount>=0?'+฿'+Math.abs(r.amount).toLocaleString('th-TH'):'฿'+Math.abs(r.amount).toLocaleString('th-TH');
-      return `<tr><td style="color:var(--muted);font-size:11px">${r.dateStr.slice(5)}</td>
+      const TX_MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const fmtTxDate=ds=>{const[,m,d]=ds.split('-');return TX_MONTHS[+m-1]+'-'+d;};
+      return `<tr><td style="color:var(--muted);font-size:11px">${fmtTxDate(r.dateStr)}</td>
         <td><span class="tp pill-${r.type}">${r.type}</span></td>
         <td style="font-size:11px;color:var(--muted2)">${r.category}</td>
         <td style="color:var(--text);max-width:160px;overflow:hidden;text-overflow:ellipsis" title="${r.details}">${r.details||'—'}</td>
@@ -1917,10 +1936,10 @@ function renderYearly(){
     </tr>`;
   }).join('');
 
-  // Monthly trend (last 6 months)
-  const last6=availableMonths.slice(-6);
-  const ls=last6.map(mk=>{const s=computeSummary(txRows.filter(r=>r.month===mk));return s;});
-  mkLineChart('yr-trend-chart',last6.map(monthLabel),[
+  // Monthly trend (last 12 months — YoY view)
+  const last12=availableMonths.slice(-12);
+  const ls=last12.map(mk=>{const s=computeSummary(txRows.filter(r=>r.month===mk));return s;});
+  mkLineChart('yr-trend-chart',last12.map(monthLabel),[
     {label:'Income',data:ls.map(s=>s.income),borderColor:'#00d4a0',backgroundColor:'rgba(0,212,160,.07)',tension:.3,pointRadius:3,borderWidth:1.5,fill:true},
     {label:'Expense',data:ls.map(s=>Math.abs(s.expense)),borderColor:'#ff4060',backgroundColor:'rgba(255,64,96,.05)',tension:.3,pointRadius:3,borderWidth:1.5,fill:true},
     {label:'Savings',data:ls.map(s=>Math.abs(s.savings)),borderColor:'#7c6fec',backgroundColor:'rgba(124,111,236,.05)',tension:.3,pointRadius:3,borderWidth:1.5,fill:true},
@@ -2555,6 +2574,19 @@ function gsProcessData(map){
       const ms=new Set(rows.map(r=>r.month));
       availableMonths=Array.from(ms).sort();
       curMonthIdx=availableMonths.length-1;
+      // Populate month dropdown (GS path)
+      const mSelGS=document.getElementById('month-select');
+      if(mSelGS){
+        mSelGS.innerHTML=availableMonths.map(mk=>`<option value="${mk}">${monthLabel(mk)}</option>`).join('');
+        mSelGS.value=availableMonths[curMonthIdx];
+        if(!mSelGS.dataset.init){
+          mSelGS.dataset.init='1';
+          mSelGS.addEventListener('change',()=>{
+            curMonthIdx=availableMonths.indexOf(mSelGS.value);
+            renderCashflow();
+          });
+        }
+      }
     }
 
     // ─ Asset prices + tracker ─
@@ -3274,10 +3306,10 @@ document.getElementById('fi').addEventListener('change',e=>{if(e.target.files[0]
 document.getElementById('fi2').addEventListener('change',e=>{if(e.target.files[0])loadData(e.target.files[0])});
 
 document.getElementById('prev-month').addEventListener('click',()=>{
-  if(curMonthIdx>0){curMonthIdx--;renderCashflow();}
+  if(curMonthIdx>0){curMonthIdx--;const mSel=document.getElementById('month-select');if(mSel)mSel.value=availableMonths[curMonthIdx];renderCashflow();}
 });
 document.getElementById('next-month').addEventListener('click',()=>{
-  if(curMonthIdx<availableMonths.length-1){curMonthIdx++;renderCashflow();}
+  if(curMonthIdx<availableMonths.length-1){curMonthIdx++;const mSel=document.getElementById('month-select');if(mSel)mSel.value=availableMonths[curMonthIdx];renderCashflow();}
 });
 document.getElementById('cf-filter-row').addEventListener('click',e=>{
   const b=e.target.closest('.fb-btn');if(!b)return;
