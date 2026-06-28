@@ -1381,7 +1381,8 @@ const BADGE={'Thai Stock':'badge-thai','US Stock':'badge-us','Crypto':'badge-cry
              'Mutual Fund':'badge-mutual','Provident Fund':'badge-provident',
              'Gold':'badge-gold','Other':'badge-other'};
 const TM={'Thai_Stock':'Thai Stock','US_Stock':'US Stock','Cryptocurrency':'Crypto',
-          'Mutual_Fund':'Mutual Fund','Provident_Fund':'Provident Fund','Gold':'Gold','Not Found':'Other'};
+          'Mutual_Fund':'Mutual Fund','Provident_Fund':'Provident Fund','Gold':'Gold',
+          'Not Found':'Crypto'};  // 'Not Found' rows are crypto tokens (KUB,ETH,DOGE etc.) — map to Crypto
 const TX_BUY=['Buy','Split'],TX_SELL=['Sell'],TX_DIV=['Dividend Payout'],
       TX_XFER=['Transfer','Send','Recieved','Stake','Used'];
 const EXP_COLORS=['#ff4060','#ff6b35','#ffd166','#06d6a0','#118ab2','#7b61ff','#ef476f','#4cc9f0','#f72585','#b5179e'];
@@ -1543,8 +1544,22 @@ function parseFile(file){
     const d=parseDate(rawDate);if(!d||isNaN(d.getTime()))continue;
           const fx=parseFloat(r[AT.fxRate])||1;
           const qty=Math.abs(parseFloat(r[AT.qty])||0); // always positive, sign from txType
-          const amtTHB=parseFloat(r[AT.amtTHB])||0;
+          const price=parseFloat(r[AT.price])||0;
+          const amtUS=parseFloat(r[AT.amtUS<0?-1:AT.amtUS])||0;
+          let amtTHB=parseFloat(r[AT.amtTHB])||0;
           const commTHB=parseFloat(r[AT.commTHB])||0;
+
+          // Guard: amtTHB=0 on Buy/Split with missing FX (row 563-564 GOOGL pattern)
+          // Reconstruct: amtUS×fx → price×qty×fx → price×qty×lastFx
+          if(amtTHB===0 && IS_COST_TX.has(txType) && qty>0){
+            const rawAmtUS=parseFloat(r[13-1]||0)||0; // Total_Amout_US col
+            if(rawAmtUS>0 && fx>1)          amtTHB=rawAmtUS*fx;
+            else if(price>0 && fx>1)        amtTHB=price*qty*fx;
+            else if(price>0){
+              const lastFx=fxAcc[ticker]?.slice(-1)[0]||33;
+              amtTHB=price*qty*lastFx;
+            }
+          }
           // Total_Amout_THB already includes commission (price*qty + comm), so trueCost = amtTHB only
           // Do NOT add commTHB again — that would double-count the fee
           const trueCost=Math.abs(amtTHB);
@@ -2172,8 +2187,25 @@ function renderLocationGrid(){
     cryptoWallets[plat].add(r.ticker);
   });
 
-  const groups = Object.keys(locMap).sort();
+  const groups = Object.keys(locMap).sort((a,b)=>{
+    // Sort by total value descending
+    const av=Object.values(locMap[a]).reduce((s,v)=>s+v.val,0);
+    const bv=Object.values(locMap[b]).reduce((s,v)=>s+v.val,0);
+    return bv-av;
+  });
   const totalPortVal = assets.reduce((s,a) => s+a.val, 0);
+
+  // Dynamic symmetric columns — same logic as bank-card & coverage grid
+  const ng = groups.length;
+  let locCols;
+  if      (ng<=3)  locCols=ng;
+  else if (ng<=4)  locCols=4;
+  else if (ng<=6)  locCols=3;
+  else if (ng===7) locCols=4;
+  else             locCols=Math.ceil(ng/2);
+  const locGridEl=document.getElementById('pf-location-grid');
+  locGridEl.style.gridTemplateColumns=`repeat(${locCols},1fr)`;
+  locGridEl.style.alignItems='start';
 
   document.getElementById('pf-location-grid').innerHTML = groups.map(grp => {
     const platforms = Object.entries(locMap[grp]).sort((a,b) => b[1].val - a[1].val);
