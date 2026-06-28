@@ -3678,18 +3678,25 @@ function renderRateCard(g,idx,isDone=false){
 // ── Insurance ────────────────────────────────────────────────────────
 const MONTH_ABBR=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const INS_COV_META={
-  'Life':           {icon:'☂',  label:'Life',          color:'#00d4a0'},
-  'Early_CI':       {icon:'⚕',  label:'Early CI',      color:'#4cc9f0'},
-  'Severe_CI':      {icon:'🫁', label:'Severe CI',     color:'#7c6fec'},
-  'Accident':       {icon:'⛑',  label:'Accident',      color:'#ff9500'},
-  'Accident_Medical':{icon:'🩹', label:'Accident Med.', color:'#ffd166'},
-  'Medical_IPD':    {icon:'🏥', label:'Medical (IPD)', color:'#06d6a0'},
-  'Hospital_Cash':  {icon:'💰', label:'Hospital Cash', color:'#f72585'},
-  'OPD':            {icon:'💊', label:'OPD',           color:'#118ab2'},
-  'Other':          {icon:'📄', label:'Other',         color:'#9090c0'},
+  'Life':            {icon:'☂',  label:'Life',           color:'#00d4a0'},
+  'Early_CI':        {icon:'⚕',  label:'Early CI',       color:'#4cc9f0'},
+  'Severe_CI':       {icon:'🫁', label:'Severe CI',      color:'#7c6fec'},
+  'Accident':        {icon:'⛑',  label:'Accident',       color:'#ff9500'},
+  'Accident_Medical':{icon:'🩹', label:'Accident Med.',  color:'#ffd166'},
+  'Medical_IPD':     {icon:'🏥', label:'Medical (IPD)',  color:'#06d6a0'},
+  'Hospital_Cash':   {icon:'💰', label:'Hospital Cash',  color:'#f72585'},
+  'OPD':             {icon:'💊', label:'OPD',            color:'#118ab2'},
+  'Theft':           {icon:'🔒', label:'Theft',          color:'#a0c4ff'},
+  'Other':           {icon:'📄', label:'Other',          color:'#9090c0'},
 };
-const INS_UNIT_LABEL={'Lump Sum':'บาท','Per Day':'บาท/วัน','Per Visit':'บาท/ครั้ง',
-  'Per Incident':'บาท/ครั้ง','Per Year':'บาท/ปี'};
+const INS_UNIT_LABEL={
+  'Lump Sum':'บาท','One-time Benefit':'บาท','Single Payment':'บาท',
+  'Per Day':'บาท/วัน','Daily Payment':'บาท/วัน',
+  'Per Visit':'บาท/ครั้ง','Per Incident':'บาท/ครั้ง',
+  'Per Claim':'บาท/เคลม',
+  'Per Month':'บาท/เดือน','Monthly Payment':'บาท/เดือน',
+  'Per Year':'บาท/ปี',
+};
 
 let insSelectedCov=null;
 
@@ -3771,9 +3778,22 @@ function renderInsurance(){
     covByType[c.covType].items.push(c);
   });
   const covTypes=Object.keys(covByType).sort((a,b)=>{
-    const order=['Life','Early_CI','Severe_CI','Accident','Accident_Medical','Medical_IPD','Hospital_Cash','OPD','Other'];
-    return order.indexOf(a)-order.indexOf(b);
+    const order=['Life','Early_CI','Severe_CI','Accident','Accident_Medical',
+                 'Medical_IPD','Hospital_Cash','OPD','Theft','Other'];
+    const ai=order.indexOf(a); const bi=order.indexOf(b);
+    return (ai<0?99:ai)-(bi<0?99:bi);
   });
+
+  // Dynamic symmetric columns — same logic as bank-card grid
+  const nc=covTypes.length;
+  let covCols;
+  if      (nc<=4)  covCols=nc;
+  else if (nc<=6)  covCols=3;
+  else if (nc===7) covCols=4;
+  else if (nc<=10) covCols=Math.ceil(nc/2);
+  else             covCols=Math.ceil(nc/3);
+  const covGrid=document.getElementById('ins-cov-grid');
+  covGrid.style.gridTemplateColumns=`repeat(${covCols},1fr)`;
 
   document.getElementById('ins-cov-grid').innerHTML=covTypes.map(ct=>{
     const meta=INS_COV_META[ct]||INS_COV_META['Other'];
