@@ -1576,8 +1576,9 @@ function parseFile(file){
         // ── 3. Asset_Tracker ──
         const atRaw=XLSX.utils.sheet_to_json(wb.Sheets['Asset_Tracker'],{header:1,raw:true,defval:null});
         const atH=atRaw[0].map(h=>h?String(h).trim():'');
-        const ai=k=>atH.indexOf(k);
-        // Column mapping — supports both old and new column names
+        // Tolerant lookup: try candidate names in order (handles header typos
+        // like 'Quatity' / 'Total_Amout_THB' that exist in the real sheet)
+        const ai=(...ks)=>{for(const k of ks){const i=atH.indexOf(k);if(i>=0)return i;}return -1;};
         const AT={
           date:   ai('Date'),
           txType: ai('Transaction_Type'),
@@ -1586,9 +1587,11 @@ function parseFile(file){
           industry: ai('Industry'),
           platform: ai('Platform'),
           fxRate:  ai('FX_Rate'),
-          qty:     ai('Quantity'),       // new file uses 'Quantity'
-          commTHB: ai('Commission_THB'), // new file column name
-          amtTHB:  ai('Total_Amount_THB'), // new file column name
+          qty:     ai('Quantity','Quatity'),
+          price:   ai('Price'),
+          commTHB: ai('Commission_THB','Commission_Fee-Tax_THB'),
+          amtTHB:  ai('Total_Amount_THB','Total_Amout_THB'),
+          amtUS:   ai('Total_Amount_US','Total_Amout_US'),
         };
         // Fallback for old file column names
         if(AT.qty<0)     AT.qty     = ai('Quatity');
@@ -1615,14 +1618,14 @@ function parseFile(file){
           const fx=parseFloat(r[AT.fxRate])||1;
           const qty=Math.abs(parseFloat(r[AT.qty])||0); // always positive, sign from txType
           const price=parseFloat(r[AT.price])||0;
-          const amtUS=parseFloat(r[AT.amtUS<0?-1:AT.amtUS])||0;
+          const amtUS=AT.amtUS>=0?(parseFloat(r[AT.amtUS])||0):0;
           let amtTHB=parseFloat(r[AT.amtTHB])||0;
           const commTHB=parseFloat(r[AT.commTHB])||0;
 
           // Guard: amtTHB=0 on Buy/Split with missing FX (row 563-564 GOOGL pattern)
           // Reconstruct: amtUS×fx → price×qty×fx → price×qty×lastFx
           if(amtTHB===0 && IS_COST_TX.has(txType) && qty>0){
-            const rawAmtUS=parseFloat(r[13-1]||0)||0; // Total_Amout_US col
+            const rawAmtUS=AT.amtUS>=0?(parseFloat(r[AT.amtUS])||0):0;
             if(rawAmtUS>0 && fx>1)          amtTHB=rawAmtUS*fx;
             else if(price>0 && fx>1)        amtTHB=price*qty*fx;
             else if(price>0){
@@ -2896,11 +2899,13 @@ function gsParseLivePrice(rows){
 function gsParseAssetTracker(rows){
   if(!rows.length)return;
   const hArr=rows[0].map(h=>h?String(h).trim():'');
-  const ai=k=>hArr.indexOf(k);
+  const ai=(...ks)=>{for(const k of ks){const i=hArr.indexOf(k);if(i>=0)return i;}return -1;};
   const AT={date:ai('Date'),txType:ai('Transaction_Type'),ticker:ai('Ticker'),
     assetType:ai('Asset_Type'),industry:ai('Industry'),platform:ai('Platform'),
-    fxRate:ai('FX_Rate'),qty:ai('Quantity'),commTHB:ai('Commission_THB'),
-    amtTHB:ai('Total_Amount_THB')};
+    fxRate:ai('FX_Rate'),qty:ai('Quantity','Quatity'),price:ai('Price'),
+    commTHB:ai('Commission_THB','Commission_Fee-Tax_THB'),
+    amtTHB:ai('Total_Amount_THB','Total_Amout_THB'),
+    amtUS:ai('Total_Amount_US','Total_Amout_US')};
   if(AT.qty<0)AT.qty=ai('Quatity');
   if(AT.commTHB<0)AT.commTHB=ai('Commission_Fee-Tax_THB');
   if(AT.amtTHB<0)AT.amtTHB=ai('Total_Amout_THB');
