@@ -2583,10 +2583,8 @@ function renderRealized(){
 
 // ── Google Sheets Sync ───────────────────────────────────────────────
 const GS_CONFIG = {
-  // SECURITY: no defaults in source. User enters these once via the ⚙ Settings
-  // modal; they persist in localStorage on the user's device only.
-  clientId:    '',
-  spreadsheetId: '',
+  clientId:    '3124311806-uobbvpafrslj4tni43hug8nkc73c7502.apps.googleusercontent.com',
+  spreadsheetId: '1of-BLRV68WvIgvD3lBfMSt-67giRyddS49fywnda_mU',
   scope:       'https://www.googleapis.com/auth/spreadsheets.readonly',
   // Asset_Dashboard removed — not present in current Excel version; Asset_Live_Price_Feed is the source of truth
   sheets:      ['Transaction','Asset_Tracker','Asset_Live_Price_Feed','Insurance_Policies','Insurance_Coverage'],
@@ -2607,10 +2605,14 @@ function gsInit(){
   if(savedCid) GS_CONFIG.clientId      = savedCid;
   if(savedSid) GS_CONFIG.spreadsheetId = savedSid;
 
-  // SECURITY: access token lives in memory only — never persisted.
-  // Purge any token saved by older versions of this app.
-  localStorage.removeItem('gs_access_token');
-  localStorage.removeItem('gs_token_expiry');
+  // Restore token if still valid
+  const savedToken  = localStorage.getItem('gs_access_token');
+  const savedExpiry = parseInt(localStorage.getItem('gs_token_expiry')||'0');
+  if(savedToken && Date.now() < savedExpiry - 60000){
+    gsAccessToken = savedToken;
+    gsTokenExpiry = savedExpiry;
+    gsConnected   = true;
+  }
 
   // Show sync btn in sidebar when dashboard is visible
   const syncBtn = document.getElementById('gs-sync-btn');
@@ -2631,15 +2633,13 @@ function gsInit(){
     });
   }
 
-  // Auto-reconnect on load: if user configured before, request a fresh token
-  // silently (prompt:'' shows no popup for an already-consented Google account).
-  if(GS_CONFIG.clientId && GS_CONFIG.spreadsheetId && !txRows.length){
-    setTimeout(()=>{ if(gsTokenClient) gsTokenClient.requestAccessToken({prompt:''}); }, 1200);
+  // Auto-sync if connected and no data loaded yet
+  if(gsConnected && !txRows.length){
+    setTimeout(()=>gsSync(), 800);
   }
 }
 
 function gsInitTokenClient(){
-  if(!GS_CONFIG.clientId){ console.log('[GS] No clientId configured yet — skip init'); return; }
   try {
     console.log('[GS] initTokenClient with clientId:', GS_CONFIG.clientId.slice(0,25)+'...');
     gsTokenClient = google.accounts.oauth2.initTokenClient({
@@ -2663,8 +2663,8 @@ function gsTokenCallback(resp){
   gsAccessToken = resp.access_token;
   gsTokenExpiry = Date.now() + (resp.expires_in * 1000);
   gsConnected   = true;
-  // SECURITY: token kept in memory only. On page reload user re-auths silently
-  // (Google shows no prompt for already-consented apps — one extra click at most).
+  localStorage.setItem('gs_access_token', gsAccessToken);
+  localStorage.setItem('gs_token_expiry',  gsTokenExpiry);
   gsSync();
 }
 
@@ -2676,12 +2676,6 @@ function gsConnect(){
     // Ensure GIS library is loaded
     if(typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2){
       alert('Google Sign-In library ยังไม่โหลด\nกรุณารอ 3 วินาทีแล้วลองใหม่\n\nถ้ายังไม่ได้ลอง Hard Reload: Cmd+Shift+R');
-      return;
-    }
-    // First-run: no config yet → open settings modal instead of failing
-    if(!GS_CONFIG.clientId || !GS_CONFIG.spreadsheetId){
-      gsOpenModal();
-      gsSetStatus('⚙ กรอก Client ID และ Sheet ID ก่อนเชื่อมต่อ (เก็บในเครื่องคุณเท่านั้น)', 'loading');
       return;
     }
     // (Re)initialize token client if needed
