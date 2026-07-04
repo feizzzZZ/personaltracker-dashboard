@@ -14,3 +14,8 @@ Personal finance tracker and investment dashboard built with vanilla HTML/JS.
 - 🔔 Budget Notification
 
 ---
+
+## 🔒 Security (personal-use setup)
+- **AI calls**: direct from browser; API key stored in localStorage on this device only. OK for single-user, non-public use. ⚠️ If you ever host this publicly, switch to the proxy in `cloudflare-worker/` first (kept in repo, ready to deploy).
+- **Google OAuth token**: memory-only, never persisted. Legacy stored tokens auto-purged.
+- **No credentials in source**: `clientId` / `spreadsheetId` entered once via ⚙ settings modal, stored on your device.

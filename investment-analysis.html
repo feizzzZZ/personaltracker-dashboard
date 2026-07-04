@@ -1340,8 +1340,10 @@ function renderCalendar(){
 
 // ══ SCENARIO PLANNER ══════════════════════════════════════════════
 let scPeriod = 'now';
+// NOTE (personal use): key เก็บใน localStorage เครื่องนี้ — โอเคสำหรับใช้คนเดียวแบบไม่ public
+// ⚠️ ถ้าวันไหนจะ deploy ให้คนอื่นเข้าถึงได้ ให้สลับไปใช้ proxy ใน cloudflare-worker/ ก่อน
 function scGetKey(){ return localStorage.getItem('finOS_claude_key')||''; }
-function scSaveKey(k){ if(k) localStorage.setItem('finOS_claude_key',k); }
+function scSaveKey(k){ if(k) localStorage.setItem('finOS_claude_key',k.trim()); }
 let scPortfolio = null;
 let scCache = {}; // cache generated scenarios
 
@@ -1374,7 +1376,7 @@ function scInit(){
 }
 
 function scPromptKey(){
-  const k = prompt('ใส่ Anthropic API Key:\nhttps://console.anthropic.com/settings/keys\n\n(เก็บใน localStorage เครื่องนี้เท่านั้น ไม่ส่งไปที่ไหน)');
+  const k = prompt('ใส่ Anthropic API Key:\nhttps://console.anthropic.com/settings/keys\n\n(เก็บใน localStorage เครื่องนี้เท่านั้น — สำหรับใช้ส่วนตัว ไม่ควร host public)');
   if(k){ scSaveKey(k); const n=document.getElementById('sc-key-notice'); if(n) n.style.display='none'; }
 }
 
@@ -1506,7 +1508,7 @@ function scApplyPastedResult(period, scenario){
 }
 
 async function scGenerate(period, scenario, btn){
-  const apiKey = scGetKey();
+
   btn.disabled = true;
   btn.textContent = '⏳ Connecting...';
 
@@ -1557,6 +1559,7 @@ Return ONLY valid JSON (no markdown, no backticks) in this exact structure:
 }`;
 
   try {
+    const apiKey = scGetKey();
     if(!apiKey) throw new Error('NO_KEY');
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method:'POST',
