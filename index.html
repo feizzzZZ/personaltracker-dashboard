@@ -83,6 +83,9 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 .month-nav{display:flex;align-items:center;gap:4px}
 .month-btn{background:var(--bg3);border:1px solid var(--border);color:var(--muted2);padding:5px 9px;border-radius:7px;cursor:pointer;font-family:'Google Sans Mono',monospace;font-size:12px;transition:all .15s}
 .month-btn:hover{border-color:var(--border2);color:var(--text)}
+.bm-scenario-btn{background:var(--bg4);border:1px solid var(--border);color:var(--muted2);padding:4px 9px;border-radius:6px;cursor:pointer;font-family:'Google Sans Mono',monospace;font-size:11px;transition:all .15s;white-space:nowrap}
+.bm-scenario-btn:hover{border-color:var(--border2);color:var(--text)}
+.bm-scenario-btn.active{background:rgba(0,212,160,.12);border-color:rgba(0,212,160,.4);color:var(--gain);font-weight:600}
 .month-display{background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:5px 12px;border-radius:7px;font-family:'Google Sans',sans-serif;font-size:12px;font-weight:600;min-width:120px;text-align:center}
 select.month-display{text-align-last:center;outline:none}
 
@@ -754,6 +757,17 @@ select.month-display{text-align-last:center;outline:none}
         <div style="display:flex;justify-content:space-between;margin-top:10px;flex-wrap:wrap;gap:8px">
           <div style="font-size:11px;color:var(--muted2)" id="ov-3m-projection">—</div>
           <div style="font-size:11px;color:var(--muted2)" id="ov-3m-monthly">—</div>
+        </div>
+        <!-- Scenario selector: expected annual return -->
+        <div style="display:flex;align-items:center;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid var(--border);flex-wrap:wrap">
+          <span style="font-size:10px;color:var(--muted2);text-transform:uppercase;letter-spacing:.06em">Expected return</span>
+          <div style="display:flex;gap:4px" id="ov-3m-scenarios">
+            <button class="bm-scenario-btn" data-ret="0"  onclick="setGoalScenario(0,this)">💵 0%</button>
+            <button class="bm-scenario-btn" data-ret="5"  onclick="setGoalScenario(5,this)">🐢 5%</button>
+            <button class="bm-scenario-btn active" data-ret="7" onclick="setGoalScenario(7,this)">📊 7%</button>
+            <button class="bm-scenario-btn" data-ret="10" onclick="setGoalScenario(10,this)">🚀 10%</button>
+          </div>
+          <span style="font-size:10px;color:var(--muted);margin-left:auto" id="ov-3m-compound-note"></span>
         </div>
       </div>
 
@@ -1810,48 +1824,100 @@ function renderOverview(){
   if(insEl) insEl.textContent=fmt(insCV);
   document.getElementById('ov-div').textContent=fmt(totalDiv);
 
-  // ── 🎯 Road to ฿3M ─────────────────────────────────────────────────
+  // ── 🎯 Road to ฿3M — Compound Projection Engine ────────────────────
   const GOAL=3_000_000;
   const pct=Math.min(netWorth/GOAL*100,100);
   const remain=Math.max(GOAL-netWorth,0);
   document.getElementById('ov-3m-pct').textContent=pct.toFixed(1)+'%';
   document.getElementById('ov-3m-bar').style.width=pct+'%';
   const remEl=document.getElementById('ov-3m-remain');
-  // Show current milestone context
   const milestone = netWorth>=2_000_000?'ผ่าน ฿2M แล้ว':netWorth>=1_000_000?'ผ่าน ฿1M แล้ว':'กำลังไปสู่ ฿1M';
   remEl.innerHTML=`เหลืออีก ${fmt(remain)} · <span style="color:var(--gain)">${milestone}</span>`;
 
-  // Projection: use average monthly net savings over available months
-  // avg monthly wealth growth ≈ avg(income - expense) + avg savings contributions
+  // Average monthly wealth contribution (net cashflow that stays + savings moved to assets)
   const monthsData=availableMonths.map(mk=>computeSummary(txRows.filter(r=>r.month===mk)));
-  const avgMonthlyNet = monthsData.length
-    ? monthsData.reduce((s,m)=>s+m.net,0)/monthsData.length
-    : 0;
-  // Wealth also grows from savings-type tx (money moved into investments)
-  const avgMonthlySavings = monthsData.length
-    ? monthsData.reduce((s,m)=>s+Math.abs(m.savings),0)/monthsData.length
-    : 0;
-  // Total monthly wealth contribution = net cashflow that stays + savings moved to assets
+  const avgMonthlyNet = monthsData.length ? monthsData.reduce((s,m)=>s+m.net,0)/monthsData.length : 0;
+  const avgMonthlySavings = monthsData.length ? monthsData.reduce((s,m)=>s+Math.abs(m.savings),0)/monthsData.length : 0;
   const monthlyContrib = Math.max(avgMonthlyNet + avgMonthlySavings, 0);
 
+  // Portion of net worth that's invested (grows with market) vs cash (doesn't compound)
+  const investedShare = netWorth>0 ? portVal/netWorth : 0;
+
+  // Store state for scenario recompute
+  window._goalState={netWorth,remain,GOAL,monthlyContrib,investedShare,portVal};
+  computeGoalProjection(window._goalReturn ?? 7);
+
+  _renderOverviewRest();
+}
+
+// Compound projection: simulate month-by-month FV with portfolio return on invested balance
+function computeGoalProjection(annualRetPct){
+  window._goalReturn=annualRetPct;
+  const st=window._goalState;
+  if(!st) return;
   const projEl=document.getElementById('ov-3m-projection');
   const monEl =document.getElementById('ov-3m-monthly');
-  if(monthlyContrib>0 && remain>0){
-    const monthsToGoal=Math.ceil(remain/monthlyContrib);
-    const yrs=Math.floor(monthsToGoal/12);
-    const mos=monthsToGoal%12;
-    const targetDate=new Date();
-    targetDate.setMonth(targetDate.getMonth()+monthsToGoal);
-    const dateStr=targetDate.toLocaleDateString('th-TH',{year:'numeric',month:'short'});
-    projEl.innerHTML=`📈 คาดถึงเป้าใน <span style="color:var(--white);font-weight:600">${yrs>0?yrs+' ปี ':''}${mos} เดือน</span> (~${dateStr})`;
-    monEl.innerHTML=`💰 เก็บเฉลี่ย <span style="color:var(--gain);font-weight:600">${fmt(monthlyContrib)}</span>/เดือน`;
-  } else if(remain<=0){
+  const noteEl=document.getElementById('ov-3m-compound-note');
+
+  if(st.remain<=0){
     projEl.innerHTML=`🎉 <span style="color:var(--gain);font-weight:600">ถึงเป้า ฿3M แล้ว!</span>`;
-    monEl.textContent='';
-  } else {
-    projEl.innerHTML=`<span style="color:var(--muted)">ยังไม่มีข้อมูลเพียงพอสำหรับคำนวณ projection</span>`;
-    monEl.textContent='';
+    monEl.textContent=''; if(noteEl) noteEl.textContent=''; return;
   }
+  if(st.monthlyContrib<=0){
+    projEl.innerHTML=`<span style="color:var(--muted)">ยังไม่มีข้อมูลพอสำหรับ projection</span>`;
+    monEl.textContent=''; if(noteEl) noteEl.textContent=''; return;
+  }
+
+  // Monthly return applied to the invested share of wealth
+  const rMonthly=Math.pow(1+annualRetPct/100, 1/12)-1;
+  let nw=st.netWorth;
+  let months=0;
+  const MAX=1200; // 100yr safety cap
+  while(nw<st.GOAL && months<MAX){
+    const investedBal=nw*st.investedShare;
+    nw += investedBal*rMonthly;   // compound growth on invested portion
+    nw += st.monthlyContrib;      // monthly contribution
+    months++;
+  }
+
+  if(months>=MAX){
+    projEl.innerHTML=`<span style="color:var(--muted)">เกิน 100 ปี — ปรับ contribution หรือ return</span>`;
+    monEl.innerHTML=`💰 เก็บเฉลี่ย <span style="color:var(--gain);font-weight:600">${fmt(st.monthlyContrib)}</span>/เดือน`;
+    return;
+  }
+
+  const yrs=Math.floor(months/12), mos=months%12;
+  const targetDate=new Date();
+  targetDate.setMonth(targetDate.getMonth()+months);
+  const dateStr=targetDate.toLocaleDateString('th-TH',{year:'numeric',month:'short'});
+
+  // Compare vs 0% baseline to show compounding benefit
+  const baselineMonths=Math.ceil(st.remain/st.monthlyContrib);
+  const saved=baselineMonths-months;
+
+  projEl.innerHTML=`📈 คาดถึงเป้าใน <span style="color:var(--white);font-weight:600">${yrs>0?yrs+' ปี ':''}${mos} เดือน</span> (~${dateStr})`;
+  monEl.innerHTML=`💰 เก็บเฉลี่ย <span style="color:var(--gain);font-weight:600">${fmt(st.monthlyContrib)}</span>/เดือน`;
+  if(noteEl){
+    if(annualRetPct>0 && saved>0){
+      noteEl.innerHTML=`⚡ compounding ช่วยร่นเวลา ~${saved} เดือน`;
+    } else if(annualRetPct===0){
+      noteEl.textContent='ไม่รวมผลตอบแทน (เงินเก็บล้วน)';
+    } else {
+      noteEl.textContent='';
+    }
+  }
+}
+
+// Scenario button handler
+function setGoalScenario(retPct, btn){
+  document.querySelectorAll('#ov-3m-scenarios .bm-scenario-btn').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  computeGoalProjection(retPct);
+}
+
+function _renderOverviewRest(){
+  const allCash=bankBals.reduce((s,b)=>s+b.balance,0);
+  const portVal=assets.reduce((s,a)=>s+a.val,0);
 
   // current month cashflow
   const curMk=availableMonths[curMonthIdx];
