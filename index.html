@@ -1438,8 +1438,21 @@ const BADGE={'Thai Stock':'badge-thai','US Stock':'badge-us','Crypto':'badge-cry
              'Mutual Fund':'badge-mutual','Provident Fund':'badge-provident',
              'Gold':'badge-gold','Other':'badge-other'};
 const TM={'Thai_Stock':'Thai Stock','US_Stock':'US Stock','Cryptocurrency':'Crypto',
-          'Mutual_Fund':'Mutual Fund','Provident_Fund':'Provident Fund','Gold':'Gold',
-          'Not Found':'Crypto'};  // 'Not Found' rows are crypto tokens (KUB,ETH,DOGE etc.) — map to Crypto
+          'Mutual_Fund':'Mutual Fund','Provident_Fund':'Provident Fund','Gold':'Gold'};
+// Fallback inference when Asset_Type lookup fails ('Not Found' / blank):
+// infer from known crypto tickers or crypto-exchange platforms; otherwise 'Other'
+// so misclassified rows are VISIBLE (fix Asset_Type in the sheet) instead of
+// silently polluting the Crypto bucket.
+const CRYPTO_TICKERS = new Set(['BTC','ETH','BNB','USDT','USDC','KUB','DOGE','XRP','ADA','SOL','DOT','MATIC','AVAX','LINK','NEAR','ATOM','OP','ARB','SAND','GALA','JFIN','SIX','BUSD']);
+const CRYPTO_PLATFORM_RE = /binance|okx|bitkub|bitazza|coinbase|kraken|bybit|kucoin|upbit|satang|zipmex|metamask|ledger|wallet/i;
+function resolveGroup(assetType, ticker, platform){
+  const t = assetType ? String(assetType).trim() : '';
+  if(TM[t]) return TM[t];
+  const tk = ticker ? String(ticker).trim().toUpperCase() : '';
+  if(CRYPTO_TICKERS.has(tk)) return 'Crypto';
+  if(platform && CRYPTO_PLATFORM_RE.test(String(platform))) return 'Crypto';
+  return 'Other';
+}
 const TX_BUY=['Buy','Split'],TX_SELL=['Sell'],TX_DIV=['Dividend Payout'],
       TX_XFER=['Transfer','Send','Recieved','Stake','Used'];
 const EXP_COLORS=['#ff4060','#ff6b35','#ffd166','#06d6a0','#118ab2','#7b61ff','#ef476f','#4cc9f0','#f72585','#b5179e'];
@@ -1620,8 +1633,8 @@ function parseFile(file){
           // Total_Amout_THB already includes commission (price*qty + comm), so trueCost = amtTHB only
           // Do NOT add commTHB again — that would double-count the fee
           const trueCost=Math.abs(amtTHB);
-          const group=TM[r[AT.assetType]?String(r[AT.assetType]).trim():'Other']||'Other';
           const platform=r[AT.platform]?String(r[AT.platform]).trim():'Unknown';
+          const group=resolveGroup(r[AT.assetType], ticker, platform);
           const industry=r[AT.industry]?String(r[AT.industry]).trim():'—';
 
           // FX tracking
@@ -2905,8 +2918,8 @@ function gsParseAssetTracker(rows){
     const commTHB=parseFloat(r[AT.commTHB])||0;
     // Total_Amout_THB already includes commission — do NOT add commTHB again
     const trueCost=Math.abs(amtTHB);
-    const group=TM[r[AT.assetType]?String(r[AT.assetType]).trim():'Other']||'Other';
     const platform=r[AT.platform]?String(r[AT.platform]).trim():'Unknown';
+    const group=resolveGroup(r[AT.assetType], ticker, platform);
     const industry=r[AT.industry]?String(r[AT.industry]).trim():'—';
     if(fx>1){if(!fxAcc[ticker])fxAcc[ticker]=[];fxAcc[ticker].push(fx);}
     if(IS_COST.has(txType)&&qty>0){
