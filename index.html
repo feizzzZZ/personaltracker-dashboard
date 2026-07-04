@@ -83,9 +83,6 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 .month-nav{display:flex;align-items:center;gap:4px}
 .month-btn{background:var(--bg3);border:1px solid var(--border);color:var(--muted2);padding:5px 9px;border-radius:7px;cursor:pointer;font-family:'Google Sans Mono',monospace;font-size:12px;transition:all .15s}
 .month-btn:hover{border-color:var(--border2);color:var(--text)}
-.bm-scenario-btn{background:var(--bg4);border:1px solid var(--border);color:var(--muted2);padding:4px 9px;border-radius:6px;cursor:pointer;font-family:'Google Sans Mono',monospace;font-size:11px;transition:all .15s;white-space:nowrap}
-.bm-scenario-btn:hover{border-color:var(--border2);color:var(--text)}
-.bm-scenario-btn.active{background:rgba(0,212,160,.12);border-color:rgba(0,212,160,.4);color:var(--gain);font-weight:600}
 .month-display{background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:5px 12px;border-radius:7px;font-family:'Google Sans',sans-serif;font-size:12px;font-weight:600;min-width:120px;text-align:center}
 select.month-display{text-align-last:center;outline:none}
 
@@ -686,15 +683,15 @@ select.month-display{text-align-last:center;outline:none}
         <div><div class="pg-title">Overview</div><div class="pg-sub">ภาพรวมทางการเงินทั้งหมด</div></div>
       </div>
 
-      <!-- Total Wealth 4-part section -->
+      <!-- Total Wealth 3-part section -->
       <div class="sl" style="margin-bottom:12px">Total Wealth</div>
-      <div style="display:grid;grid-template-columns:1fr 1px 1fr 1px 1fr 1px 1.2fr;gap:0;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;overflow:hidden;margin-bottom:14px">
+      <div style="display:grid;grid-template-columns:1fr 1px 1fr 1px 1fr;gap:0;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;overflow:hidden;margin-bottom:20px">
         <!-- Cash -->
         <div style="padding:20px 24px">
           <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2);margin-bottom:8px;display:flex;align-items:center;gap:6px">
             <div style="width:8px;height:8px;border-radius:50%;background:var(--income)"></div>Cash Balance
           </div>
-          <div style="font-family:'Google Sans',sans-serif;font-size:clamp(20px,2.6vw,28px);font-weight:700;color:var(--income);letter-spacing:-.02em" id="ov-cash">฿0</div>
+          <div style="font-family:'Google Sans',sans-serif;font-size:clamp(22px,3vw,32px);font-weight:700;color:var(--income);letter-spacing:-.02em" id="ov-cash">฿0</div>
           <div style="font-size:11px;color:var(--muted2);margin-top:6px" id="ov-cash-sub">— accounts</div>
         </div>
         <div style="background:var(--border)"></div>
@@ -703,71 +700,17 @@ select.month-display{text-align-last:center;outline:none}
           <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2);margin-bottom:8px;display:flex;align-items:center;gap:6px">
             <div style="width:8px;height:8px;border-radius:50%;background:var(--savings)"></div>Portfolio Value
           </div>
-          <div style="font-family:'Google Sans',sans-serif;font-size:clamp(20px,2.6vw,28px);font-weight:700;color:var(--savings);letter-spacing:-.02em" id="ov-portval">฿0</div>
+          <div style="font-family:'Google Sans',sans-serif;font-size:clamp(22px,3vw,32px);font-weight:700;color:var(--savings);letter-spacing:-.02em" id="ov-portval">฿0</div>
           <div style="font-size:11px;margin-top:6px" id="ov-portpnl-sub"></div>
         </div>
         <div style="background:var(--border)"></div>
-        <!-- Insurance Cash Value -->
-        <div style="padding:20px 24px">
-          <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2);margin-bottom:8px;display:flex;align-items:center;gap:6px">
-            <div style="width:8px;height:8px;border-radius:50%;background:#7c6fec"></div>Insurance CV
-          </div>
-          <div style="font-family:'Google Sans',sans-serif;font-size:clamp(20px,2.6vw,28px);font-weight:700;color:#7c6fec;letter-spacing:-.02em" id="ov-inscv">฿0</div>
-          <div style="font-size:11px;color:var(--muted2);margin-top:6px" id="ov-inscv-sub">มูลค่าเวนคืน</div>
-        </div>
-        <div style="background:var(--border)"></div>
-        <!-- Net Worth -->
+        <!-- Total -->
         <div style="padding:20px 24px;background:rgba(0,212,160,.04)">
           <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2);margin-bottom:8px;display:flex;align-items:center;gap:6px">
-            <div style="width:8px;height:8px;border-radius:2px;background:var(--white)"></div>Net Worth
+            <div style="width:8px;height:8px;border-radius:2px;background:var(--white)"></div>Total
           </div>
           <div style="font-family:'Google Sans',sans-serif;font-size:clamp(22px,3vw,32px);font-weight:700;color:var(--white);letter-spacing:-.02em" id="ov-networth">฿0</div>
-          <div style="font-size:11px;color:var(--muted2);margin-top:6px">Cash + Portfolio + Insurance CV</div>
-        </div>
-      </div>
-
-      <!-- 🎯 Net Worth Goal Progress -->
-      <div id="ov-goal-3m" style="background:linear-gradient(135deg,rgba(0,212,160,.08),rgba(124,111,236,.06));border:1px solid rgba(0,212,160,.25);border-radius:14px;padding:18px 24px;margin-bottom:20px">
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">
-          <div style="display:flex;align-items:center;gap:10px">
-            <span style="font-size:20px">🎯</span>
-            <div>
-              <div style="font-family:'Google Sans',sans-serif;font-size:15px;font-weight:600;color:var(--white)">Road to ฿3 Million</div>
-              <div style="font-size:11px;color:var(--muted2)">เป้าหมาย Net Worth ฿3,000,000</div>
-            </div>
-          </div>
-          <div style="text-align:right">
-            <div style="font-family:'Google Sans',sans-serif;font-size:22px;font-weight:700;color:var(--gain)" id="ov-3m-pct">0%</div>
-            <div style="font-size:10px;color:var(--muted2)" id="ov-3m-remain">เหลืออีก ฿3,000,000</div>
-          </div>
-        </div>
-        <!-- Progress bar with milestone markers -->
-        <div style="position:relative;height:12px;background:var(--bg4);border-radius:6px;overflow:visible;border:1px solid var(--border)">
-          <div style="position:absolute;inset:0;border-radius:6px;overflow:hidden">
-            <div id="ov-3m-bar" style="height:100%;width:0%;background:linear-gradient(90deg,var(--income),var(--gain));border-radius:6px;transition:width .8s ease"></div>
-          </div>
-          <!-- Milestone: 1M (33.3%) -->
-          <div style="position:absolute;left:33.33%;top:-3px;bottom:-3px;width:2px;background:var(--muted2);opacity:.5"></div>
-          <!-- Milestone: 2M (66.6%) -->
-          <div style="position:absolute;left:66.66%;top:-3px;bottom:-3px;width:2px;background:var(--muted2);opacity:.5"></div>
-        </div>
-        <div style="display:flex;justify-content:space-between;margin-top:5px;font-size:9px;color:var(--muted2)">
-          <span>฿0</span><span style="margin-left:29%">฿1M</span><span style="margin-left:24%">฿2M</span><span>฿3M</span>
-        </div>
-        <div style="display:flex;justify-content:space-between;margin-top:10px;flex-wrap:wrap;gap:8px">
-          <div style="font-size:11px;color:var(--muted2)" id="ov-3m-projection">—</div>
-          <div style="font-size:11px;color:var(--muted2)" id="ov-3m-monthly">—</div>
-        </div>
-        <!-- Scenario selector: expected annual return -->
-        <div style="display:flex;align-items:center;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid var(--border);flex-wrap:wrap">
-          <span style="font-size:10px;color:var(--muted2);text-transform:uppercase;letter-spacing:.06em">Expected return</span>
-          <div style="display:flex;gap:4px" id="ov-3m-scenarios">
-            <button class="bm-scenario-btn" data-ret="0"  onclick="setGoalScenario(0,this)">💵 0%</button>
-            <button class="bm-scenario-btn" data-ret="5"  onclick="setGoalScenario(5,this)">🐢 5%</button>
-            <button class="bm-scenario-btn active" data-ret="7" onclick="setGoalScenario(7,this)">📊 7%</button>
-            <button class="bm-scenario-btn" data-ret="10" onclick="setGoalScenario(10,this)">🚀 10%</button>
-          </div>
-          <span style="font-size:10px;color:var(--muted);margin-left:auto" id="ov-3m-compound-note"></span>
+          <div style="font-size:11px;color:var(--muted2);margin-top:6px">Cash + Portfolio</div>
         </div>
       </div>
 
@@ -1810,114 +1753,13 @@ function renderOverview(){
   const portCost=assets.reduce((s,a)=>s+a.cost,0);
   const portPnl=portVal-portCost;
   const totalDiv=tracker.filter(r=>TX_DIV.includes(r.txType)).reduce((s,r)=>s+r.amtTHB,0);
-  const insCV=insPolicies.reduce((s,p)=>s+(p.surrender||0),0);
-
-  // Net Worth = Cash + Portfolio + Insurance Cash Value
-  const netWorth=allCash+portVal+insCV;
-  document.getElementById('ov-networth').textContent=fmt(netWorth);
+  document.getElementById('ov-networth').textContent=fmt(allCash+portVal);
   document.getElementById('ov-cash').textContent=fmt(allCash);
   document.getElementById('ov-cash-sub').textContent=`${bankBals.filter(b=>b.balance!==0).length} accounts`;
   document.getElementById('ov-portval').textContent=fmt(portVal);
   const ppEl=document.getElementById('ov-portpnl-sub');
   ppEl.textContent=fmtSign(portPnl)+' P&L';ppEl.style.color=portPnl>=0?'var(--gain)':'var(--loss)';
-  const insEl=document.getElementById('ov-inscv');
-  if(insEl) insEl.textContent=fmt(insCV);
   document.getElementById('ov-div').textContent=fmt(totalDiv);
-
-  // ── 🎯 Road to ฿3M — Compound Projection Engine ────────────────────
-  const GOAL=3_000_000;
-  const pct=Math.min(netWorth/GOAL*100,100);
-  const remain=Math.max(GOAL-netWorth,0);
-  document.getElementById('ov-3m-pct').textContent=pct.toFixed(1)+'%';
-  document.getElementById('ov-3m-bar').style.width=pct+'%';
-  const remEl=document.getElementById('ov-3m-remain');
-  const milestone = netWorth>=2_000_000?'ผ่าน ฿2M แล้ว':netWorth>=1_000_000?'ผ่าน ฿1M แล้ว':'กำลังไปสู่ ฿1M';
-  remEl.innerHTML=`เหลืออีก ${fmt(remain)} · <span style="color:var(--gain)">${milestone}</span>`;
-
-  // Average monthly wealth contribution (net cashflow that stays + savings moved to assets)
-  const monthsData=availableMonths.map(mk=>computeSummary(txRows.filter(r=>r.month===mk)));
-  const avgMonthlyNet = monthsData.length ? monthsData.reduce((s,m)=>s+m.net,0)/monthsData.length : 0;
-  const avgMonthlySavings = monthsData.length ? monthsData.reduce((s,m)=>s+Math.abs(m.savings),0)/monthsData.length : 0;
-  const monthlyContrib = Math.max(avgMonthlyNet + avgMonthlySavings, 0);
-
-  // Portion of net worth that's invested (grows with market) vs cash (doesn't compound)
-  const investedShare = netWorth>0 ? portVal/netWorth : 0;
-
-  // Store state for scenario recompute
-  window._goalState={netWorth,remain,GOAL,monthlyContrib,investedShare,portVal};
-  computeGoalProjection(window._goalReturn ?? 7);
-
-  _renderOverviewRest();
-}
-
-// Compound projection: simulate month-by-month FV with portfolio return on invested balance
-function computeGoalProjection(annualRetPct){
-  window._goalReturn=annualRetPct;
-  const st=window._goalState;
-  if(!st) return;
-  const projEl=document.getElementById('ov-3m-projection');
-  const monEl =document.getElementById('ov-3m-monthly');
-  const noteEl=document.getElementById('ov-3m-compound-note');
-
-  if(st.remain<=0){
-    projEl.innerHTML=`🎉 <span style="color:var(--gain);font-weight:600">ถึงเป้า ฿3M แล้ว!</span>`;
-    monEl.textContent=''; if(noteEl) noteEl.textContent=''; return;
-  }
-  if(st.monthlyContrib<=0){
-    projEl.innerHTML=`<span style="color:var(--muted)">ยังไม่มีข้อมูลพอสำหรับ projection</span>`;
-    monEl.textContent=''; if(noteEl) noteEl.textContent=''; return;
-  }
-
-  // Monthly return applied to the invested share of wealth
-  const rMonthly=Math.pow(1+annualRetPct/100, 1/12)-1;
-  let nw=st.netWorth;
-  let months=0;
-  const MAX=1200; // 100yr safety cap
-  while(nw<st.GOAL && months<MAX){
-    const investedBal=nw*st.investedShare;
-    nw += investedBal*rMonthly;   // compound growth on invested portion
-    nw += st.monthlyContrib;      // monthly contribution
-    months++;
-  }
-
-  if(months>=MAX){
-    projEl.innerHTML=`<span style="color:var(--muted)">เกิน 100 ปี — ปรับ contribution หรือ return</span>`;
-    monEl.innerHTML=`💰 เก็บเฉลี่ย <span style="color:var(--gain);font-weight:600">${fmt(st.monthlyContrib)}</span>/เดือน`;
-    return;
-  }
-
-  const yrs=Math.floor(months/12), mos=months%12;
-  const targetDate=new Date();
-  targetDate.setMonth(targetDate.getMonth()+months);
-  const dateStr=targetDate.toLocaleDateString('th-TH',{year:'numeric',month:'short'});
-
-  // Compare vs 0% baseline to show compounding benefit
-  const baselineMonths=Math.ceil(st.remain/st.monthlyContrib);
-  const saved=baselineMonths-months;
-
-  projEl.innerHTML=`📈 คาดถึงเป้าใน <span style="color:var(--white);font-weight:600">${yrs>0?yrs+' ปี ':''}${mos} เดือน</span> (~${dateStr})`;
-  monEl.innerHTML=`💰 เก็บเฉลี่ย <span style="color:var(--gain);font-weight:600">${fmt(st.monthlyContrib)}</span>/เดือน`;
-  if(noteEl){
-    if(annualRetPct>0 && saved>0){
-      noteEl.innerHTML=`⚡ compounding ช่วยร่นเวลา ~${saved} เดือน`;
-    } else if(annualRetPct===0){
-      noteEl.textContent='ไม่รวมผลตอบแทน (เงินเก็บล้วน)';
-    } else {
-      noteEl.textContent='';
-    }
-  }
-}
-
-// Scenario button handler
-function setGoalScenario(retPct, btn){
-  document.querySelectorAll('#ov-3m-scenarios .bm-scenario-btn').forEach(b=>b.classList.remove('active'));
-  if(btn) btn.classList.add('active');
-  computeGoalProjection(retPct);
-}
-
-function _renderOverviewRest(){
-  const allCash=bankBals.reduce((s,b)=>s+b.balance,0);
-  const portVal=assets.reduce((s,a)=>s+a.val,0);
 
   // current month cashflow
   const curMk=availableMonths[curMonthIdx];
@@ -2583,10 +2425,8 @@ function renderRealized(){
 
 // ── Google Sheets Sync ───────────────────────────────────────────────
 const GS_CONFIG = {
-  // SECURITY: no defaults in source. User enters these once via the ⚙ Settings
-  // modal; they persist in localStorage on the user's device only.
-  clientId:    '',
-  spreadsheetId: '',
+  clientId:    '3124311806-uobbvpafrslj4tni43hug8nkc73c7502.apps.googleusercontent.com',
+  spreadsheetId: '1of-BLRV68WvIgvD3lBfMSt-67giRyddS49fywnda_mU',
   scope:       'https://www.googleapis.com/auth/spreadsheets.readonly',
   // Asset_Dashboard removed — not present in current Excel version; Asset_Live_Price_Feed is the source of truth
   sheets:      ['Transaction','Asset_Tracker','Asset_Live_Price_Feed','Insurance_Policies','Insurance_Coverage'],
@@ -2607,21 +2447,23 @@ function gsInit(){
   if(savedCid) GS_CONFIG.clientId      = savedCid;
   if(savedSid) GS_CONFIG.spreadsheetId = savedSid;
 
-  // SECURITY: access token lives in memory only — never persisted.
-  // Purge any token saved by older versions of this app.
-  localStorage.removeItem('gs_access_token');
-  localStorage.removeItem('gs_token_expiry');
+  // Restore token if still valid
+  const savedToken  = localStorage.getItem('gs_access_token');
+  const savedExpiry = parseInt(localStorage.getItem('gs_token_expiry')||'0');
+  if(savedToken && Date.now() < savedExpiry - 60000){
+    gsAccessToken = savedToken;
+    gsTokenExpiry = savedExpiry;
+    gsConnected   = true;
+  }
 
   // Show sync btn in sidebar when dashboard is visible
   const syncBtn = document.getElementById('gs-sync-btn');
   if(syncBtn) syncBtn.style.display = 'flex';
   gsUpdateSyncBtn();
 
-  // Populate modal inputs (null-safe — don't let a missing element kill init)
-  const cidEl = document.getElementById('gs-client-id-input');
-  const sidEl = document.getElementById('gs-sheet-id-input');
-  if(cidEl) cidEl.value = GS_CONFIG.clientId;
-  if(sidEl) sidEl.value = GS_CONFIG.spreadsheetId;
+  // Populate modal inputs
+  document.getElementById('gs-client-id-input').value  = GS_CONFIG.clientId;
+  document.getElementById('gs-sheet-id-input').value   = GS_CONFIG.spreadsheetId;
 
   // Init GIS token client (if library loaded)
   if(typeof google !== 'undefined' && google.accounts){
@@ -2633,15 +2475,13 @@ function gsInit(){
     });
   }
 
-  // Auto-reconnect on load: if user configured before, request a fresh token
-  // silently (prompt:'' shows no popup for an already-consented Google account).
-  if(GS_CONFIG.clientId && GS_CONFIG.spreadsheetId && !txRows.length){
-    setTimeout(()=>{ if(gsTokenClient) gsTokenClient.requestAccessToken({prompt:''}); }, 1200);
+  // Auto-sync if connected and no data loaded yet
+  if(gsConnected && !txRows.length){
+    setTimeout(()=>gsSync(), 800);
   }
 }
 
 function gsInitTokenClient(){
-  if(!GS_CONFIG.clientId){ console.log('[GS] No clientId configured yet — skip init'); return; }
   try {
     console.log('[GS] initTokenClient with clientId:', GS_CONFIG.clientId.slice(0,25)+'...');
     gsTokenClient = google.accounts.oauth2.initTokenClient({
@@ -2665,8 +2505,8 @@ function gsTokenCallback(resp){
   gsAccessToken = resp.access_token;
   gsTokenExpiry = Date.now() + (resp.expires_in * 1000);
   gsConnected   = true;
-  // SECURITY: token kept in memory only. On page reload user re-auths silently
-  // (Google shows no prompt for already-consented apps — one extra click at most).
+  localStorage.setItem('gs_access_token', gsAccessToken);
+  localStorage.setItem('gs_token_expiry',  gsTokenExpiry);
   gsSync();
 }
 
@@ -2678,12 +2518,6 @@ function gsConnect(){
     // Ensure GIS library is loaded
     if(typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2){
       alert('Google Sign-In library ยังไม่โหลด\nกรุณารอ 3 วินาทีแล้วลองใหม่\n\nถ้ายังไม่ได้ลอง Hard Reload: Cmd+Shift+R');
-      return;
-    }
-    // First-run: no config yet → open settings modal instead of failing
-    if(!GS_CONFIG.clientId || !GS_CONFIG.spreadsheetId){
-      gsOpenModal();
-      gsSetStatus('⚙ กรอก Client ID และ Sheet ID ก่อนเชื่อมต่อ (เก็บในเครื่องคุณเท่านั้น)', 'loading');
       return;
     }
     // (Re)initialize token client if needed
@@ -3016,19 +2850,14 @@ function gsSetStatus(msg,type){
 }
 
 function gsOpenModal(){
-  const cidEl=document.getElementById('gs-client-id-input');
-  const sidEl=document.getElementById('gs-sheet-id-input');
-  const modal=document.getElementById('gs-modal');
-  if(!modal){alert('Settings modal ไม่พบใน DOM — โหลดหน้าใหม่แล้วลองอีกครั้ง');return;}
-  if(cidEl) cidEl.value=GS_CONFIG.clientId;
-  if(sidEl) sidEl.value=GS_CONFIG.spreadsheetId;
-  modal.classList.add('show');
+  document.getElementById('gs-client-id-input').value=GS_CONFIG.clientId;
+  document.getElementById('gs-sheet-id-input').value=GS_CONFIG.spreadsheetId;
+  document.getElementById('gs-modal').classList.add('show');
 }
 function gsCloseModal(){document.getElementById('gs-modal').classList.remove('show');}
 function gsSaveAndConnect(){
-  const cid=(document.getElementById('gs-client-id-input')?.value||'').trim();
-  const sid=(document.getElementById('gs-sheet-id-input')?.value||'').trim();
-  if(!cid||!sid){gsSetStatus('⚠ กรอกให้ครบทั้ง Client ID และ Sheet ID','err');return;}
+  const cid=document.getElementById('gs-client-id-input').value.trim();
+  const sid=document.getElementById('gs-sheet-id-input').value.trim();
   if(cid){GS_CONFIG.clientId=cid;localStorage.setItem('gs_client_id',cid);}
   if(sid){GS_CONFIG.spreadsheetId=sid;localStorage.setItem('gs_sheet_id',sid);}
   gsAccessToken=null;gsConnected=false;
@@ -3539,16 +3368,7 @@ let renderedPages=new Set();
 function switchPage(name){
   document.querySelectorAll('.sb-item').forEach(el=>{el.classList.toggle('active',el.dataset.page===name);});
   document.querySelectorAll('.page').forEach(el=>{el.classList.toggle('active',el.id===`page-${name}`);});
-  if(!renderedPages.has(name)&&pageRenderFns[name]){
-    try{
-      pageRenderFns[name]();
-      renderedPages.add(name);   // mark rendered only on success → failed page retries next visit
-      updateBudgetBadge();
-    }catch(e){
-      console.error('[Page] render failed:',name,e);
-      // navigation ยังทำงานต่อได้ — หน้าอื่นไม่โดนลากพังไปด้วย
-    }
-  }
+  if(!renderedPages.has(name)&&pageRenderFns[name]){pageRenderFns[name]();renderedPages.add(name);updateBudgetBadge();}
   if(window.innerWidth<=700){document.getElementById('sidebar').classList.remove('open');}
 }
 function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');}
@@ -4466,28 +4286,5 @@ if('serviceWorker' in navigator){
   });
 }
 </script>
-
-<!-- ⚙ Google Sheets Settings Modal (restored — JS references these IDs) -->
-<div id="gs-modal" class="gs-modal-overlay">
-  <div class="gs-modal">
-    <div class="gs-modal-close" onclick="gsCloseModal()">✕</div>
-    <div class="gs-modal-title">⚙ เชื่อมต่อ Google Sheets</div>
-    <div class="gs-field">
-      <div class="gs-label">Google OAuth Client ID</div>
-      <input id="gs-client-id-input" class="gs-input" type="text"
-             placeholder="xxxx.apps.googleusercontent.com" autocomplete="off">
-    </div>
-    <div class="gs-field">
-      <div class="gs-label">Spreadsheet ID</div>
-      <input id="gs-sheet-id-input" class="gs-input" type="text"
-             placeholder="จาก URL: docs.google.com/spreadsheets/d/【ตรงนี้】/edit" autocomplete="off">
-    </div>
-    <div class="gs-status-row"><span id="gs-modal-status-text">กรอกครั้งเดียว — เก็บในเครื่องนี้เท่านั้น</span></div>
-    <div class="gs-modal-actions">
-      <button class="gs-save-btn" onclick="gsSaveAndConnect()">บันทึก & เชื่อมต่อ</button>
-      <button class="gs-cancel-btn" onclick="gsCloseModal()">ยกเลิก</button>
-    </div>
-  </div>
-</div>
 </body>
 </html>
