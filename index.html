@@ -2619,9 +2619,11 @@ function gsInit(){
   if(syncBtn) syncBtn.style.display = 'flex';
   gsUpdateSyncBtn();
 
-  // Populate modal inputs
-  document.getElementById('gs-client-id-input').value  = GS_CONFIG.clientId;
-  document.getElementById('gs-sheet-id-input').value   = GS_CONFIG.spreadsheetId;
+  // Populate modal inputs (null-safe: missing element must not kill init)
+  const _cidEl = document.getElementById('gs-client-id-input');
+  const _sidEl = document.getElementById('gs-sheet-id-input');
+  if(_cidEl) _cidEl.value = GS_CONFIG.clientId;
+  if(_sidEl) _sidEl.value = GS_CONFIG.spreadsheetId;
 
   // Init GIS token client (if library loaded)
   if(typeof google !== 'undefined' && google.accounts){
@@ -3008,14 +3010,18 @@ function gsSetStatus(msg,type){
 }
 
 function gsOpenModal(){
-  document.getElementById('gs-client-id-input').value=GS_CONFIG.clientId;
-  document.getElementById('gs-sheet-id-input').value=GS_CONFIG.spreadsheetId;
-  document.getElementById('gs-modal').classList.add('show');
+  const m=document.getElementById('gs-modal');
+  if(!m){alert('ไม่พบ Settings modal — โหลดหน้าใหม่ (Cmd+Shift+R) แล้วลองอีกครั้ง');return;}
+  const c=document.getElementById('gs-client-id-input');
+  const s=document.getElementById('gs-sheet-id-input');
+  if(c) c.value=GS_CONFIG.clientId;
+  if(s) s.value=GS_CONFIG.spreadsheetId;
+  m.classList.add('show');
 }
-function gsCloseModal(){document.getElementById('gs-modal').classList.remove('show');}
+function gsCloseModal(){const m=document.getElementById('gs-modal');if(m)m.classList.remove('show');}
 function gsSaveAndConnect(){
-  const cid=document.getElementById('gs-client-id-input').value.trim();
-  const sid=document.getElementById('gs-sheet-id-input').value.trim();
+  const cid=(document.getElementById('gs-client-id-input')?.value||'').trim();
+  const sid=(document.getElementById('gs-sheet-id-input')?.value||'').trim();
   if(cid){GS_CONFIG.clientId=cid;localStorage.setItem('gs_client_id',cid);}
   if(sid){GS_CONFIG.spreadsheetId=sid;localStorage.setItem('gs_sheet_id',sid);}
   gsAccessToken=null;gsConnected=false;
@@ -3526,7 +3532,10 @@ let renderedPages=new Set();
 function switchPage(name){
   document.querySelectorAll('.sb-item').forEach(el=>{el.classList.toggle('active',el.dataset.page===name);});
   document.querySelectorAll('.page').forEach(el=>{el.classList.toggle('active',el.id===`page-${name}`);});
-  if(!renderedPages.has(name)&&pageRenderFns[name]){pageRenderFns[name]();renderedPages.add(name);updateBudgetBadge();}
+  if(!renderedPages.has(name)&&pageRenderFns[name]){
+    try{ pageRenderFns[name](); renderedPages.add(name); updateBudgetBadge(); }
+    catch(e){ console.error('[Page] render failed:',name,e); }
+  }
   if(window.innerWidth<=700){document.getElementById('sidebar').classList.remove('open');}
 }
 function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');}
@@ -4444,5 +4453,27 @@ if('serviceWorker' in navigator){
   });
 }
 </script>
+<!-- ⚙ Google Sheets Settings Modal (restored — CSS/JS อ้างถึงแต่ markup หายไป) -->
+<div id="gs-modal" class="gs-modal-overlay">
+  <div class="gs-modal">
+    <div class="gs-modal-close" onclick="gsCloseModal()">✕</div>
+    <div class="gs-modal-title">⚙ เชื่อมต่อ Google Sheets</div>
+    <div class="gs-field">
+      <div class="gs-label">Google OAuth Client ID</div>
+      <input id="gs-client-id-input" class="gs-input" type="text"
+             placeholder="xxxx.apps.googleusercontent.com" autocomplete="off">
+    </div>
+    <div class="gs-field">
+      <div class="gs-label">Spreadsheet ID</div>
+      <input id="gs-sheet-id-input" class="gs-input" type="text"
+             placeholder="docs.google.com/spreadsheets/d/【ส่วนนี้】/edit" autocomplete="off">
+    </div>
+    <div class="gs-status-row"><span id="gs-modal-status-text">ค่าจะถูกเก็บในเครื่องนี้</span></div>
+    <div class="gs-modal-actions">
+      <button class="gs-save-btn" onclick="gsSaveAndConnect()">บันทึก & เชื่อมต่อ</button>
+      <button class="gs-cancel-btn" onclick="gsCloseModal()">ยกเลิก</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
