@@ -2617,9 +2617,11 @@ function gsInit(){
   if(syncBtn) syncBtn.style.display = 'flex';
   gsUpdateSyncBtn();
 
-  // Populate modal inputs
-  document.getElementById('gs-client-id-input').value  = GS_CONFIG.clientId;
-  document.getElementById('gs-sheet-id-input').value   = GS_CONFIG.spreadsheetId;
+  // Populate modal inputs (null-safe — don't let a missing element kill init)
+  const cidEl = document.getElementById('gs-client-id-input');
+  const sidEl = document.getElementById('gs-sheet-id-input');
+  if(cidEl) cidEl.value = GS_CONFIG.clientId;
+  if(sidEl) sidEl.value = GS_CONFIG.spreadsheetId;
 
   // Init GIS token client (if library loaded)
   if(typeof google !== 'undefined' && google.accounts){
@@ -3014,14 +3016,19 @@ function gsSetStatus(msg,type){
 }
 
 function gsOpenModal(){
-  document.getElementById('gs-client-id-input').value=GS_CONFIG.clientId;
-  document.getElementById('gs-sheet-id-input').value=GS_CONFIG.spreadsheetId;
-  document.getElementById('gs-modal').classList.add('show');
+  const cidEl=document.getElementById('gs-client-id-input');
+  const sidEl=document.getElementById('gs-sheet-id-input');
+  const modal=document.getElementById('gs-modal');
+  if(!modal){alert('Settings modal ไม่พบใน DOM — โหลดหน้าใหม่แล้วลองอีกครั้ง');return;}
+  if(cidEl) cidEl.value=GS_CONFIG.clientId;
+  if(sidEl) sidEl.value=GS_CONFIG.spreadsheetId;
+  modal.classList.add('show');
 }
 function gsCloseModal(){document.getElementById('gs-modal').classList.remove('show');}
 function gsSaveAndConnect(){
-  const cid=document.getElementById('gs-client-id-input').value.trim();
-  const sid=document.getElementById('gs-sheet-id-input').value.trim();
+  const cid=(document.getElementById('gs-client-id-input')?.value||'').trim();
+  const sid=(document.getElementById('gs-sheet-id-input')?.value||'').trim();
+  if(!cid||!sid){gsSetStatus('⚠ กรอกให้ครบทั้ง Client ID และ Sheet ID','err');return;}
   if(cid){GS_CONFIG.clientId=cid;localStorage.setItem('gs_client_id',cid);}
   if(sid){GS_CONFIG.spreadsheetId=sid;localStorage.setItem('gs_sheet_id',sid);}
   gsAccessToken=null;gsConnected=false;
@@ -3532,7 +3539,16 @@ let renderedPages=new Set();
 function switchPage(name){
   document.querySelectorAll('.sb-item').forEach(el=>{el.classList.toggle('active',el.dataset.page===name);});
   document.querySelectorAll('.page').forEach(el=>{el.classList.toggle('active',el.id===`page-${name}`);});
-  if(!renderedPages.has(name)&&pageRenderFns[name]){pageRenderFns[name]();renderedPages.add(name);updateBudgetBadge();}
+  if(!renderedPages.has(name)&&pageRenderFns[name]){
+    try{
+      pageRenderFns[name]();
+      renderedPages.add(name);   // mark rendered only on success → failed page retries next visit
+      updateBudgetBadge();
+    }catch(e){
+      console.error('[Page] render failed:',name,e);
+      // navigation ยังทำงานต่อได้ — หน้าอื่นไม่โดนลากพังไปด้วย
+    }
+  }
   if(window.innerWidth<=700){document.getElementById('sidebar').classList.remove('open');}
 }
 function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');}
@@ -4450,5 +4466,28 @@ if('serviceWorker' in navigator){
   });
 }
 </script>
+
+<!-- ⚙ Google Sheets Settings Modal (restored — JS references these IDs) -->
+<div id="gs-modal" class="gs-modal-overlay">
+  <div class="gs-modal">
+    <div class="gs-modal-close" onclick="gsCloseModal()">✕</div>
+    <div class="gs-modal-title">⚙ เชื่อมต่อ Google Sheets</div>
+    <div class="gs-field">
+      <div class="gs-label">Google OAuth Client ID</div>
+      <input id="gs-client-id-input" class="gs-input" type="text"
+             placeholder="xxxx.apps.googleusercontent.com" autocomplete="off">
+    </div>
+    <div class="gs-field">
+      <div class="gs-label">Spreadsheet ID</div>
+      <input id="gs-sheet-id-input" class="gs-input" type="text"
+             placeholder="จาก URL: docs.google.com/spreadsheets/d/【ตรงนี้】/edit" autocomplete="off">
+    </div>
+    <div class="gs-status-row"><span id="gs-modal-status-text">กรอกครั้งเดียว — เก็บในเครื่องนี้เท่านั้น</span></div>
+    <div class="gs-modal-actions">
+      <button class="gs-save-btn" onclick="gsSaveAndConnect()">บันทึก & เชื่อมต่อ</button>
+      <button class="gs-cancel-btn" onclick="gsCloseModal()">ยกเลิก</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
