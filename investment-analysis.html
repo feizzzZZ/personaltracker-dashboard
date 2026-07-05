@@ -757,6 +757,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 </div><!-- end main-content -->
 
 <script>
+const APP_BUILD='v12'; console.log('[Invest OS] build', APP_BUILD);
 // ── Navigation ──
 function switchPage(id, el){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -787,7 +788,7 @@ function updateDate(){
   const now = new Date();
   const opts = {year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'};
   document.getElementById('live-date').textContent = now.toLocaleDateString('th-TH',opts);
-  document.getElementById('last-update').textContent = 'อัปเดต: '+now.toLocaleDateString('th-TH',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'});
+  document.getElementById('last-update').textContent = 'อัปเดต: '+now.toLocaleDateString('th-TH',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'})+' · build '+APP_BUILD;
 }
 updateDate();
 setInterval(updateDate,60000);

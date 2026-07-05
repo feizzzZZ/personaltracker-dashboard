@@ -1,7 +1,7 @@
 // Finance OS — Service Worker v2
 // Cache strategy: Cache-first for shell, Network-first for CDN
 
-const CACHE_NAME = 'finance-os-v11';  // bump version so old cache is cleared on deploy
+const CACHE_NAME = 'finance-os-v12';  // bump version so old cache is cleared on deploy
 const BASE = '/personaltracker-dashboard';
 
 // App shell — files to pre-cache on install
@@ -66,7 +66,23 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // App shell: cache-first, fallback to index.html for SPA navigation
+  // HTML/navigation: NETWORK-FIRST — deploy แล้วเห็นเวอร์ชันใหม่ทันที
+  // (cache ใช้เฉพาะตอน offline) แก้ปัญหา "hard reload ทุกครั้งหลัง deploy" ถาวร
+  const isHTML = event.request.mode === 'navigate' || url.split('?')[0].endsWith('.html');
+  if (isHTML && (url.includes(BASE) || url.includes(self.location.origin))) {
+    event.respondWith(
+      fetch(event.request).then(response => {
+        if (response.ok) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+        }
+        return response;
+      }).catch(() => caches.match(event.request).then(c => c || caches.match(BASE + '/index.html')))
+    );
+    return;
+  }
+
+  // Static assets อื่นๆ: cache-first (เร็ว, เปลี่ยนไม่บ่อย)
   if (url.includes(BASE) || url.includes(self.location.origin)) {
     event.respondWith(
       caches.match(event.request).then(cached => {

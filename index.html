@@ -1431,6 +1431,7 @@ select.month-display{text-align-last:center;outline:none}
 </div><!-- /app -->
 
 <script>
+const APP_BUILD='v12'; console.log('[Finance OS] build', APP_BUILD);
 // ── Constants ───────────────────────────────────────────────────────
 const GC={'Thai Stock':'#4cc9f0','US Stock':'#00d4a0','Crypto':'#ff9500',
           'Mutual Fund':'#7c6fec','Provident Fund':'#ffd166','Gold':'#ffa94d','Other':'#5a5a8a'};
@@ -4501,7 +4502,7 @@ async function loadData(file){
 // ── Service Worker registration ───────────────────────────────────────
 if('serviceWorker' in navigator){
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./service-worker.js')
+    navigator.serviceWorker.register('./service-worker.js', {updateViaCache:'none'})
       .then(reg => console.log('[SW] Registered, scope:', reg.scope))
       .catch(err => console.warn('[SW] Registration failed:', err));
   });
