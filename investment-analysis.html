@@ -441,33 +441,33 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 
   <!-- Key metrics -->
   <div class="sg">
-    <div class="sc" style="--g:rgba(0,212,160,.08)">
-      <div class="sc-lbl">S&P 500</div>
+    <div class="sc" style="--g:rgba(0,212,160,.08)" data-tk="SP500">
+      <div class="sc-lbl">S&P 500 <span class="tk-dot"></span></div>
       <div class="sc-val gain" id="sp500-val">5,482</div>
       <div class="sc-sub"><span class="gain">▲ +12.4% YTD</span></div>
     </div>
-    <div class="sc" style="--g:rgba(76,201,240,.08)">
-      <div class="sc-lbl">SET Index</div>
+    <div class="sc" style="--g:rgba(76,201,240,.08)" data-tk="SET_INDEX">
+      <div class="sc-lbl">SET Index <span class="tk-dot"></span></div>
       <div class="sc-val loss" id="set-val">1,198</div>
       <div class="sc-sub"><span class="loss">▼ -8.3% YTD</span></div>
     </div>
-    <div class="sc" style="--g:rgba(255,149,0,.08)">
-      <div class="sc-lbl">US 10Y Yield</div>
+    <div class="sc" style="--g:rgba(255,149,0,.08)" data-tk="US10Y">
+      <div class="sc-lbl">US 10Y Yield <span class="tk-dot"></span></div>
       <div class="sc-val" style="color:var(--debt)">4.28%</div>
       <div class="sc-sub"><span class="loss">▼ -42bps YTD</span></div>
     </div>
-    <div class="sc" style="--g:rgba(255,209,102,.08)">
-      <div class="sc-lbl">Gold (XAU)</div>
+    <div class="sc" style="--g:rgba(255,209,102,.08)" data-tk="GOLD_XAU,GOLD_GLD">
+      <div class="sc-lbl">Gold <span class="tk-dot"></span></div>
       <div class="sc-val gain">$3,312</div>
       <div class="sc-sub"><span class="gain">▲ +28.1% YTD</span></div>
     </div>
-    <div class="sc" style="--g:rgba(255,149,0,.08)">
-      <div class="sc-lbl">USD/THB</div>
+    <div class="sc" style="--g:rgba(255,149,0,.08)" data-tk="USDTHB">
+      <div class="sc-lbl">USD/THB <span class="tk-dot"></span></div>
       <div class="sc-val" style="color:var(--debt)">33.8</div>
       <div class="sc-sub"><span class="loss">Baht อ่อน YTD</span></div>
     </div>
-    <div class="sc" style="--g:rgba(247,37,133,.08)">
-      <div class="sc-lbl">Bitcoin</div>
+    <div class="sc" style="--g:rgba(247,37,133,.08)" data-tk="BTCUSD">
+      <div class="sc-lbl">Bitcoin <span class="tk-dot"></span></div>
       <div class="sc-val gain">$98,420</div>
       <div class="sc-sub"><span class="gain">▲ +48.2% YTD</span></div>
     </div>
@@ -827,7 +827,37 @@ function injectFreshnessBanners(){
     if(head) head.insertAdjacentHTML('afterend', html);
   });
 }
-document.addEventListener('DOMContentLoaded', injectFreshnessBanners);
+function renderSituationLive(){
+  const md=loadMarketData();
+  document.querySelectorAll('#page-situation [data-tk]').forEach(card=>{
+    const keys=card.dataset.tk.split(',');
+    const valEl=card.querySelector('.sc-val'), subEl=card.querySelector('.sc-sub'), dot=card.querySelector('.tk-dot');
+    let hit=null, hitKey=null;
+    if(md&&md.data) for(const k of keys){ const d=md.data[k]; if(d&&d.value!=null&&d.value!==''){hit=d;hitKey=k;break;} }
+    if(hit){
+      const meta=LIVE_META[hitKey];
+      let vTxt; try{ vTxt=meta?meta.fmt(hit.value):String(hit.value);}catch(e){vTxt=String(hit.value);}
+      valEl.textContent=vTxt;
+      valEl.classList.remove('gain','loss'); valEl.style.color='var(--text)';
+      // S&P: ใช้ % เปลี่ยนวันนี้เป็นสีและ sub ถ้ามี
+      const chg = hitKey==='SP500' && md.data.SP500_CHG ? Number(md.data.SP500_CHG.value) : null;
+      const upd = hit.updated ? new Date(hit.updated).toLocaleDateString('th-TH',{day:'numeric',month:'short'}) : 'จากชีต';
+      if(chg!=null && !isNaN(chg)){
+        valEl.style.color = chg>=0?'var(--gain)':'var(--loss)';
+        subEl.innerHTML = `<span style="color:${chg>=0?'var(--gain)':'var(--loss)'}">${chg>=0?'▲ +':'▼ '}${chg.toFixed(2)}% วันนี้</span> <span style="color:var(--muted2)">· ${upd}</span>`;
+      } else {
+        subEl.innerHTML = `<span style="color:var(--muted2)">📡 อัปเดต ${upd}${hit.note?' · '+hit.note:''}</span>`;
+      }
+      if(dot) dot.style.cssText='display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--gain);vertical-align:middle;margin-left:3px';
+    } else {
+      // ไม่มีข้อมูล live — ติดป้ายให้รู้ว่าเป็นค่า editorial เก่า
+      if(subEl && !subEl.querySelector('.ed-tag'))
+        subEl.insertAdjacentHTML('beforeend',' <span class="ed-tag" style="font-size:9px;color:var(--muted2);border:1px solid rgba(255,255,255,.12);border-radius:4px;padding:0 4px;vertical-align:middle">EDITORIAL มิ.ย. 69</span>');
+      card.style.opacity='.65';
+    }
+  });
+}
+document.addEventListener('DOMContentLoaded', ()=>{ injectFreshnessBanners(); renderSituationLive(); });
 
 function renderPage(id){
   switch(id){
@@ -858,6 +888,8 @@ const LIVE_META = {
   GOLD_GLD:  {label:'Gold (GLD proxy)',fmt:v=>'$'+Number(v).toFixed(1)},
   FED_RATE:  {label:'Fed Funds Rate', fmt:v=>Number(v).toFixed(2)+'%'},
   BOT_RATE:  {label:'BOT Policy Rate',fmt:v=>Number(v).toFixed(2)+'%'},
+  US10Y:     {label:'US 10Y Yield',   fmt:v=>Number(v).toFixed(2)+'%'},
+  GOLD_XAU:  {label:'Gold Spot (XAU)',fmt:v=>'$'+Number(v).toLocaleString(undefined,{maximumFractionDigits:0})},
   US_CPI:    {label:'US CPI YoY',     fmt:v=>Number(v).toFixed(1)+'%'},
   TH_CPI:    {label:'CPI ไทย YoY',    fmt:v=>Number(v).toFixed(1)+'%'},
 };
