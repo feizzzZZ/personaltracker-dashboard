@@ -804,6 +804,30 @@ const tooltipDefaults={
 };
 
 // ── Page renderers ──
+// ═══ DATA FRESHNESS ═══════════════════════════════════════════════
+// ทุกข้อมูล editorial ในหน้านี้ (signals, F&G, sectors, outlook, calendar)
+// ถูกบันทึกไว้ ณ วันที่ด้านล่าง — ไม่ใช่ live data
+const MARKET_DATA_ASOF = '2026-06-15';
+const STALE_AFTER_DAYS = 14;
+function dataAgeDays(){ return Math.floor((Date.now()-new Date(MARKET_DATA_ASOF+'T00:00:00'))/86400e3); }
+function injectFreshnessBanners(){
+  const d = dataAgeDays(), stale = d > STALE_AFTER_DAYS;
+  const html = `<div class="fresh-banner" style="display:flex;align-items:center;gap:8px;padding:9px 13px;border-radius:8px;margin:0 0 14px;font-size:11.5px;line-height:1.5;
+      background:${stale?'rgba(255,64,96,.08)':'rgba(0,212,160,.06)'};
+      border:1px solid ${stale?'rgba(255,64,96,.4)':'rgba(0,212,160,.25)'};
+      color:${stale?'var(--loss)':'var(--gain)'}">
+    <span style="font-size:14px">${stale?'⛔':'📅'}</span>
+    <span><strong>ข้อมูลตลาดชุดนี้บันทึก ณ 15 มิ.ย. 2569</strong> (${d} วันที่แล้ว)${stale?' — เก่าเกินกำหนด <strong>ห้ามใช้ตัดสินใจซื้อขาย</strong> จนกว่าจะอัปเดตข้อมูล':''}</span>
+  </div>`;
+  ['page-situation','page-signals','page-feargreed','page-strategy','page-sectors','page-calendar'].forEach(pid=>{
+    const pg = document.getElementById(pid);
+    if(!pg || pg.querySelector('.fresh-banner')) return;
+    const head = pg.querySelector('.pg-head') || pg.firstElementChild;
+    if(head) head.insertAdjacentHTML('afterend', html);
+  });
+}
+document.addEventListener('DOMContentLoaded', injectFreshnessBanners);
+
 function renderPage(id){
   switch(id){
     case 'signals':   renderSignals();   break;
@@ -1179,7 +1203,33 @@ const ALLOC_META = {
   'Provident Fund': {label:'Provident Fund',color:'#ffa94d',target:5},
   'Other':          {label:'Other',        color:'#5a5a8a', target:2},
 };
-const CASH_TARGET = 22;
+const CASH_TARGET = 22; // default เท่านั้น — ค่าจริงมาจาก getTargets()
+
+// ═══ USER-OWNED ALLOCATION TARGETS ════════════════════════════════
+// เป้าสัดส่วนพอร์ตเป็น "นโยบายของเจ้าของพอร์ต" ไม่ใช่ค่าตายตัวในโค้ด
+function getTargets(){
+  const def = {}; Object.keys(ALLOC_META).forEach(k=>def[k]=ALLOC_META[k].target);
+  def['Cash'] = CASH_TARGET;
+  try{ const s = JSON.parse(localStorage.getItem('finOS_targets')||'null');
+       if(s && typeof s==='object') return {...def, ...s}; }catch(e){}
+  return def;
+}
+function editTargets(){
+  const t = getTargets();
+  const order = [...Object.keys(ALLOC_META), 'Cash'];
+  for(const k of order){
+    const label = ALLOC_META[k]?.label || k;
+    const v = prompt(`เป้าสัดส่วน ${label} (%)\nปัจจุบัน: ${t[k]}%\n(เว้นว่าง = คงเดิม)`, t[k]);
+    if(v===null) break;                       // กด Cancel = หยุดทั้งชุด
+    const n = parseFloat(v);
+    if(!isNaN(n) && n>=0 && n<=100) t[k]=n;
+  }
+  const sum = Object.values(t).reduce((s,v)=>s+v,0);
+  if(Math.round(sum)!==100 && !confirm(`ผลรวมเป้า = ${sum}% (ไม่ใช่ 100%)\nบันทึกต่อไหม?`)) return;
+  localStorage.setItem('finOS_targets', JSON.stringify(t));
+  renderAlerts();
+  alert('บันทึกเป้า Allocation แล้ว ✓');
+}
 
 function renderPortfolio(){
   // Load real portfolio data from localStorage (saved by Finance OS)
@@ -1209,11 +1259,11 @@ function renderPortfolio(){
     breakdown = [
       ...entries.map(([k,v]) => ({
         label:   ALLOC_META[k]?.label || k,
-        target:  ALLOC_META[k]?.target || 0,
+        target:  getTargets()[k] ?? (ALLOC_META[k]?.target || 0),
         current: v.pct,
         color:   ALLOC_META[k]?.color || '#8080b0',
       })),
-      {label:'Cash', target: CASH_TARGET, current: cashPct, color:'#8080b0'},
+      {label:'Cash', target: getTargets()['Cash'] ?? CASH_TARGET, current: cashPct, color:'#8080b0'},
     ];
   } else {
     // Static fallback (shown before Finance OS is connected)
@@ -1288,44 +1338,88 @@ function renderPortfolio(){
 
 // ── ALERTS ──
 function renderAlerts(){
-  document.getElementById('alerts-critical').innerHTML=[
-    {icon:'🚨',title:'Thai Stocks Overweight — ควร Rebalance',desc:'น้ำหนักปัจจุบัน 18% สูงกว่า target 10% มาก ในช่วง Late-cycle ที่ SET ยังอ่อน ควรพิจารณา Trim บางส่วนในช่วงที่ตลาด bounce'},
-    {icon:'⚡',title:'Yield Curve ยังกลับหัว (-18bps)',desc:'2Y-10Y Treasury ยังกลับหัว สัญญาณ recession ในอดีต มักเกิดภายใน 12-18 เดือน ควรเพิ่ม Cash และ Defensive assets'},
-  ].map(a=>`<div class="alert-item"><div class="alert-icon">${a.icon}</div><div><div class="alert-title">${a.title}</div><div class="alert-desc">${a.desc}</div></div></div>`).join('');
+  // ── โหลดพอร์ตจริงจาก Finance OS ──
+  let real=null;
+  try{ real = JSON.parse(localStorage.getItem('finOS_portfolio')||'null'); }catch(e){}
 
-  document.getElementById('alerts-warning').innerHTML=[
-    {icon:'⚠️',title:'Fed Rate Decision — ก.ค. 2026',desc:'FOMC Meeting 29-30 ก.ค. 2026 Market expects rate คง แต่ถ้า surprise cut/hike จะมี volatility สูง ควรมี cash reserve ก่อนวันนั้น'},
-    {icon:'⚠️',title:'Bitcoin ขึ้นมา 48% แล้ว YTD',desc:'Crypto position อาจ Overvalued ระยะสั้น ถ้า BTC > $105K ให้พิจารณา Take profit บางส่วน ไม่ควรเกิน 5-10% ของพอร์ต'},
-    {icon:'📊',title:'SET ต่ำกว่า MA200 — Bearish',desc:'SET index ยังอยู่ต่ำกว่า 200-day MA ที่ ~1,230 หลีกเลี่ยง aggressive buy หุ้นไทย จนกว่าจะ break above'},
-  ].map(a=>`<div class="alert-item"><div class="alert-icon">${a.icon}</div><div><div class="alert-title">${a.title}</div><div class="alert-desc">${a.desc}</div></div></div>`).join('');
+  const critEl=document.getElementById('alerts-critical');
+  const warnEl=document.getElementById('alerts-warning');
+  const oppEl =document.getElementById('alerts-opportunity');
+  const item=a=>`<div class="alert-item"><div class="alert-icon">${a.icon}</div><div><div class="alert-title">${a.title}</div><div class="alert-desc">${a.desc}</div></div></div>`;
 
-  document.getElementById('alerts-opportunity').innerHTML=[
-    {icon:'💰',title:'Gold Dip < $3,200 = โอกาสซื้อ',desc:'ถ้า Gold dip มาต่ำกว่า $3,200 ถือเป็นจุดน่าสนใจ Central bank ยังซื้ออย่างต่อเนื่อง + USD อ่อนค่าเป็น catalyst'},
-    {icon:'🎯',title:'S&P 500 Dip 5-10% = DCA เพิ่ม',desc:'ถ้า S&P 500 ปรับลง 5-10% จากระดับนี้ (~5,100–5,200) เป็นโอกาส DCA US Tech ETF เพิ่ม'},
-    {icon:'🇮🇳',title:'India / EM ex-China น่าสนใจ',desc:'NIFTY 50 Valuation ยัง reasonable, GDP growth 6%+ Infrastructure boom ยังต่อเนื่อง พิจารณา ETF เช่น INDA หรือกองทุนรวม India'},
-  ].map(a=>`<div class="alert-item"><div class="alert-icon">${a.icon}</div><div><div class="alert-title">${a.title}</div><div class="alert-desc">${a.desc}</div></div></div>`).join('');
+  // ปุ่มตั้งเป้า — แสดงเสมอด้านบนคอลัมน์แรก
+  const editBtn = `<div style="margin-bottom:10px"><button onclick="editTargets()" style="background:rgba(124,111,236,.12);border:1px solid rgba(124,111,236,.4);color:var(--savings);padding:6px 12px;border-radius:6px;font-size:11px;cursor:pointer;font-family:inherit">⚙ ตั้งเป้า Allocation ของฉัน</button></div>`;
+
+  if(!real || !real.allocation || !Object.keys(real.allocation).length){
+    critEl.innerHTML = editBtn + item({icon:'🔌',title:'ยังไม่ได้เชื่อมข้อมูลพอร์ตจริง',
+      desc:'เปิดหน้า Finance OS ให้โหลดข้อมูลก่อน แล้วกลับมาหน้านี้ — Alerts จะคำนวณจากพอร์ตจริงของคุณโดยอัตโนมัติ'});
+    warnEl.innerHTML=''; oppEl.innerHTML='';
+    return;
+  }
+
+  // ── คำนวณ weight ปัจจุบัน (รวม Cash) เทียบเป้าที่ผู้ใช้ตั้ง ──
+  const targets = getTargets();
+  const cashBal = real.cashBalance||0;
+  const totalVal = (real.totalValue||0) + cashBal;
+  const cur = {};
+  Object.entries(real.allocation).forEach(([k,v])=>{ if(v.value>0) cur[k] = v.value/totalVal*100; });
+  if(totalVal>0) cur['Cash'] = cashBal/totalVal*100;
+
+  const TH = 5; // เกณฑ์เบี่ยงเบน ±5 percentage points
+  const crit=[], warn=[], opp=[];
+  const allKeys = new Set([...Object.keys(cur), ...Object.keys(targets)]);
+  allKeys.forEach(k=>{
+    const c = cur[k]||0, t = targets[k]??0, diff = c-t;
+    const label = ALLOC_META[k]?.label || k;
+    if(diff >= TH)
+      crit.push({icon:'🚨',title:`${label} Overweight ${c.toFixed(1)}% (เป้า ${t}%)`,
+        desc:`เกินเป้า ${diff.toFixed(1)}pp ≈ ฿${Math.round(diff/100*totalVal).toLocaleString()} — พิจารณา trim หรือหยุด DCA ชั่วคราวเพื่อ rebalance`});
+    else if(diff <= -TH && t>0)
+      warn.push({icon:'📉',title:`${label} Underweight ${c.toFixed(1)}% (เป้า ${t}%)`,
+        desc:`ต่ำกว่าเป้า ${(-diff).toFixed(1)}pp ≈ ฿${Math.round(-diff/100*totalVal).toLocaleString()} — เป็นหมวดที่ควรจัดสรร DCA รอบถัดไปเข้าก่อน`});
+    else if(t>0 || c>0)
+      opp.push({icon:'✅',title:`${label} ${c.toFixed(1)}% ใกล้เป้า (${t}%)`,
+        desc:`เบี่ยงเบน ${diff>=0?'+':''}${diff.toFixed(1)}pp อยู่ในกรอบ ±${TH}pp — คงสัดส่วนไว้`});
+  });
+
+  // P&L flag จากข้อมูลจริง
+  Object.entries(real.allocation).forEach(([k,v])=>{
+    if(v.pnlPct<=-20) crit.push({icon:'🩸',title:`${ALLOC_META[k]?.label||k} ขาดทุน ${v.pnlPct}%`,
+      desc:`Unrealized loss ฿${Math.abs(v.pnl).toLocaleString()} — ทบทวน thesis: ถ้าเหตุผลที่ซื้อยังอยู่ = ถือ/DCA, ถ้าเปลี่ยนไปแล้ว = ตัดขาดทุนอย่างมีวินัย`});
+  });
+
+  const asOfNote = `<div style="font-size:10px;color:var(--muted2);margin-bottom:10px">คำนวณจากพอร์ตจริง · มูลค่ารวม ฿${Math.round(totalVal).toLocaleString()} · เกณฑ์ ±${TH}pp</div>`;
+  critEl.innerHTML = editBtn + asOfNote + (crit.length?crit.map(item).join(''):item({icon:'🎉',title:'ไม่มีหมวดที่เกินเป้าเกินเกณฑ์',desc:'พอร์ตอยู่ในกรอบนโยบายที่ตั้งไว้'}));
+  warnEl.innerHTML = warn.length?warn.map(item).join(''):item({icon:'—',title:'ไม่มีหมวด Underweight',desc:''});
+  oppEl.innerHTML  = opp.map(item).join('');
 }
 
 // ── CALENDAR ──
 function renderCalendar(){
+  // iso = ใช้เทียบกับวันนี้ เพื่อซ่อน/หรี่อีเวนต์ที่ผ่านไปแล้วอัตโนมัติ
   const events=[
-    {date:'25 มิ.ย. 2026',title:'US Q1 Final GDP Revision',desc:'Final confirmation ของ GDP Q1 — ถ้าต่ำกว่า 2.1% อาจกดดันตลาด',type:'economic',color:'var(--accent1)',impact:'Medium'},
-    {date:'30 มิ.ย. 2026',title:'US PCE Inflation Data',desc:'ตัวชี้วัด inflation ที่ Fed ดูเป็นหลัก ถ้า PCE > 2.7% = Hawkish signal',type:'economic',color:'var(--loss)',impact:'High'},
-    {date:'5 ก.ค. 2026',title:'US NFP (Non-Farm Payrolls)',desc:'ข้อมูลตลาดแรงงาน ถ้า < 150K = slowdown signal, > 250K = still hot',type:'economic',color:'var(--loss)',impact:'High'},
-    {date:'15 ก.ค. 2026',title:'US CPI Inflation — มิ.ย.',desc:'Key inflation data — ตลาดคาด 2.9% ถ้าต่ำกว่านี้ = bullish bonds/stocks',type:'economic',color:'var(--debt)',impact:'High'},
-    {date:'22 ก.ค. 2026',title:'BOT Policy Meeting',desc:'Bank of Thailand อาจลดดอกเบี้ย ถ้าลดจาก 2.00% → 1.75% bullish สำหรับ Bond และ Property',type:'thai',color:'#4cc9f0',impact:'Medium'},
-    {date:'29–30 ก.ค. 2026',title:'FOMC Meeting — Fed Rate Decision',desc:'Critical event! Market expects HOLD แต่ถ้า surprise cut = bullish, ถ้า Hawkish signal = bearish',type:'economic',color:'var(--loss)',impact:'Critical'},
-    {date:'ส.ค. 2026',title:'US Earnings Season Q2',desc:'Nvidia, Apple, Microsoft, Alphabet รายงานผล Q2 — AI revenue จะเป็น key catalyst ว่า AI story ยังไป',type:'earnings',color:'var(--savings)',impact:'High'},
-    {date:'1 ก.ย. 2026',title:'Thai GDP Q2 2026',desc:'ถ้า GDP ต่ำกว่า 2.5% = pressure บน SET ต่อ. ถ้าสูงกว่า 3% = positive surprise',type:'thai',color:'#4cc9f0',impact:'Medium'},
+    {date:'25 มิ.ย. 2026',iso:'2026-06-25',title:'US Q1 Final GDP Revision',desc:'Final confirmation ของ GDP Q1 — ถ้าต่ำกว่า 2.1% อาจกดดันตลาด',type:'economic',color:'var(--accent1)',impact:'Medium'},
+    {date:'30 มิ.ย. 2026',iso:'2026-06-30',title:'US PCE Inflation Data',desc:'ตัวชี้วัด inflation ที่ Fed ดูเป็นหลัก ถ้า PCE > 2.7% = Hawkish signal',type:'economic',color:'var(--loss)',impact:'High'},
+    {date:'5 ก.ค. 2026',iso:'2026-07-05',title:'US NFP (Non-Farm Payrolls)',desc:'ข้อมูลตลาดแรงงาน ถ้า < 150K = slowdown signal, > 250K = still hot',type:'economic',color:'var(--loss)',impact:'High'},
+    {date:'15 ก.ค. 2026',iso:'2026-07-15',title:'US CPI Inflation — มิ.ย.',desc:'Key inflation data — ตลาดคาด 2.9% ถ้าต่ำกว่านี้ = bullish bonds/stocks',type:'economic',color:'var(--debt)',impact:'High'},
+    {date:'22 ก.ค. 2026',iso:'2026-07-22',title:'BOT Policy Meeting',desc:'Bank of Thailand อาจลดดอกเบี้ย ถ้าลดจาก 2.00% → 1.75% bullish สำหรับ Bond และ Property',type:'thai',color:'#4cc9f0',impact:'Medium'},
+    {date:'29–30 ก.ค. 2026',iso:'2026-07-30',title:'FOMC Meeting — Fed Rate Decision',desc:'Critical event! Market expects HOLD แต่ถ้า surprise cut = bullish, ถ้า Hawkish signal = bearish',type:'economic',color:'var(--loss)',impact:'Critical'},
+    {date:'ส.ค. 2026',iso:'2026-08-31',title:'US Earnings Season Q2',desc:'Nvidia, Apple, Microsoft, Alphabet รายงานผล Q2 — AI revenue จะเป็น key catalyst ว่า AI story ยังไป',type:'earnings',color:'var(--savings)',impact:'High'},
+    {date:'1 ก.ย. 2026',iso:'2026-09-01',title:'Thai GDP Q2 2026',desc:'ถ้า GDP ต่ำกว่า 2.5% = pressure บน SET ต่อ. ถ้าสูงกว่า 3% = positive surprise',type:'thai',color:'#4cc9f0',impact:'Medium'},
   ];
-  document.getElementById('event-timeline').innerHTML=events.map(e=>{
+  const today = new Date(); today.setHours(0,0,0,0);
+  const upcoming = events.filter(e=>new Date(e.iso+'T23:59:59')>=today);
+  const past     = events.filter(e=>new Date(e.iso+'T23:59:59')< today);
+  const ordered  = [...upcoming, ...past];
+  document.getElementById('event-timeline').innerHTML=ordered.map(e=>{
+    const isPast = new Date(e.iso+'T23:59:59') < today;
     const impactBg=e.impact==='Critical'?'rgba(255,64,96,.15)':e.impact==='High'?'rgba(255,149,0,.1)':'rgba(124,111,236,.1)';
     const impactColor=e.impact==='Critical'?'var(--loss)':e.impact==='High'?'var(--debt)':'var(--savings)';
-    return `<div class="tl-item">
+    return `<div class="tl-item" style="${isPast?'opacity:.35;filter:grayscale(.6)':''}">
       <div class="tl-dot-wrap"><div class="tl-dot" style="border-color:${e.color};background:${e.color}44"></div></div>
       <div class="tl-content">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:4px">
-          <div class="tl-date">${e.date}</div>
+          <div class="tl-date">${e.date}${isPast?' · <span style="color:var(--muted2)">ผ่านไปแล้ว</span>':''}</div>
           <span style="font-size:9px;padding:2px 7px;border-radius:3px;background:${impactBg};color:${impactColor};border:1px solid ${impactColor}44">${e.impact.toUpperCase()}</span>
         </div>
         <div class="tl-title">${e.title}</div>
