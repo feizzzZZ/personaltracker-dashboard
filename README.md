@@ -1,4 +1,4 @@
-# Finance OS — Personal Finance Dashboard
+# Personal Finance Dashboard
 
 Personal finance tracker and investment dashboard built with vanilla HTML/JS.
 
