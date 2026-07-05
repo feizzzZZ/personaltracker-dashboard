@@ -891,7 +891,22 @@ const LIVE_META = {
   US10Y:     {label:'US 10Y Yield',   fmt:v=>Number(v).toFixed(2)+'%'},
   GOLD_XAU:  {label:'Gold Spot (XAU)',fmt:v=>'$'+Number(v).toLocaleString(undefined,{maximumFractionDigits:0})},
   US_CPI:    {label:'US CPI YoY',     fmt:v=>Number(v).toFixed(1)+'%'},
+  US_PCE:    {label:'US PCE YoY',     fmt:v=>Number(v).toFixed(1)+'%'},
+  NFP:       {label:'NFP (Jobs)',     fmt:v=>(v>=0?'+':'')+Number(v).toLocaleString()+'K'},
+  US_GDP:    {label:'US GDP QoQ',     fmt:v=>(v>=0?'+':'')+Number(v).toFixed(1)+'%'},
+  ISM_MFG:   {label:'ISM Manufacturing', fmt:v=>Number(v).toFixed(1)},
+  ISM_SVC:   {label:'ISM Services',   fmt:v=>Number(v).toFixed(1)},
+  YIELD_CURVE:{label:'Yield Curve 2s10s', fmt:v=>(v>=0?'+':'')+Number(v).toFixed(0)+'bps', signed:true},
+  CREDIT_SPREAD:{label:'Credit Spread HY-IG', fmt:v=>Number(v).toFixed(1)+'%'},
   TH_CPI:    {label:'CPI ไทย YoY',    fmt:v=>Number(v).toFixed(1)+'%'},
+  TH_GDP:    {label:'GDP ไทย YoY',    fmt:v=>(v>=0?'+':'')+Number(v).toFixed(1)+'%'},
+  TH_TOURISTS:{label:'นักท่องเที่ยว/เดือน', fmt:v=>Number(v).toFixed(1)+'M'},
+  TH_FDI:    {label:'FDI ไทย',        fmt:v=>'฿'+Number(v).toLocaleString()+'B'},
+  SP500_RSI: {label:'S&P 500 RSI (14d)', fmt:v=>Number(v).toFixed(0)},
+  SET_RSI:   {label:'SET RSI (14d)',  fmt:v=>Number(v).toFixed(0)},
+  PUT_CALL:  {label:'Put/Call Ratio', fmt:v=>Number(v).toFixed(2)},
+  SP500_MA200:{label:'S&P vs MA200',  fmt:v=>String(v)},
+  SET_MA200: {label:'SET vs MA200',   fmt:v=>String(v)},
 };
 function loadMarketData(){
   try{ return JSON.parse(localStorage.getItem('finOS_market')||'null'); }catch(e){ return null; }
@@ -920,8 +935,12 @@ function renderLiveMarket(){
     return;
   }
   const stale = Date.now()-md.savedAt > 24*3600e3;
-  const cards = Object.keys(LIVE_META).filter(k=>md.data[k]!=null && md.data[k].value!=null && md.data[k].value!=='').map(k=>{
-    const meta=LIVE_META[k], d=md.data[k];
+  const knownKeys = Object.keys(LIVE_META).filter(k=>md.data[k]!=null && md.data[k].value!=null && md.data[k].value!=='');
+  const extraKeys = Object.keys(md.data).filter(k=>!LIVE_META[k] && md.data[k].value!=null && md.data[k].value!=='');
+  const cards = [...knownKeys, ...extraKeys].map(k=>{
+    // key ที่ไม่รู้จัก → แสดงแบบ generic (เพิ่มแถวในชีตแล้วโผล่ทันที ไม่ต้องแก้โค้ด)
+    const meta=LIVE_META[k]||{label:k.replace(/_/g,' '), fmt:v=>typeof v==='number'?Number(v).toLocaleString():String(v)};
+    const d=md.data[k];
     let vTxt; try{ vTxt=meta.fmt(d.value); }catch(e){ vTxt=String(d.value); }
     const color = meta.signed ? (d.value>=0?'var(--gain)':'var(--loss)') : 'var(--text)';
     const upd = d.updated ? new Date(d.updated).toLocaleDateString('th-TH',{day:'numeric',month:'short'}) : null;
