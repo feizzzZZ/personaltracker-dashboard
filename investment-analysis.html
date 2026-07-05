@@ -844,8 +844,70 @@ function renderPage(id){
 // ── Situation page (rendered on load) ──
 rendered.situation = true;
 
+// ═══ LIVE MARKET DATA (Method 1: Google Sheets pipeline) ═══════════
+const LIVE_META = {
+  SP500:     {label:'S&P 500',        fmt:v=>Number(v).toLocaleString(undefined,{maximumFractionDigits:0})},
+  SP500_CHG: {label:'S&P 500 Δ วันนี้',fmt:v=>(v>=0?'+':'')+Number(v).toFixed(2)+'%', signed:true},
+  NASDAQ:    {label:'Nasdaq',         fmt:v=>Number(v).toLocaleString(undefined,{maximumFractionDigits:0})},
+  VIX:       {label:'VIX (Fear)',     fmt:v=>Number(v).toFixed(1)},
+  SET_INDEX: {label:'SET Index',      fmt:v=>Number(v).toLocaleString(undefined,{maximumFractionDigits:1})},
+  USDTHB:    {label:'USD/THB',        fmt:v=>Number(v).toFixed(2)},
+  BTCUSD:    {label:'Bitcoin',        fmt:v=>'$'+Number(v).toLocaleString(undefined,{maximumFractionDigits:0})},
+  ETHUSD:    {label:'Ethereum',       fmt:v=>'$'+Number(v).toLocaleString(undefined,{maximumFractionDigits:0})},
+  GOLD_GLD:  {label:'Gold (GLD proxy)',fmt:v=>'$'+Number(v).toFixed(1)},
+  FED_RATE:  {label:'Fed Funds Rate', fmt:v=>Number(v).toFixed(2)+'%'},
+  BOT_RATE:  {label:'BOT Policy Rate',fmt:v=>Number(v).toFixed(2)+'%'},
+  US_CPI:    {label:'US CPI YoY',     fmt:v=>Number(v).toFixed(1)+'%'},
+  TH_CPI:    {label:'CPI ไทย YoY',    fmt:v=>Number(v).toFixed(1)+'%'},
+};
+function loadMarketData(){
+  try{ return JSON.parse(localStorage.getItem('finOS_market')||'null'); }catch(e){ return null; }
+}
+function timeAgoTH(ts){
+  const m=Math.floor((Date.now()-ts)/60000);
+  if(m<1)return 'เมื่อสักครู่'; if(m<60)return m+' นาทีที่แล้ว';
+  const h=Math.floor(m/60); if(h<24)return h+' ชม.ที่แล้ว';
+  return Math.floor(h/24)+' วันที่แล้ว';
+}
+function renderLiveMarket(){
+  const pg=document.getElementById('page-signals');
+  if(!pg) return;
+  let host=document.getElementById('live-market-section');
+  if(!host){
+    host=document.createElement('div'); host.id='live-market-section';
+    const banner=pg.querySelector('.fresh-banner');
+    (banner||pg.querySelector('.pg-head')).insertAdjacentElement('afterend', host);
+  }
+  const md=loadMarketData();
+  if(!md || !md.data || !Object.keys(md.data).length){
+    host.innerHTML=`<div class="sl" style="color:var(--gain)">📡 Live Market Data</div>
+      <div style="font-size:11.5px;color:var(--muted2);padding:10px 12px;border:1px dashed rgba(255,255,255,.12);border-radius:8px;margin-bottom:16px">
+        ยังไม่มีข้อมูลจากชีต <strong>Market_Data</strong> — เพิ่มชีตนี้ใน Google Sheets แล้วกด Sync ที่หน้า Finance OS
+        (รูปแบบ: คอลัมน์ Key | Value | Updated | Note)</div>`;
+    return;
+  }
+  const stale = Date.now()-md.savedAt > 24*3600e3;
+  const cards = Object.keys(LIVE_META).filter(k=>md.data[k]!=null && md.data[k].value!=null && md.data[k].value!=='').map(k=>{
+    const meta=LIVE_META[k], d=md.data[k];
+    let vTxt; try{ vTxt=meta.fmt(d.value); }catch(e){ vTxt=String(d.value); }
+    const color = meta.signed ? (d.value>=0?'var(--gain)':'var(--loss)') : 'var(--text)';
+    const upd = d.updated ? new Date(d.updated).toLocaleDateString('th-TH',{day:'numeric',month:'short'}) : null;
+    return `<div class="signal-card" style="border-color:rgba(0,212,160,.25)">
+      <div class="sig-header"><div class="sig-name">${meta.label}</div><div class="sig-dot" style="background:var(--gain)"></div></div>
+      <div class="sig-val" style="color:${color}">${vTxt}</div>
+      <div class="sig-change" style="color:var(--muted2)">${upd?'อัปเดต '+upd:'จาก Google Sheets'}</div>
+      <div class="sig-note">${d.note||''}</div>
+    </div>`;
+  }).join('');
+  host.innerHTML=`<div class="sl" style="color:var(--gain)">📡 Live Market Data
+      <span style="font-weight:400;color:${stale?'var(--loss)':'var(--muted2)'}">· sync ${timeAgoTH(md.savedAt)}${stale?' ⚠ เกิน 24 ชม. — กด Sync ใหม่':''}</span></div>
+    <div class="signal-grid" style="margin-bottom:18px">${cards}</div>
+    <div class="sl sl-mt" style="opacity:.75">📰 ข้อมูล Editorial (ด้านล่างทั้งหมด — ดูวันที่ในแบนเนอร์)</div>`;
+}
+
 // ── SIGNALS ──
 function renderSignals(){
+  renderLiveMarket();
   const globalSigs=[
     {name:'US CPI YoY',val:'3.1%',change:'-0.2%',note:'ลดลงช้า, ยังเหนือ target 2%',status:'warn'},
     {name:'US PCE',val:'2.6%',change:'-0.1%',note:'Fed ดู PCE เป็นหลัก',status:'warn'},

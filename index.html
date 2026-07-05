@@ -1688,6 +1688,10 @@ function parseFile(file){
         // ── 4. Asset_Live_Price_Feed — current prices (THB) ──
         // Asset_Dashboard.Current_Price = NaN in new file format
         // Correct source: Asset_Live_Price_Feed.Current_Price_THB (already FX-converted)
+        // Market_Data (optional) → live market bridge
+        if(wb.Sheets['Market_Data']){
+          saveMarketData(XLSX.utils.sheet_to_json(wb.Sheets['Market_Data'],{header:1,raw:true,defval:null}));
+        }
         const lpRaw=XLSX.utils.sheet_to_json(wb.Sheets['Asset_Live_Price_Feed'],{header:1,raw:true,defval:null});
         const lpH=lpRaw[0]?lpRaw[0].map(h=>h?String(h).trim():''):[];
         const LP={
@@ -2747,7 +2751,7 @@ async function gsSync(){
     console.log('[GS] Required:', Object.keys(map));
 
     // Optional sheets (skip if missing)
-    const OPT = ['Asset_Dashboard','Insurance_Policies','Insurance_Coverage'];
+    const OPT = ['Asset_Dashboard','Insurance_Policies','Insurance_Coverage','Market_Data'];
     for(const s of OPT){
       try{
         const ro=await fetch(BASE+'&ranges='+encodeURIComponent(s+'!A1:Z500'),{headers:hdrs});
@@ -2758,6 +2762,7 @@ async function gsSync(){
     }
 
     gsProcessData(map);
+    saveMarketData(map['Market_Data']);
     gsLastSync=new Date();
     gsConnected=true;
     gsSetStatus('✓ Sync '+gsLastSync.toLocaleTimeString('th-TH'),'ok');
@@ -2773,6 +2778,37 @@ async function gsSync(){
 
 
 // ── Parse Google Sheets 2D arrays → same global state as parseFile ──
+// ═══ MARKET DATA BRIDGE ═══════════════════════════════════════════
+// อ่านชีต Market_Data (Key | Value | Updated | Note) → localStorage
+// ให้หน้า Investment Analysis ใช้เป็นข้อมูลตลาดสด (Method 1: Google Sheets pipeline)
+function gserialToISO(v){
+  // Google/Excel serial date → ISO string (25569 = 1970-01-01)
+  if(typeof v==='number' && v>25569 && v<80000) return new Date((v-25569)*86400e3).toISOString();
+  if(typeof v==='string' && v.trim()) return v.trim();
+  return null;
+}
+function saveMarketData(rows){
+  try{
+    if(!rows || rows.length<2) return;
+    const h=(rows[0]||[]).map(x=>x?String(x).trim():'');
+    const ki=h.indexOf('Key'), vi=h.indexOf('Value'), ui=h.indexOf('Updated'), ni=h.indexOf('Note');
+    if(ki<0||vi<0){console.log('[Market] header ต้องมี Key, Value');return;}
+    const data={};
+    for(const r of rows.slice(1)){
+      if(!r || !r[ki]) continue;
+      const key=String(r[ki]).trim(); if(!key) continue;
+      let val=r[vi];
+      if(typeof val==='string' && val.trim()!=='' && !isNaN(parseFloat(val))) val=parseFloat(val);
+      data[key]={ value:val,
+                  updated: ui>=0 ? gserialToISO(r[ui]) : null,
+                  note:    ni>=0 && r[ni] ? String(r[ni]).trim() : '' };
+    }
+    if(!Object.keys(data).length) return;
+    localStorage.setItem('finOS_market', JSON.stringify({savedAt:Date.now(), data}));
+    console.log('[Market] saved', Object.keys(data).length, 'keys');
+  }catch(e){console.warn('[Market] save failed:', e.message);}
+}
+
 function gsProcessData(map){
   try {
     // ─ Transaction ─
