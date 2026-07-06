@@ -952,6 +952,30 @@ select.month-display{text-align-last:center;outline:none}
         <div class="sc"><div class="sc-lbl">Best performer</div><div class="sc-val gain" id="pf-best" style="font-size:16px">—</div><div class="sc-sub" id="pf-best-pct"></div></div>
         <div class="sc"><div class="sc-lbl">Worst performer</div><div class="sc-val loss" id="pf-worst" style="font-size:16px">—</div><div class="sc-sub" id="pf-worst-pct"></div></div>
       </div>
+
+      <div class="sl sl-mt">True Performance — ผลตอบแทนที่แท้จริง</div>
+      <div class="sg" style="grid-template-columns:1.2fr 1fr 1fr">
+        <div class="sc" style="--g:rgba(0,212,160,.12)">
+          <div class="sc-lbl">Portfolio XIRR (Money-Weighted)</div>
+          <div class="sc-val" id="perf-xirr" style="font-size:26px">—</div>
+          <div class="sc-sub" id="perf-xirr-sub">ผลตอบแทนต่อปี ถ่วงตามวันที่เงินเข้าจริง — เลขเดียวที่ตอบว่า "DCA ของฉันคุ้มไหม"</div>
+        </div>
+        <div class="sc">
+          <div class="sc-lbl">Money In → Out + Value</div>
+          <div class="sc-val" id="perf-money" style="font-size:14px;line-height:1.7">—</div>
+          <div class="sc-sub" id="perf-period"></div>
+        </div>
+        <div class="sc">
+          <div class="sc-lbl">TWR (Time-Weighted)</div>
+          <div class="sc-val" id="perf-twr" style="font-size:20px">—</div>
+          <div class="sc-sub" id="perf-twr-sub"></div>
+        </div>
+      </div>
+      <div class="sg" style="grid-template-columns:1fr 1fr">
+        <div class="sc"><div class="sc-lbl">🚀 เครื่องยนต์ของพอร์ต (XIRR สูงสุด)</div><div id="perf-top" style="font-size:12px;line-height:2;margin-top:6px">—</div></div>
+        <div class="sc"><div class="sc-lbl">⚓ ตัวถ่วง (XIRR ต่ำสุด)</div><div id="perf-bottom" style="font-size:12px;line-height:2;margin-top:6px">—</div></div>
+      </div>
+
       <div class="sl sl-mt">Where are your assets</div>
       <div class="plat-grid" id="pf-plat-grid" style="margin-bottom:18px"></div>
       <div class="sl sl-mt">Asset investment location</div>
@@ -1431,7 +1455,7 @@ select.month-display{text-align-last:center;outline:none}
 </div><!-- /app -->
 
 <script>
-const APP_BUILD='v17'; console.log('[Finance OS] build', APP_BUILD);
+const APP_BUILD='v18'; console.log('[Finance OS] build', APP_BUILD);
 // ── Constants ───────────────────────────────────────────────────────
 const GC={'Thai Stock':'#4cc9f0','US Stock':'#00d4a0','Crypto':'#ff9500',
           'Mutual Fund':'#7c6fec','Provident Fund':'#ffd166','Gold':'#ffa94d','Other':'#5a5a8a'};
@@ -2432,6 +2456,107 @@ function renderLocationGrid(){
 }
 
 // ── Portfolio ─────────────────────────────────────────────────────────
+// ═══ TRUE PERFORMANCE: XIRR + TWR ═══════════════════════════════════
+// XIRR: อัตราคิดลดที่ทำให้ NPV ของทุก cashflow = 0 (bisection — ทนทานสุด)
+function xirrJS(cfs){
+  if(!cfs || cfs.length<2) return null;
+  const t0 = Math.min(...cfs.map(c=>c.t));
+  const hasNeg = cfs.some(c=>c.v<0), hasPos = cfs.some(c=>c.v>0);
+  if(!hasNeg || !hasPos) return null;
+  const npv = r => cfs.reduce((s,c)=> s + c.v/Math.pow(1+r,(c.t-t0)/(365*86400e3)), 0);
+  let lo=-0.9999, hi=10;
+  if(npv(lo)*npv(hi)>0) return null;
+  for(let i=0;i<200;i++){ const mid=(lo+hi)/2; if(npv(lo)*npv(mid)<=0) hi=mid; else lo=mid; }
+  return (lo+hi)/2;
+}
+// cashflow มุมมองกระเป๋าเงิน: Buy = เงินออก(-), Sell/Dividend = เงินเข้า(+)
+function buildPerfFlows(){
+  const flows=[], byTk={};
+  tracker.forEach(r=>{
+    let cf=null;
+    if(r.txType==='Buy') cf=-Math.abs(r.amtTHB);
+    else if(r.txType==='Sell') cf=+Math.abs(r.amtTHB);
+    else if(r.txType==='Dividend Payout') cf=+Math.abs(r.amtTHB);
+    if(cf===null || cf===0 || !r.date) return;
+    const item={t:r.date.getTime(), v:cf};
+    flows.push(item);
+    (byTk[r.ticker]=byTk[r.ticker]||[]).push(item);
+  });
+  return {flows, byTk};
+}
+// TWR: ต้องมีมูลค่าพอร์ตย้อนหลัง — เริ่มเก็บ snapshot รายวันตั้งแต่วันนี้
+function logValueSnapshot(totalVal){
+  try{
+    const log = JSON.parse(localStorage.getItem('finOS_valueLog')||'[]');
+    const today = new Date().toISOString().slice(0,10);
+    const i = log.findIndex(e=>e.d===today);
+    if(i>=0) log[i].v = totalVal; else log.push({d:today, v:totalVal});
+    localStorage.setItem('finOS_valueLog', JSON.stringify(log.slice(-730)));
+    return log;
+  }catch(e){ return []; }
+}
+function computeTWR(log, flows){
+  if(!log || log.length<2) return null;
+  const sorted=[...log].sort((a,b)=>a.d.localeCompare(b.d));
+  let growth=1;
+  for(let i=1;i<sorted.length;i++){
+    const t0=new Date(sorted[i-1].d+'T00:00:00').getTime();
+    const t1=new Date(sorted[i].d+'T23:59:59').getTime();
+    // เงินเติมสุทธิระหว่างช่วง = -(ผลรวม cf) เพราะ Buy เป็นลบในมุมกระเป๋า
+    const F = -flows.filter(f=>f.t>t0 && f.t<=t1).reduce((s,f)=>s+f.v,0);
+    const base = sorted[i-1].v + F;
+    if(base>0) growth *= sorted[i].v/base;
+  }
+  const days=(new Date(sorted[sorted.length-1].d)-new Date(sorted[0].d))/86400e3;
+  if(days<1) return null;
+  return { total: growth-1, annual: Math.pow(growth, 365/days)-1, days: Math.round(days) };
+}
+
+function renderPerformance(totalVal){
+  const {flows, byTk} = buildPerfFlows();
+  if(!flows.length) return;
+  const nowT = Date.now();
+  const r = xirrJS([...flows, {t:nowT, v:totalVal}]);
+  const xEl=document.getElementById('perf-xirr');
+  if(xEl){
+    xEl.textContent = r===null ? '—' : (r>=0?'+':'')+(r*100).toFixed(2)+'% /ปี';
+    xEl.style.color = r===null ? 'var(--muted2)' : r>=0 ? 'var(--gain)' : 'var(--loss)';
+  }
+  const inSum = -flows.filter(f=>f.v<0).reduce((s,f)=>s+f.v,0);
+  const outSum =  flows.filter(f=>f.v>0).reduce((s,f)=>s+f.v,0);
+  const mEl=document.getElementById('perf-money');
+  if(mEl) mEl.innerHTML = `ลงไป <strong>${fmt(inSum)}</strong><br>ได้คืน <strong style="color:var(--gain)">${fmt(outSum)}</strong> · เหลือ <strong>${fmt(totalVal)}</strong>`;
+  const t0=new Date(Math.min(...flows.map(f=>f.t)));
+  const yrs=((nowT-t0.getTime())/(365*86400e3)).toFixed(1);
+  const pEl=document.getElementById('perf-period');
+  if(pEl) pEl.textContent = `ตั้งแต่ ${t0.toLocaleDateString('th-TH',{month:'short',year:'2-digit'})} · ${yrs} ปี · ${flows.length} cashflows`;
+
+  // per-asset XIRR (เฉพาะที่ยังถือและมูลค่า > ฿3,000)
+  const perAsset = assets.filter(a=>a.val>3000 && byTk[a.ticker]).map(a=>{
+    return { ticker:a.ticker, val:a.val, r: xirrJS([...byTk[a.ticker], {t:nowT, v:a.val}]) };
+  }).filter(x=>x.r!==null).sort((a,b)=>b.r-a.r);
+  const row = x => `<div style="display:flex;justify-content:space-between"><span>${x.ticker} <span style="color:var(--muted2);font-size:10px">${fmt(x.val)}</span></span><strong style="color:${x.r>=0?'var(--gain)':'var(--loss)'}">${(x.r>=0?'+':'')+(x.r*100).toFixed(1)}%/ปี</strong></div>`;
+  const topEl=document.getElementById('perf-top'), botEl=document.getElementById('perf-bottom');
+  if(topEl) topEl.innerHTML = perAsset.slice(0,5).map(row).join('') || '—';
+  if(botEl) botEl.innerHTML = perAsset.slice(-3).reverse().map(row).join('') || '—';
+
+  // TWR — เริ่มเก็บประวัติมูลค่าวันนี้
+  const log = logValueSnapshot(totalVal);
+  const twr = computeTWR(log, flows);
+  const tEl=document.getElementById('perf-twr'), tsEl=document.getElementById('perf-twr-sub');
+  if(tEl && tsEl){
+    if(twr){
+      tEl.textContent=(twr.annual>=0?'+':'')+(twr.annual*100).toFixed(2)+'% /ปี';
+      tEl.style.color=twr.annual>=0?'var(--gain)':'var(--loss)';
+      tsEl.textContent=`จาก snapshot ${log.length} วัน (${twr.days} วันปฏิทิน) — ใช้เทียบ benchmark ได้`;
+    } else {
+      tEl.textContent='⏳ สะสมข้อมูล';
+      tEl.style.color='var(--muted2)';
+      tsEl.textContent=`TWR ต้องมีมูลค่าพอร์ตรายวันย้อนหลัง — เริ่มบันทึกแล้ววันนี้ (${log.length}/2 วันขั้นต่ำ) เปิดแอปวันหลังจะเริ่มคำนวณให้`;
+    }
+  }
+}
+
 function renderPortfolio(){
   const totalVal=assets.reduce((s,a)=>s+a.val,0);
   const totalCost=assets.reduce((s,a)=>s+a.cost,0);
@@ -2445,6 +2570,7 @@ function renderPortfolio(){
   document.getElementById('pf-upnl-pct').textContent=fmtPct(totalCost?unrealPnl/totalCost*100:0);
   const rpEl=document.getElementById('pf-rpnl');rpEl.textContent=fmtSign(realPnl);rpEl.className='sc-val '+(realPnl>=0?'gain':'loss');
   document.getElementById('pf-rpnl-s').textContent=`${realized.length} sell tx`;
+  try{ renderPerformance(totalVal); }catch(e){ console.error('[Perf]', e); }
   const known=assets.filter(a=>a.cost>0&&a.val>0);
   if(known.length){
     const best=known.reduce((a,b)=>b.pnlPct>a.pnlPct?b:a);
