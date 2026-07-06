@@ -753,7 +753,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 </div><!-- end main-content -->
 
 <script>
-const APP_BUILD='v14'; console.log('[Invest OS] build', APP_BUILD);
+const APP_BUILD='v15'; console.log('[Invest OS] build', APP_BUILD);
 // ── Navigation ──
 function switchPage(id, el){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -856,6 +856,7 @@ function renderSituationLive(){
 }
 document.addEventListener('DOMContentLoaded', ()=>{
   injectFreshnessBanners(); renderSituationLive();
+  fetchActionsData().then(()=>{ renderSituationLive(); }); // Method 3: pipeline JSON
   fetchExternalData().then(()=>{      // Method 2: ดึง API ภายนอกแล้ว refresh ส่วนที่เกี่ยว
     renderSituationLive();
     if(document.getElementById('page-signals')?.classList.contains('active')) renderLiveMarket();
@@ -912,8 +913,37 @@ const LIVE_META = {
   SP500_MA200:{label:'S&P vs MA200',  fmt:v=>String(v)},
   SET_MA200: {label:'SET vs MA200',   fmt:v=>String(v)},
 };
+// ── METHOD 3: GitHub Actions pipeline (market-data.json ใน repo เดียวกัน) ──
+function loadActions(){ try{ return JSON.parse(localStorage.getItem('finOS_actions')||'null'); }catch(e){ return null; } }
+async function fetchActionsData(){
+  try{
+    const r = await fetch('market-data.json?t='+new Date().toISOString().slice(0,10)); // cache-bust รายวัน
+    if(!r.ok) return null;
+    const j = await r.json();
+    if(j && j.data){ localStorage.setItem('finOS_actions', JSON.stringify(j)); return j; }
+  }catch(e){ console.log('[Actions] ยังไม่มี market-data.json (pipeline ยังไม่รัน) — ข้าม'); }
+  return null;
+}
+function mergeActionsIntoMarket(md){
+  const act = loadActions();
+  if(!act || !act.data) return md;
+  if(!md) md = { savedAt: 0, data: {} };
+  Object.entries(act.data).forEach(([k,v])=>{
+    const cur = md.data[k];
+    // เลือกตัวที่ updated ใหม่กว่า — ชีต GOOGLEFINANCE สดกว่าสำหรับราคา,
+    // pipeline สดกว่าสำหรับ macro ที่ชีตใส่มือ
+    const curT = cur?.updated ? Date.parse(cur.updated) : 0;
+    const actT = v.updated ? Date.parse(v.updated) : 0;
+    if(!cur || actT >= curT) md.data[k] = { value:v.value, updated:v.updated, note:'🤖 '+(v.note||'pipeline') };
+  });
+  return md;
+}
 function loadMarketData(){
-  try{ return mergeExtIntoMarket(JSON.parse(localStorage.getItem('finOS_market')||'null')); }catch(e){ return null; }
+  try{
+    let md = JSON.parse(localStorage.getItem('finOS_market')||'null');
+    md = mergeActionsIntoMarket(md);   // Method 3
+    return mergeExtIntoMarket(md);     // Method 2 (crypto สดสุด ชนะเสมอ)
+  }catch(e){ return null; }
 }
 function timeAgoTH(ts){
   const m=Math.floor((Date.now()-ts)/60000);
