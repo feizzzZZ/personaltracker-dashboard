@@ -1,7 +1,7 @@
 // Finance OS — Service Worker v2
 // Cache strategy: Cache-first for shell, Network-first for CDN
 
-const CACHE_NAME = 'finance-os-v15';  // bump version so old cache is cleared on deploy
+const CACHE_NAME = 'finance-os-v16';  // bump version so old cache is cleared on deploy
 const BASE = '/personaltracker-dashboard';
 
 // App shell — files to pre-cache on install
@@ -68,7 +68,9 @@ self.addEventListener('fetch', event => {
 
   // HTML/navigation: NETWORK-FIRST — deploy แล้วเห็นเวอร์ชันใหม่ทันที
   // (cache ใช้เฉพาะตอน offline) แก้ปัญหา "hard reload ทุกครั้งหลัง deploy" ถาวร
-  const isHTML = event.request.mode === 'navigate' || url.split('?')[0].endsWith('.html');
+  const cleanUrl = url.split('?')[0];
+  const isHTML = event.request.mode === 'navigate' || cleanUrl.endsWith('.html')
+              || cleanUrl.endsWith('.json');   // market-data.json เปลี่ยนทุกวัน — ห้ามติด cache
   if (isHTML && (url.includes(BASE) || url.includes(self.location.origin))) {
     event.respondWith(
       fetch(event.request).then(response => {

@@ -753,7 +753,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 </div><!-- end main-content -->
 
 <script>
-const APP_BUILD='v15'; console.log('[Invest OS] build', APP_BUILD);
+const APP_BUILD='v16'; console.log('[Invest OS] build', APP_BUILD);
 // ── Navigation ──
 function switchPage(id, el){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -765,7 +765,7 @@ function switchPage(id, el){
   const activeEl = el || (typeof event !== 'undefined' && event.currentTarget) || null;
   if(activeEl && activeEl.classList) activeEl.classList.add('active');
   // lazy init charts
-  const alwaysFresh = (id==='portfolio'||id==='alerts'||id==='feargreed');   // หน้า data-driven ต้อง re-render
+  const alwaysFresh = (id==='portfolio'||id==='alerts'||id==='feargreed'||id==='signals');   // หน้า data-driven ต้อง re-render
   if(!rendered[id] || alwaysFresh){rendered[id]=true; renderPage(id);}
 }
 const rendered={situation:false,signals:false,feargreed:false,strategy:false,sectors:false,portfolio:false,alerts:false,calendar:false};
@@ -856,7 +856,9 @@ function renderSituationLive(){
 }
 document.addEventListener('DOMContentLoaded', ()=>{
   injectFreshnessBanners(); renderSituationLive();
-  fetchActionsData().then(()=>{ renderSituationLive(); }); // Method 3: pipeline JSON
+  fetchActionsData().then(()=>{ renderSituationLive();
+    if(document.getElementById('page-signals')?.classList.contains('active')) renderLiveMarket();
+  }); // Method 3: pipeline JSON
   fetchExternalData().then(()=>{      // Method 2: ดึง API ภายนอกแล้ว refresh ส่วนที่เกี่ยว
     renderSituationLive();
     if(document.getElementById('page-signals')?.classList.contains('active')) renderLiveMarket();
