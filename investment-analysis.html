@@ -575,17 +575,13 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 
   <div class="cr2">
     <div class="cc">
-      <div class="ct">Fear & Greed Index<span>CNN Money Model — มิ.ย. 2026</span></div>
+      <div class="ct">Portfolio Mood<span id="fg-src-label">ถ่วงน้ำหนักตามพอร์ตจริง · คำนวณสด</span></div>
       <div class="fg-display">
         <canvas id="fg-gauge" width="200" height="110"></canvas>
         <div class="fg-number" id="fg-number" style="color:var(--debt)">52</div>
         <div class="fg-label" id="fg-mood">NEUTRAL</div>
       </div>
-      <div style="margin-top:14px;display:flex;justify-content:space-between;font-size:11px;color:var(--muted)">
-        <span>1 เดือนก่อน: <strong style="color:var(--savings)">48</strong></span>
-        <span>3 เดือนก่อน: <strong style="color:var(--gain)">72</strong></span>
-        <span>1 ปีก่อน: <strong style="color:var(--loss)">31</strong></span>
-      </div>
+      <div id="fg-past-row" style="margin-top:14px;display:flex;justify-content:space-between;font-size:11px;color:var(--muted)"></div>
     </div>
     <div class="cc">
       <div class="ct">คอมโพเนนต์ Sentiment<span>ปัจจัยที่ใช้คำนวณ</span></div>
@@ -595,7 +591,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 
   <div class="sl sl-mt orange">Historical Mood</div>
   <div class="cc">
-    <div class="ct">Fear & Greed — 12 เดือน<span>ย้อนหลัง</span></div>
+    <div class="ct">Crypto Fear & Greed — 90 วัน<span>ที่มา: alternative.me (ดัชนีจริง)</span></div>
     <div style="position:relative;height:200px"><canvas id="fg-history-chart"></canvas></div>
   </div>
 
@@ -757,7 +753,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 </div><!-- end main-content -->
 
 <script>
-const APP_BUILD='v13'; console.log('[Invest OS] build', APP_BUILD);
+const APP_BUILD='v14'; console.log('[Invest OS] build', APP_BUILD);
 // ── Navigation ──
 function switchPage(id, el){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -769,7 +765,7 @@ function switchPage(id, el){
   const activeEl = el || (typeof event !== 'undefined' && event.currentTarget) || null;
   if(activeEl && activeEl.classList) activeEl.classList.add('active');
   // lazy init charts
-  const alwaysFresh = (id==='portfolio'||id==='alerts');   // หน้า data-driven ต้อง re-render
+  const alwaysFresh = (id==='portfolio'||id==='alerts'||id==='feargreed');   // หน้า data-driven ต้อง re-render
   if(!rendered[id] || alwaysFresh){rendered[id]=true; renderPage(id);}
 }
 const rendered={situation:false,signals:false,feargreed:false,strategy:false,sectors:false,portfolio:false,alerts:false,calendar:false};
@@ -858,7 +854,14 @@ function renderSituationLive(){
     }
   });
 }
-document.addEventListener('DOMContentLoaded', ()=>{ injectFreshnessBanners(); renderSituationLive(); });
+document.addEventListener('DOMContentLoaded', ()=>{
+  injectFreshnessBanners(); renderSituationLive();
+  fetchExternalData().then(()=>{      // Method 2: ดึง API ภายนอกแล้ว refresh ส่วนที่เกี่ยว
+    renderSituationLive();
+    if(document.getElementById('page-signals')?.classList.contains('active')) renderLiveMarket();
+    if(document.getElementById('page-feargreed')?.classList.contains('active')) renderFearGreed();
+  });
+});
 
 function renderPage(id){
   switch(id){
@@ -910,7 +913,7 @@ const LIVE_META = {
   SET_MA200: {label:'SET vs MA200',   fmt:v=>String(v)},
 };
 function loadMarketData(){
-  try{ return JSON.parse(localStorage.getItem('finOS_market')||'null'); }catch(e){ return null; }
+  try{ return mergeExtIntoMarket(JSON.parse(localStorage.getItem('finOS_market')||'null')); }catch(e){ return null; }
 }
 function timeAgoTH(ts){
   const m=Math.floor((Date.now()-ts)/60000);
@@ -921,6 +924,7 @@ function timeAgoTH(ts){
 function renderLiveMarket(){
   const pg=document.getElementById('page-signals');
   if(!pg) return;
+  // (CoinGecko override ทำใน loadMarketData ผ่าน mergeExtIntoMarket ด้านล่าง)
   let host=document.getElementById('live-market-section');
   if(!host){
     host=document.createElement('div'); host.id='live-market-section';
@@ -1031,103 +1035,183 @@ function renderSignals(){
 }
 
 // ── FEAR & GREED ──
-function renderFearGreed(){
-  const score=52;
-  document.getElementById('fg-number').textContent=score;
+// ═══ METHOD 2: EXTERNAL LIVE APIs (เรียกตรงจาก browser, cache 10 นาที) ═══
+// - alternative.me : Crypto Fear & Greed (ดัชนีจริง + ประวัติ) — แสดงที่มาตามเงื่อนไขผู้ให้ข้อมูล
+// - CoinGecko      : ราคา BTC/ETH สดระดับนาที (public keyless, ~1 call/โหลด)
+const EXT_TTL = 10*60e3;
+function loadExt(){ try{ return JSON.parse(localStorage.getItem('finOS_ext')||'null'); }catch(e){ return null; } }
+async function fetchExternalData(force){
+  const cached = loadExt();
+  if(!force && cached && Date.now()-cached.savedAt < EXT_TTL) return cached;
+  const out = { savedAt: Date.now(), fng: cached?.fng||null, prices: cached?.prices||null };
+  try{
+    const r = await fetch('https://api.alternative.me/fng/?limit=365');
+    const j = await r.json();
+    if(j && j.data && j.data.length){
+      out.fng = { value:+j.data[0].value, cls:j.data[0].value_classification,
+                  history: j.data.map(d=>({t:+d.timestamp*1000, v:+d.value})).reverse() };
+    }
+  }catch(e){ console.warn('[Ext] alternative.me:', e.message); }
+  try{
+    const r = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd,thb&include_24hr_change=true');
+    const j = await r.json();
+    if(j && j.bitcoin) out.prices = { BTCUSD:{v:j.bitcoin.usd, chg:j.bitcoin.usd_24h_change, thb:j.bitcoin.thb},
+                                      ETHUSD:{v:j.ethereum?.usd, chg:j.ethereum?.usd_24h_change, thb:j.ethereum?.thb} };
+  }catch(e){ console.warn('[Ext] coingecko:', e.message); }
+  localStorage.setItem('finOS_ext', JSON.stringify(out));
+  return out;
+}
+// ราคา crypto จาก CoinGecko สดกว่าชีต → override ก่อน render (พร้อมระบุที่มา)
+function mergeExtIntoMarket(md){
+  const ext = loadExt();
+  if(!ext || !ext.prices || !md || !md.data) return md;
+  ['BTCUSD','ETHUSD'].forEach(k=>{
+    const p = ext.prices[k];
+    if(p && p.v){ md.data[k] = { value:p.v, updated:new Date(ext.savedAt).toISOString(),
+      note:'CoinGecko'+(p.chg!=null?` · ${p.chg>=0?'+':''}${p.chg.toFixed(1)}% 24h`:'') }; }
+  });
+  return md;
+}
 
-  // Gauge arc
+// ── คะแนน sentiment ต่อ asset class (สูตรโปร่งใส เขียนไว้ตรงนี้ทั้งหมด) ──
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+function assetSentiments(){
+  const md = loadMarketData(), ext = loadExt();
+  const g = k => md?.data?.[k]?.value;
+  const out = [];
+  // CRYPTO — ดัชนีจริง
+  if(ext?.fng?.value!=null)
+    out.push({key:'Crypto', score:ext.fng.value, cls:ext.fng.cls,
+      src:'alternative.me (ดัชนีจริง)', parts:[{n:'Crypto F&G Index',v:ext.fng.value,note:ext.fng.cls}]});
+  // US STOCKS — composite จากองค์ประกอบ live ในชีต (แนวเดียวกับสูตร CNN 4/7 ตัว)
+  const usParts=[];
+  if(g('VIX')!=null)        usParts.push({n:'Volatility (VIX)', v:Math.round(clamp((35-g('VIX'))/25*100,0,100)), note:'VIX '+g('VIX')});
+  if(g('SP500_RSI')!=null)  usParts.push({n:'Momentum (RSI)',   v:Math.round(clamp(g('SP500_RSI'),0,100)),      note:'RSI '+g('SP500_RSI')});
+  if(g('SP500_MA200')!=null)usParts.push({n:'Trend vs MA200',   v:/above/i.test(g('SP500_MA200'))?70:30,        note:String(g('SP500_MA200'))});
+  if(g('PUT_CALL')!=null)   usParts.push({n:'Put/Call Ratio',   v:Math.round(clamp((1.2-g('PUT_CALL'))/0.5*100,0,100)), note:'P/C '+g('PUT_CALL')});
+  if(usParts.length)
+    out.push({key:'US Stock', score:Math.round(usParts.reduce((s,p)=>s+p.v,0)/usParts.length),
+      src:`คำนวณจาก ${usParts.length} องค์ประกอบในชีต`, parts:usParts});
+  // THAI STOCKS
+  const thParts=[];
+  if(g('SET_RSI')!=null)   thParts.push({n:'Momentum (SET RSI)', v:Math.round(clamp(g('SET_RSI'),0,100)), note:'RSI '+g('SET_RSI')});
+  if(g('SET_MA200')!=null) thParts.push({n:'Trend vs MA200',     v:/above/i.test(g('SET_MA200'))?70:30,   note:String(g('SET_MA200'))});
+  if(thParts.length)
+    out.push({key:'Thai Stock', score:Math.round(thParts.reduce((s,p)=>s+p.v,0)/thParts.length),
+      src:`คำนวณจาก ${thParts.length} องค์ประกอบในชีต`, parts:thParts});
+  return out;
+}
+
+function renderFearGreed(){
+  const sents = assetSentiments();
+  const ext = loadExt();
+
+  // ── Portfolio-weighted score จากสัดส่วนพอร์ตจริง ──
+  let real=null; try{ real=JSON.parse(localStorage.getItem('finOS_portfolio')||'null'); }catch(e){}
+  let score=null, coverage=0, weightNote='เฉลี่ยเท่ากัน (ยังไม่เชื่อมพอร์ต)';
+  if(sents.length){
+    if(real && real.allocation && real.totalValue>0){
+      let wSum=0, sSum=0;
+      sents.forEach(s=>{ const w=(real.allocation[s.key]?.value||0)/real.totalValue;
+                         wSum+=w; sSum+=w*s.score; });
+      if(wSum>0){ score=Math.round(sSum/wSum); coverage=Math.round(wSum*100);
+                  weightNote=`ถ่วงน้ำหนักตามพอร์ตจริง · ครอบคลุม ${coverage}% ของพอร์ต`; }
+    }
+    if(score===null) score=Math.round(sents.reduce((s,x)=>s+x.score,0)/sents.length);
+  }
+  const srcEl=document.getElementById('fg-src-label'); if(srcEl) srcEl.textContent=weightNote;
+
+  // ── Gauge ──
   const canvas=document.getElementById('fg-gauge');
   const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,canvas.width,canvas.height);
   const cx=100,cy=95,r=75;
-  // Background arc
   ctx.beginPath();ctx.arc(cx,cy,r,Math.PI,0);
   ctx.strokeStyle='#1a1a30';ctx.lineWidth=18;ctx.stroke();
-  // Color gradient arc
-  const gradient=ctx.createLinearGradient(cx-r,cy,cx+r,cy);
-  gradient.addColorStop(0,'#ff4060');
-  gradient.addColorStop(0.25,'#ff9500');
-  gradient.addColorStop(0.5,'#ffd166');
-  gradient.addColorStop(0.75,'#00d4a0');
-  gradient.addColorStop(1,'#4cc9f0');
-  const angle=Math.PI+(score/100)*Math.PI;
-  ctx.beginPath();ctx.arc(cx,cy,r,Math.PI,angle);
-  ctx.strokeStyle=gradient;ctx.lineWidth=18;ctx.lineCap='round';ctx.stroke();
-  // Needle
-  const nx=cx+r*0.7*Math.cos(angle);
-  const ny=cy+r*0.7*Math.sin(angle);
-  ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(nx,ny);
-  ctx.strokeStyle='#ffffff';ctx.lineWidth=2.5;ctx.lineCap='round';ctx.stroke();
-  ctx.beginPath();ctx.arc(cx,cy,5,0,Math.PI*2);ctx.fillStyle='#ffffff';ctx.fill();
-
-  const moodColor=score<25?'var(--loss)':score<45?'var(--expense)':score<55?'var(--debt)':score<75?'var(--gain)':'#4cc9f0';
-  const moodText=score<25?'EXTREME FEAR':score<45?'FEAR':score<55?'NEUTRAL':score<75?'GREED':'EXTREME GREED';
+  if(score!==null){
+    const gradient=ctx.createLinearGradient(cx-r,cy,cx+r,cy);
+    gradient.addColorStop(0,'#ff4060');gradient.addColorStop(0.25,'#ff9500');
+    gradient.addColorStop(0.5,'#ffd166');gradient.addColorStop(0.75,'#00d4a0');
+    gradient.addColorStop(1,'#4cc9f0');
+    const angle=Math.PI+(score/100)*Math.PI;
+    ctx.beginPath();ctx.arc(cx,cy,r,Math.PI,angle);
+    ctx.strokeStyle=gradient;ctx.lineWidth=18;ctx.lineCap='round';ctx.stroke();
+    const nx=cx+r*0.7*Math.cos(angle), ny=cy+r*0.7*Math.sin(angle);
+    ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(nx,ny);
+    ctx.strokeStyle='#ffffff';ctx.lineWidth=2.5;ctx.lineCap='round';ctx.stroke();
+    ctx.beginPath();ctx.arc(cx,cy,5,0,Math.PI*2);ctx.fillStyle='#ffffff';ctx.fill();
+  }
+  const moodColor=score===null?'var(--muted2)':score<25?'var(--loss)':score<45?'var(--expense)':score<55?'var(--debt)':score<75?'var(--gain)':'#4cc9f0';
+  const moodText=score===null?'ไม่มีข้อมูล':score<25?'EXTREME FEAR':score<45?'FEAR':score<55?'NEUTRAL':score<75?'GREED':'EXTREME GREED';
+  document.getElementById('fg-number').textContent=score===null?'—':score;
   document.getElementById('fg-number').style.color=moodColor;
   document.getElementById('fg-mood').textContent=moodText;
 
-  // Components
-  const components=[
-    {name:'Market Momentum',val:62,note:'S&P 500 above 125-day MA'},
-    {name:'Stock Price Strength',val:55,note:'52-week highs vs lows'},
-    {name:'Stock Price Breadth',val:48,note:'McClellan Volume Summation'},
-    {name:'Put/Call Options',val:58,note:'Bearish options vs Bullish'},
-    {name:'Market Volatility (VIX)',val:60,note:'VIX = 18.4 (neutral-low)'},
-    {name:'Safe Haven Demand',val:42,note:'Bonds vs Stocks flow'},
-    {name:'Junk Bond Demand',val:50,note:'Yield spread HY-IG'},
-  ];
+  // ── ค่าย้อนหลัง (จากประวัติจริงของ Crypto F&G) ──
+  const pastEl=document.getElementById('fg-past-row');
+  if(pastEl){
+    if(ext?.fng?.history?.length>90){
+      const h=ext.fng.history, last=h[h.length-1];
+      const ago=n=>h[Math.max(0,h.length-1-n)]?.v;
+      const cell=(lbl,v)=>`<span>${lbl}: <strong style="color:${v<45?'var(--loss)':v<55?'var(--debt)':'var(--gain)'}">${v??'—'}</strong></span>`;
+      pastEl.innerHTML=cell('Crypto วันนี้',last.v)+cell('1 เดือนก่อน',ago(30))+cell('3 เดือนก่อน',ago(90))+cell('1 ปีก่อน',ago(364));
+    } else pastEl.innerHTML='<span style="color:var(--muted2)">กำลังดึงประวัติจาก alternative.me...</span>';
+  }
+
+  // ── Components: แยกตาม asset class ที่ถือจริง ──
   const compEl=document.getElementById('fg-components');
-  compEl.innerHTML=components.map(c=>{
-    const cc=c.val<40?'var(--loss)':c.val<55?'var(--debt)':c.val<70?'var(--gain)':'#4cc9f0';
-    return `<div style="display:flex;align-items:center;gap:10px">
-      <div style="min-width:160px;font-size:11px;color:var(--muted2)">${c.name}</div>
-      <div style="flex:1;height:5px;background:var(--bg4);border-radius:3px;overflow:hidden">
-        <div style="width:${c.val}%;height:5px;background:${cc};border-radius:3px"></div>
-      </div>
-      <div style="min-width:28px;font-size:11px;font-weight:600;color:${cc}">${c.val}</div>
-    </div>`;
-  }).join('');
+  if(!sents.length){
+    compEl.innerHTML='<div style="font-size:11.5px;color:var(--muted2)">ยังไม่มีข้อมูล — เพิ่ม VIX, SP500_RSI, SP500_MA200, PUT_CALL, SET_RSI, SET_MA200 ในชีต Market_Data แล้ว Sync</div>';
+  } else {
+    compEl.innerHTML=sents.map(s=>{
+      const sc=s.score<40?'var(--loss)':s.score<55?'var(--debt)':s.score<70?'var(--gain)':'#4cc9f0';
+      const label=ALLOC_META[s.key]?.label||s.key;
+      return `<div style="border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:9px 11px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <span style="font-size:12px;font-weight:600">${label}</span>
+          <span style="font-size:15px;font-weight:700;color:${sc}">${s.score}</span>
+        </div>
+        ${s.parts.map(p=>{
+          const pc=p.v<40?'var(--loss)':p.v<55?'var(--debt)':p.v<70?'var(--gain)':'#4cc9f0';
+          return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
+            <div style="min-width:130px;font-size:10.5px;color:var(--muted2)">${p.n}</div>
+            <div style="flex:1;height:4px;background:var(--bg4);border-radius:3px;overflow:hidden"><div style="width:${p.v}%;height:4px;background:${pc}"></div></div>
+            <div style="min-width:24px;font-size:10.5px;font-weight:600;color:${pc}">${p.v}</div>
+            <div style="min-width:70px;font-size:9.5px;color:var(--muted2);text-align:right">${p.note}</div>
+          </div>`;}).join('')}
+        <div style="font-size:9.5px;color:var(--muted2);margin-top:4px">ที่มา: ${s.src}</div>
+      </div>`;}).join('');
+  }
 
-  // History chart
-  const months=['ก.ค. 25','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค. 25','ม.ค. 26','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.'];
-  const fgHistory=[31,38,44,55,68,72,65,58,45,42,48,52];
-  const histCtx=document.getElementById('fg-history-chart').getContext('2d');
-  new Chart(histCtx,{
-    type:'line',
-    data:{
-      labels:months,
-      datasets:[{
-        label:'Fear & Greed',data:fgHistory,
-        borderColor:'#7c6fec',backgroundColor:'rgba(124,111,236,.1)',fill:true,tension:.4,borderWidth:2,pointRadius:3,
-        pointBackgroundColor:fgHistory.map(v=>v<40?'#ff4060':v<55?'#ff9500':v<70?'#00d4a0':'#4cc9f0')
-      }]
-    },
-    options:{
-      responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false},tooltip:{...tooltipDefaults,callbacks:{label:c=>' F&G Index: '+c.raw}}},
-      scales:{
-        x:{grid:{color:gridColor,lineWidth:.5}},
-        y:{grid:{color:gridColor,lineWidth:.5},min:0,max:100,
-          ticks:{callback:v=>v<25?'EXF':v<45?'Fear':v<55?'Neut':v<75?'Greed':'ExG'}}
-      }
-    }
-  });
+  // ── History chart: Crypto F&G จริง 90 วัน ──
+  const histCanvas=document.getElementById('fg-history-chart');
+  const prevH=Chart.getChart(histCanvas); if(prevH) prevH.destroy();
+  if(ext?.fng?.history?.length){
+    const h=ext.fng.history.slice(-90);
+    new Chart(histCanvas.getContext('2d'),{type:'line',
+      data:{labels:h.map(p=>new Date(p.t).toLocaleDateString('th-TH',{day:'numeric',month:'short'})),
+        datasets:[{data:h.map(p=>p.v),borderColor:'#7c6fec',backgroundColor:'rgba(124,111,236,.08)',fill:true,tension:.35,pointRadius:0,borderWidth:2}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+        scales:{y:{min:0,max:100,ticks:{color:'#8080a0',font:{size:10}},grid:{color:'rgba(255,255,255,.04)'}},
+                x:{ticks:{color:'#8080a0',font:{size:9},maxTicksLimit:10},grid:{display:false}}}}});
+  }
 
-  // Interpretation
-  const interpretations=[
-    {score:'0–24',label:'Extreme Fear',color:'var(--loss)',desc:'โอกาสซื้อที่ดี ตลาดขาย oversold',action:'🟢 Aggressive Buy'},
-    {score:'25–44',label:'Fear',color:'var(--expense)',desc:'เริ่ม DCA เพิ่ม position ช้าๆ',action:'🟡 Buy Gradually'},
-    {score:'45–54',label:'Neutral',color:'var(--debt)',desc:'Hold ตาม plan, ไม่ต้องทำอะไรพิเศษ',action:'⚖️ Hold & DCA'},
-    {score:'55–74',label:'Greed',color:'var(--gain)',desc:'ระวัง FOMO, ลด size ใหม่',action:'⚠️ Reduce New Buys'},
-    {score:'75–100',label:'Extreme Greed',color:'#4cc9f0',desc:'Take profit บางส่วน, เพิ่ม cash',action:'🔴 Trim Positions'},
-  ];
-  document.getElementById('fg-interpretation').innerHTML=interpretations.map(i=>`
-    <div class="strat-card" style="border-color:${i.score==='45–54'?'var(--border2)':'var(--cb)'}">
-      ${i.score==='45–54'?'<div style="position:absolute;top:0;left:0;right:0;height:3px;background:var(--debt);border-radius:12px 12px 0 0"></div>':''}
-      <div style="font-size:10px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase">Index ${i.score}</div>
-      <div style="font-family:\'Google Sans\',sans-serif;font-size:16px;font-weight:700;color:${i.color};margin:6px 0">${i.label}</div>
-      <div style="font-size:12px;color:var(--muted2);margin-bottom:8px">${i.desc}</div>
-      <div style="font-size:12px;font-weight:600">${i.action}</div>
-      ${i.score==='45–54'?'<div style="margin-top:8px;font-size:10px;padding:4px 8px;background:rgba(255,149,0,.1);border:1px solid rgba(255,149,0,.3);border-radius:4px;color:var(--debt)">◀ ตอนนี้อยู่ที่นี่ (52)</div>':''}
-    </div>`).join('');
+  // ── การตีความ ──
+  const interpEl=document.getElementById('fg-interpretation');
+  if(interpEl){
+    interpEl.innerHTML=sents.map(s=>{
+      const label=ALLOC_META[s.key]?.label||s.key;
+      const advice=s.score<30?'ตลาดกลัวจัด — โซนที่คน DCA ชอบ แต่เช็ค thesis ก่อนเติม':
+                   s.score<45?'เอียงไปทางกลัว — DCA ตามแผนปกติ':
+                   s.score<60?'กลางๆ — ไม่มีสัญญาณพิเศษ ทำตามแผน':
+                   s.score<75?'เริ่มโลภ — ระวังไล่ราคา, ถือตามแผน':'โลภจัด — โซนพิจารณา trim ถ้าเกินเป้า allocation';
+      return `<div style="background:var(--bg3);border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:10px 12px">
+        <div style="font-size:11px;font-weight:600;margin-bottom:4px">${label} · ${s.score}</div>
+        <div style="font-size:10.5px;color:var(--muted2);line-height:1.5">${advice}</div></div>`;}).join('')
+      +`<div style="background:var(--bg3);border:1px solid rgba(124,111,236,.25);border-radius:8px;padding:10px 12px">
+        <div style="font-size:11px;font-weight:600;margin-bottom:4px">⚠️ ข้อจำกัด</div>
+        <div style="font-size:10.5px;color:var(--muted2);line-height:1.5">US/Thai คำนวณจากองค์ประกอบบางส่วน (ไม่ใช่ดัชนี CNN เต็ม) · Gold/MF/PVD ไม่มีดัชนี sentiment มาตรฐาน · sentiment ใช้ประกอบ ไม่ใช่สัญญาณซื้อขายเดี่ยวๆ</div></div>`;
+  }
 }
 
 // ── STRATEGY ──
