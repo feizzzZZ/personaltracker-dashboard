@@ -757,7 +757,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 </div><!-- end main-content -->
 
 <script>
-const APP_BUILD='v12'; console.log('[Invest OS] build', APP_BUILD);
+const APP_BUILD='v13'; console.log('[Invest OS] build', APP_BUILD);
 // ── Navigation ──
 function switchPage(id, el){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -819,7 +819,7 @@ function injectFreshnessBanners(){
       border:1px solid ${stale?'rgba(255,64,96,.4)':'rgba(0,212,160,.25)'};
       color:${stale?'var(--loss)':'var(--gain)'}">
     <span style="font-size:14px">${stale?'⛔':'📅'}</span>
-    <span><strong>ข้อมูลตลาดชุดนี้บันทึก ณ 15 มิ.ย. 2569</strong> (${d} วันที่แล้ว)${stale?' — เก่าเกินกำหนด <strong>ห้ามใช้ตัดสินใจซื้อขาย</strong> จนกว่าจะอัปเดตข้อมูล':''}</span>
+    <span><strong>เฉพาะส่วนบทวิเคราะห์/ความเห็น (editorial)</strong> ในหน้านี้ เขียนไว้ ณ 15 มิ.ย. 2569 (${d} วันที่แล้ว)${stale?' — เก่าเกินกำหนด <strong>อย่าใช้ส่วน editorial ตัดสินใจซื้อขาย</strong>':''} · การ์ดที่มีจุดเขียว 📡 คือข้อมูลสดจากชีต ใช้ได้ปกติ</span>
   </div>`;
   ['page-situation','page-signals','page-feargreed','page-strategy','page-sectors','page-calendar'].forEach(pid=>{
     const pg = document.getElementById(pid);
