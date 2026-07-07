@@ -1,6 +1,6 @@
 # Personal Finance Dashboard
 
-Personal finance tracker and investment dashboard built with vanilla HTML/JS.
+Personal finance tracker and investment dashboard built with HTML/JS.
 
 ## Features
 - 📊 Cash Flow (Monthly & Yearly)
