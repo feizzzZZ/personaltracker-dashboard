@@ -674,6 +674,13 @@ select.month-display{text-align-last:center;outline:none}
         <span aria-hidden="true" style="font-size:13px;font-size:14px">↑</span></i>New file
         <input type="file" id="fi2" accept=".xlsx,.xls" style="display:none">
       </button>
+      <div style="display:flex;gap:6px;margin-top:6px">
+        <button onclick="exportSettings()" title="สำรองการตั้งค่า + ประวัติ TWR เป็นไฟล์ JSON"
+          style="flex:1;background:rgba(0,212,160,.08);border:1px solid rgba(0,212,160,.3);color:var(--gain);padding:7px 0;border-radius:8px;font-size:11px;cursor:pointer;font-family:inherit">💾 Backup</button>
+        <button onclick="document.getElementById('settings-import').click()" title="กู้คืนจากไฟล์ backup"
+          style="flex:1;background:rgba(124,111,236,.08);border:1px solid rgba(124,111,236,.3);color:var(--savings);padding:7px 0;border-radius:8px;font-size:11px;cursor:pointer;font-family:inherit">📥 Restore</button>
+        <input type="file" id="settings-import" accept=".json" style="display:none" onchange="importSettings(this)">
+      </div>
     </div>
   </div>
 
@@ -1455,7 +1462,7 @@ select.month-display{text-align-last:center;outline:none}
 </div><!-- /app -->
 
 <script>
-const APP_BUILD='v18'; console.log('[Finance OS] build', APP_BUILD);
+const APP_BUILD='v19'; console.log('[Finance OS] build', APP_BUILD);
 // ── Constants ───────────────────────────────────────────────────────
 const GC={'Thai Stock':'#4cc9f0','US Stock':'#00d4a0','Crypto':'#ff9500',
           'Mutual Fund':'#7c6fec','Provident Fund':'#ffd166','Gold':'#ffa94d','Other':'#5a5a8a'};
@@ -2456,6 +2463,64 @@ function renderLocationGrid(){
 }
 
 // ── Portfolio ─────────────────────────────────────────────────────────
+// ═══ SETTINGS BACKUP / RESTORE ══════════════════════════════════════
+// สำรองเฉพาะของที่ผู้ใช้สร้างเอง (ตั้งค่า + ประวัติ TWR) — ข้อมูลตลาด/พอร์ต
+// ไม่ต้องสำรองเพราะ sync ใหม่ได้เสมอ
+const BACKUP_KEYS = [
+  'gs_client_id',     // Google OAuth client
+  'gs_sheet_id',      // Spreadsheet ID
+  'finOS_targets',    // เป้า allocation ที่ตั้งเอง
+  'finOS_valueLog',   // ★ ประวัติมูลค่าพอร์ตรายวัน (TWR) — แทนไม่ได้ถ้าหาย
+  'finOS_claude_key', // ⚠ API key — ไฟล์ backup ต้องเก็บให้ดี
+];
+function exportSettings(){
+  const data = {};
+  BACKUP_KEYS.forEach(k=>{ const v=localStorage.getItem(k); if(v!==null) data[k]=v; });
+  const payload = { app:'finance-os', version:1, exportedAt:new Date().toISOString(),
+                    build: typeof APP_BUILD!=='undefined'?APP_BUILD:'?', data };
+  const blob = new Blob([JSON.stringify(payload,null,1)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `finance-os-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.click(); URL.revokeObjectURL(a.href);
+  const n = Object.keys(data).length;
+  const logN = data.finOS_valueLog ? JSON.parse(data.finOS_valueLog).length : 0;
+  alert(`💾 สำรองแล้ว ${n} รายการ${logN?` (รวมประวัติ TWR ${logN} วัน)`:''}\n⚠ ไฟล์นี้มี API key — เก็บในที่ปลอดภัย อย่าแชร์`);
+}
+function importSettings(input){
+  const file = input.files && input.files[0];
+  input.value = '';                       // ให้เลือกไฟล์เดิมซ้ำได้
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try{
+      const p = JSON.parse(reader.result);
+      if(!p || p.app!=='finance-os' || !p.data) throw new Error('ไม่ใช่ไฟล์ backup ของ Finance OS');
+      const keys = Object.keys(p.data).filter(k=>BACKUP_KEYS.includes(k)); // whitelist เท่านั้น
+      if(!keys.length) throw new Error('ไฟล์ไม่มีข้อมูลที่กู้คืนได้');
+      if(!confirm(`กู้คืน ${keys.length} รายการจากไฟล์วันที่ ${String(p.exportedAt).slice(0,10)}?\n(${keys.join(', ')})`)) return;
+      keys.forEach(k=>{
+        if(k==='finOS_valueLog'){
+          // ★ MERGE ไม่ทับ: รวมประวัติ TWR เก่า+ใหม่ ตามวันที่ ไม่มี snapshot ไหนหาย
+          try{
+            const cur = JSON.parse(localStorage.getItem('finOS_valueLog')||'[]');
+            const inc = JSON.parse(p.data[k]||'[]');
+            const byDate = {};
+            [...inc, ...cur].forEach(e=>{ if(e && e.d) byDate[e.d]=e; }); // ของในเครื่อง(ใหม่กว่า)ชนะวันซ้ำ
+            const merged = Object.values(byDate).sort((a,b)=>a.d.localeCompare(b.d)).slice(-730);
+            localStorage.setItem(k, JSON.stringify(merged));
+            return;
+          }catch(e){ /* ตกลงมาใช้ทับปกติ */ }
+        }
+        localStorage.setItem(k, p.data[k]);
+      });
+      alert('📥 กู้คืนสำเร็จ — กำลังโหลดหน้าใหม่');
+      location.reload();
+    }catch(e){ alert('❌ กู้คืนไม่สำเร็จ: '+e.message); }
+  };
+  reader.readAsText(file);
+}
+
 // ═══ TRUE PERFORMANCE: XIRR + TWR ═══════════════════════════════════
 // XIRR: อัตราคิดลดที่ทำให้ NPV ของทุก cashflow = 0 (bisection — ทนทานสุด)
 function xirrJS(cfs){
