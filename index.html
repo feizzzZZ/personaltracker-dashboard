@@ -1461,8 +1461,8 @@ select.month-display{text-align-last:center;outline:none}
   </div><!-- /main-content -->
 </div><!-- /app -->
 
+<script src="shared.js"></script>
 <script>
-const APP_BUILD='v19'; console.log('[Finance OS] build', APP_BUILD);
 // ── Constants ───────────────────────────────────────────────────────
 const GC={'Thai Stock':'#4cc9f0','US Stock':'#00d4a0','Crypto':'#ff9500',
           'Mutual Fund':'#7c6fec','Provident Fund':'#ffd166','Gold':'#ffa94d','Other':'#5a5a8a'};
@@ -2523,17 +2523,7 @@ function importSettings(input){
 
 // ═══ TRUE PERFORMANCE: XIRR + TWR ═══════════════════════════════════
 // XIRR: อัตราคิดลดที่ทำให้ NPV ของทุก cashflow = 0 (bisection — ทนทานสุด)
-function xirrJS(cfs){
-  if(!cfs || cfs.length<2) return null;
-  const t0 = Math.min(...cfs.map(c=>c.t));
-  const hasNeg = cfs.some(c=>c.v<0), hasPos = cfs.some(c=>c.v>0);
-  if(!hasNeg || !hasPos) return null;
-  const npv = r => cfs.reduce((s,c)=> s + c.v/Math.pow(1+r,(c.t-t0)/(365*86400e3)), 0);
-  let lo=-0.9999, hi=10;
-  if(npv(lo)*npv(hi)>0) return null;
-  for(let i=0;i<200;i++){ const mid=(lo+hi)/2; if(npv(lo)*npv(mid)<=0) hi=mid; else lo=mid; }
-  return (lo+hi)/2;
-}
+
 // cashflow มุมมองกระเป๋าเงิน: Buy = เงินออก(-), Sell/Dividend = เงินเข้า(+)
 function buildPerfFlows(){
   const flows=[], byTk={};
@@ -2973,33 +2963,7 @@ async function gsSync(){
 // ═══ MARKET DATA BRIDGE ═══════════════════════════════════════════
 // อ่านชีต Market_Data (Key | Value | Updated | Note) → localStorage
 // ให้หน้า Investment Analysis ใช้เป็นข้อมูลตลาดสด (Method 1: Google Sheets pipeline)
-function gserialToISO(v){
-  // Google/Excel serial date → ISO string (25569 = 1970-01-01)
-  if(typeof v==='number' && v>25569 && v<80000) return new Date((v-25569)*86400e3).toISOString();
-  if(typeof v==='string' && v.trim()) return v.trim();
-  return null;
-}
-function saveMarketData(rows){
-  try{
-    if(!rows || rows.length<2) return;
-    const h=(rows[0]||[]).map(x=>x?String(x).trim():'');
-    const ki=h.indexOf('Key'), vi=h.indexOf('Value'), ui=h.indexOf('Updated'), ni=h.indexOf('Note');
-    if(ki<0||vi<0){console.log('[Market] header ต้องมี Key, Value');return;}
-    const data={};
-    for(const r of rows.slice(1)){
-      if(!r || !r[ki]) continue;
-      const key=String(r[ki]).trim(); if(!key) continue;
-      let val=r[vi];
-      if(typeof val==='string' && val.trim()!=='' && !isNaN(parseFloat(val))) val=parseFloat(val);
-      data[key]={ value:val,
-                  updated: ui>=0 ? gserialToISO(r[ui]) : null,
-                  note:    ni>=0 && r[ni] ? String(r[ni]).trim() : '' };
-    }
-    if(!Object.keys(data).length) return;
-    localStorage.setItem('finOS_market', JSON.stringify({savedAt:Date.now(), data}));
-    console.log('[Market] saved', Object.keys(data).length, 'keys');
-  }catch(e){console.warn('[Market] save failed:', e.message);}
-}
+
 
 function gsProcessData(map){
   try {

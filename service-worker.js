@@ -1,7 +1,7 @@
 // Finance OS — Service Worker v2
 // Cache strategy: Cache-first for shell, Network-first for CDN
 
-const CACHE_NAME = 'finance-os-v19';  // bump version so old cache is cleared on deploy
+const CACHE_NAME = 'finance-os-v20';  // bump version so old cache is cleared on deploy
 const BASE = '/personaltracker-dashboard';
 
 // App shell — files to pre-cache on install
@@ -9,6 +9,7 @@ const SHELL_FILES = [
   BASE + '/',
   BASE + '/index.html',
   BASE + '/investment-analysis.html',  // was missing — caused offline failure on nav
+  BASE + '/shared.js',                 // data layer กลาง — ต้อง precache ให้ offline ทำงาน
   BASE + '/manifest.json',
   BASE + '/icon-192x192.png',
   BASE + '/icon-512x512.png',
