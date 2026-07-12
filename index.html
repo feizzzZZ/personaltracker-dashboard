@@ -2601,9 +2601,17 @@ function renderPerformance(totalVal){
   const tEl=document.getElementById('perf-twr'), tsEl=document.getElementById('perf-twr-sub');
   if(tEl && tsEl){
     if(twr){
-      tEl.textContent=(twr.annual>=0?'+':'')+(twr.annual*100).toFixed(2)+'% /ปี';
-      tEl.style.color=twr.annual>=0?'var(--gain)':'var(--loss)';
-      tsEl.textContent=`จาก snapshot ${log.length} วัน (${twr.days} วันปฏิทิน) — ใช้เทียบ benchmark ได้`;
+      if(twr.days < 30){
+        // ข้อมูลสั้นเกินกว่าจะ annualize อย่างมีความหมาย — noise จะถูกคูณหลายสิบเท่า
+        // แสดงผลตอบแทนสะสมตามจริงแทน กันอ่านผิดแล้วตัดสินใจพลาด
+        tEl.textContent=(twr.total>=0?'+':'')+(twr.total*100).toFixed(2)+'% สะสม';
+        tEl.style.color=twr.total>=0?'var(--gain)':'var(--loss)';
+        tsEl.textContent=`ช่วง ${twr.days} วัน (snapshot ${log.length} วัน) — สั้นเกินกว่าจะคิดเป็น %ต่อปี รอครบ 30 วันจึงแสดง annualized`;
+      } else {
+        tEl.textContent=(twr.annual>=0?'+':'')+(twr.annual*100).toFixed(2)+'% /ปี';
+        tEl.style.color=twr.annual>=0?'var(--gain)':'var(--loss)';
+        tsEl.textContent=`จาก snapshot ${log.length} วัน (${twr.days} วันปฏิทิน) — ใช้เทียบ benchmark ได้`;
+      }
     } else {
       tEl.textContent='⏳ สะสมข้อมูล';
       tEl.style.color='var(--muted2)';
