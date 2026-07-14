@@ -2793,8 +2793,10 @@ function renderRealized(){
 
 // ── Google Sheets Sync ───────────────────────────────────────────────
 const GS_CONFIG = {
-  clientId:    '3124311806-uobbvpafrslj4tni43hug8nkc73c7502.apps.googleusercontent.com',
-  spreadsheetId: '1of-BLRV68WvIgvD3lBfMSt-67giRyddS49fywnda_mU',
+  // ไม่มี default ใน source (repo เป็น public) — กรอกครั้งเดียวผ่าน modal ⚙
+  // ค่าเก็บใน localStorage เครื่องคุณ + อยู่ในไฟล์ 💾 Backup แล้ว
+  clientId:    '',
+  spreadsheetId: '',
   scope:       'https://www.googleapis.com/auth/spreadsheets.readonly',
   // Asset_Dashboard removed — not present in current Excel version; Asset_Live_Price_Feed is the source of truth
   sheets:      ['Transaction','Asset_Tracker','Asset_Live_Price_Feed','Insurance_Policies','Insurance_Coverage'],
