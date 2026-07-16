@@ -2971,7 +2971,15 @@ async function gsSync(){
   } catch(e){
     gsSetStatus('❌ '+e.message,'err');
     console.error('[GS] Sync error:',e);
-    alert('Sync failed:\n'+e.message);
+    if(/404|NOT_FOUND/.test(e.message)){
+      alert('❌ หา Spreadsheet ไม่เจอ (404)\n\nสาเหตุเกือบทั้งหมด: Spreadsheet ID ไม่ถูกต้อง\nID ที่ใช้อยู่: '+GS_CONFIG.spreadsheetId+'\n\nกำลังเปิดหน้าตั้งค่าให้แก้ — วาง URL เต็มของชีตมาได้เลย ระบบสกัด ID ให้เอง');
+      // ล้างค่าผิดออก แล้วเปิด modal ให้กรอกใหม่
+      GS_CONFIG.spreadsheetId=''; localStorage.removeItem('gs_sheet_id');
+      gsOpenModal();
+      gsSetStatus('⚠ Spreadsheet ID เดิมใช้ไม่ได้ — วาง URL ชีตจาก address bar ได้เลย','err');
+    } else {
+      alert('Sync failed:\n'+e.message);
+    }
   }
   gsUpdateSyncBtn(false);
 }
@@ -3247,9 +3255,21 @@ function gsOpenModal(){
   m.classList.add('show');
 }
 function gsCloseModal(){const m=document.getElementById('gs-modal');if(m)m.classList.remove('show');}
+// วาง URL เต็มของชีตมาก็ได้ — สกัดเฉพาะ ID ให้เอง (กันเคส 404 NOT_FOUND)
+function extractSheetId(input){
+  const s = String(input||'').trim();
+  const m = s.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]{20,})/); // จาก URL เต็ม
+  if(m) return m[1];
+  return s.replace(/[?#].*$/,'').replace(/\/.*$/,'');             // ตัด query/path ที่ติดมา
+}
 function gsSaveAndConnect(){
   const cid=(document.getElementById('gs-client-id-input')?.value||'').trim();
-  const sid=(document.getElementById('gs-sheet-id-input')?.value||'').trim();
+  const sidRaw=(document.getElementById('gs-sheet-id-input')?.value||'').trim();
+  const sid=extractSheetId(sidRaw);
+  if(sidRaw && sid!==sidRaw){
+    const el=document.getElementById('gs-sheet-id-input'); if(el) el.value=sid; // โชว์ค่าที่สกัดแล้ว
+    console.log('[GS] extracted sheet ID from URL:', sid);
+  }
   if(cid){GS_CONFIG.clientId=cid;localStorage.setItem('gs_client_id',cid);}
   if(sid){GS_CONFIG.spreadsheetId=sid;localStorage.setItem('gs_sheet_id',sid);}
   gsAccessToken=null;gsConnected=false;
