@@ -2854,6 +2854,8 @@ function gsInit(){
 }
 
 function gsInitTokenClient(){
+  // ยังไม่ตั้งค่า clientId = สถานะปกติของเครื่องใหม่ — ข้ามเงียบๆ ห้าม throw/alert
+  if(!GS_CONFIG.clientId){ console.log('[GS] no clientId configured yet — skip init'); return; }
   try {
     console.log('[GS] initTokenClient with clientId:', GS_CONFIG.clientId.slice(0,25)+'...');
     gsTokenClient = google.accounts.oauth2.initTokenClient({
@@ -2890,6 +2892,12 @@ function gsConnect(){
     // Ensure GIS library is loaded
     if(typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2){
       alert('Google Sign-In library ยังไม่โหลด\nกรุณารอ 3 วินาทีแล้วลองใหม่\n\nถ้ายังไม่ได้ลอง Hard Reload: Cmd+Shift+R');
+      return;
+    }
+    // ครั้งแรกที่ยังไม่ตั้งค่า → เปิด modal ให้กรอก Client ID + Sheet ID
+    if(!GS_CONFIG.clientId || !GS_CONFIG.spreadsheetId){
+      gsOpenModal();
+      gsSetStatus('⚙ กรอก Client ID และ Sheet ID ก่อนเชื่อมต่อ (เก็บในเครื่องนี้เท่านั้น)','loading');
       return;
     }
     // (Re)initialize token client if needed
