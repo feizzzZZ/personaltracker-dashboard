@@ -8,7 +8,7 @@
 //   • XIRR engine
 // กติกา: ไฟล์นี้ห้ามแตะ DOM ของหน้าใดหน้าหนึ่ง — pure data layer เท่านั้น
 // ═══════════════════════════════════════════════════════════════════
-const APP_BUILD = 'v24';
+const APP_BUILD = 'v25';
 console.log('[Finance OS shared] build', APP_BUILD);
 
 // ═══ LIVE_META — นิยามการ์ดข้อมูลตลาด ═══
@@ -184,6 +184,30 @@ function saveMarketData(rows){
     localStorage.setItem('finOS_market', JSON.stringify({savedAt:Date.now(), data}));
     console.log('[Market] saved', Object.keys(data).length, 'keys');
   }catch(e){console.warn('[Market] save failed:', e.message);}
+}
+
+// ═══ Value_Log — ประวัติมูลค่าพอร์ตรายวันจากชีต (Apps Script เขียนทุกเช้า) ═══
+// merge เข้า finOS_valueLog: ชีตอุดวันที่โหว่ / วันซ้ำค่าในเครื่องชนะ (convention เดียวกับ restore)
+function mergeValueLogFromSheet(rows){
+  try{
+    if(!rows || rows.length < 2) return 0;
+    const h = (rows[0]||[]).map(x=>x?String(x).trim():'');
+    const di = h.indexOf('Date'), vi = h.indexOf('Portfolio_Value');
+    if(di < 0 || vi < 0) return 0;
+    const byDate = {};
+    rows.slice(1).forEach(r=>{
+      if(!r || r[di]==null || r[vi]==null || r[vi]==='') return;
+      const iso = gserialToISO(r[di]); if(!iso) return;
+      const v = parseFloat(r[vi]); if(!(v > 0)) return;
+      byDate[String(iso).slice(0,10)] = { d: String(iso).slice(0,10), v: Math.round(v) };
+    });
+    const cur = JSON.parse(localStorage.getItem('finOS_valueLog')||'[]');
+    cur.forEach(e=>{ if(e && e.d) byDate[e.d] = e; });   // local ชนะวันซ้ำ
+    const merged = Object.values(byDate).sort((a,b)=>a.d.localeCompare(b.d)).slice(-730);
+    localStorage.setItem('finOS_valueLog', JSON.stringify(merged));
+    console.log('[ValueLog] merged from sheet →', merged.length, 'days');
+    return merged.length;
+  }catch(e){ console.warn('[ValueLog] merge failed:', e.message); return 0; }
 }
 
 // ═══ XIRR engine (validated กับ ground truth ±0.01%) ═══

@@ -1724,6 +1724,9 @@ function parseFile(file){
         if(wb.Sheets['Market_Data']){
           saveMarketData(XLSX.utils.sheet_to_json(wb.Sheets['Market_Data'],{header:1,raw:true,defval:null}));
         }
+        if(wb.Sheets['Value_Log']){
+          mergeValueLogFromSheet(XLSX.utils.sheet_to_json(wb.Sheets['Value_Log'],{header:1,raw:true,defval:null}));
+        }
         const lpRaw=XLSX.utils.sheet_to_json(wb.Sheets['Asset_Live_Price_Feed'],{header:1,raw:true,defval:null});
         const lpH=lpRaw[0]?lpRaw[0].map(h=>h?String(h).trim():''):[];
         const LP={
@@ -2951,7 +2954,7 @@ async function gsSync(){
     console.log('[GS] Required:', Object.keys(map));
 
     // Optional sheets (skip if missing)
-    const OPT = ['Asset_Dashboard','Insurance_Policies','Insurance_Coverage','Market_Data'];
+    const OPT = ['Asset_Dashboard','Insurance_Policies','Insurance_Coverage','Market_Data','Value_Log'];
     for(const s of OPT){
       try{
         const ro=await fetch(BASE+'&ranges='+encodeURIComponent(s+'!A1:Z500'),{headers:hdrs});
@@ -2963,6 +2966,7 @@ async function gsSync(){
 
     gsProcessData(map);
     saveMarketData(map['Market_Data']);
+    mergeValueLogFromSheet(map['Value_Log']);   // ประวัติมูลค่าพอร์ตรายวัน → TWR ไม่มีวันโหว่
     gsLastSync=new Date();
     gsConnected=true;
     gsSetStatus('✓ Sync '+gsLastSync.toLocaleTimeString('th-TH'),'ok');
