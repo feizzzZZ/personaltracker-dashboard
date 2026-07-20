@@ -1,10 +1,10 @@
 {
- "generated_at": "2026-07-19T00:13:54.210648+00:00",
+ "generated_at": "2026-07-20T03:03:09.626702+00:00",
  "source": "github-actions pipeline (FRED + Yahoo)",
  "data": {
   "FED_RATE": {
    "value": 3.75,
-   "updated": "2026-07-18",
+   "updated": "2026-07-19",
    "note": "FRED: target upper bound"
   },
   "US_CPI": {
@@ -44,23 +44,23 @@
   },
   "SP500_RSI": {
    "value": 48.0,
-   "updated": "2026-07-19",
+   "updated": "2026-07-20",
    "note": "Yahoo ^GSPC RSI(14)"
   },
   "SP500_MA200": {
    "value": "Above",
-   "updated": "2026-07-19",
+   "updated": "2026-07-20",
    "note": "close 7,458 vs MA200 6,987"
   },
   "SET_RSI": {
-   "value": 61.0,
-   "updated": "2026-07-19",
+   "value": 65.0,
+   "updated": "2026-07-20",
    "note": "Yahoo ^SET.BK RSI(14)"
   },
   "SET_MA200": {
    "value": "Above",
-   "updated": "2026-07-19",
-   "note": "close 1,621.6 vs MA200 1,396.1"
+   "updated": "2026-07-20",
+   "note": "close 1,639.0 vs MA200 1,404.4"
   }
  }
 }
