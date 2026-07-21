@@ -59,6 +59,20 @@ def yahoo_closes(symbol, range_="1y"):
     return closes
 
 
+def yahoo_weekly_history(symbol, range_="5y"):
+    """ราคาปิดรายสัปดาห์พร้อมวันที่ — ใช้ทำ benchmark simulation ฝั่ง dashboard"""
+    j = json.loads(fetch(
+        f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
+        f"?range={range_}&interval=1wk"))
+    res = j["chart"]["result"][0]
+    out = []
+    for t, c in zip(res["timestamp"], res["indicators"]["quote"][0]["close"]):
+        if c:
+            out.append([datetime.fromtimestamp(t, timezone.utc).strftime("%Y-%m-%d"),
+                        round(c, 3)])
+    return out
+
+
 def rsi14(closes):
     """Wilder's RSI(14) มาตรฐานเดียวกับ TradingView"""
     if len(closes) < 15:
@@ -135,10 +149,22 @@ def run():
                 TODAY, f"close {closes[-1]:,.1f} vs MA200 {ma:,.1f}")
     except Exception as e: print(f"  ✗ SET technicals: {e} (ใส่มือในชีตแทนได้)")
 
+    print("── Benchmark history (weekly 5y) ──")
+    history = {}
+    try:
+        history["SP500"] = yahoo_weekly_history("%5EGSPC")
+        print(f"  ✓ SP500 history: {len(history['SP500'])} weeks")
+    except Exception as e: print(f"  ✗ SP500 history: {e}")
+    try:
+        history["USDTHB"] = yahoo_weekly_history("THB=X")
+        print(f"  ✓ USDTHB history: {len(history['USDTHB'])} weeks")
+    except Exception as e: print(f"  ✗ USDTHB history: {e}")
+
     payload = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "source": "github-actions pipeline (FRED + Yahoo)",
         "data": out,
+        "history": history,
     }
     with open("market-data.json", "w") as f:
         json.dump(payload, f, ensure_ascii=False, indent=1)
