@@ -8,7 +8,7 @@
 //   • XIRR engine
 // กติกา: ไฟล์นี้ห้ามแตะ DOM ของหน้าใดหน้าหนึ่ง — pure data layer เท่านั้น
 // ═══════════════════════════════════════════════════════════════════
-const APP_BUILD = 'v25';
+const APP_BUILD = 'v26';
 console.log('[Finance OS shared] build', APP_BUILD);
 
 // ═══ LIVE_META — นิยามการ์ดข้อมูลตลาด ═══
@@ -208,6 +208,40 @@ function mergeValueLogFromSheet(rows){
     console.log('[ValueLog] merged from sheet →', merged.length, 'days');
     return merged.length;
   }catch(e){ console.warn('[ValueLog] merge failed:', e.message); return 0; }
+}
+
+// ═══ Benchmark simulation — "ถ้าเงินก้อนเดียวกันเข้า S&P 500 แทน" ═══
+// จำลอง cashflow เดิมทุกรายการซื้อ/ขาย ^GSPC ณ ราคาสัปดาห์นั้น (แปลงเป็นบาทด้วย
+// USD/THB ณ วันเดียวกัน — FX คือส่วนหนึ่งของผลตอบแทนจริงของนักลงทุนไทย)
+function priceAt(series, tMs){
+  // series = [[iso, price]] เรียงเก่า→ใหม่ · คืนราคาล่าสุดที่ไม่เกินวันนั้น
+  if(!series || !series.length) return null;
+  let best = series[0][1];
+  for(let i=0;i<series.length;i++){
+    if(Date.parse(series[i][0]) <= tMs) best = series[i][1];
+    else break;
+  }
+  return best;
+}
+function benchmarkXIRR(flows){
+  const act = loadActions();
+  const h = act && act.history;
+  if(!h || !h.SP500 || h.SP500.length<10 || !h.USDTHB || !h.USDTHB.length) return null;
+  let units = 0;
+  for(const f of flows){
+    const px = priceAt(h.SP500, f.t), fx = priceAt(h.USDTHB, f.t);
+    if(!px || !fx) return null;
+    units += (-f.v) / (px * fx);   // ซื้อ (cf<0) → units เพิ่ม · ถอน/ปันผล (cf>0) → units ลด
+  }
+  // terminal = ราคา ณ วันนี้ (ไม่ใช่แถวสุดท้ายของ series — กันกรณีข้อมูลลากเกินวันนี้)
+  const nowT = Date.now();
+  const lastPx = priceAt(h.SP500, nowT);
+  const lastFx = priceAt(h.USDTHB, nowT);
+  const terminal = Math.max(0, units) * lastPx * lastFx;
+  const r = xirrJS([...flows, {t: nowT, v: terminal}]);
+  let asOf = h.SP500[0][0];
+  for(const [d] of h.SP500){ if(Date.parse(d) <= nowT) asOf = d; else break; }
+  return r===null ? null : { rate:r, terminal, asOf };
 }
 
 // ═══ XIRR engine (validated กับ ground truth ±0.01%) ═══

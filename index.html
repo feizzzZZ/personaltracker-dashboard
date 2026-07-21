@@ -982,6 +982,13 @@ select.month-display{text-align-last:center;outline:none}
         <div class="sc"><div class="sc-lbl">🚀 เครื่องยนต์ของพอร์ต (XIRR สูงสุด)</div><div id="perf-top" style="font-size:12px;line-height:2;margin-top:6px">—</div></div>
         <div class="sc"><div class="sc-lbl">⚓ ตัวถ่วง (XIRR ต่ำสุด)</div><div id="perf-bottom" style="font-size:12px;line-height:2;margin-top:6px">—</div></div>
       </div>
+      <div class="sg" style="grid-template-columns:1fr">
+        <div class="sc" style="--g:rgba(124,111,236,.1)">
+          <div class="sc-lbl">⚔️ คุณ vs ตลาด — ถ้า cashflow เดียวกัน DCA เข้า S&P 500 (คิดเป็นบาท รวมผล FX)</div>
+          <div class="sc-val" id="perf-bench" style="font-size:16px;line-height:1.8">—</div>
+          <div class="sc-sub" id="perf-bench-sub"></div>
+        </div>
+      </div>
 
       <div class="sl sl-mt">Where are your assets</div>
       <div class="plat-grid" id="pf-plat-grid" style="margin-bottom:18px"></div>
@@ -2599,6 +2606,25 @@ function renderPerformance(totalVal){
   if(botEl) botEl.innerHTML = perAsset.slice(-3).reverse().map(row).join('') || '—';
 
   // TWR — เริ่มเก็บประวัติมูลค่าวันนี้
+  // ⚔️ Benchmark: จำลอง cashflow เดิมเข้า S&P 500
+  const bEl=document.getElementById('perf-bench'), bsEl=document.getElementById('perf-bench-sub');
+  if(bEl && bsEl){
+    const bm = benchmarkXIRR(flows);
+    if(bm && r!==null){
+      const diff=(r-bm.rate)*100;
+      const verdict = diff>=0
+        ? `<strong style="color:var(--gain)">🏆 ชนะตลาด +${diff.toFixed(2)}pp</strong>`
+        : `<strong style="color:var(--loss)">📉 แพ้ตลาด ${diff.toFixed(2)}pp</strong>`;
+      bEl.innerHTML = `พอร์ตคุณ <strong style="color:${r>=0?'var(--gain)':'var(--loss)'}">${(r*100).toFixed(2)}%/ปี</strong>`+
+        ` &nbsp;vs&nbsp; S&P 500 <strong style="color:var(--savings)">${(bm.rate*100).toFixed(2)}%/ปี</strong> &nbsp;→&nbsp; ${verdict}`;
+      bsEl.textContent = `จำลอง ${flows.length} cashflows เข้า ^GSPC ราคารายสัปดาห์ × USD/THB · `+
+        `มูลค่าปลายทางจำลอง ${fmt(bm.terminal)} vs จริง ${fmt(totalVal)} · ราคาถึง ${bm.asOf}`;
+    } else {
+      bEl.textContent='⏳ รอข้อมูลราคาย้อนหลังจาก pipeline';
+      bsEl.textContent='pipeline รอบถัดไป (06:30 พรุ่งเช้า) จะส่ง S&P history มาให้ — หรือกด Run workflow เองที่ GitHub Actions ได้เลย';
+    }
+  }
+
   const log = logValueSnapshot(totalVal);
   const twr = computeTWR(log, flows);
   const tEl=document.getElementById('perf-twr'), tsEl=document.getElementById('perf-twr-sub');
