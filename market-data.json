@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-07-21T16:43:47.363016+00:00",
+ "generated_at": "2026-07-22T00:12:57.548016+00:00",
  "source": "github-actions pipeline (FRED + Yahoo)",
  "data": {
   "FED_RATE": {
@@ -23,13 +23,13 @@
    "note": "FRED: PAYEMS MoM change (K)"
   },
   "US10Y": {
-   "value": 4.55,
-   "updated": "2026-07-17",
+   "value": 4.6,
+   "updated": "2026-07-20",
    "note": "FRED: DGS10"
   },
   "YIELD_CURVE": {
-   "value": 37,
-   "updated": "2026-07-17",
+   "value": 39,
+   "updated": "2026-07-20",
    "note": "FRED: 2s10s spread (bps)"
   },
   "CREDIT_SPREAD": {
@@ -44,23 +44,23 @@
   },
   "SP500_RSI": {
    "value": 53.0,
-   "updated": "2026-07-21",
+   "updated": "2026-07-22",
    "note": "Yahoo ^GSPC RSI(14)"
   },
   "SP500_MA200": {
    "value": "Above",
-   "updated": "2026-07-21",
-   "note": "close 7,511 vs MA200 6,995"
+   "updated": "2026-07-22",
+   "note": "close 7,509 vs MA200 6,995"
   },
   "SET_RSI": {
-   "value": 68.0,
-   "updated": "2026-07-21",
+   "value": 65.0,
+   "updated": "2026-07-22",
    "note": "Yahoo ^SET.BK RSI(14)"
   },
   "SET_MA200": {
    "value": "Above",
-   "updated": "2026-07-21",
-   "note": "close 1,653.0 vs MA200 1,406.2"
+   "updated": "2026-07-22",
+   "note": "close 1,639.0 vs MA200 1,404.4"
   }
  },
  "history": {
@@ -1115,7 +1115,7 @@
    ],
    [
     "2026-07-21",
-    7511.34
+    7509.2
    ]
   ],
   "USDTHB": [
@@ -2165,11 +2165,11 @@
    ],
    [
     "2026-07-19",
-    33.65
+    33.63
    ],
    [
-    "2026-07-21",
-    33.69
+    "2026-07-22",
+    33.7
    ]
   ]
  }
