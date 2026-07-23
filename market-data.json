@@ -1,10 +1,10 @@
 {
- "generated_at": "2026-07-22T00:12:57.548016+00:00",
+ "generated_at": "2026-07-23T00:57:32.868436+00:00",
  "source": "github-actions pipeline (FRED + Yahoo)",
  "data": {
   "FED_RATE": {
    "value": 3.75,
-   "updated": "2026-07-21",
+   "updated": "2026-07-22",
    "note": "FRED: target upper bound"
   },
   "US_CPI": {
@@ -23,43 +23,43 @@
    "note": "FRED: PAYEMS MoM change (K)"
   },
   "US10Y": {
-   "value": 4.6,
-   "updated": "2026-07-20",
+   "value": 4.63,
+   "updated": "2026-07-21",
    "note": "FRED: DGS10"
   },
   "YIELD_CURVE": {
-   "value": 39,
-   "updated": "2026-07-20",
+   "value": 37,
+   "updated": "2026-07-21",
    "note": "FRED: 2s10s spread (bps)"
   },
   "CREDIT_SPREAD": {
    "value": 2.69,
-   "updated": "2026-07-20",
+   "updated": "2026-07-21",
    "note": "FRED: HY OAS"
   },
   "VIX": {
-   "value": 18.65,
-   "updated": "2026-07-20",
+   "value": 17.05,
+   "updated": "2026-07-21",
    "note": "FRED: VIXCLS"
   },
   "SP500_RSI": {
-   "value": 53.0,
-   "updated": "2026-07-22",
+   "value": 52.0,
+   "updated": "2026-07-23",
    "note": "Yahoo ^GSPC RSI(14)"
   },
   "SP500_MA200": {
    "value": "Above",
-   "updated": "2026-07-22",
-   "note": "close 7,509 vs MA200 6,995"
+   "updated": "2026-07-23",
+   "note": "close 7,499 vs MA200 6,999"
   },
   "SET_RSI": {
    "value": 65.0,
-   "updated": "2026-07-22",
+   "updated": "2026-07-23",
    "note": "Yahoo ^SET.BK RSI(14)"
   },
   "SET_MA200": {
    "value": "Above",
-   "updated": "2026-07-22",
+   "updated": "2026-07-23",
    "note": "close 1,639.0 vs MA200 1,404.4"
   }
  },
@@ -1111,11 +1111,11 @@
    ],
    [
     "2026-07-20",
-    7443.28
+    7509.2
    ],
    [
-    "2026-07-21",
-    7509.2
+    "2026-07-22",
+    7498.96
    ]
   ],
   "USDTHB": [
@@ -2165,11 +2165,11 @@
    ],
    [
     "2026-07-19",
-    33.63
+    33.72
    ],
    [
-    "2026-07-22",
-    33.7
+    "2026-07-23",
+    33.76
    ]
   ]
  }
