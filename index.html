@@ -651,6 +651,9 @@ select.month-display{text-align-last:center;outline:none}
       <div class="sb-item" data-page="yearly" onclick="switchPage('yearly')">
         <span class="sb-icon" aria-hidden="true">📅</span></i>Yearly
       </div>
+      <div class="sb-item" data-page="engine" onclick="switchPage('engine')">
+        <span class="sb-icon" aria-hidden="true">💧</span></i>Wealth Engine
+      </div>
       <div class="sb-section">Investment</div>
       <div class="sb-item" data-page="portfolio" onclick="switchPage('portfolio')">
         <span class="sb-icon" aria-hidden="true">💼</span></i>Holdings
@@ -660,6 +663,9 @@ select.month-display{text-align-last:center;outline:none}
       </div>
       <div class="sb-item" data-page="flow" onclick="switchPage('flow')">
         <span class="sb-icon" aria-hidden="true">↗</span></i>Investment Flow
+      </div>
+      <div class="sb-item" data-page="dividends" onclick="switchPage('dividends')">
+        <span class="sb-icon" aria-hidden="true">💵</span></i>Dividends
       </div>
       <div class="sb-item" data-page="realized" onclick="switchPage('realized')">
         <span class="sb-icon" aria-hidden="true">🧾</span></i>Realized P&L
@@ -1390,6 +1396,89 @@ select.month-display{text-align-last:center;outline:none}
         <th class="r">Qty</th><th class="r">WACC</th><th class="r">Cost basis</th>
         <th class="r">Proceeds</th><th class="r">Realized P&L</th>
       </tr></thead><tbody id="real-body"></tbody></table></div>
+    </div>
+
+    <!-- ══ WEALTH ENGINE (savings & invest rate) ══ -->
+    <div class="page" id="page-engine">
+      <div class="pg-hdr"><div>
+        <div class="pg-title">Wealth Engine</div>
+        <div class="pg-sub">ฝั่งซ้ายของสมการความรวย — เก็บได้กี่ % และเอาไปลงทุนจริงกี่ %</div>
+      </div></div>
+      <div class="sg">
+        <div class="sc" style="--g:rgba(0,212,160,.1)">
+          <div class="sc-lbl">Savings Rate (12 เดือน)</div>
+          <div class="sc-val gain" id="we-sav">—</div>
+          <div class="sc-sub" id="we-sav-s"></div>
+        </div>
+        <div class="sc" style="--g:rgba(124,111,236,.1)">
+          <div class="sc-lbl">Invest Rate (12 เดือน)</div>
+          <div class="sc-val" id="we-inv" style="color:var(--savings)">—</div>
+          <div class="sc-sub" id="we-inv-s"></div>
+        </div>
+        <div class="sc" style="--g:rgba(255,149,0,.12)">
+          <div class="sc-lbl">⚠ เงินที่เก็บได้แต่ยังไม่ลงทุน</div>
+          <div class="sc-val" id="we-gap" style="color:var(--debt)">—</div>
+          <div class="sc-sub" id="we-gap-s"></div>
+        </div>
+        <div class="sc">
+          <div class="sc-lbl">รายได้เฉลี่ย / เดือน</div>
+          <div class="sc-val" id="we-income" style="font-size:20px">—</div>
+          <div class="sc-sub" id="we-income-s"></div>
+        </div>
+      </div>
+      <div class="sl sl-mt">Income · Expense · Invested รายเดือน</div>
+      <div class="cw" style="height:300px"><canvas id="we-chart"></canvas></div>
+      <div class="sl sl-mt">Rate Trend — เก็บได้ vs ลงทุนจริง (%)</div>
+      <div class="cw" style="height:250px"><canvas id="we-rate-chart"></canvas></div>
+      <div class="sl sl-mt">Insight</div>
+      <div class="sg" style="grid-template-columns:1fr">
+        <div class="sc" style="--g:rgba(0,212,160,.06)">
+          <div id="we-insight" style="font-size:12.5px;line-height:2"></div>
+        </div>
+      </div>
+      <div class="sl sl-mt">รายละเอียดรายเดือน</div>
+      <div class="tw"><table class="at"><thead><tr>
+        <th>เดือน</th><th class="r">รายได้</th><th class="r">รายจ่าย</th>
+        <th class="r">เก็บได้</th><th class="r">ลงทุน</th>
+        <th class="r">Sav %</th><th class="r">Inv %</th><th class="r">ค้างในบัญชี</th>
+      </tr></thead><tbody id="we-body"></tbody></table></div>
+    </div>
+
+    <!-- ══ DIVIDENDS (passive income) ══ -->
+    <div class="page" id="page-dividends">
+      <div class="pg-hdr"><div>
+        <div class="pg-title">Dividend Income</div>
+        <div class="pg-sub">รายได้ที่ไม่ต้องทำงาน — เงินทำงานแทนคุณเดือนละเท่าไหร่แล้ว</div>
+      </div></div>
+      <div class="sg">
+        <div class="sc" style="--g:rgba(0,212,160,.1)">
+          <div class="sc-lbl">ปันผลรวมทั้งหมด</div>
+          <div class="sc-val gain" id="dv-total">—</div>
+          <div class="sc-sub" id="dv-total-s"></div>
+        </div>
+        <div class="sc">
+          <div class="sc-lbl">12 เดือนล่าสุด</div>
+          <div class="sc-val gain" id="dv-12m" style="font-size:22px">—</div>
+          <div class="sc-sub" id="dv-12m-s"></div>
+        </div>
+        <div class="sc">
+          <div class="sc-lbl">Yield on Portfolio</div>
+          <div class="sc-val" id="dv-yield" style="font-size:22px;color:var(--savings)">—</div>
+          <div class="sc-sub">ปันผล 12 เดือน ÷ มูลค่าพอร์ตปัจจุบัน</div>
+        </div>
+        <div class="sc" style="--g:rgba(255,209,102,.1)">
+          <div class="sc-lbl">🔥 FIRE Progress</div>
+          <div class="sc-val" id="dv-fire" style="font-size:22px;color:var(--debt)">—</div>
+          <div class="sc-sub" id="dv-fire-s">ปันผลครอบคลุมรายจ่ายกี่ %</div>
+        </div>
+      </div>
+      <div class="sl sl-mt">ปันผลรายเดือน</div>
+      <div class="cw" style="height:280px"><canvas id="dv-chart"></canvas></div>
+      <div class="sl sl-mt">ผู้จ่ายปันผล — เรียงตามยอดรวม</div>
+      <div class="tw"><table class="at"><thead><tr>
+        <th>Ticker</th><th>ประเภท</th><th class="r">จำนวนครั้ง</th>
+        <th class="r">ปันผลรวม</th><th class="r">ล่าสุด</th><th class="r">% ของปันผลทั้งหมด</th>
+      </tr></thead><tbody id="dv-body"></tbody></table></div>
     </div>
 
     <!-- ══ GOALS ══ -->
@@ -2717,6 +2806,164 @@ function renderAssetTable(){
   }).join('');
 }
 
+// ── WEALTH ENGINE: savings rate + invest rate ─────────────────────────
+// สร้างสรุปรายเดือน: รายได้ / รายจ่าย / เก็บได้ / ลงทุนจริง
+function buildEngineMonths(){
+  const byM={};
+  const touch=mk=>{ if(!byM[mk]) byM[mk]={mk, inc:0, exp:0, invested:0}; return byM[mk]; };
+  txRows.forEach(r=>{
+    const m=touch(r.month);
+    if(r.type==='Income') m.inc+=r.amount;
+    else if(r.type==='Expense'||r.type==='Bills') m.exp+=Math.abs(r.amount);
+  });
+  tracker.filter(r=>TX_BUY.includes(r.txType)).forEach(r=>{
+    if(!r.date) return;
+    const mk=`${r.date.getFullYear()}-${String(r.date.getMonth()+1).padStart(2,'0')}`;
+    touch(mk).invested+=Math.abs(r.amtTHB);
+  });
+  return Object.values(byM).sort((a,b)=>a.mk.localeCompare(b.mk)).map(m=>{
+    const surplus=m.inc-m.exp;
+    return {...m, surplus,
+      savRate: m.inc>0 ? surplus/m.inc*100 : null,
+      invRate: m.inc>0 ? m.invested/m.inc*100 : null,
+      idle: surplus-m.invested };
+  });
+}
+
+function renderEngine(){
+  const all=buildEngineMonths().filter(m=>m.inc>0);   // เดือนที่ยังไม่มีรายได้บันทึก = ข้าม
+  if(!all.length) return;
+  const L12=all.slice(-12);
+  const sum=(a,k)=>a.reduce((s,x)=>s+x[k],0);
+  const inc12=sum(L12,'inc'), exp12=sum(L12,'exp'), inv12=sum(L12,'invested');
+  const sur12=inc12-exp12, idle12=sur12-inv12;
+  const savR=inc12>0?sur12/inc12*100:0, invR=inc12>0?inv12/inc12*100:0;
+  const last=all[all.length-1];
+
+  const setT=(id,v)=>{const e=document.getElementById(id); if(e) e.textContent=v;};
+  setT('we-sav', savR.toFixed(1)+'%');
+  setT('we-sav-s', `เก็บได้ ${fmt(sur12)} จากรายได้ ${fmt(inc12)} · เดือนล่าสุด ${last.savRate.toFixed(0)}%`);
+  setT('we-inv', invR.toFixed(1)+'%');
+  setT('we-inv-s', `ลงทุนจริง ${fmt(inv12)} · เฉลี่ย ${fmt(inv12/L12.length)}/เดือน`);
+  setT('we-gap', fmt(Math.max(0,idle12/L12.length))+'/เดือน');
+  setT('we-gap-s', idle12>0
+    ? `รวม 12 เดือน ${fmt(idle12)} = ${(savR-invR).toFixed(1)}pp ของรายได้ที่ยังไม่ได้ทำงาน`
+    : `ลงทุนเกินเงินที่เก็บได้ ${fmt(-idle12)} (ใช้เงินเก่า/โบนัส)`);
+  setT('we-income', fmt(inc12/L12.length));
+  setT('we-income-s', `${L12.length} เดือน · รายจ่ายเฉลี่ย ${fmt(exp12/L12.length)}`);
+
+  // charts
+  const labels=L12.map(m=>monthLabel(m.mk));
+  mkBarChart('we-chart', labels, [
+    {label:'รายได้', data:L12.map(m=>Math.round(m.inc)), backgroundColor:'rgba(0,212,160,.75)', borderRadius:4},
+    {label:'รายจ่าย', data:L12.map(m=>Math.round(m.exp)), backgroundColor:'rgba(255,64,96,.7)', borderRadius:4},
+    {label:'ลงทุน', data:L12.map(m=>Math.round(m.invested)), backgroundColor:'rgba(124,111,236,.85)', borderRadius:4},
+  ]);
+  mkLineChart('we-rate-chart', labels, [
+    {label:'Savings %', data:L12.map(m=>+m.savRate.toFixed(1)), borderColor:'#00d4a0',
+      backgroundColor:'rgba(0,212,160,.08)', fill:true, tension:.35, borderWidth:2, pointRadius:3},
+    {label:'Invest %', data:L12.map(m=>+m.invRate.toFixed(1)), borderColor:'#7c6fec',
+      backgroundColor:'rgba(124,111,236,.05)', fill:false, tension:.35, borderWidth:2,
+      borderDash:[5,3], pointRadius:3},
+  ]);
+
+  // insight — เชื่อมกับเป้าหมายจริง
+  const goalAmt=1000000;
+  const pv=assets.reduce((s,a)=>s+a.val,0);
+  const monthlyNow=inv12/L12.length, monthlyIfDeploy=monthlyNow+Math.max(0,idle12/L12.length);
+  const r=0.08/12;
+  const monthsTo=(pmt)=>{
+    if(pmt<=0) return Infinity;
+    let v=pv, n=0;
+    while(v<goalAmt && n<1200){ v=v*(1+r)+pmt; n++; }
+    return n;
+  };
+  const mNow=monthsTo(monthlyNow), mDeploy=monthsTo(monthlyIfDeploy);
+  const el=document.getElementById('we-insight');
+  if(el){
+    const saved=mNow-mDeploy;
+    el.innerHTML =
+      `💧 <strong>วินัยการเก็บเงินของคุณอยู่ระดับดี</strong> — savings rate ${savR.toFixed(1)}% สูงกว่าค่าเฉลี่ยคนทั่วไป (10-20%) อย่างชัดเจน<br>`+
+      `⚠️ แต่ <strong>invest rate เพียง ${invR.toFixed(1)}%</strong> — ส่วนต่าง ${(savR-invR).toFixed(1)}pp ` +
+      `หรือราว <strong style="color:var(--debt)">${fmt(Math.max(0,idle12/L12.length))}/เดือน</strong> นอนอยู่ในบัญชีโดยไม่ได้ทำงาน<br>`+
+      (isFinite(mNow)
+        ? `🎯 ที่อัตราลงทุนปัจจุบัน (${fmt(monthlyNow)}/เดือน, ผลตอบแทน 8%/ปี) จะถึง ฿1,000,000 ใน <strong>${mNow} เดือน (${(mNow/12).toFixed(1)} ปี)</strong><br>`
+        : `🎯 ที่อัตราลงทุนปัจจุบันยังไปไม่ถึงเป้า<br>`)+
+      (isFinite(mDeploy) && saved>0
+        ? `🚀 ถ้าเอาเงินที่นอนอยู่ไปลงทุนด้วย (${fmt(monthlyIfDeploy)}/เดือน) จะถึงเป้าใน <strong style="color:var(--gain)">${mDeploy} เดือน (${(mDeploy/12).toFixed(1)} ปี)</strong> — <strong>เร็วขึ้น ${saved} เดือน</strong>`
+        : `🚀 คุณกำลังลงทุนเต็มศักยภาพของเงินที่เก็บได้แล้ว — ก้าวถัดไปคือเพิ่มรายได้หรือลดรายจ่าย`)+
+      `<br><span style="color:var(--muted2);font-size:11px">หมายเหตุ: กันเงินสำรองฉุกเฉิน 3-6 เดือนของรายจ่าย (${fmt(exp12/L12.length*6)}) ไว้ก่อนเสมอ — เงินที่ "นอนอยู่" ส่วนหนึ่งควรเป็นก้อนนี้</span>`;
+  }
+
+  // table
+  const tb=document.getElementById('we-body');
+  if(tb) tb.innerHTML=[...all].reverse().slice(0,24).map(m=>{
+    const sc=m.savRate>=30?'gain':m.savRate>=10?'':'loss';
+    const ic=m.invRate>=20?'gain':'';
+    return `<tr><td>${monthLabel(m.mk)}</td>
+      <td class="r">${fmt(m.inc)}</td><td class="r loss">${fmt(m.exp)}</td>
+      <td class="r ${m.surplus>=0?'gain':'loss'}">${fmtSign(m.surplus)}</td>
+      <td class="r" style="color:var(--savings)">${fmt(m.invested)}</td>
+      <td class="r ${sc}">${m.savRate.toFixed(0)}%</td>
+      <td class="r ${ic}">${m.invRate.toFixed(0)}%</td>
+      <td class="r" style="color:${m.idle>0?'var(--debt)':'var(--muted2)'}">${fmt(Math.max(0,m.idle))}</td></tr>`;
+  }).join('');
+}
+
+// ── DIVIDENDS: passive income ────────────────────────────────────────
+function renderDividends(){
+  const rows=tracker.filter(r=>TX_DIV.includes(r.txType) && r.date);
+  const setT=(id,v)=>{const e=document.getElementById(id); if(e) e.textContent=v;};
+  if(!rows.length){ setT('dv-total','฿0'); setT('dv-total-s','ยังไม่มีรายการปันผล'); return; }
+
+  const total=rows.reduce((s,r)=>s+Math.abs(r.amtTHB),0);
+  const now=Date.now(), cut=now-365*86400e3;
+  const r12=rows.filter(r=>r.date.getTime()>=cut);
+  const d12=r12.reduce((s,r)=>s+Math.abs(r.amtTHB),0);
+  const pv=assets.reduce((s,a)=>s+a.val,0);
+  const firstD=new Date(Math.min(...rows.map(r=>r.date.getTime())));
+
+  setT('dv-total', fmt(total));
+  setT('dv-total-s', `${rows.length} รายการ · ตั้งแต่ ${monthLabel(`${firstD.getFullYear()}-${String(firstD.getMonth()+1).padStart(2,'0')}`)}`);
+  setT('dv-12m', fmt(d12));
+  setT('dv-12m-s', `เฉลี่ย ${fmt(d12/12)}/เดือน · ${r12.length} รายการ`);
+  setT('dv-yield', pv>0 ? (d12/pv*100).toFixed(2)+'%' : '—');
+
+  // FIRE: ปันผลครอบคลุมรายจ่ายกี่ %
+  const em=buildEngineMonths().filter(m=>m.inc>0).slice(-12);
+  const avgExp=em.length?em.reduce((s,m)=>s+m.exp,0)/em.length:0;
+  const cover=avgExp>0 ? (d12/12)/avgExp*100 : 0;
+  setT('dv-fire', cover.toFixed(1)+'%');
+  setT('dv-fire-s', avgExp>0
+    ? `ปันผล ${fmt(d12/12)}/เดือน vs รายจ่าย ${fmt(avgExp)}/เดือน`
+    : 'ยังไม่มีข้อมูลรายจ่าย');
+
+  // monthly chart (18 เดือน)
+  const byM={};
+  rows.forEach(r=>{
+    const mk=`${r.date.getFullYear()}-${String(r.date.getMonth()+1).padStart(2,'0')}`;
+    byM[mk]=(byM[mk]||0)+Math.abs(r.amtTHB);
+  });
+  const keys=Object.keys(byM).sort().slice(-18);
+  mkBarChart('dv-chart', keys.map(monthLabel), [
+    {label:'ปันผล', data:keys.map(k=>Math.round(byM[k])), backgroundColor:'rgba(0,212,160,.8)', borderRadius:4}
+  ]);
+
+  // per-ticker table
+  const byTk={};
+  rows.forEach(r=>{
+    const t=byTk[r.ticker]=byTk[r.ticker]||{group:r.group, n:0, amt:0, last:r.date};
+    t.n++; t.amt+=Math.abs(r.amtTHB);
+    if(r.date>t.last) t.last=r.date;
+  });
+  const tb=document.getElementById('dv-body');
+  if(tb) tb.innerHTML=Object.entries(byTk).sort((a,b)=>b[1].amt-a[1].amt).map(([tk,d])=>
+    `<tr><td><strong>${tk}</strong></td><td>${d.group||'—'}</td>
+     <td class="r">${d.n}</td><td class="r gain">${fmt(d.amt)}</td>
+     <td class="r" style="color:var(--muted2)">${d.last.toISOString().slice(0,10)}</td>
+     <td class="r">${(d.amt/total*100).toFixed(1)}%</td></tr>`).join('');
+}
+
 // ── Dividend detail table ─────────────────────────────────────────────
 function renderDividendTable(){
   const divRows=tracker.filter(r=>TX_DIV.includes(r.txType));
@@ -3803,6 +4050,7 @@ let pageRenderFns={
   insurance:renderInsurance,
   benchmark:renderBenchmark,
   flow:renderFlow,realized:renderRealized,
+  engine:renderEngine,dividends:renderDividends,
   goals:renderGoals
 };
 let renderedPages=new Set();
