@@ -8,7 +8,10 @@ Personal finance tracker and investment dashboard built with HTML/JS.
 - 💼 Investment Holdings (Asset_Tracker based)
 - 🛡 Insurance Dashboard
 - 💰 Budget Alert with Sidebar Badge
-- 📈 Benchmark Comparison (SET, S&P 500, Gold, Crypto)
+- ⚔️ Benchmark Comparison — XIRR พอร์ตจริง vs S&P 500 (จำลอง cashflow เดิม รวมผล FX)
+  อยู่ในหน้า Holdings การ์ด "คุณ vs ตลาด" · ราคาย้อนหลังจาก GitHub Actions pipeline
+- 💧 Wealth Engine — savings rate / invest rate / เงินที่เก็บได้แต่ยังไม่ลงทุน
+- 💵 Dividend Income — passive income + FIRE progress
 - 🎯 Financial Goals Tracker
 - 📄 Monthly Report PDF Export
 - 🔔 Budget Notification
