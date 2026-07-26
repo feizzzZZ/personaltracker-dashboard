@@ -8,7 +8,7 @@
 //   • XIRR engine
 // กติกา: ไฟล์นี้ห้ามแตะ DOM ของหน้าใดหน้าหนึ่ง — pure data layer เท่านั้น
 // ═══════════════════════════════════════════════════════════════════
-const APP_BUILD = 'v28';
+const APP_BUILD = 'v29';
 console.log('[Finance OS shared] build', APP_BUILD);
 
 // ═══ LIVE_META — นิยามการ์ดข้อมูลตลาด ═══
@@ -242,6 +242,30 @@ function benchmarkXIRR(flows){
   let asOf = h.SP500[0][0];
   for(const [d] of h.SP500){ if(Date.parse(d) <= nowT) asOf = d; else break; }
   return r===null ? null : { rate:r, terminal, asOf };
+}
+
+// ═══ WEALTH GOAL CONFIG — แหล่งเดียวของเป้าหมาย (ทุกหน้าต้องอ่านจากที่นี่) ═══
+// เดิมเป้าหมายกระจายอยู่ 3 ที่และไม่ตรงกัน (Overview ฿3M / Wealth Engine ฿1M /
+// อีเมล Apps Script ฿1M) → ทำให้ progress ที่แสดงขัดกันเอง แก้โดยรวมมาที่นี่
+const GOAL_DEFAULT = {
+  final: 3000000,               // เป้าหมายปลายทาง (Net Worth)
+  milestones: [1000000, 2000000, 3000000],
+  expectedReturn: 7,            // %/ปี ที่ใช้ในการฉายภาพ (ตรงกับ default ปุ่มใน Overview)
+};
+function getGoalCfg(){
+  try{
+    const s = JSON.parse(localStorage.getItem('finOS_goalCfg')||'null');
+    if(s && typeof s==='object') return {...GOAL_DEFAULT, ...s};
+  }catch(e){}
+  return {...GOAL_DEFAULT};
+}
+function saveGoalCfg(cfg){
+  localStorage.setItem('finOS_goalCfg', JSON.stringify({...getGoalCfg(), ...cfg}));
+}
+// milestone ถัดไปที่ยังไม่ถึง (ใช้บอก "อีกไกลแค่ไหนถึงหมุดหมายหน้า")
+function nextMilestone(netWorth){
+  const cfg = getGoalCfg();
+  return cfg.milestones.find(m => netWorth < m) ?? cfg.final;
 }
 
 // ═══ XIRR engine (validated กับ ground truth ±0.01%) ═══

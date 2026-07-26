@@ -742,8 +742,8 @@ select.month-display{text-align-last:center;outline:none}
           <div style="display:flex;align-items:center;gap:10px">
             <span style="font-size:20px">🎯</span>
             <div>
-              <div style="font-family:'Google Sans',sans-serif;font-size:15px;font-weight:600;color:var(--white)">Road to ฿3 Million</div>
-              <div style="font-size:11px;color:var(--muted2)">เป้าหมาย Net Worth ฿3,000,000</div>
+              <div style="font-family:'Google Sans',sans-serif;font-size:15px;font-weight:600;color:var(--white)" id="ov-goal-title">Road to ฿3 Million</div>
+              <div style="font-size:11px;color:var(--muted2)" id="ov-goal-sub">เป้าหมาย Net Worth ฿3,000,000</div>
             </div>
           </div>
           <div style="text-align:right">
@@ -1790,13 +1790,18 @@ function renderOverview(){
   document.getElementById('ov-div').textContent=fmt(totalDiv);
 
   // ── 🎯 Road to ฿3M — Compound Projection Engine ────────────────────
-  const GOAL=3_000_000;
+  const GOAL=getGoalCfg().final;   // แหล่งเดียวจาก shared.js
   const pct=Math.min(netWorth/GOAL*100,100);
   const remain=Math.max(GOAL-netWorth,0);
   document.getElementById('ov-3m-pct').textContent=pct.toFixed(1)+'%';
   document.getElementById('ov-3m-bar').style.width=pct+'%';
   const remEl=document.getElementById('ov-3m-remain');
-  const milestone = netWorth>=2_000_000?'ผ่าน ฿2M แล้ว':netWorth>=1_000_000?'ผ่าน ฿1M แล้ว':'กำลังไปสู่ ฿1M';
+  const _cfg=getGoalCfg(), _next=nextMilestone(netWorth);
+  const _tEl=document.getElementById('ov-goal-title'), _sEl=document.getElementById('ov-goal-sub');
+  if(_tEl) _tEl.textContent=`Road to ฿${(GOAL/1e6).toFixed(GOAL%1e6?1:0)} Million`;
+  if(_sEl) _sEl.textContent=`เป้าหมาย Net Worth ${fmt(GOAL)} · หมุดหมายถัดไป ${fmt(_next)}`;
+  const passed=_cfg.milestones.filter(m=>netWorth>=m).pop();
+  const milestone = passed ? `ผ่าน ${fmt(passed)} แล้ว` : `กำลังไปสู่ ${fmt(_next)}`;
   remEl.innerHTML=`เหลืออีก ${fmt(remain)} · <span style="color:var(--gain)">${milestone}</span>`;
 
   // Average monthly wealth contribution (net cashflow that stays + savings moved to assets)
@@ -2682,10 +2687,11 @@ function renderEngine(){
   ]);
 
   // insight — เชื่อมกับเป้าหมายจริง
-  const goalAmt=1000000;
+  const cfg=getGoalCfg();
   const pv=assets.reduce((s,a)=>s+a.val,0);
+  const goalAmt=nextMilestone(pv);          // หมุดหมายถัดไป (ไม่ใช่เลข hardcode)
   const monthlyNow=inv12/L12.length, monthlyIfDeploy=monthlyNow+Math.max(0,idle12/L12.length);
-  const r=0.08/12;
+  const r=cfg.expectedReturn/100/12;        // สมมติฐานเดียวกับ Overview
   const monthsTo=(pmt)=>{
     if(pmt<=0) return Infinity;
     let v=pv, n=0;
@@ -2701,12 +2707,12 @@ function renderEngine(){
       `⚠️ แต่ <strong>invest rate เพียง ${invR.toFixed(1)}%</strong> — ส่วนต่าง ${(savR-invR).toFixed(1)}pp ` +
       `หรือราว <strong style="color:var(--debt)">${fmt(Math.max(0,idle12/L12.length))}/เดือน</strong> นอนอยู่ในบัญชีโดยไม่ได้ทำงาน<br>`+
       (isFinite(mNow)
-        ? `🎯 ที่อัตราลงทุนปัจจุบัน (${fmt(monthlyNow)}/เดือน, ผลตอบแทน 8%/ปี) จะถึง ฿1,000,000 ใน <strong>${mNow} เดือน (${(mNow/12).toFixed(1)} ปี)</strong><br>`
+        ? `🎯 ที่อัตราลงทุนปัจจุบัน (${fmt(monthlyNow)}/เดือน, ผลตอบแทน ${cfg.expectedReturn}%/ปี) จะถึง ${fmt(goalAmt)} ใน <strong>${mNow} เดือน (${(mNow/12).toFixed(1)} ปี)</strong><br>`
         : `🎯 ที่อัตราลงทุนปัจจุบันยังไปไม่ถึงเป้า<br>`)+
       (isFinite(mDeploy) && saved>0
         ? `🚀 ถ้าเอาเงินที่นอนอยู่ไปลงทุนด้วย (${fmt(monthlyIfDeploy)}/เดือน) จะถึงเป้าใน <strong style="color:var(--gain)">${mDeploy} เดือน (${(mDeploy/12).toFixed(1)} ปี)</strong> — <strong>เร็วขึ้น ${saved} เดือน</strong>`
         : `🚀 คุณกำลังลงทุนเต็มศักยภาพของเงินที่เก็บได้แล้ว — ก้าวถัดไปคือเพิ่มรายได้หรือลดรายจ่าย`)+
-      `<br><span style="color:var(--muted2);font-size:11px">หมายเหตุ: กันเงินสำรองฉุกเฉิน 3-6 เดือนของรายจ่าย (${fmt(exp12/L12.length*6)}) ไว้ก่อนเสมอ — เงินที่ "นอนอยู่" ส่วนหนึ่งควรเป็นก้อนนี้</span>`;
+      `<br><span style="color:var(--muted2);font-size:11px">นับจาก <strong>เงินที่ลงทุนจริง</strong> ใน Asset_Tracker เท่านั้น (หน้า Overview ฉายภาพจาก net cashflow + savings ทั้งหมด จึงมองโลกในแง่ดีกว่า) · ฐานคำนวณ = มูลค่าพอร์ต ${fmt(pv)} ไม่รวมเงินสด<br>หมายเหตุ: กันเงินสำรองฉุกเฉิน 3-6 เดือนของรายจ่าย (${fmt(exp12/L12.length*6)}) ไว้ก่อนเสมอ — เงินที่ "นอนอยู่" ส่วนหนึ่งควรเป็นก้อนนี้</span>`;
   }
 
   // table
