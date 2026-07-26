@@ -831,7 +831,10 @@ function renderSituationLive(){
     const keys=card.dataset.tk.split(',');
     const valEl=card.querySelector('.sc-val'), subEl=card.querySelector('.sc-sub'), dot=card.querySelector('.tk-dot');
     let hit=null, hitKey=null;
-    if(md&&md.data) for(const k of keys){ const d=md.data[k]; if(d&&d.value!=null&&d.value!==''){hit=d;hitKey=k;break;} }
+    // ค่าต้องใช้ได้จริง — กัน #N/A / NaN ที่อาจค้างใน cache เดิมโผล่เป็น "$NaN"
+    const usable=v=> v!=null && v!=='' && !(typeof v==='number' && !isFinite(v))
+                  && !(typeof v==='string' && /^#|N\/A/i.test(String(v).trim()));
+    if(md&&md.data) for(const k of keys){ const d=md.data[k]; if(d&&usable(d.value)){hit=d;hitKey=k;break;} }
     if(hit){
       const meta=LIVE_META[hitKey];
       let vTxt; try{ vTxt=meta?meta.fmt(hit.value):String(hit.value);}catch(e){vTxt=String(hit.value);}
@@ -910,13 +913,16 @@ function renderLiveMarket(){
     return;
   }
   const stale = Date.now()-md.savedAt > 24*3600e3;
-  const knownKeys = Object.keys(LIVE_META).filter(k=>md.data[k]!=null && md.data[k].value!=null && md.data[k].value!=='');
-  const extraKeys = Object.keys(md.data).filter(k=>!LIVE_META[k] && md.data[k].value!=null && md.data[k].value!=='');
+  const ok=v=> v!=null && v!=='' && !(typeof v==='number' && !isFinite(v))
+            && !(typeof v==='string' && /^#|N\/A/i.test(String(v).trim()));
+  const knownKeys = Object.keys(LIVE_META).filter(k=>md.data[k]!=null && ok(md.data[k].value));
+  const extraKeys = Object.keys(md.data).filter(k=>!LIVE_META[k] && ok(md.data[k].value));
   const cards = [...knownKeys, ...extraKeys].map(k=>{
     // key ที่ไม่รู้จัก → แสดงแบบ generic (เพิ่มแถวในชีตแล้วโผล่ทันที ไม่ต้องแก้โค้ด)
     const meta=LIVE_META[k]||{label:k.replace(/_/g,' '), fmt:v=>typeof v==='number'?Number(v).toLocaleString():String(v)};
     const d=md.data[k];
     let vTxt; try{ vTxt=meta.fmt(d.value); }catch(e){ vTxt=String(d.value); }
+    if(/NaN|Infinity/.test(vTxt)) vTxt='—';   // เกราะสุดท้าย ห้ามโชว์ NaN บนจอ
     const color = meta.signed ? (d.value>=0?'var(--gain)':'var(--loss)') : 'var(--text)';
     const upd = d.updated ? new Date(d.updated).toLocaleDateString('th-TH',{day:'numeric',month:'short'}) : null;
     return `<div class="signal-card" style="border-color:rgba(0,212,160,.25)">

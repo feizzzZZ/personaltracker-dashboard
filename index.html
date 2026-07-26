@@ -2971,9 +2971,24 @@ function gsInit(){
     });
   }
 
-  // Auto-sync if connected and no data loaded yet
-  if(gsConnected && !txRows.length){
-    setTimeout(()=>gsSync(), 800);
+  // ── กู้ข้อมูลจาก cache ก่อน: เห็นข้อมูลทันทีแม้ token หมดอายุ ──
+  const cacheAge = restoreDataCache();
+  if(cacheAge !== false){
+    const upEl=document.getElementById('up'), appEl=document.getElementById('app');
+    if(upEl) upEl.style.display='none';
+    if(appEl) appEl.style.display='flex';
+    const sbStatus=document.getElementById('sb-status');
+    if(sbStatus) sbStatus.textContent=txRows.length.toLocaleString()+' tx · '+assets.length+
+      ' assets · cache '+(cacheAge<60?cacheAge+' นาที':Math.round(cacheAge/60)+' ชม.');
+    renderedPages=new Set();
+    loadGoals(); updateBudgetBadge(); savePortfolioToStorage();
+    switchPage('overview');
+    gsSetStatus('📦 ใช้ข้อมูล cache ('+(cacheAge<60?cacheAge+' นาทีที่แล้ว':Math.round(cacheAge/60)+' ชม.ที่แล้ว')+') — กด Sync เพื่ออัปเดต','ok');
+  }
+
+  // Auto-sync ถ้า token ยังใช้ได้ (เงียบๆ อัปเดตทับ cache)
+  if(gsConnected){
+    setTimeout(()=>gsSync(), cacheAge!==false ? 1500 : 800);
   }
 }
 
@@ -3855,6 +3870,40 @@ function bgtSaveOne(key,cat){
 
 
 // ── Save portfolio summary to localStorage for Investment Analysis ──
+// ═══ SESSION CACHE — กลับมาจากหน้า Analysis แล้วเห็นข้อมูลทันที ═══════
+// เดิม: กลับมา = state ว่าง → ต้อง sync ใหม่ → token หมดอายุ = ต้อง login ใหม่
+// ใหม่: cache state ที่ parse แล้ว (~0.9 MB) ใน localStorage แล้วกู้คืนตอนโหลด
+const CACHE_KEY='finOS_dataCache', CACHE_TTL=24*3600e3;   // ใช้ได้ 24 ชม.
+function saveDataCache(){
+  try{
+    const payload={ savedAt:Date.now(), txRows, tracker, assets, bankBals, realized,
+                    waccMap, fxMap, platMap, insurance:(typeof insurance!=='undefined'?insurance:null),
+                    coverage:(typeof coverage!=='undefined'?coverage:null) };
+    localStorage.setItem(CACHE_KEY, JSON.stringify(payload));
+    console.log('[Cache] saved', (JSON.stringify(payload).length/1048576).toFixed(2)+' MB');
+  }catch(e){ console.warn('[Cache] save failed (quota?):', e.message); }
+}
+function restoreDataCache(){
+  try{
+    const raw=localStorage.getItem(CACHE_KEY); if(!raw) return false;
+    const p=JSON.parse(raw);
+    if(!p || !p.savedAt || Date.now()-p.savedAt > CACHE_TTL) return false;
+    if(!Array.isArray(p.txRows) || !Array.isArray(p.assets) || !p.assets.length) return false;
+    // date ถูก serialize เป็น string → แปลงกลับ
+    txRows   = p.txRows;
+    tracker  = (p.tracker||[]).map(r=>({...r, date: r.date? new Date(r.date):null}));
+    assets   = p.assets;  bankBals = p.bankBals||[];  realized = p.realized||[];
+    waccMap  = p.waccMap||{}; fxMap = p.fxMap||{}; platMap = p.platMap||{};
+    if(p.insurance && typeof insurance!=='undefined') insurance=p.insurance;
+    if(p.coverage  && typeof coverage!=='undefined')  coverage=p.coverage;
+    availableMonths=[...new Set(txRows.map(r=>r.month))].sort();
+    curMonthIdx=availableMonths.length-1;
+    const ageMin=Math.round((Date.now()-p.savedAt)/60000);
+    console.log('[Cache] restored — อายุ', ageMin, 'นาที');
+    return ageMin;
+  }catch(e){ console.warn('[Cache] restore failed:', e.message); return false; }
+}
+
 function savePortfolioToStorage(){
   if(!assets.length)return;
   try{
@@ -3892,6 +3941,7 @@ function savePortfolioToStorage(){
     };
     localStorage.setItem('finOS_portfolio',JSON.stringify(summary));
     console.log('[FinOS] Portfolio saved to localStorage:',Object.keys(groupMap));
+    saveDataCache();   // เก็บ state ไว้ให้กลับมาใช้ได้ทันทีโดยไม่ต้อง sync ใหม่
   }catch(e){console.warn('[FinOS] savePortfolio error:',e);}
 }
 

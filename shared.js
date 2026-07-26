@@ -8,7 +8,7 @@
 //   • XIRR engine
 // กติกา: ไฟล์นี้ห้ามแตะ DOM ของหน้าใดหน้าหนึ่ง — pure data layer เท่านั้น
 // ═══════════════════════════════════════════════════════════════════
-const APP_BUILD = 'v31';
+const APP_BUILD = 'v32';
 console.log('[Finance OS shared] build', APP_BUILD);
 
 // ═══ LIVE_META — นิยามการ์ดข้อมูลตลาด ═══
@@ -67,6 +67,9 @@ function mergeActionsIntoMarket(md){
     // pipeline สดกว่าสำหรับ macro ที่ชีตใส่มือ
     const curT = cur?.updated ? Date.parse(cur.updated) : 0;
     const actT = v.updated ? Date.parse(v.updated) : 0;
+    const badVal = v.value==null || (typeof v.value==='number' && !isFinite(v.value))
+                || (typeof v.value==='string' && /^#|N\/A|^\s*$/i.test(v.value.trim()));
+    if(badVal) return;                              // ค่าพัง → ข้าม ไม่ทับของดี
     if(!cur || actT >= curT) md.data[k] = { value:v.value, updated:v.updated, note:'🤖 '+(v.note||'pipeline') };
   });
   return md;
@@ -176,6 +179,10 @@ function saveMarketData(rows){
       const key=String(r[ki]).trim(); if(!key) continue;
       let val=r[vi];
       if(typeof val==='string' && val.trim()!=='' && !isNaN(parseFloat(val))) val=parseFloat(val);
+      // กันค่าพังจากชีต: #N/A, #REF!, #ERROR! → ถือว่า "ไม่มีข้อมูล" ไม่เก็บเข้าระบบ
+      // (เดิมค่าพวกนี้ไหลเข้าไปแล้วโผล่บนการ์ดเป็น "$NaN")
+      if(typeof val==='string' && /^#|N\/A|^\s*$/i.test(val.trim())) continue;
+      if(typeof val==='number' && !isFinite(val)) continue;
       data[key]={ value:val,
                   updated: ui>=0 ? gserialToISO(r[ui]) : null,
                   note:    ni>=0 && r[ni] ? String(r[ni]).trim() : '' };
