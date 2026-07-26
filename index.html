@@ -3077,7 +3077,18 @@ async function gsSync(){
     const reqUrl = BASE+'&'+REQ.map(s=>'ranges='+encodeURIComponent(s+'!A1:Z5000')).join('&');
     const r1 = await fetch(reqUrl, {headers:hdrs});
     if(!r1.ok){
-      if(r1.status===401){gsAccessToken=null;gsConnected=false;gsConnect();return;}
+      if(r1.status===401||r1.status===403){
+        // ★ ห้ามเรียก gsConnect() เอง — เดิมบรรทัดนี้ทำให้ popup login เด้งขึ้นมาเอง
+        // ทุกครั้งที่ token หมดอายุ (1 ชม.) แม้ผู้ใช้ไม่ได้กดอะไร
+        gsAccessToken=null; gsConnected=false;
+        localStorage.removeItem('gs_access_token'); localStorage.removeItem('gs_token_expiry');
+        const hasCache = Array.isArray(txRows) && txRows.length>0;
+        gsSetStatus(hasCache
+          ? '🔑 Session หมดอายุ — ข้อมูลที่เห็นคือ cache · กด Sync เมื่อต้องการอัปเดต'
+          : '🔑 Session หมดอายุ — กด Sync เพื่อเข้าสู่ระบบใหม่','err');
+        gsUpdateSyncBtn(false);
+        return;
+      }
       const body = await r1.text().catch(()=>'');
       throw new Error('HTTP '+r1.status+' ตรวจสอบชื่อ sheet: '+REQ.join(', ')+' | '+body.slice(0,120));
     }

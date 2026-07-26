@@ -8,7 +8,7 @@
 //   • XIRR engine
 // กติกา: ไฟล์นี้ห้ามแตะ DOM ของหน้าใดหน้าหนึ่ง — pure data layer เท่านั้น
 // ═══════════════════════════════════════════════════════════════════
-const APP_BUILD = 'v32';
+const APP_BUILD = 'v33';
 console.log('[Finance OS shared] build', APP_BUILD);
 
 // ═══ LIVE_META — นิยามการ์ดข้อมูลตลาด ═══
@@ -286,6 +286,121 @@ function feeToAdd(amtTHB, qty, price, fx, comm){
   const gap = Math.abs(amtTHB||0) - base;
   const already = Math.abs(gap - c) <= Math.max(0.02, c*0.05);
   return already ? 0 : c;
+}
+
+// ═══ REGIME ENGINE — บทวิเคราะห์ที่คำนวณจากข้อมูลสด ไม่ใช่ข้อความ hardcode ═══
+// รับสัญญาณจาก market data (ชีต + pipeline FRED/Yahoo + CoinGecko) แล้วให้คะแนน
+// แต่ละตัว -2..+2 → รวมเป็น regime + posture + คำอธิบายที่อ้างตัวเลขจริงทุกคำ
+function mdNum(key){
+  const md = loadMarketData();
+  const d = md && md.data && md.data[key];
+  if(!d) return null;
+  const n = Number(d.value);
+  return isFinite(n) ? n : null;
+}
+function mdStr(key){
+  const md = loadMarketData();
+  const d = md && md.data && md.data[key];
+  return d && d.value!=null ? String(d.value) : null;
+}
+function mdAsOf(key){
+  const md = loadMarketData();
+  const d = md && md.data && md.data[key];
+  return d && d.updated ? String(d.updated).slice(0,10) : null;
+}
+
+function computeRegime(){
+  const sig = [];
+  const push = (o) => { if(o) sig.push(o); };
+
+  // 1) เงินเฟ้อ — เทียบเป้า Fed 2%
+  const cpi = mdNum('US_CPI');
+  if(cpi!=null) push({key:'cpi', label:'เงินเฟ้อ US (CPI YoY)', val:cpi.toFixed(1)+'%',
+    score: cpi>=4?-2 : cpi>=3?-1 : cpi>=2.5?0 : cpi>=1.5?1 : 0,
+    note: cpi>=3?'สูงกว่าเป้า 2% มาก — จำกัดพื้นที่ผ่อนคลายนโยบาย'
+        : cpi>=2.5?'ยังเหนือเป้าเล็กน้อย' : 'ใกล้เป้า Fed', asOf: mdAsOf('US_CPI')});
+
+  // 2) นโยบายการเงิน — เทียบ neutral rate ~3%
+  const fed = mdNum('FED_RATE');
+  if(fed!=null) push({key:'fed', label:'Fed Funds Rate', val:fed.toFixed(2)+'%',
+    score: fed>=5?-2 : fed>=4?-1 : fed>=3?0 : 1,
+    note: fed>=4?'ตึงตัวกว่า neutral — กดดัน valuation'
+        : fed>=3?'ใกล้ neutral' : 'ผ่อนคลาย หนุนสินทรัพย์เสี่ยง', asOf: mdAsOf('FED_RATE')});
+
+  // 3) Yield curve 2s10s — inverted = สัญญาณ recession คลาสสิก
+  const yc = mdNum('YIELD_CURVE');
+  if(yc!=null) push({key:'curve', label:'Yield Curve 2s10s', val:(yc>=0?'+':'')+yc.toFixed(0)+'bps',
+    score: yc<-50?-2 : yc<0?-1 : yc<25?0 : 1,
+    note: yc<0?'inverted — สัญญาณเตือน recession'
+        : yc<25?'แบนราบ — วัฏจักรปลายทาง' : 'ชันขึ้น — คลายสัญญาณ recession', asOf: mdAsOf('YIELD_CURVE')});
+
+  // 4) ความผันผวน
+  const vix = mdNum('VIX');
+  if(vix!=null) push({key:'vix', label:'VIX', val:vix.toFixed(1),
+    score: vix>=30?-2 : vix>=22?-1 : vix>=15?1 : 0,
+    note: vix>=30?'ตลาดตื่นตระหนก' : vix>=22?'ความกังวลสูงขึ้น'
+        : vix>=15?'สงบ ปกติ' : 'สงบมาก — ระวังความประมาท', asOf: mdAsOf('VIX')});
+
+  // 5) เทรนด์ US — MA200 + RSI
+  const ma = mdStr('SP500_MA200'), rsi = mdNum('SP500_RSI');
+  if(ma) push({key:'trend', label:'S&P vs MA200', val:ma,
+    score: /above/i.test(ma)?1:-1,
+    note: /above/i.test(ma)?'เทรนด์ขาขึ้นยังไม่หัก':'หลุดเทรนด์ยาว — โหมดระวัง', asOf: mdAsOf('SP500_MA200')});
+  if(rsi!=null) push({key:'rsi', label:'S&P RSI(14)', val:rsi.toFixed(0),
+    score: rsi>=75?-1 : rsi>=60?1 : rsi>=40?0 : rsi>=25?-1 : 1,
+    note: rsi>=75?'overbought — เสี่ยงพักฐาน' : rsi>=60?'โมเมนตัมดี'
+        : rsi>=40?'กลางๆ' : rsi>=25?'อ่อนแรง' : 'oversold — โซนที่ historically คุ้มเสี่ยง',
+    asOf: mdAsOf('SP500_RSI')});
+
+  // 6) เครดิต — วัดความเครียดระบบการเงิน
+  const cs = mdNum('CREDIT_SPREAD');
+  if(cs!=null) push({key:'credit', label:'Credit Spread (HY OAS)', val:cs.toFixed(2)+'%',
+    score: cs>=6?-2 : cs>=4.5?-1 : cs>=3?0 : 1,
+    note: cs>=4.5?'ตลาดเครดิตเริ่มเครียด' : cs>=3?'ปกติ' : 'ผ่อนคลาย — ความเสี่ยงถูกประเมินต่ำ',
+    asOf: mdAsOf('CREDIT_SPREAD')});
+
+  // 7) ตลาดไทย
+  const smt = mdStr('SET_MA200'), srsi = mdNum('SET_RSI');
+  if(smt) push({key:'th', label:'SET vs MA200', val:smt, score:/above/i.test(smt)?1:-1,
+    note:/above/i.test(smt)?'SET อยู่ในเทรนด์ขาขึ้น':'SET ยังต่ำกว่าเทรนด์ยาว', asOf: mdAsOf('SET_MA200')});
+  if(srsi!=null) push({key:'thrsi', label:'SET RSI(14)', val:srsi.toFixed(0),
+    score: srsi>=75?-1 : srsi>=60?1 : srsi>=40?0 : -1,
+    note: srsi>=75?'ร้อนแรงเกิน' : srsi>=60?'โมเมนตัมดี' : srsi>=40?'กลางๆ':'อ่อนแรง',
+    asOf: mdAsOf('SET_RSI')});
+
+  if(sig.length < 3) return null;   // ข้อมูลน้อยเกินกว่าจะสรุป regime
+
+  const avg = sig.reduce((s,x)=>s+x.score,0)/sig.length;
+  let label, color, desc;
+  if(avg >= 0.7){ label='Risk-On Expansion'; color='gain';
+    desc='สัญญาณส่วนใหญ่หนุนสินทรัพย์เสี่ยง'; }
+  else if(avg >= 0.25){ label='Cautious Growth'; color='gain';
+    desc='เอียงบวกแต่ยังมีจุดต้องระวัง'; }
+  else if(avg >= -0.25){ label='Mixed Signals'; color='debt';
+    desc='สัญญาณขัดกัน — ไม่ใช่จังหวะเดิมพันหนักด้านใดด้านหนึ่ง'; }
+  else if(avg >= -0.9){ label='Late-Cycle Caution'; color='debt';
+    desc='ปัจจัยลบเริ่มมากกว่าบวก — เน้นคุณภาพและกระจายความเสี่ยง'; }
+  else { label='Risk-Off / Defensive'; color='loss';
+    desc='สัญญาณเตือนหลายด้านพร้อมกัน — ให้ความสำคัญกับการรักษาเงินต้น'; }
+
+  // posture + cash จาก score
+  const posture = avg>=0.7 ? 'Growth + Momentum'
+                : avg>=0.25 ? 'Quality Growth'
+                : avg>=-0.25 ? 'Quality + Real Assets'
+                : avg>=-0.9 ? 'Quality + Income + Gold' : 'Capital Preservation';
+  const cashLo = avg>=0.7?5 : avg>=0.25?10 : avg>=-0.25?15 : avg>=-0.9?20 : 25;
+  const risk = avg>=0.7?'High' : avg>=0.25?'Moderate-High' : avg>=-0.25?'Moderate'
+             : avg>=-0.9?'Moderate-Low' : 'Low';
+  // ตำแหน่งบน spectrum 0..100 (bear→bull)
+  const spectrum = Math.max(2, Math.min(98, Math.round((avg + 2) / 4 * 100)));
+  const neg = sig.filter(x=>x.score<0).sort((a,b)=>a.score-b.score);
+  const pos = sig.filter(x=>x.score>0).sort((a,b)=>b.score-a.score);
+  const asOfList = sig.map(x=>x.asOf).filter(Boolean).sort();
+
+  return { label, color, desc, posture, risk, avg, spectrum, signals: sig,
+           cashRange: cashLo+'-'+(cashLo+5)+'%', negatives: neg, positives: pos,
+           dataAsOf: asOfList.length ? asOfList[asOfList.length-1] : null,
+           oldestAsOf: asOfList.length ? asOfList[0] : null };
 }
 
 // ═══ XIRR engine (validated กับ ground truth ±0.01%) ═══
