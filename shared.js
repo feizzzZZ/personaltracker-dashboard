@@ -8,7 +8,7 @@
 //   • XIRR engine
 // กติกา: ไฟล์นี้ห้ามแตะ DOM ของหน้าใดหน้าหนึ่ง — pure data layer เท่านั้น
 // ═══════════════════════════════════════════════════════════════════
-const APP_BUILD = 'v29';
+const APP_BUILD = 'v31';
 console.log('[Finance OS shared] build', APP_BUILD);
 
 // ═══ LIVE_META — นิยามการ์ดข้อมูลตลาด ═══
@@ -266,6 +266,19 @@ function saveGoalCfg(cfg){
 function nextMilestone(netWorth){
   const cfg = getGoalCfg();
   return cfg.milestones.find(m => netWorth < m) ?? cfg.final;
+}
+
+// ═══ feeToAdd — commission ที่ยังไม่ถูกรวมใน Total_Amout_THB ═══════
+// ชีตต้นทางไม่สม่ำเสมอ: บางแถวใส่ค่าธรรมเนียมไว้ในยอดรวมแล้ว บางแถวไม่ใส่
+// เทียบกับ base = qty×price×fx เพื่อตัดสินรายแถว — กัน double-count
+function feeToAdd(amtTHB, qty, price, fx, comm){
+  const c = Math.abs(comm||0);
+  if(!(c > 0)) return 0;
+  const base = Math.abs(qty||0) * Math.abs(price||0) * Math.abs(fx||1);
+  if(!(base > 0)) return c;                       // ไม่มี base ให้เทียบ → ถือว่ายังไม่รวม
+  const gap = Math.abs(amtTHB||0) - base;
+  const already = Math.abs(gap - c) <= Math.max(0.02, c*0.05);
+  return already ? 0 : c;
 }
 
 // ═══ XIRR engine (validated กับ ground truth ±0.01%) ═══

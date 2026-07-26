@@ -1530,7 +1530,13 @@ function renderAlerts(){
       desc:`Unrealized loss ฿${Math.abs(v.pnl).toLocaleString()} — ทบทวน thesis: ถ้าเหตุผลที่ซื้อยังอยู่ = ถือ/DCA, ถ้าเปลี่ยนไปแล้ว = ตัดขาดทุนอย่างมีวินัย`});
   });
 
-  const asOfNote = `<div style="font-size:10px;color:var(--muted2);margin-bottom:10px">คำนวณจากพอร์ตจริง · มูลค่ารวม ฿${Math.round(totalVal).toLocaleString()} · เกณฑ์ ±${TH}pp</div>`;
+  // เตือนถ้ามีสินทรัพย์ที่หาราคาไม่เจอ — สัดส่วนที่คำนวณจะเพี้ยน
+  const _unp = (real.unpriced||[]);
+  const unpWarn = _unp.length ? `<div style="background:rgba(255,149,0,.08);border:1px solid rgba(255,149,0,.35);
+      border-radius:8px;padding:8px 11px;margin-bottom:10px;font-size:11px;line-height:1.7;color:var(--debt)">
+      ⚠ ${_unp.length} สินทรัพย์หาราคาไม่เจอ (${_unp.map(u=>u.ticker).join(', ')}) — ถูกนับเป็น ฿0
+      <span style="color:var(--muted2)">สัดส่วนด้านล่างจึงคลาดเคลื่อน · แก้ที่ชีต Asset_Live_Price_Feed</span></div>` : '';
+  const asOfNote = unpWarn + `<div style="font-size:10px;color:var(--muted2);margin-bottom:10px">คำนวณจากพอร์ตจริง · มูลค่ารวม ฿${Math.round(totalVal).toLocaleString()} · เกณฑ์ ±${TH}pp</div>`;
   critEl.innerHTML = editBtn + asOfNote + (crit.length?crit.map(item).join(''):item({icon:'🎉',title:'ไม่มีหมวดที่เกินเป้าเกินเกณฑ์',desc:'พอร์ตอยู่ในกรอบนโยบายที่ตั้งไว้'}));
   warnEl.innerHTML = warn.length?warn.map(item).join(''):item({icon:'—',title:'ไม่มีหมวด Underweight',desc:''});
   oppEl.innerHTML  = opp.map(item).join('');

@@ -963,6 +963,7 @@ select.month-display{text-align-last:center;outline:none}
         <div class="sc"><div class="sc-lbl">Worst performer</div><div class="sc-val loss" id="pf-worst" style="font-size:16px">—</div><div class="sc-sub" id="pf-worst-pct"></div></div>
       </div>
 
+      <div id="pf-dq-warn" style="display:none"></div>
       <div class="sl sl-mt">True Performance — ผลตอบแทนที่แท้จริง</div>
       <div class="sg" style="grid-template-columns:1.2fr 1fr 1fr">
         <div class="sc" style="--g:rgba(0,212,160,.12)">
@@ -1575,9 +1576,9 @@ function parseFile(file){
               amtTHB=price*qty*lastFx;
             }
           }
-          // Total_Amout_THB already includes commission (price*qty + comm), so trueCost = amtTHB only
-          // Do NOT add commTHB again — that would double-count the fee
-          const trueCost=Math.abs(amtTHB);
+          // ชีตไม่สม่ำเสมอ: บางแถว Total_Amout_THB รวม commission แล้ว บางแถวไม่รวม
+          // → ตรวจรายแถวเทียบ base (qty×price×fx) แล้วเติมเฉพาะที่ขาด ไม่ double-count
+          const trueCost=Math.abs(amtTHB)+feeToAdd(amtTHB,qty,parseFloat(r[AT.price])||0,fx,commTHB);
           const platform=r[AT.platform]?String(r[AT.platform]).trim():'Unknown';
           const group=resolveGroup(r[AT.assetType], ticker, platform);
           const industry=r[AT.industry]?String(r[AT.industry]).trim():'—';
@@ -2571,6 +2572,7 @@ function renderPortfolio(){
   const rpEl=document.getElementById('pf-rpnl');rpEl.textContent=fmtSign(realPnl);rpEl.className='sc-val '+(realPnl>=0?'gain':'loss');
   document.getElementById('pf-rpnl-s').textContent=`${realized.length} sell tx`;
   try{ renderPerformance(totalVal); }catch(e){ console.error('[Perf]', e); }
+  try{ renderDataQuality(); }catch(e){ console.error('[DQ]', e); }
   const known=assets.filter(a=>a.cost>0&&a.val>0);
   if(known.length){
     const best=known.reduce((a,b)=>b.pnlPct>a.pnlPct?b:a);
@@ -2623,6 +2625,32 @@ function renderAssetTable(){
       <td class="nr" style="font-size:10px;color:var(--muted2)">${a.currency}${a.currency==='USD'&&fxMap[a.ticker]?`<span style="font-size:9px;color:var(--muted)"> ~${fxMap[a.ticker]}</span>`:''}</td>
     </tr>`;
   }).join('');
+}
+
+// ── DATA QUALITY: ถืออยู่แต่ไม่มีราคา = มูลค่าถูกนับเป็น ฿0 เงียบๆ ──────
+// เคสจริงที่เจอ: Gold (สูตรในชีตขึ้น #N/A) และ ticker ที่ยังไม่ได้เพิ่มใน
+// Asset_Live_Price_Feed — ทำให้พอร์ตต่ำกว่าจริง และ Allocation/Alerts เพี้ยน
+function findUnpricedAssets(){
+  return assets.filter(a => a.qty > 1e-8 && (!a.val || a.val <= 0));
+}
+function renderDataQuality(){
+  const el = document.getElementById('pf-dq-warn');
+  if(!el) return;
+  const bad = findUnpricedAssets();
+  if(!bad.length){ el.style.display='none'; el.innerHTML=''; return; }
+  const lostCost = bad.reduce((s,a)=>s+(a.cost||0),0);
+  el.style.display='block';
+  el.innerHTML = `<div style="background:rgba(255,149,0,.08);border:1px solid rgba(255,149,0,.4);
+      border-radius:10px;padding:12px 14px;margin-top:14px;font-size:12px;line-height:1.9">
+    <div style="font-weight:600;color:var(--debt);margin-bottom:4px">
+      ⚠ มี ${bad.length} สินทรัพย์ที่ถืออยู่จริงแต่ <u>หาราคาไม่เจอ</u> — ระบบนับมูลค่าเป็น ฿0</div>
+    ${bad.map(a=>`<div style="color:var(--muted)">• <strong>${a.ticker}</strong> (${a.group})
+       — ถือ ${(+a.qty).toLocaleString(undefined,{maximumFractionDigits:6})} หน่วย · ต้นทุน ${fmt(a.cost||0)}</div>`).join('')}
+    <div style="color:var(--muted2);font-size:11px;margin-top:6px">
+      พอร์ตรวมจึง<strong>ต่ำกว่าความจริง</strong>อย่างน้อย ${fmt(lostCost)} (ราคาทุน) และสัดส่วนใน
+      Allocation/Alerts จะเพี้ยนตาม → แก้ที่ชีต <strong>Asset_Live_Price_Feed</strong>:
+      ใส่ราคาให้ครบและตรวจว่าไม่มีเซลล์ขึ้น #N/A แล้ว Sync ใหม่</div>
+  </div>`;
 }
 
 // ── WEALTH ENGINE: savings rate + invest rate ─────────────────────────
@@ -3236,8 +3264,8 @@ function gsParseAssetTracker(rows){
     const qty=Math.abs(parseFloat(r[AT.qty])||0);
     const amtTHB=parseFloat(r[AT.amtTHB])||0;
     const commTHB=parseFloat(r[AT.commTHB])||0;
-    // Total_Amout_THB already includes commission — do NOT add commTHB again
-    const trueCost=Math.abs(amtTHB);
+    // ตรวจรายแถวว่า commission รวมมาแล้วหรือยัง (ดูหมายเหตุที่ feeToAdd)
+    const trueCost=Math.abs(amtTHB)+feeToAdd(amtTHB,qty,parseFloat(r[AT.price])||0,fx,commTHB);
     const platform=r[AT.platform]?String(r[AT.platform]).trim():'Unknown';
     const group=resolveGroup(r[AT.assetType], ticker, platform);
     const industry=r[AT.industry]?String(r[AT.industry]).trim():'—';
@@ -3851,7 +3879,11 @@ function savePortfolioToStorage(){
     }));
     const totalCost=assets.filter(a=>a.val>0).reduce((s,a)=>s+a.cost,0);
     const totalPnl=totalVal-totalCost;
+    // แนบรายการที่หาราคาไม่เจอไปด้วย เพื่อให้หน้า Analysis เตือนได้เหมือนกัน
+    const unpriced=assets.filter(a=>a.qty>1e-8 && (!a.val||a.val<=0))
+      .map(a=>({ticker:a.ticker,group:a.group,cost:Math.round(a.cost||0),qty:a.qty}));
     const summary={
+      unpriced,
       totalValue:Math.round(totalVal),totalCost:Math.round(totalCost),
       pnl:Math.round(totalPnl),pnlPct:totalCost>0?Math.round(totalPnl/totalCost*100):0,
       allocation:groupMap,topHoldings,
