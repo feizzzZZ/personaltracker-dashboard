@@ -2986,10 +2986,52 @@ function gsInit(){
     gsSetStatus('📦 ใช้ข้อมูล cache ('+(cacheAge<60?cacheAge+' นาทีที่แล้ว':Math.round(cacheAge/60)+' ชม.ที่แล้ว')+') — กด Sync เพื่ออัปเดต','ok');
   }
 
-  // Auto-sync ถ้า token ยังใช้ได้ (เงียบๆ อัปเดตทับ cache)
-  if(gsConnected){
-    setTimeout(()=>gsSync(), cacheAge!==false ? 1500 : 800);
-  }
+  // ── รักษา session ต่อเนื่อง: สลับหน้าไป-กลับไม่ต้อง login ใหม่ ──
+  const delay = cacheAge!==false ? 1200 : 600;
+  setTimeout(()=>{
+    if(gsTokenValid()){
+      gsStartAutoRefresh();
+      gsSync();                                   // token ยังดี → sync ข้อมูลสดเลย
+    } else if(localStorage.getItem(GS_EVER)==='1' && GS_CONFIG.clientId && GS_CONFIG.spreadsheetId){
+      // token หมดอายุ แต่เคยยินยอมแล้ว → ต่ออายุเงียบ (ไม่มี popup) แล้ว sync
+      gsSilentRefresh(ok=>{
+        if(ok){ gsSync(); }
+        else if(cacheAge===false){
+          gsSetStatus('🔑 กด Sync เพื่อเข้าสู่ระบบ Google Sheets','err');
+        }
+      });
+    }
+  }, delay);
+}
+
+// ═══ SILENT TOKEN REFRESH ═════════════════════════════════════════
+// Google GIS ต่ออายุ token ได้เงียบๆ ด้วย prompt:'' ถ้าผู้ใช้ยัง sign-in อยู่
+// และเคยกดยินยอมแล้ว → สลับหน้าไป-กลับได้ไม่ต้อง login ใหม่ตลอด
+let gsSilentPending=false, gsRefreshTimer=null, gsSilentDone=null, gsRetriedAfterRefresh=false;
+const GS_EVER = 'gs_ever_connected';
+function gsTokenValid(marginMs){
+  return !!gsAccessToken && Date.now() < gsTokenExpiry - (marginMs||60000);
+}
+function gsSilentRefresh(onDone){
+  if(!GS_CONFIG.clientId || localStorage.getItem(GS_EVER)!=='1'){ if(onDone) onDone(false); return; }
+  if(!gsTokenClient) gsInitTokenClient();
+  if(!gsTokenClient){ if(onDone) onDone(false); return; }
+  gsSilentPending=true;
+  gsSilentDone=onDone||null;
+  gsSetStatus('🔄 กำลังต่ออายุ session…','loading');
+  try{ gsTokenClient.requestAccessToken({prompt:''}); }
+  catch(e){ gsSilentPending=false; if(onDone) onDone(false); }
+}
+// ต่ออายุล่วงหน้าเรื่อยๆ ระหว่างเปิดแอป — token จะไม่มีวันหมดอายุคาตา
+function gsStartAutoRefresh(){
+  if(gsRefreshTimer) clearInterval(gsRefreshTimer);
+  gsRefreshTimer=setInterval(()=>{
+    if(localStorage.getItem(GS_EVER)!=='1') return;
+    if(!gsTokenValid(5*60000)){        // เหลือน้อยกว่า 5 นาที → ต่ออายุเลย
+      console.log('[GS] token ใกล้หมดอายุ — ต่ออายุอัตโนมัติ');
+      gsSilentRefresh(ok=>{ if(ok) console.log('[GS] ต่ออายุสำเร็จ'); });
+    }
+  }, 4*60000);
 }
 
 function gsInitTokenClient(){
@@ -3002,7 +3044,13 @@ function gsInitTokenClient(){
       scope:     GS_CONFIG.scope,
       callback:  gsTokenCallback,
       error_callback: (e) => {
-        console.error('[GS] Token error:', e);
+        console.warn('[GS] Token error:', e && e.type);
+        if(gsSilentPending){          // ต่ออายุเงียบล้มเหลว = เรื่องปกติ ห้ามรบกวนผู้ใช้
+          gsSilentPending=false;
+          gsSetStatus('🔑 ต่ออายุ session อัตโนมัติไม่สำเร็จ — กด Sync เพื่อเข้าสู่ระบบ','err');
+          gsUpdateSyncBtn(false);
+          return;
+        }
         alert('OAuth error: '+(e.type||JSON.stringify(e)));
       }
     });
@@ -3018,6 +3066,13 @@ function gsTokenCallback(resp){
   gsAccessToken = resp.access_token;
   gsTokenExpiry = Date.now() + (resp.expires_in * 1000);
   gsConnected   = true;
+  localStorage.setItem(GS_EVER,'1');        // เคยยินยอมแล้ว → ต่ออายุเงียบได้
+  gsStartAutoRefresh();
+  if(gsSilentPending){ gsSilentPending=false;
+    const cb=gsSilentDone; gsSilentDone=null;
+    gsSetStatus('✓ ต่ออายุ session สำเร็จ','ok');
+    if(cb){ cb(true); return; }               // silent → ให้ผู้เรียกตัดสินใจต่อ
+  }
   localStorage.setItem('gs_access_token', gsAccessToken);
   localStorage.setItem('gs_token_expiry',  gsTokenExpiry);
   gsSync();
@@ -3078,9 +3133,13 @@ async function gsSync(){
     const r1 = await fetch(reqUrl, {headers:hdrs});
     if(!r1.ok){
       if(r1.status===401||r1.status===403){
-        // ★ ห้ามเรียก gsConnect() เอง — เดิมบรรทัดนี้ทำให้ popup login เด้งขึ้นมาเอง
-        // ทุกครั้งที่ token หมดอายุ (1 ชม.) แม้ผู้ใช้ไม่ได้กดอะไร
+        // token หมดอายุกลางคัน → ลองต่ออายุเงียบก่อน (ไม่มี popup) แล้ว sync ซ้ำ
         gsAccessToken=null; gsConnected=false;
+        if(!gsRetriedAfterRefresh && localStorage.getItem(GS_EVER)==='1'){
+          gsRetriedAfterRefresh=true;
+          gsSilentRefresh(ok=>{ gsRetriedAfterRefresh=false; if(ok) gsSync(); });
+          return;
+        }
         localStorage.removeItem('gs_access_token'); localStorage.removeItem('gs_token_expiry');
         const hasCache = Array.isArray(txRows) && txRows.length>0;
         gsSetStatus(hasCache
@@ -3953,6 +4012,7 @@ function savePortfolioToStorage(){
     localStorage.setItem('finOS_portfolio',JSON.stringify(summary));
     console.log('[FinOS] Portfolio saved to localStorage:',Object.keys(groupMap));
     saveDataCache();   // เก็บ state ไว้ให้กลับมาใช้ได้ทันทีโดยไม่ต้อง sync ใหม่
+    localStorage.setItem('finOS_lastSync', String(Date.now()));
   }catch(e){console.warn('[FinOS] savePortfolio error:',e);}
 }
 
@@ -4616,6 +4676,16 @@ async function loadData(file){
     switchPage('overview');
   }catch(e){ue.textContent='Error: '+(e.message||e);ue.style.display='block';}
 }
+
+// ── กลับมาที่หน้านี้อีกครั้ง (สลับแท็บ/กลับจาก Analysis) → ทำให้ข้อมูลสดเสมอ ──
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState!=='visible') return;
+  if(localStorage.getItem(GS_EVER)!=='1' || !GS_CONFIG.spreadsheetId) return;
+  const last = +(localStorage.getItem('finOS_lastSync')||0);
+  if(Date.now()-last < 60000) return;            // เพิ่ง sync ไม่ถึงนาที — ไม่ต้องซ้ำ
+  if(gsTokenValid()) gsSync();
+  else gsSilentRefresh(ok=>{ if(ok) gsSync(); });
+});
 
 // ── Service Worker registration ───────────────────────────────────────
 if('serviceWorker' in navigator){
