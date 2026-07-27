@@ -614,11 +614,11 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
   <div class="sl sl-mt purple">DCA Action Plan</div>
   <div class="cr2">
     <div class="cc">
-      <div class="ct">แผน DCA รายเดือน<span>สำหรับ Late-Cycle</span></div>
+      <div class="ct">แผน DCA รายเดือน<span id="dca-regime-tag"></span></div>
       <div style="display:flex;flex-direction:column;gap:10px;padding-top:4px" id="dca-plan"></div>
     </div>
     <div class="cc">
-      <div class="ct">Portfolio Target Weights<span>Late-Cycle positioning</span></div>
+      <div class="ct">Portfolio Target Weights<span>เป้าของคุณ (แก้ที่ Alerts)</span></div>
       <div style="padding-top:4px" id="target-weights"></div>
     </div>
   </div>
@@ -1215,6 +1215,68 @@ function renderFearGreed(){
 }
 
 // ── STRATEGY ──
+// ═══ DCA ACTION PLAN — จัดสรรเงินลงทุนรอบหน้าตามช่องว่างจริง ═══════
+// เงินก้อนถัดไปควรเข้าหมวดไหนก่อน = หมวดที่ต่ำกว่าเป้ามากสุด (ไล่ปิด gap)
+function getDcaBudget(){
+  const v = parseFloat(localStorage.getItem('finOS_dcaBudget')||'');
+  return isFinite(v) && v>0 ? v : 10000;      // default ฿10,000/เดือน
+}
+function setDcaBudget(){
+  const cur=getDcaBudget();
+  const v=prompt('เงินลงทุนต่อเดือน (บาท)\nใช้จัดสรร DCA รอบถัดไป', cur);
+  if(v===null) return;
+  const n=parseFloat(v);
+  if(isFinite(n) && n>0){ localStorage.setItem('finOS_dcaBudget', String(n)); renderStrategy(); }
+}
+function renderDcaPlan(list, totalVal, rg){
+  const el=document.getElementById('dca-plan'); if(!el) return;
+  const budget=getDcaBudget();
+  const under=list.filter(d=>d.diff<0 && d.target>0).sort((a,b)=>a.diff-b.diff);
+  const head=`<div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--muted2)">
+      <span>งบ DCA <strong style="color:var(--text)">${fmt(budget)}</strong>/เดือน</span>
+      <button onclick="setDcaBudget()" style="background:rgba(124,111,236,.12);border:1px solid rgba(124,111,236,.4);
+        color:var(--savings);padding:3px 9px;border-radius:6px;font-size:10px;cursor:pointer;font-family:inherit">⚙ แก้งบ</button></div>`;
+  if(!under.length){
+    el.innerHTML=head+`<div style="font-size:11.5px;color:var(--gain);padding:6px 0">
+      🎉 ทุกหมวดอยู่ในกรอบเป้าแล้ว — กระจายงบตามสัดส่วนเป้าเดิม หรือเก็บเป็นเงินสดรอจังหวะ</div>`;
+    return;
+  }
+  const gapSum=under.reduce((s,d)=>s+Math.abs(d.diff),0);
+  el.innerHTML=head+under.slice(0,5).map(d=>{
+    const share=Math.abs(d.diff)/gapSum, amt=budget*share;
+    const months=amt>0?Math.ceil(d.amt/amt):0;
+    return `<div style="display:flex;align-items:center;gap:8px;font-size:11.5px">
+      <div style="min-width:104px">${d.label}</div>
+      <div style="flex:1;height:6px;background:var(--bg4);border-radius:4px;overflow:hidden">
+        <div style="width:${(share*100).toFixed(0)}%;height:6px;background:${d.color}"></div></div>
+      <div style="min-width:74px;text-align:right;font-weight:600;color:var(--gain)">${fmt(amt)}</div>
+      <div style="min-width:96px;text-align:right;color:var(--muted2);font-size:10px">ปิด gap ~${months} เดือน</div>
+    </div>`;
+  }).join('')+`<div style="font-size:10px;color:var(--muted2);margin-top:4px">
+    จัดสรรตามสัดส่วนช่องว่าง (หมวดที่ขาดมากได้เงินมาก)${rg?` · regime ${rg.label}`:''}</div>`;
+}
+// ═══ PORTFOLIO TARGET WEIGHTS — เป้าคุณ vs ถืออยู่จริง ═══
+function renderTargetWeights(list){
+  const el=document.getElementById('target-weights'); if(!el) return;
+  el.innerHTML=list.filter(d=>d.target>0||d.cur>0)
+    .sort((a,b)=>b.target-a.target).map(d=>{
+    const ok=Math.abs(d.diff)<5;
+    return `<div style="margin-bottom:9px">
+      <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px">
+        <span>${d.label}</span>
+        <span><span style="color:var(--muted2)">เป้า ${d.target}%</span> ·
+          <strong style="color:${ok?'var(--gain)':'var(--debt)'}">${d.cur.toFixed(1)}%</strong>
+          ${ok?'✓':(d.diff>0?'▲':'▼')}</span></div>
+      <div style="position:relative;height:6px;background:var(--bg4);border-radius:4px">
+        <div style="width:${Math.min(100,d.cur)}%;height:6px;background:${d.color};border-radius:4px"></div>
+        <div style="position:absolute;left:${Math.min(100,d.target)}%;top:-2px;width:2px;height:10px;background:var(--white);opacity:.7"></div>
+      </div></div>`;
+  }).join('')+`<div style="font-size:10px;color:var(--muted2);margin-top:2px">แถบ = ถืออยู่จริง · เส้นขาว = เป้าของคุณ</div>`;
+}
+
+// helper แสดงเงิน — หน้านี้เดิมไม่มี (ต้นเหตุ renderStrategy พังทั้งหน้า)
+function fmt(v){ return '฿'+Math.round(Math.abs(Number(v)||0)).toLocaleString('en-US'); }
+
 function renderStrategy(){
   // ═══ PLAYBOOK ที่สร้างจากข้อมูลจริง: พอร์ตคุณ × regime สด ═══
   // เดิมเป็นการ์ด hardcode 8 ใบที่ไม่รู้ว่าคุณถืออะไร — ตอนนี้สร้างจาก
@@ -1224,10 +1286,12 @@ function renderStrategy(){
   const rg=computeRegime();
 
   if(!real || !real.allocation || !Object.keys(real.allocation).length){
-    el.innerHTML=`<div style="grid-column:1/-1;font-size:12px;color:var(--muted2);padding:14px;
+    const msg=`<div style="font-size:12px;color:var(--muted2);padding:14px;
       border:1px dashed rgba(255,255,255,.12);border-radius:10px">
       🔌 ยังไม่มีข้อมูลพอร์ต — เปิดหน้า Finance OS ให้โหลดข้อมูลก่อน แล้ว Playbook
       จะสร้างคำแนะนำจากพอร์ตจริงของคุณเทียบกับสภาวะตลาดสดโดยอัตโนมัติ</div>`;
+    el.innerHTML=`<div style="grid-column:1/-1">${msg}</div>`;
+    ['dca-plan','target-weights'].forEach(id=>{const e=document.getElementById(id); if(e) e.innerHTML=msg;});
     return;
   }
 
@@ -1272,6 +1336,13 @@ function renderStrategy(){
     ${rg?`(score ${rg.avg>=0?'+':''}${rg.avg.toFixed(2)})`:''} · เกณฑ์เบี่ยงเบน ±${TH}pp ·
     เป้าแก้ได้ที่หน้า Alerts → ⚙ ตั้งเป้า Allocation</div>`;
 
+  // หัวข้อบอก regime สด แทน "มิ.ย. 2026" ที่ hardcode
+  const tag=document.getElementById('pb-regime-tag');
+  if(tag) tag.textContent = rg ? ' — regime: '+rg.label+' (score '+(rg.avg>=0?'+':'')+rg.avg.toFixed(2)+')' : '';
+  const dtag=document.getElementById('dca-regime-tag');
+  if(dtag) dtag.textContent = rg ? 'ตาม regime '+rg.label : '';
+  renderDcaPlan(list, totalVal, rg);
+  renderTargetWeights(list);
   el.innerHTML = head + cards.map(c=>`
     <div class="strat-card strat-${c.type}" style="border-top:2px solid ${c.color}">
       <div class="strat-head">
