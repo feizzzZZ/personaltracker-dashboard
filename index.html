@@ -2978,10 +2978,15 @@ function gsInit(){
     if(upEl) upEl.style.display='none';
     if(appEl) appEl.style.display='flex';
     const sbStatus=document.getElementById('sb-status');
+    const ageTxt = cacheAge<60 ? cacheAge+' นาที' : cacheAge<1440 ? Math.round(cacheAge/60)+' ชม.'
+                 : Math.round(cacheAge/1440)+' วัน';
     if(sbStatus) sbStatus.textContent=txRows.length.toLocaleString()+' tx · '+assets.length+
-      ' assets · cache '+(cacheAge<60?cacheAge+' นาที':Math.round(cacheAge/60)+' ชม.');
+      ' assets · ข้อมูล '+ageTxt+'ที่แล้ว';
+    if(cacheAge>30) console.warn('[Cache] ข้อมูลเก่า '+ageTxt+' — กำลังพยายาม sync ใหม่');
     renderedPages=new Set();
+    _restoringFromCache=true;
     loadGoals(); updateBudgetBadge(); savePortfolioToStorage();
+    _restoringFromCache=false;
     switchPage('overview');
     gsSetStatus('📦 ใช้ข้อมูล cache ('+(cacheAge<60?cacheAge+' นาทีที่แล้ว':Math.round(cacheAge/60)+' ชม.ที่แล้ว')+') — กด Sync เพื่ออัปเดต','ok');
   }
@@ -3944,9 +3949,14 @@ function bgtSaveOne(key,cat){
 // เดิม: กลับมา = state ว่าง → ต้อง sync ใหม่ → token หมดอายุ = ต้อง login ใหม่
 // ใหม่: cache state ที่ parse แล้ว (~0.9 MB) ใน localStorage แล้วกู้คืนตอนโหลด
 const CACHE_KEY='finOS_dataCache', CACHE_TTL=24*3600e3;   // ใช้ได้ 24 ชม.
+let _restoringFromCache=false, _syncedAt=0;
 function saveDataCache(){
+  // ★ ห้ามเขียนทับตอนกำลังกู้จาก cache — เดิมทำให้ timestamp เด้งใหม่ทุกครั้งที่เปิดหน้า
+  //   cache เลย "อายุ 9 นาที" ตลอดกาลทั้งที่ข้อมูลข้างในเก่าเป็นวัน และ TTL ไม่มีวันหมด
+  if(_restoringFromCache) return;
   try{
-    const payload={ savedAt:Date.now(), txRows, tracker, assets, bankBals, realized,
+    _syncedAt = Date.now();     // ข้อมูลชุดนี้มาจากชีตจริง ณ เวลานี้
+    const payload={ savedAt:Date.now(), syncedAt:_syncedAt, txRows, tracker, assets, bankBals, realized,
                     waccMap, fxMap, platMap, insurance:(typeof insurance!=='undefined'?insurance:null),
                     coverage:(typeof coverage!=='undefined'?coverage:null) };
     localStorage.setItem(CACHE_KEY, JSON.stringify(payload));
@@ -3957,7 +3967,8 @@ function restoreDataCache(){
   try{
     const raw=localStorage.getItem(CACHE_KEY); if(!raw) return false;
     const p=JSON.parse(raw);
-    if(!p || !p.savedAt || Date.now()-p.savedAt > CACHE_TTL) return false;
+    const stamp = p.syncedAt || p.savedAt;      // อายุจริง = เวลาที่ sync จากชีต
+    if(!stamp || Date.now()-stamp > CACHE_TTL) return false;
     if(!Array.isArray(p.txRows) || !Array.isArray(p.assets) || !p.assets.length) return false;
     // date ถูก serialize เป็น string → แปลงกลับ
     txRows   = p.txRows;
@@ -3968,7 +3979,8 @@ function restoreDataCache(){
     if(p.coverage  && typeof coverage!=='undefined')  coverage=p.coverage;
     availableMonths=[...new Set(txRows.map(r=>r.month))].sort();
     curMonthIdx=availableMonths.length-1;
-    const ageMin=Math.round((Date.now()-p.savedAt)/60000);
+    _syncedAt = stamp;
+    const ageMin=Math.round((Date.now()-stamp)/60000);
     console.log('[Cache] restored — อายุ', ageMin, 'นาที');
     return ageMin;
   }catch(e){ console.warn('[Cache] restore failed:', e.message); return false; }
