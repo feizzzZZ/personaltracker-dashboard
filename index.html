@@ -3000,22 +3000,33 @@ function gsInit(){
     gsSetStatus('📦 ใช้ข้อมูล cache ('+(cacheAge<60?cacheAge+' นาทีที่แล้ว':Math.round(cacheAge/60)+' ชม.ที่แล้ว')+') — กด Sync เพื่ออัปเดต','ok');
   }
 
-  // ── รักษา session ต่อเนื่อง: สลับหน้าไป-กลับไม่ต้อง login ใหม่ ──
-  const delay = cacheAge!==false ? 1200 : 600;
+  // ── รักษา session + บังคับให้ข้อมูลสด (log ทุกขั้นเพื่อ debug ได้) ──
+  const delay = cacheAge!==false ? 900 : 500;
   setTimeout(()=>{
-    if(gsTokenValid()){
-      gsStartAutoRefresh();
-      gsSync();                                   // token ยังดี → sync ข้อมูลสดเลย
-    } else if(localStorage.getItem(GS_EVER)==='1' && GS_CONFIG.clientId && GS_CONFIG.spreadsheetId){
-      // token หมดอายุ แต่เคยยินยอมแล้ว → ต่ออายุเงียบ (ไม่มี popup) แล้ว sync
-      gsSilentRefresh(ok=>{
-        if(ok){ gsSync(); }
-        else {
-          gsSetStatus('🔑 ต่ออายุอัตโนมัติไม่ได้ — กด Sync เพื่อเข้าสู่ระบบ','err');
-          if(cacheAge!==false) showStaleBanner(cacheAge);
-        }
-      });
+    const stale = cacheAge===false || cacheAge>5;      // เกิน 5 นาที = ควร sync
+    console.log('[GS] init flow: cacheAge='+cacheAge+' stale='+stale+
+                ' tokenValid='+gsTokenValid()+' everConnected='+localStorage.getItem(GS_EVER)+
+                ' clientId='+!!GS_CONFIG.clientId+' sheetId='+!!GS_CONFIG.spreadsheetId);
+    if(!GS_CONFIG.clientId || !GS_CONFIG.spreadsheetId){
+      console.log('[GS] ยังไม่ตั้งค่า — ข้าม');
+      if(cacheAge!==false && cacheAge>30) showStaleBanner(cacheAge);
+      return;
     }
+    if(!stale){ console.log('[GS] ข้อมูลยังสด — ไม่ sync'); gsStartAutoRefresh(); return; }
+
+    if(gsTokenValid()){
+      console.log('[GS] token ใช้ได้ → sync เลย');
+      gsStartAutoRefresh(); gsSync();
+      return;
+    }
+    console.log('[GS] token หมดอายุ → ลองต่ออายุเงียบ');
+    gsSilentRefresh(ok=>{
+      if(ok){ console.log('[GS] ต่ออายุสำเร็จ → sync'); gsSync(); return; }
+      console.log('[GS] ต่ออายุเงียบไม่สำเร็จ — ต้องให้ผู้ใช้กด Sync');
+      gsSetStatus('🔑 ต่ออายุอัตโนมัติไม่ได้ — กด Sync เพื่อเข้าสู่ระบบ','err');
+      if(cacheAge!==false) showStaleBanner(cacheAge);
+      else gsSetStatus('🔑 กด Sync เพื่อเข้าสู่ระบบ Google Sheets','err');
+    });
   }, delay);
 }
 
@@ -3957,25 +3968,26 @@ function bgtSaveOne(key,cat){
 // ── Save portfolio summary to localStorage for Investment Analysis ──
 // ── แจ้งเตือนเมื่อข้อมูลเก่า + ปุ่มกดอัปเดต (เดิมเงียบสนิทถ้า sync ไม่ทำงาน) ──
 function showStaleBanner(ageMin){
-  let el=document.getElementById('stale-banner');
+  // ★ ใช้ position:fixed ลอยอยู่มุมล่าง — ห้ามแทรกเข้า DOM flow ของ .main อีก
+  //   (เวอร์ชันก่อนแทรกเป็น firstChild ของ .main → layout ทั้งหน้าพัง)
+  let el=document.getElementById('stale-toast');
+  if(ageMin==null){ if(el) el.remove(); return; }
   if(!el){
-    el=document.createElement('div'); el.id='stale-banner';
-    const app=document.getElementById('app');
-    const main=app?app.querySelector('.main')||app:null;
-    if(main) main.insertBefore(el, main.firstChild); else return;
+    el=document.createElement('div'); el.id='stale-toast';
+    el.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:18px;z-index:9999;'+
+      'background:#1a1408;border:1px solid rgba(255,149,0,.55);border-radius:12px;'+
+      'padding:11px 16px;display:flex;align-items:center;gap:14px;'+
+      'box-shadow:0 8px 28px rgba(0,0,0,.6);max-width:calc(100vw - 32px)';
+    document.body.appendChild(el);
   }
-  if(ageMin==null){ el.style.display='none'; return; }
   const txt = ageMin<60?ageMin+' นาที' : ageMin<1440?Math.round(ageMin/60)+' ชั่วโมง' : Math.round(ageMin/1440)+' วัน';
-  el.style.display='block';
-  el.innerHTML=`<div style="background:rgba(255,149,0,.1);border:1px solid rgba(255,149,0,.45);
-      border-radius:10px;padding:11px 14px;margin:14px 0 0;display:flex;align-items:center;
-      justify-content:space-between;gap:12px;flex-wrap:wrap">
-    <div style="font-size:12px;line-height:1.7">
-      <strong style="color:var(--debt)">⚠ ข้อมูลนี้เก่า ${txt}</strong>
-      <span style="color:var(--muted2)">— ตัวเลขที่เห็นยังไม่ใช่ค่าล่าสุดจาก Google Sheets</span></div>
-    <button onclick="gsSyncOrConnect()" style="background:var(--gain);border:none;color:#04120d;
-      padding:7px 16px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">
-      🔄 Sync ข้อมูลใหม่</button></div>`;
+  el.innerHTML=`<span style="font-size:12px;line-height:1.6;color:#ffb84d">
+      ⚠ ข้อมูลเก่า <strong>${txt}</strong> — ยังไม่ใช่ค่าล่าสุดจาก Sheets</span>
+    <button onclick="gsSyncOrConnect()" style="background:#00d4a0;border:none;color:#04120d;
+      padding:6px 14px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;
+      font-family:inherit;white-space:nowrap">🔄 Sync</button>
+    <span onclick="document.getElementById('stale-toast').remove()"
+      style="cursor:pointer;color:#8080a0;font-size:15px;line-height:1">✕</span>`;
 }
 
 // ═══ SESSION CACHE — กลับมาจากหน้า Analysis แล้วเห็นข้อมูลทันที ═══════
@@ -3990,8 +4002,8 @@ function saveDataCache(){
   try{
     _syncedAt = Date.now();     // ข้อมูลชุดนี้มาจากชีตจริง ณ เวลานี้
     const payload={ savedAt:Date.now(), syncedAt:_syncedAt, txRows, tracker, assets, bankBals, realized,
-                    waccMap, fxMap, platMap, insurance:(typeof insurance!=='undefined'?insurance:null),
-                    coverage:(typeof coverage!=='undefined'?coverage:null) };
+                    waccMap, fxMap, platMap,
+                    insPolicies, insCoverage, totalFee };   // ★ ชื่อตัวแปรจริง (เดิมเขียนผิดเป็น insurance/coverage → ข้อมูลประกันหาย)
     localStorage.setItem(CACHE_KEY, JSON.stringify(payload));
     console.log('[Cache] saved', (JSON.stringify(payload).length/1048576).toFixed(2)+' MB');
   }catch(e){ console.warn('[Cache] save failed (quota?):', e.message); }
@@ -4008,8 +4020,9 @@ function restoreDataCache(){
     tracker  = (p.tracker||[]).map(r=>({...r, date: r.date? new Date(r.date):null}));
     assets   = p.assets;  bankBals = p.bankBals||[];  realized = p.realized||[];
     waccMap  = p.waccMap||{}; fxMap = p.fxMap||{}; platMap = p.platMap||{};
-    if(p.insurance && typeof insurance!=='undefined') insurance=p.insurance;
-    if(p.coverage  && typeof coverage!=='undefined')  coverage=p.coverage;
+    insPolicies = p.insPolicies||[];
+    insCoverage = p.insCoverage||[];
+    if(typeof p.totalFee==='number') totalFee = p.totalFee;
     availableMonths=[...new Set(txRows.map(r=>r.month))].sort();
     curMonthIdx=availableMonths.length-1;
     _syncedAt = stamp;
@@ -4058,7 +4071,8 @@ function savePortfolioToStorage(){
     console.log('[FinOS] Portfolio saved to localStorage:',Object.keys(groupMap));
     saveDataCache();   // เก็บ state ไว้ให้กลับมาใช้ได้ทันทีโดยไม่ต้อง sync ใหม่
     localStorage.setItem('finOS_lastSync', String(Date.now()));
-    try{ showStaleBanner(null); }catch(e){}   // sync สำเร็จ → ซ่อนแบนเนอร์เตือน
+    try{ showStaleBanner(null); }catch(e){}   // sync สำเร็จ → ซ่อน toast
+    console.log('[GS] ✓ sync สำเร็จ — ข้อมูลสดแล้ว');
   }catch(e){console.warn('[FinOS] savePortfolio error:',e);}
 }
 
