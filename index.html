@@ -2938,6 +2938,12 @@ function gsInit(){
   // Load overrides from localStorage
   const savedCid = localStorage.getItem('gs_client_id');
   const savedSid = localStorage.getItem('gs_sheet_id');
+  // ── migrate: เครื่องที่เคยตั้งค่า+login มาก่อนเวอร์ชันนี้ ยังไม่มีธง GS_EVER
+  //    → ตั้งให้เลย เพื่อให้ silent refresh ทำงานได้ทันทีไม่ต้องรอ login ใหม่
+  if(savedCid && savedSid && localStorage.getItem('gs_ever_connected')!=='1'){
+    localStorage.setItem('gs_ever_connected','1');
+    console.log('[GS] migrate: ตั้งธง ever_connected จาก config ที่มีอยู่');
+  }
   if(savedCid) GS_CONFIG.clientId      = savedCid;
   if(savedSid) GS_CONFIG.spreadsheetId = savedSid;
 
@@ -2982,7 +2988,10 @@ function gsInit(){
                  : Math.round(cacheAge/1440)+' วัน';
     if(sbStatus) sbStatus.textContent=txRows.length.toLocaleString()+' tx · '+assets.length+
       ' assets · ข้อมูล '+ageTxt+'ที่แล้ว';
-    if(cacheAge>30) console.warn('[Cache] ข้อมูลเก่า '+ageTxt+' — กำลังพยายาม sync ใหม่');
+    if(cacheAge>30){
+      console.warn('[Cache] ข้อมูลเก่า '+ageTxt+' — กำลังพยายาม sync ใหม่');
+      setTimeout(()=>showStaleBanner(cacheAge), 300);
+    }
     renderedPages=new Set();
     _restoringFromCache=true;
     loadGoals(); updateBudgetBadge(); savePortfolioToStorage();
@@ -3001,8 +3010,9 @@ function gsInit(){
       // token หมดอายุ แต่เคยยินยอมแล้ว → ต่ออายุเงียบ (ไม่มี popup) แล้ว sync
       gsSilentRefresh(ok=>{
         if(ok){ gsSync(); }
-        else if(cacheAge===false){
-          gsSetStatus('🔑 กด Sync เพื่อเข้าสู่ระบบ Google Sheets','err');
+        else {
+          gsSetStatus('🔑 ต่ออายุอัตโนมัติไม่ได้ — กด Sync เพื่อเข้าสู่ระบบ','err');
+          if(cacheAge!==false) showStaleBanner(cacheAge);
         }
       });
     }
@@ -3945,6 +3955,29 @@ function bgtSaveOne(key,cat){
 
 
 // ── Save portfolio summary to localStorage for Investment Analysis ──
+// ── แจ้งเตือนเมื่อข้อมูลเก่า + ปุ่มกดอัปเดต (เดิมเงียบสนิทถ้า sync ไม่ทำงาน) ──
+function showStaleBanner(ageMin){
+  let el=document.getElementById('stale-banner');
+  if(!el){
+    el=document.createElement('div'); el.id='stale-banner';
+    const app=document.getElementById('app');
+    const main=app?app.querySelector('.main')||app:null;
+    if(main) main.insertBefore(el, main.firstChild); else return;
+  }
+  if(ageMin==null){ el.style.display='none'; return; }
+  const txt = ageMin<60?ageMin+' นาที' : ageMin<1440?Math.round(ageMin/60)+' ชั่วโมง' : Math.round(ageMin/1440)+' วัน';
+  el.style.display='block';
+  el.innerHTML=`<div style="background:rgba(255,149,0,.1);border:1px solid rgba(255,149,0,.45);
+      border-radius:10px;padding:11px 14px;margin:14px 0 0;display:flex;align-items:center;
+      justify-content:space-between;gap:12px;flex-wrap:wrap">
+    <div style="font-size:12px;line-height:1.7">
+      <strong style="color:var(--debt)">⚠ ข้อมูลนี้เก่า ${txt}</strong>
+      <span style="color:var(--muted2)">— ตัวเลขที่เห็นยังไม่ใช่ค่าล่าสุดจาก Google Sheets</span></div>
+    <button onclick="gsSyncOrConnect()" style="background:var(--gain);border:none;color:#04120d;
+      padding:7px 16px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">
+      🔄 Sync ข้อมูลใหม่</button></div>`;
+}
+
 // ═══ SESSION CACHE — กลับมาจากหน้า Analysis แล้วเห็นข้อมูลทันที ═══════
 // เดิม: กลับมา = state ว่าง → ต้อง sync ใหม่ → token หมดอายุ = ต้อง login ใหม่
 // ใหม่: cache state ที่ parse แล้ว (~0.9 MB) ใน localStorage แล้วกู้คืนตอนโหลด
@@ -4025,6 +4058,7 @@ function savePortfolioToStorage(){
     console.log('[FinOS] Portfolio saved to localStorage:',Object.keys(groupMap));
     saveDataCache();   // เก็บ state ไว้ให้กลับมาใช้ได้ทันทีโดยไม่ต้อง sync ใหม่
     localStorage.setItem('finOS_lastSync', String(Date.now()));
+    try{ showStaleBanner(null); }catch(e){}   // sync สำเร็จ → ซ่อนแบนเนอร์เตือน
   }catch(e){console.warn('[FinOS] savePortfolio error:',e);}
 }
 
