@@ -640,6 +640,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
   </div>
 
   <div class="sl sl-mt blue">Sector Rating — ตลาดโลก (US)</div>
+  <div id="sector-summary" style="margin-bottom:12px"></div>
   <div class="sector-grid" id="sector-global"></div>
 
   <div class="sl sl-mt">Sector Rating — ตลาดไทย (SET)</div>
@@ -769,7 +770,7 @@ function switchPage(id, el){
   if(activeEl && activeEl.classList) activeEl.classList.add('active');
   // lazy init charts
   const alwaysFresh = (id==='portfolio'||id==='alerts'||id==='feargreed'||id==='signals'
-                     ||id==='situation'||id==='strategy');   // หน้า data-driven ต้อง re-render
+                     ||id==='situation'||id==='strategy'||id==='sectors');   // หน้า data-driven ต้อง re-render
   if(!rendered[id] || alwaysFresh){rendered[id]=true; renderPage(id);}
 }
 const rendered={situation:false,signals:false,feargreed:false,strategy:false,sectors:false,portfolio:false,alerts:false,calendar:false};
@@ -822,7 +823,7 @@ function injectFreshnessBanners(){
     <span><strong>เฉพาะส่วนบทวิเคราะห์/ความเห็น (editorial)</strong> ในหน้านี้ เขียนไว้ ณ 6 ก.ค. 2569 (${d} วันที่แล้ว)${stale?' — เก่าเกินกำหนด <strong>อย่าใช้ส่วน editorial ตัดสินใจซื้อขาย</strong>':''} · การ์ดที่มีจุดเขียว 📡 คือข้อมูลสดจากชีต ใช้ได้ปกติ</span>
   </div>`;
   // Situation + Playbook + Market Mood คำนวณสดแล้ว → ไม่ต้องติดแบนเนอร์ editorial
-  ['page-signals','page-sectors','page-calendar'].forEach(pid=>{
+  ['page-signals','page-calendar'].forEach(pid=>{
     const pg = document.getElementById(pid);
     if(!pg || pg.querySelector('.fresh-banner')) return;
     const head = pg.querySelector('.pg-head') || pg.firstElementChild;
@@ -1357,93 +1358,57 @@ function renderStrategy(){
 }
 
 function renderSectors(){
-  const globalSectors=[
-    {icon:'🤖',name:'Technology',rating:'Overweight',note:'+AI spend',color:'#00d4a0',score:85},
-    {icon:'💊',name:'Healthcare',rating:'Overweight',note:'Defensive',color:'#00d4a0',score:78},
-    {icon:'⚡',name:'Utilities',rating:'Neutral',note:'Rate sensitive',color:'#ffd166',score:52},
-    {icon:'🏦',name:'Financials',rating:'Neutral',note:'Watch rates',color:'#ffd166',score:55},
-    {icon:'🛒',name:'Cons. Staples',rating:'Overweight',note:'Defensive late-cycle',color:'#00d4a0',score:72},
-    {icon:'🎮',name:'Cons. Disc.',rating:'Underweight',note:'Spending slow',color:'#ff9500',score:38},
-    {icon:'🏗',name:'Industrials',rating:'Neutral',note:'Infra spend OK',color:'#ffd166',score:58},
-    {icon:'🛢',name:'Energy',rating:'Underweight',note:'Oil price risk',color:'#ff9500',score:42},
-    {icon:'🏠',name:'Real Estate',rating:'Underweight',note:'Rate pressure',color:'#ff4060',score:30},
-    {icon:'🧪',name:'Materials',rating:'Neutral',note:'Commodity mixed',color:'#ffd166',score:50},
-  ];
-  const thaiSectors=[
-    {icon:'✈️',name:'Tourism',rating:'Overweight',note:'Recovery play',color:'#00d4a0',score:80},
-    {icon:'📦',name:'Export',rating:'Overweight',note:'Baht อ่อนช่วย',color:'#00d4a0',score:75},
-    {icon:'⚡',name:'Energy',rating:'Neutral',note:'PTT, PTTEP mixed',color:'#ffd166',score:55},
-    {icon:'🏦',name:'Banking',rating:'Underweight',note:'NPL risk ยัง',color:'#ff9500',score:40},
-    {icon:'🏪',name:'Commerce',rating:'Neutral',note:'CPALL, BJC stable',color:'#ffd166',score:52},
-    {icon:'🏗',name:'Property',rating:'Underweight',note:'Supply excess',color:'#ff4060',score:28},
-    {icon:'📡',name:'Telecom',rating:'Neutral',note:'Stable dividend',color:'#ffd166',score:55},
-    {icon:'🏥',name:'Healthcare',rating:'Overweight',note:'BDMS, BCH strong',color:'#00d4a0',score:78},
-  ];
+  // ═══ SECTOR ROTATION จากข้อมูลจริง (sector ETF ผ่าน pipeline) ═══
+  // เดิม rating เป็น hardcode 10 ใบ — ตอนนี้คำนวณจาก relative strength vs SPY,
+  // เทรนด์เทียบ MA200 และ RSI ของ ETF แต่ละกลุ่มจริง
+  const ICON={Technology:'🤖',Healthcare:'💊',Financials:'🏦','Cons. Disc.':'🎮',
+    'Cons. Staples':'🛒',Industrials:'🏗',Energy:'🛢',Utilities:'⚡','Real Estate':'🏠',Materials:'🧪'};
+  const el=document.getElementById('sector-global');
+  const secs=loadSectors();
 
-  function renderSectorGrid(data,elId){
-    document.getElementById(elId).innerHTML=data.map(s=>`
-      <div class="sector-item">
-        <div class="sec-icon">${s.icon}</div>
-        <div class="sec-name">${s.name}</div>
-        <div class="sec-rating" style="color:${s.color}">${s.rating}</div>
-        <div class="sec-bar" style="background:linear-gradient(to right,${s.color} ${s.score}%,var(--bg4) ${s.score}%)"></div>
-        <div style="font-size:9px;color:var(--muted);margin-top:4px">${s.note}</div>
-      </div>`).join('');
+  if(!secs){
+    if(el) el.innerHTML=`<div style="grid-column:1/-1;font-size:11.5px;color:var(--muted2);
+      padding:12px 14px;border:1px dashed rgba(255,255,255,.12);border-radius:10px">
+      ⏳ ยังไม่มีข้อมูล sector — pipeline รอบถัดไป (06:30) จะดึง sector ETF (XLK, XLV, XLF …) มาให้
+      หรือกด <strong>Run workflow</strong> ที่ GitHub Actions เพื่อดึงทันที</div>`;
+    return;
   }
-  renderSectorGrid(globalSectors,'sector-global');
-  renderSectorGrid(thaiSectors,'sector-thai');
 
-  // Cycle chart
-  const cycleCtx=document.getElementById('cycle-chart').getContext('2d');
-  const cycleLabels=['Early Recovery','Expansion','Late Expansion','Slowdown','Recession','Early Recovery'];
-  const cycleData=[3,7,9,4,1,3];
-  new Chart(cycleCtx,{
-    type:'radar',
-    data:{
-      labels:cycleLabels,
-      datasets:[
-        {label:'เราอยู่ที่',data:[2,6,9,3,0,0],backgroundColor:'rgba(124,111,236,.15)',borderColor:'#7c6fec',borderWidth:2,pointBackgroundColor:'#7c6fec',pointRadius:4},
-        {label:'ปกติ',data:[4,7,9,6,2,4],backgroundColor:'rgba(255,255,255,.03)',borderColor:'rgba(255,255,255,.2)',borderWidth:1,borderDash:[3,3],pointRadius:0},
-      ]
-    },
-    options:{
-      responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{labels:{color:'#9090c0',boxWidth:12}},tooltip:tooltipDefaults},
-      scales:{r:{grid:{color:gridColor},angleLines:{color:gridColor},pointLabels:{color:'#9090c0',font:{size:10}},ticks:{display:false}}}
-    }
-  });
+  const cmap={gain:'var(--gain)',debt:'var(--debt)',loss:'var(--loss)'};
+  if(el) el.innerHTML = secs.map(s=>{
+    const r=sectorRating(s), c=cmap[r.color];
+    const rs = s.rs3m!=null ? (s.rs3m>=0?'+':'')+s.rs3m.toFixed(1)+'pp vs SPY' : '';
+    const trend = s.vsMA200==null?'' : (s.vsMA200>0?'เหนือ MA200':'ใต้ MA200');
+    return `<div class="sector-card">
+      <div class="sec-icon">${ICON[s.name]||'📊'}</div>
+      <div class="sec-name">${s.name} <span style="color:var(--muted2);font-size:9px">${s.sym}</span></div>
+      <div class="sec-rating" style="color:${c}">${r.label}</div>
+      <div class="sec-bar"><div class="sec-bar-fill" style="width:${Math.max(4,Math.min(100,50+(s.rs3m??0)*4))}%;background:${c}"></div></div>
+      <div class="sec-note" style="line-height:1.6">
+        <span style="color:${s.chg3m>=0?'var(--gain)':'var(--loss)'}">3M ${s.chg3m>=0?'+':''}${s.chg3m.toFixed(1)}%</span>
+        · <span style="color:${s.chg1m>=0?'var(--gain)':'var(--loss)'}">1M ${s.chg1m>=0?'+':''}${s.chg1m.toFixed(1)}%</span><br>
+        <span style="color:var(--muted2)">${rs}${trend?' · '+trend:''} · RSI ${s.rsi}</span></div>
+    </div>`;
+  }).join('');
 
-  // Sector flow chart
-  const flowCtx=document.getElementById('sector-flow-chart').getContext('2d');
-  const sectors=['Tech','Healthcare','Staples','Financials','Energy','Property','Disc.'];
-  const flows=[+2.8,+1.4,+0.9,-0.3,-0.8,-1.4,-1.2];
-  new Chart(flowCtx,{
-    type:'bar',
-    data:{
-      labels:sectors,
-      datasets:[{
-        label:'Fund Flow ($B)',data:flows,
-        backgroundColor:flows.map(v=>v>0?'rgba(0,212,160,.6)':'rgba(255,64,96,.6)'),
-        borderRadius:4
-      }]
-    },
-    options:{
-      responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false},tooltip:tooltipDefaults},
-      scales:{
-        x:{grid:{color:gridColor,lineWidth:.5}},
-        y:{grid:{color:gridColor,lineWidth:.5},ticks:{callback:v=>(v>=0?'+':'')+v+'B'}}
-      }
-    }
-  });
+  // หัวข้อบอกที่มา + สรุปการหมุนเวียน
+  const head=document.querySelector('#page-sectors .ct');
+  const lead=secs.slice(0,3).map(s=>s.name).join(', ');
+  const lag =secs.slice(-3).map(s=>s.name).reverse().join(', ');
+  const sumEl=document.getElementById('sector-summary');
+  if(sumEl) sumEl.innerHTML=`<div style="font-size:11.5px;line-height:1.9;
+      background:rgba(0,212,160,.05);border:1px solid rgba(0,212,160,.2);border-radius:8px;padding:10px 13px">
+    🔄 <strong>เงินไหลเข้า:</strong> ${lead}<br>
+    📉 <strong>เงินไหลออก:</strong> ${lag}<br>
+    <span style="color:var(--muted2)">จัดอันดับด้วย relative strength 3 เดือนเทียบ SPY · ข้อมูลจาก sector ETF จริง (${secs.length} กลุ่ม)</span></div>`;
+
+  // ไทย: ยังไม่มี sector ETF ให้ดึง — บอกตรงๆ
+  const th=document.getElementById('sector-thai');
+  if(th) th.innerHTML=`<div style="grid-column:1/-1;font-size:11px;color:var(--muted2);
+    padding:10px 12px;border:1px dashed rgba(255,255,255,.1);border-radius:8px">
+    ℹ️ กลุ่มอุตสาหกรรมไทยยังไม่มี ETF ให้ดึงอัตโนมัติ — ใช้ SET RSI / SET vs MA200
+    ในหน้า Situation เป็นภาพรวมแทน</div>`;
 }
-
-// ── PORTFOLIO ──
-// Map from finOS_portfolio allocation keys → display labels + colors
-
-
-// ═══ USER-OWNED ALLOCATION TARGETS ════════════════════════════════
-// เป้าสัดส่วนพอร์ตเป็น "นโยบายของเจ้าของพอร์ต" ไม่ใช่ค่าตายตัวในโค้ด
 
 function editTargets(){
   const t = getTargets();

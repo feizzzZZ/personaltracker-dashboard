@@ -8,7 +8,7 @@
 //   • XIRR engine
 // กติกา: ไฟล์นี้ห้ามแตะ DOM ของหน้าใดหน้าหนึ่ง — pure data layer เท่านั้น
 // ═══════════════════════════════════════════════════════════════════
-const APP_BUILD = 'v38';
+const APP_BUILD = 'v39';
 console.log('[Finance OS shared] build', APP_BUILD);
 
 // ═══ LIVE_META — นิยามการ์ดข้อมูลตลาด ═══
@@ -43,6 +43,16 @@ const LIVE_META = {
   PUT_CALL:  {label:'Put/Call Ratio', fmt:v=>Number(v).toFixed(2)},
   SP500_MA200:{label:'S&P vs MA200',  fmt:v=>String(v)},
   SET_MA200: {label:'SET vs MA200',   fmt:v=>String(v)},
+  // ── key ใหม่จาก pipeline (v39) ──
+  US2Y:      {label:'US 2Y Yield',    fmt:v=>Number(v).toFixed(2)+'%'},
+  US_CORE_CPI:{label:'US Core CPI YoY',fmt:v=>Number(v).toFixed(1)+'%'},
+  US_CORE_PCE:{label:'US Core PCE YoY',fmt:v=>Number(v).toFixed(1)+'%'},
+  US_UNEMP:  {label:'US Unemployment',fmt:v=>Number(v).toFixed(1)+'%'},
+  US_REAL10Y:{label:'Real 10Y (TIPS)',fmt:v=>Number(v).toFixed(2)+'%'},
+  OIL_WTI:   {label:'WTI Crude',      fmt:v=>'$'+Number(v).toFixed(2)},
+  DXY:       {label:'Dollar Index',   fmt:v=>Number(v).toFixed(2)},
+  NDX_RSI:   {label:'Nasdaq RSI (14d)',fmt:v=>Number(v).toFixed(0)},
+  NDX_MA200: {label:'Nasdaq vs MA200',fmt:v=>String(v)},
 };
 
 // ═══ Method 3 — pipeline JSON layer + loadMarketData (merge chain) ═══
@@ -368,6 +378,34 @@ function computeRegime(){
     note: srsi>=75?'ร้อนแรงเกิน' : srsi>=60?'โมเมนตัมดี' : srsi>=40?'กลางๆ':'อ่อนแรง',
     asOf: mdAsOf('SET_RSI')});
 
+  // 8) Core inflation — ตัวที่ Fed ดูจริง (sticky กว่า headline)
+  const core = mdNum('US_CORE_PCE') ?? mdNum('US_CORE_CPI');
+  if(core!=null) push({key:'core', label:'Core inflation', val:core.toFixed(1)+'%',
+    score: core>=3.5?-2 : core>=2.8?-1 : core>=2.2?0 : 1,
+    note: core>=2.8?'core ยังหนืด — Fed ผ่อนคลายยาก' : 'core เข้าใกล้เป้า',
+    asOf: mdAsOf('US_CORE_PCE')||mdAsOf('US_CORE_CPI')});
+
+  // 9) ตลาดแรงงาน — เย็นเกินไป = สัญญาณ recession
+  const un = mdNum('US_UNEMP');
+  if(un!=null) push({key:'unemp', label:'US Unemployment', val:un.toFixed(1)+'%',
+    score: un>=5?-2 : un>=4.5?-1 : un>=3.5?1 : 0,
+    note: un>=4.5?'ว่างงานสูงขึ้น — อุปสงค์อ่อน' : un>=3.5?'ตลาดแรงงานแข็งแรง':'ตึงตัวมาก',
+    asOf: mdAsOf('US_UNEMP')});
+
+  // 10) Real yield — ต้นทุนเงินจริงหลังหักเงินเฟ้อ
+  const rr = mdNum('US_REAL10Y');
+  if(rr!=null) push({key:'real', label:'Real 10Y (TIPS)', val:rr.toFixed(2)+'%',
+    score: rr>=2.5?-2 : rr>=1.8?-1 : rr>=0.5?0 : 1,
+    note: rr>=1.8?'ต้นทุนเงินจริงสูง — กดดันสินทรัพย์เสี่ยง' : 'ต้นทุนเงินจริงไม่ตึง',
+    asOf: mdAsOf('US_REAL10Y')});
+
+  // 11) น้ำมัน — ตัวส่งผ่านเข้าเงินเฟ้อ
+  const oil = mdNum('OIL_WTI');
+  if(oil!=null) push({key:'oil', label:'WTI Crude', val:'$'+oil.toFixed(0),
+    score: oil>=100?-2 : oil>=85?-1 : oil>=55?1 : 0,
+    note: oil>=85?'น้ำมันแพง — กดดันเงินเฟ้อ' : oil>=55?'ระดับปกติ':'ต่ำ — อุปสงค์อ่อน?',
+    asOf: mdAsOf('OIL_WTI')});
+
   if(sig.length < 3) return null;   // ข้อมูลน้อยเกินกว่าจะสรุป regime
 
   const avg = sig.reduce((s,x)=>s+x.score,0)/sig.length;
@@ -401,6 +439,27 @@ function computeRegime(){
            cashRange: cashLo+'-'+(cashLo+5)+'%', negatives: neg, positives: pos,
            dataAsOf: asOfList.length ? asOfList[asOfList.length-1] : null,
            oldestAsOf: asOfList.length ? asOfList[0] : null };
+}
+
+// ═══ SECTOR DATA จาก pipeline (สำหรับหน้า Sectors) ═══════════════════
+function loadSectors(){
+  const act = loadActions();
+  const s = act && act.history && act.history.sectors;
+  if(!s || !Object.keys(s).length) return null;
+  return Object.entries(s).map(([sym,d])=>({sym, ...d}))
+    .sort((a,b)=>(b.rs3m??b.chg3m??0)-(a.rs3m??a.chg3m??0));   // เรียงตาม relative strength
+}
+function sectorRating(s){
+  // rating จากตัวเลขจริง: relative strength + trend + RSI
+  let score = 0;
+  if(s.rs3m!=null) score += s.rs3m>5?2 : s.rs3m>0?1 : s.rs3m>-5?0 : -1;
+  if(s.rs1m!=null) score += s.rs1m>3?1 : s.rs1m>-3?0 : -1;
+  if(s.vsMA200!=null) score += s.vsMA200>0?1:-1;
+  if(s.rsi!=null && s.rsi>78) score -= 1;      // overbought
+  return score>=3 ? {label:'Overweight', color:'gain'}
+       : score>=1 ? {label:'Neutral+',   color:'gain'}
+       : score>=-1? {label:'Neutral',    color:'debt'}
+                  : {label:'Underweight',color:'loss'};
 }
 
 // ═══ XIRR engine (validated กับ ground truth ±0.01%) ═══
