@@ -8,7 +8,7 @@
 //   • XIRR engine
 // กติกา: ไฟล์นี้ห้ามแตะ DOM ของหน้าใดหน้าหนึ่ง — pure data layer เท่านั้น
 // ═══════════════════════════════════════════════════════════════════
-const APP_BUILD = 'v39';
+const APP_BUILD = 'v40';
 console.log('[Finance OS shared] build', APP_BUILD);
 
 // ═══ LIVE_META — นิยามการ์ดข้อมูลตลาด ═══
@@ -75,12 +75,16 @@ function mergeActionsIntoMarket(md){
     const cur = md.data[k];
     // เลือกตัวที่ updated ใหม่กว่า — ชีต GOOGLEFINANCE สดกว่าสำหรับราคา,
     // pipeline สดกว่าสำหรับ macro ที่ชีตใส่มือ
-    const curT = cur?.updated ? Date.parse(cur.updated) : 0;
-    const actT = v.updated ? Date.parse(v.updated) : 0;
+    // v40: FRED ส่ง "observation date" (เช่น CPI = 2026-06-01) ไม่ใช่เวลาที่ดึงข้อมูล
+    // ส่วนชีตส่ง timestamp ตอน sync (วันนี้) → ชีตชนะเสมอแม้ pipeline จะแม่นกว่า
+    // แก้โดยใช้ fetched_at เป็นตัวตัดสินความสด ส่วน updated ใช้แค่แสดงผล
+    const curT = cur?.fetched_at ? Date.parse(cur.fetched_at) : (cur?.updated ? Date.parse(cur.updated) : 0);
+    const actT = v.fetched_at   ? Date.parse(v.fetched_at)   : (v.updated   ? Date.parse(v.updated)   : 0);
     const badVal = v.value==null || (typeof v.value==='number' && !isFinite(v.value))
                 || (typeof v.value==='string' && /^#|N\/A|^\s*$/i.test(v.value.trim()));
     if(badVal) return;                              // ค่าพัง → ข้าม ไม่ทับของดี
-    if(!cur || actT >= curT) md.data[k] = { value:v.value, updated:v.updated, note:'🤖 '+(v.note||'pipeline') };
+    if(!cur || actT >= curT) md.data[k] = { value:v.value, updated:v.updated,
+      fetched_at:v.fetched_at||null, note:'🤖 '+(v.note||'pipeline') };
   });
   return md;
 }
@@ -473,4 +477,141 @@ function xirrJS(cfs){
   if(npv(lo)*npv(hi)>0) return null;
   for(let i=0;i<200;i++){ const mid=(lo+hi)/2; if(npv(lo)*npv(mid)<=0) hi=mid; else lo=mid; }
   return (lo+hi)/2;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// v40 — LIABILITY & DEBT ENGINE
+// ═══════════════════════════════════════════════════════════════════
+// เดิม bankBals ถูกรวมเป็นก้อนเดียว → บัตรเครดิตติดลบไปหักเงินสดเงียบๆ
+// ทำให้การ์ด "Cash" แสดง ฿22,840 ทั้งที่เงินสดจริง ฿60,894 และหนี้ ฿38,053
+// ตัวเลข Net Worth ถูกอยู่แล้ว แต่คนอ่านตัดสินใจผิดเพราะเห็นเงินสดน้อยกว่าจริง
+
+// จำแนกบัญชี → 'cash' | 'liability'
+// เกณฑ์: type มีคำว่า Credit = หนี้เสมอ (แม้ยอด 0 หรือบวกจากการจ่ายเกิน)
+//        บัญชีอื่นถ้ายอดติดลบ = เบิกเกินบัญชี ถือเป็นหนี้
+function classifyAccount(b){
+  const t = String(b.type||'');
+  if(/credit/i.test(t) || /credit/i.test(String(b.name||''))) return 'liability';
+  return (b.balance < 0) ? 'liability' : 'cash';
+}
+
+// แยก bankBals เป็นสองฝั่ง + ยอดรวม
+// คืน: {cashAccounts, liabAccounts, cash, liabilities, net}
+//   cash        = เงินสดที่ใช้ได้จริง (บวกเท่านั้น)
+//   liabilities = หนี้ (ค่าบวกเสมอ — เป็นจำนวนที่ค้างชำระ)
+//   net         = cash - liabilities (เท่ากับผลรวมเดิมทุกประการ ไม่มี regression)
+function splitBalances(bals){
+  const cashAccounts = [], liabAccounts = [];
+  (bals||[]).forEach(b=>{
+    if(classifyAccount(b)==='liability') liabAccounts.push(b);
+    else cashAccounts.push(b);
+  });
+  const cash = cashAccounts.reduce((s,b)=>s+b.balance, 0);
+  const liabilities = liabAccounts.reduce((s,b)=>s+Math.abs(Math.min(0,b.balance)), 0);
+  return { cashAccounts, liabAccounts, cash, liabilities, net: cash-liabilities };
+}
+
+// ═══ DEBT CONFIG — ดอกเบี้ย/ขั้นต่ำต่อบัญชี (ผู้ใช้กรอกเอง เก็บในเครื่อง) ═══
+// ดอกเบี้ยไม่ได้อยู่ในชีต — ต้องให้ผู้ใช้ใส่ ไม่งั้นแผนปลดหนี้เป็นแค่การเดา
+const DEBT_DEFAULT = {
+  apr: {},              // { 'SCB Up2ME Credit Card': 16 }  หน่วย %/ปี
+  minPct: 10,           // ขั้นต่ำมาตรฐานบัตรเครดิตไทย = 10% ของยอดคงเหลือ (ขั้นต่ำ ฿500)
+  minFloor: 500,
+  strategy: 'avalanche',// avalanche = จ่ายดอกสูงสุดก่อน (ประหยัดเงินที่สุด)
+  extraPerMonth: 0,     // เงินที่จ่ายเพิ่มจากขั้นต่ำต่อเดือน
+};
+function getDebtCfg(){
+  try{ const s = JSON.parse(localStorage.getItem('finOS_debtCfg')||'null');
+       if(s && typeof s==='object') return {...DEBT_DEFAULT, ...s, apr:{...DEBT_DEFAULT.apr, ...(s.apr||{})}}; }catch(e){}
+  return JSON.parse(JSON.stringify(DEBT_DEFAULT));
+}
+function saveDebtCfg(cfg){
+  const cur = getDebtCfg();
+  localStorage.setItem('finOS_debtCfg', JSON.stringify({...cur, ...cfg, apr:{...cur.apr, ...(cfg.apr||{})}}));
+}
+
+// ═══ buildDebtPlan — จำลองการปลดหนี้เดือนต่อเดือน ═══
+// avalanche: จ่ายขั้นต่ำทุกใบ แล้วโยนเงินเหลือทั้งหมดใส่ใบที่ APR สูงสุด
+// snowball : เหมือนกันแต่เรียงตามยอดน้อยสุด (แพงกว่า แต่เห็นผลเร็ว = แรงใจ)
+// คืน null ถ้าไม่มีหนี้ · คืน {months:Infinity} ถ้าจ่ายไม่พอดอกเบี้ย (หนี้โต)
+function buildDebtPlan(liabAccounts, cfg){
+  cfg = cfg || getDebtCfg();
+  let debts = (liabAccounts||[])
+    .map(b=>({ name:b.name,
+               bal: Math.abs(Math.min(0, b.balance)),
+               apr: Number(cfg.apr[b.name] ?? 0) }))
+    .filter(d=>d.bal > 0.5);
+  if(!debts.length) return null;
+
+  const totalStart = debts.reduce((s,d)=>s+d.bal, 0);
+  const minOf = d => Math.min(d.bal, Math.max(cfg.minFloor, d.bal * cfg.minPct/100));
+  const baseMin = debts.reduce((s,d)=>s+minOf(d), 0);
+  const budget = baseMin + Math.max(0, Number(cfg.extraPerMonth)||0);
+
+  // เรียงลำดับเป้าโจมตี
+  const order = cfg.strategy==='snowball'
+    ? [...debts].sort((a,b)=>a.bal-b.bal)
+    : [...debts].sort((a,b)=>b.apr-a.apr || a.bal-b.bal);
+
+  let month = 0, totalInterest = 0;
+  const timeline = [], payoffMonth = {};
+  const MAX = 600;   // 50 ปี — เกินนี้ถือว่าไม่มีวันหมด
+
+  while(debts.some(d=>d.bal>0.5) && month < MAX){
+    month++;
+    let pool = budget;
+    // 1) ดอกเบี้ยเดินก่อน (ทบต้นรายเดือน)
+    debts.forEach(d=>{
+      if(d.bal<=0) return;
+      const int = d.bal * (d.apr/100) / 12;
+      d.bal += int; totalInterest += int;
+    });
+    // 2) จ่ายขั้นต่ำทุกใบ
+    debts.forEach(d=>{
+      if(d.bal<=0) return;
+      const pay = Math.min(d.bal, minOf(d), pool);
+      d.bal -= pay; pool -= pay;
+    });
+    // 3) เงินเหลือ → ใบเป้าหมายตามกลยุทธ์
+    for(const t of order){
+      if(pool<=0) break;
+      const d = debts.find(x=>x.name===t.name);
+      if(!d || d.bal<=0) continue;
+      const pay = Math.min(d.bal, pool);
+      d.bal -= pay; pool -= pay;
+    }
+    debts.forEach(d=>{ if(d.bal<=0.5 && !payoffMonth[d.name]){ payoffMonth[d.name]=month; d.bal=0; } });
+    timeline.push({ m:month, total: debts.reduce((s,d)=>s+d.bal,0) });
+  }
+
+  const done = month < MAX;
+  return {
+    months: done ? month : Infinity,
+    totalStart, totalInterest, budget, baseMin,
+    strategy: cfg.strategy,
+    payoffMonth, timeline,
+    order: order.map(d=>({name:d.name, apr:d.apr,
+                          bal: totalStartOf(liabAccounts, d.name)})),
+    // เทียบกับ "จ่ายขั้นต่ำอย่างเดียว" เพื่อบอกว่าการจ่ายเพิ่มคุ้มแค่ไหน
+    freeMonth: done ? month : null,
+  };
+}
+function totalStartOf(liabAccounts, name){
+  const b = (liabAccounts||[]).find(x=>x.name===name);
+  return b ? Math.abs(Math.min(0, b.balance)) : 0;
+}
+
+// ═══ debtVsInvest — เปรียบเทียบ "จ่ายหนี้" vs "ลงทุน" ═══
+// จ่ายหนี้ APR 16% = ผลตอบแทนรับประกัน 16% ปลอดภาษี ปลอดความผันผวน
+// ต้องเทียบกับผลตอบแทนคาดหวังของพอร์ต (getGoalCfg().expectedReturn)
+function debtVsInvest(liabAccounts, cfg){
+  cfg = cfg || getDebtCfg();
+  const exp = getGoalCfg().expectedReturn || 7;
+  const rows = (liabAccounts||[])
+    .map(b=>({ name:b.name, bal:Math.abs(Math.min(0,b.balance)), apr:Number(cfg.apr[b.name] ?? 0) }))
+    .filter(d=>d.bal>0.5)
+    .map(d=>({ ...d, edge: d.apr-exp, verdict: d.apr>exp ? 'จ่ายหนี้ก่อน' : d.apr>0 ? 'ลงทุนก่อน' : 'ยังไม่ได้ใส่ดอกเบี้ย' }));
+  const yearlyInterest = rows.reduce((s,d)=>s + d.bal*d.apr/100, 0);
+  return { rows, expectedReturn: exp, yearlyInterest,
+           monthlyInterest: yearlyInterest/12 };
 }

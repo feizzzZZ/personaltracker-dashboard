@@ -1,7 +1,7 @@
 // Finance OS — Service Worker v2
 // Cache strategy: Cache-first for shell, Network-first for CDN
 
-const CACHE_NAME = 'finance-os-v39';  // bump version so old cache is cleared on deploy
+const CACHE_NAME = 'finance-os-v40';  // bump version so old cache is cleared on deploy
 const BASE = '/personaltracker-dashboard';
 
 // App shell — files to pre-cache on install
@@ -25,11 +25,23 @@ const CDN_ASSETS = [
 ];
 
 // ── Install: pre-cache app shell ──────────────────────────────────────
+// v40 FIX: เดิมใช้ cache.addAll() ซึ่งเป็น all-or-nothing —
+// ถ้าไฟล์ใดไฟล์หนึ่งหาย (เช่น icon-192 ยังไม่ได้ commit) install จะ reject ทั้งชุด
+// ผลคือ SW ไม่ติดตั้งเลย → offline พังทั้งแอปแบบเงียบๆ หาสาเหตุไม่เจอ
+// เปลี่ยนเป็น cache ทีละไฟล์ ไฟล์ที่หายแค่ข้ามไป พร้อม log บอกว่าไฟล์ไหนหาย
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
-      console.log('[SW] Pre-caching shell');
-      return cache.addAll(SHELL_FILES);
+    caches.open(CACHE_NAME).then(async cache => {
+      const missing = [];
+      await Promise.all(SHELL_FILES.map(async url => {
+        try {
+          const res = await fetch(url, { cache: 'reload' });
+          if (res.ok) await cache.put(url, res);
+          else missing.push(url + ' (HTTP ' + res.status + ')');
+        } catch (e) { missing.push(url + ' (' + e.message + ')'); }
+      }));
+      if (missing.length) console.warn('[SW] ข้ามไฟล์ที่หาไม่เจอ:', missing);
+      else console.log('[SW] Pre-cached shell ครบ', SHELL_FILES.length, 'ไฟล์');
     }).then(() => self.skipWaiting())
   );
 });

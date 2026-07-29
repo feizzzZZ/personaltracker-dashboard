@@ -645,6 +645,10 @@ select.month-display{text-align-last:center;outline:none}
       <div class="sb-item" data-page="accounts" onclick="switchPage('accounts')">
         <span class="sb-icon" aria-hidden="true">🏦</span></i>Accounts
       </div>
+      <div class="sb-item" data-page="debt" onclick="switchPage('debt')">
+        <span class="sb-icon" aria-hidden="true">💳</span></i>Debt
+        <span class="bgt-badge" id="debt-badge" style="display:none;margin-left:auto"></span>
+      </div>
       <div class="sb-item" data-page="cashflow" onclick="switchPage('cashflow')">
         <span class="sb-icon" aria-hidden="true">📊</span></i>Monthly
       </div>
@@ -698,14 +702,23 @@ select.month-display{text-align-last:center;outline:none}
 
       <!-- Total Wealth 4-part section -->
       <div class="sl" style="margin-bottom:12px">Total Wealth</div>
-      <div style="display:grid;grid-template-columns:1fr 1px 1fr 1px 1fr 1px 1.2fr;gap:0;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;overflow:hidden;margin-bottom:14px">
+      <div class="wealth-strip" style="display:grid;grid-template-columns:1fr 1px 1fr 1px 1fr 1px 1fr 1px 1.25fr;gap:0;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;overflow:hidden;margin-bottom:14px">
         <!-- Cash -->
         <div style="padding:20px 24px">
           <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2);margin-bottom:8px;display:flex;align-items:center;gap:6px">
-            <div style="width:8px;height:8px;border-radius:50%;background:var(--income)"></div>Cash Balance
+            <div style="width:8px;height:8px;border-radius:50%;background:var(--income)"></div>Cash (ใช้ได้จริง)
           </div>
           <div style="font-family:'Google Sans',sans-serif;font-size:clamp(20px,2.6vw,28px);font-weight:700;color:var(--income);letter-spacing:-.02em" id="ov-cash">฿0</div>
           <div style="font-size:11px;color:var(--muted2);margin-top:6px" id="ov-cash-sub">— accounts</div>
+        </div>
+        <div style="background:var(--border)"></div>
+        <!-- Liabilities (v40 — เดิมถูกซ่อนอยู่ในยอด Cash) -->
+        <div style="padding:20px 24px;cursor:pointer" onclick="switchPage('debt')" title="ดูแผนปลดหนี้">
+          <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2);margin-bottom:8px;display:flex;align-items:center;gap:6px">
+            <div style="width:8px;height:8px;border-radius:50%;background:var(--loss)"></div>Liabilities
+          </div>
+          <div style="font-family:'Google Sans',sans-serif;font-size:clamp(20px,2.6vw,28px);font-weight:700;color:var(--loss);letter-spacing:-.02em" id="ov-liab">฿0</div>
+          <div style="font-size:11px;color:var(--muted2);margin-top:6px" id="ov-liab-sub">— accounts</div>
         </div>
         <div style="background:var(--border)"></div>
         <!-- Portfolio -->
@@ -732,7 +745,7 @@ select.month-display{text-align-last:center;outline:none}
             <div style="width:8px;height:8px;border-radius:2px;background:var(--white)"></div>Net Worth
           </div>
           <div style="font-family:'Google Sans',sans-serif;font-size:clamp(22px,3vw,32px);font-weight:700;color:var(--white);letter-spacing:-.02em" id="ov-networth">฿0</div>
-          <div style="font-size:11px;color:var(--muted2);margin-top:6px">Cash + Portfolio + Insurance CV</div>
+          <div style="font-size:11px;color:var(--muted2);margin-top:6px">Cash − Debt + Portfolio + Ins CV</div>
         </div>
       </div>
 
@@ -1212,6 +1225,74 @@ select.month-display{text-align-last:center;outline:none}
         <th class="r">Qty</th><th class="r">WACC</th><th class="r">Cost basis</th>
         <th class="r">Proceeds</th><th class="r">Realized P&L</th>
       </tr></thead><tbody id="real-body"></tbody></table></div>
+    </div>
+
+    <!-- ══ DEBT — v40 ══════════════════════════════════════════════ -->
+    <div class="page" id="page-debt">
+      <div class="pg-hdr"><div>
+        <div class="pg-title">Debt</div>
+        <div class="pg-sub">หนี้ที่มีดอกเบี้ยเดิน — ผลตอบแทนรับประกันที่สูงที่สุดในพอร์ตคุณ</div>
+      </div></div>
+
+      <div id="debt-empty" style="display:none;text-align:center;padding:60px 20px;color:var(--muted)">
+        🎉 ไม่มีหนี้ในระบบ<br><small>บัญชีที่ type = Credit Card หรือยอดติดลบจะถูกนับเป็นหนี้อัตโนมัติ</small>
+      </div>
+
+      <div id="debt-main">
+        <div class="sg" style="margin-bottom:16px">
+          <div class="sc" style="--g:rgba(255,64,96,.08)">
+            <div class="sc-lbl">ยอดหนี้รวม</div>
+            <div class="sc-val" id="dbt-total" style="color:var(--loss)">฿0</div>
+            <div class="sc-sub" id="dbt-total-s"></div>
+          </div>
+          <div class="sc" style="--g:rgba(255,149,0,.08)">
+            <div class="sc-lbl">ดอกเบี้ยที่จ่ายอยู่</div>
+            <div class="sc-val" id="dbt-int" style="color:var(--debt)">฿0</div>
+            <div class="sc-sub" id="dbt-int-s">ต่อเดือน</div>
+          </div>
+          <div class="sc" style="--g:rgba(124,111,236,.08)">
+            <div class="sc-lbl">ปลดหนี้หมดใน</div>
+            <div class="sc-val" id="dbt-months" style="color:var(--savings)">—</div>
+            <div class="sc-sub" id="dbt-months-s"></div>
+          </div>
+          <div class="sc" style="--g:rgba(0,212,160,.08)">
+            <div class="sc-lbl">ดอกเบี้ยรวมจนหมดหนี้</div>
+            <div class="sc-val" id="dbt-totint" style="color:var(--gain)">฿0</div>
+            <div class="sc-sub" id="dbt-totint-s"></div>
+          </div>
+        </div>
+
+        <!-- การตัดสินใจหลัก: จ่ายหนี้ vs ลงทุน -->
+        <div id="dbt-verdict" style="margin-bottom:18px"></div>
+
+        <!-- ตั้งค่าดอกเบี้ย -->
+        <div class="sl orange" style="margin-bottom:10px">ดอกเบี้ยแต่ละใบ · ต้องกรอกเอง (ชีตไม่มีข้อมูลนี้)</div>
+        <div class="tw" style="margin-bottom:18px"><table class="at"><thead><tr>
+          <th>บัญชี</th><th class="r">ยอดค้าง</th><th class="r">ดอกเบี้ย %/ปี</th>
+          <th class="r">ดอกเบี้ย/เดือน</th><th class="r">ขั้นต่ำ/เดือน</th><th>ปลดหนี้เดือนที่</th>
+        </tr></thead><tbody id="dbt-body"></tbody></table></div>
+
+        <!-- แผนจ่าย -->
+        <div class="sl" style="margin-bottom:10px">แผนปลดหนี้</div>
+        <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:16px 18px;margin-bottom:16px">
+          <div style="display:flex;gap:18px;flex-wrap:wrap;align-items:flex-end">
+            <div>
+              <div style="font-size:10px;color:var(--muted2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.08em">กลยุทธ์</div>
+              <select id="dbt-strategy" onchange="dbtSaveCfg()" style="background:var(--bg4);color:var(--text);border:1px solid var(--border2);border-radius:7px;padding:7px 10px;font-family:inherit;font-size:12px">
+                <option value="avalanche">Avalanche — ดอกสูงสุดก่อน (ประหยัดที่สุด)</option>
+                <option value="snowball">Snowball — ยอดน้อยสุดก่อน (เห็นผลเร็ว)</option>
+              </select>
+            </div>
+            <div>
+              <div style="font-size:10px;color:var(--muted2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.08em">จ่ายเพิ่มจากขั้นต่ำ (฿/เดือน)</div>
+              <input type="number" id="dbt-extra" onchange="dbtSaveCfg()" step="500" min="0"
+                style="background:var(--bg4);color:var(--text);border:1px solid var(--border2);border-radius:7px;padding:7px 10px;width:130px;font-family:inherit;font-size:12px">
+            </div>
+            <div style="flex:1;min-width:200px;font-size:11.5px;color:var(--muted2);line-height:1.7" id="dbt-plan-note"></div>
+          </div>
+        </div>
+        <div class="cw" style="height:220px;margin-bottom:8px"><canvas id="dbt-chart"></canvas></div>
+      </div>
     </div>
 
     <!-- ══ WEALTH ENGINE (savings & invest rate) ══ -->
@@ -1771,18 +1852,32 @@ function parseFile(file){
 
 // ── Overview ─────────────────────────────────────────────────────────
 function renderOverview(){
-  const allCash=bankBals.reduce((s,b)=>s+b.balance,0);
+  // v40: แยกเงินสดออกจากหนี้ — allCash เดิมเป็นยอด "สุทธิ" ที่หักบัตรเครดิตไปแล้ว
+  const _sb=splitBalances(bankBals);
+  const cashAssets=_sb.cash, liabTotal=_sb.liabilities;
+  const allCash=_sb.net;      // = ค่าเดิมทุกประการ (ใช้ต่อในสูตรที่เหลือ)
   const portVal=assets.reduce((s,a)=>s+a.val,0);
   const portCost=assets.reduce((s,a)=>s+a.cost,0);
   const portPnl=portVal-portCost;
   const totalDiv=tracker.filter(r=>TX_DIV.includes(r.txType)).reduce((s,r)=>s+r.amtTHB,0);
   const insCV=insPolicies.reduce((s,p)=>s+(p.surrender||0),0);
 
-  // Net Worth = Cash + Portfolio + Insurance Cash Value
-  const netWorth=allCash+portVal+insCV;
+  // Net Worth = Cash − Liabilities + Portfolio + Insurance Cash Value
+  const netWorth=cashAssets-liabTotal+portVal+insCV;
   document.getElementById('ov-networth').textContent=fmt(netWorth);
-  document.getElementById('ov-cash').textContent=fmt(allCash);
-  document.getElementById('ov-cash-sub').textContent=`${bankBals.filter(b=>b.balance!==0).length} accounts`;
+  document.getElementById('ov-cash').textContent=fmt(cashAssets);
+  document.getElementById('ov-cash-sub').textContent=`${_sb.cashAccounts.filter(b=>b.balance!==0).length} accounts`;
+  const _lEl=document.getElementById('ov-liab');
+  if(_lEl){
+    _lEl.textContent=liabTotal>0?'−'+fmt(liabTotal):fmt(0);
+    const _di=debtVsInvest(_sb.liabAccounts);
+    const _n=_sb.liabAccounts.filter(b=>b.balance<0).length;
+    document.getElementById('ov-liab-sub').innerHTML = liabTotal>0
+      ? (_di.yearlyInterest>0
+          ? `${_n} บัญชี · ดอกเบี้ย ${fmt(Math.round(_di.monthlyInterest))}/เดือน`
+          : `${_n} บัญชี · <span style="color:var(--debt)">ยังไม่ได้ใส่ดอกเบี้ย →</span>`)
+      : 'ปลอดหนี้ 🎉';
+  }
   document.getElementById('ov-portval').textContent=fmt(portVal);
   const ppEl=document.getElementById('ov-portpnl-sub');
   ppEl.textContent=fmtSign(portPnl)+' P&L';ppEl.style.color=portPnl>=0?'var(--gain)':'var(--loss)';
@@ -2994,7 +3089,7 @@ function gsInit(){
     }
     renderedPages=new Set();
     _restoringFromCache=true;
-    loadGoals(); updateBudgetBadge(); savePortfolioToStorage();
+    loadGoals(); updateBudgetBadge(); try{updateDebtBadge();}catch(e){} savePortfolioToStorage();
     _restoringFromCache=false;
     switchPage('overview');
     gsSetStatus('📦 ใช้ข้อมูล cache ('+(cacheAge<60?cacheAge+' นาทีที่แล้ว':Math.round(cacheAge/60)+' ชม.ที่แล้ว')+') — กด Sync เพื่ออัปเดต','ok');
@@ -3319,7 +3414,7 @@ function gsProcessData(map){
     }
     renderedPages=new Set();
     loadGoals();
-    updateBudgetBadge();
+    updateBudgetBadge(); try{updateDebtBadge();}catch(e){}
     savePortfolioToStorage();
     switchPage('overview');
   } catch(e){
@@ -3910,7 +4005,7 @@ function renderBudget(){
     const key    = 'sav_'+cat;
     return bgtCardHTML(cat, saved, tgt, pct, savSt, barW, key, 'ออม', 'target ', barCol);
   }).join('');
-  updateBudgetBadge();
+  updateBudgetBadge(); try{updateDebtBadge();}catch(e){}
 }
 
 function bgtCardHTML(cat, amount, limit, pct, st, barW, key, spentLabel, limitPrefix, barCol){
@@ -4076,6 +4171,135 @@ function savePortfolioToStorage(){
   }catch(e){console.warn('[FinOS] savePortfolio error:',e);}
 }
 
+
+// ── Debt (v40) ────────────────────────────────────────────────────────
+// หนี้บัตรเครดิตที่มีดอกเบี้ยเดิน = การลงทุนที่ให้ผลตอบแทนรับประกันเท่ากับ APR
+// ปลอดภาษี ปลอดความผันผวน — ต้องเทียบตรงๆ กับผลตอบแทนคาดหวังของพอร์ต
+function dbtSaveCfg(){
+  const st=document.getElementById('dbt-strategy'), ex=document.getElementById('dbt-extra');
+  saveDebtCfg({ strategy: st?st.value:'avalanche',
+                extraPerMonth: ex?(parseFloat(ex.value)||0):0 });
+  renderDebt();
+}
+function dbtSetApr(name, val){
+  const v=parseFloat(val);
+  saveDebtCfg({ apr: { [name]: isFinite(v)&&v>=0 ? v : 0 } });
+  renderDebt(); renderOverview(); updateDebtBadge();
+}
+function updateDebtBadge(){
+  const el=document.getElementById('debt-badge'); if(!el) return;
+  const sb=splitBalances(bankBals);
+  if(sb.liabilities<=0){ el.style.display='none'; return; }
+  const cfg=getDebtCfg();
+  const missing=sb.liabAccounts.filter(b=>b.balance<0 && !(cfg.apr[b.name]>0)).length;
+  el.style.display='inline-block';
+  if(missing){ el.className='bgt-badge warn'; el.textContent='!'; el.title='ยังไม่ได้ใส่ดอกเบี้ย '+missing+' บัญชี'; }
+  else { el.className='bgt-badge'; el.textContent=Math.round(sb.liabilities/1000)+'k'; el.title='ยอดหนี้คงเหลือ'; }
+}
+function renderDebt(){
+  const sb=splitBalances(bankBals);
+  const hasDebt=sb.liabilities>0;
+  document.getElementById('debt-empty').style.display=hasDebt?'none':'block';
+  document.getElementById('debt-main').style.display=hasDebt?'block':'none';
+  updateDebtBadge();
+  if(!hasDebt) return;
+
+  const cfg=getDebtCfg();
+  const di=debtVsInvest(sb.liabAccounts,cfg);
+  const plan=buildDebtPlan(sb.liabAccounts,cfg);
+  const anyApr=di.rows.some(r=>r.apr>0);
+
+  // ควบคุมฟอร์ม
+  const stEl=document.getElementById('dbt-strategy'); if(stEl) stEl.value=cfg.strategy;
+  const exEl=document.getElementById('dbt-extra');    if(exEl && document.activeElement!==exEl) exEl.value=cfg.extraPerMonth||0;
+
+  // การ์ดสรุป
+  document.getElementById('dbt-total').textContent=fmt(sb.liabilities);
+  document.getElementById('dbt-total-s').textContent=`${di.rows.length} บัญชี · ${(sb.cash>0?(sb.liabilities/sb.cash*100).toFixed(0):'∞')}% ของเงินสด`;
+  document.getElementById('dbt-int').textContent=anyApr?fmt(Math.round(di.monthlyInterest)):'—';
+  document.getElementById('dbt-int-s').textContent=anyApr?`${fmt(Math.round(di.yearlyInterest))}/ปี`:'ใส่ดอกเบี้ยด้านล่างก่อน';
+  const mEl=document.getElementById('dbt-months');
+  if(plan && isFinite(plan.months)){
+    mEl.textContent=plan.months+' เดือน';
+    const d=new Date(); d.setMonth(d.getMonth()+plan.months);
+    document.getElementById('dbt-months-s').textContent='ราว '+d.toLocaleDateString('th-TH',{month:'short',year:'numeric'});
+  }else{
+    mEl.textContent='ไม่มีวันหมด'; mEl.style.color='var(--loss)';
+    document.getElementById('dbt-months-s').textContent='จ่ายไม่พอดอกเบี้ย — หนี้โตขึ้นเรื่อยๆ';
+  }
+  document.getElementById('dbt-totint').textContent=plan?fmt(Math.round(plan.totalInterest)):'—';
+  document.getElementById('dbt-totint-s').textContent=plan&&plan.totalStart>0
+    ? `= ${(plan.totalInterest/plan.totalStart*100).toFixed(1)}% ของเงินต้น`:'';
+
+  // ── บทสรุปการตัดสินใจ ──
+  const vEl=document.getElementById('dbt-verdict');
+  if(!anyApr){
+    vEl.innerHTML=`<div style="background:rgba(255,149,0,.07);border:1px solid rgba(255,149,0,.3);border-radius:12px;padding:14px 18px;font-size:12px;line-height:1.9">
+      <strong style="color:var(--debt)">⚠️ ยังไม่ได้ใส่ดอกเบี้ย</strong> — กรอกช่อง "ดอกเบี้ย %/ปี" ในตารางด้านล่าง
+      แล้วระบบจะคำนวณให้ว่าควรเอาเงินไปจ่ายหนี้หรือลงทุน<br>
+      <span style="color:var(--muted2)">บัตรเครดิตไทยส่วนใหญ่อยู่ที่ 16% · สินเชื่อส่วนบุคคล 20–25% · ผ่อน 0% ใส่ 0</span></div>`;
+  }else{
+    const win=di.rows.filter(r=>r.apr>di.expectedReturn).sort((a,b)=>b.apr-a.apr);
+    const topApr=Math.max(...di.rows.map(r=>r.apr));
+    const winAmt=win.reduce((s,r)=>s+r.bal,0);
+    vEl.innerHTML=`<div style="background:linear-gradient(135deg,rgba(255,64,96,.08),rgba(255,149,0,.05));border:1px solid rgba(255,64,96,.28);border-radius:12px;padding:16px 20px">
+      <div style="font-family:'Google Sans',sans-serif;font-size:14px;font-weight:600;color:var(--white);margin-bottom:8px">
+        ${win.length?'💡 จ่ายหนี้ก่อน — ชนะการลงทุนชัดเจน':'✅ ดอกเบี้ยต่ำกว่าผลตอบแทนคาดหวัง — ลงทุนก่อนได้'}</div>
+      <div style="font-size:12px;line-height:1.95;color:var(--text)">
+        ${win.length?`หนี้ ${fmt(winAmt)} ที่ดอกเบี้ยสูงสุด <strong style="color:var(--loss)">${topApr}%/ปี</strong>
+        ให้ผลตอบแทน <strong>รับประกัน ${topApr}% ปลอดภาษี ปลอดความผันผวน</strong>
+        ขณะที่พอร์ตคุณตั้งเป้าไว้ที่ ${di.expectedReturn}%/ปี <em>ก่อน</em>ภาษีและความเสี่ยง<br>
+        → ส่วนต่าง <strong style="color:var(--gain)">+${(topApr-di.expectedReturn).toFixed(1)} จุด</strong>
+        ต่อทุกบาทที่โยนไปจ่ายหนี้แทนการลงทุน
+        · ตอนนี้ดอกเบี้ยกินเงินคุณ <strong style="color:var(--loss)">${fmt(Math.round(di.monthlyInterest))}/เดือน</strong>
+        = ${fmt(Math.round(di.yearlyInterest))}/ปี ที่หายไปเปล่าๆ`
+        :`ดอกเบี้ยสูงสุดของคุณ ${topApr}% ต่ำกว่าผลตอบแทนคาดหวัง ${di.expectedReturn}% —
+        ทางคณิตศาสตร์ควรจ่ายขั้นต่ำแล้วเอาเงินที่เหลือไปลงทุน (แต่ต้องมั่นใจว่าจ่ายตรงเวลาทุกงวด)`}
+      </div></div>`;
+  }
+
+  // ── ตารางดอกเบี้ย ──
+  document.getElementById('dbt-body').innerHTML=di.rows
+    .sort((a,b)=>b.apr-a.apr||b.bal-a.bal).map(r=>{
+    const monthlyInt=r.bal*r.apr/100/12;
+    const minPay=Math.min(r.bal,Math.max(cfg.minFloor,r.bal*cfg.minPct/100));
+    const pm=plan&&plan.payoffMonth[r.name];
+    return `<tr>
+      <td>${r.name}</td>
+      <td class="r" style="color:var(--loss)">${fmt(r.bal)}</td>
+      <td class="r"><input type="number" value="${r.apr||''}" step="0.5" min="0" max="99" placeholder="0"
+        onchange="dbtSetApr(${JSON.stringify(r.name)},this.value)"
+        style="background:var(--bg4);color:${r.apr>0?'var(--debt)':'var(--muted)'};border:1px solid var(--border2);
+        border-radius:6px;padding:4px 7px;width:72px;text-align:right;font-family:inherit;font-size:11.5px"></td>
+      <td class="r" style="color:var(--debt)">${r.apr>0?fmt(Math.round(monthlyInt)):'—'}</td>
+      <td class="r" style="color:var(--muted2)">${fmt(Math.round(minPay))}</td>
+      <td style="color:var(--muted2)">${pm?('เดือนที่ '+pm):(plan?'—':'')}</td>
+    </tr>`;
+  }).join('');
+
+  // ── โน้ตแผน + กราฟ ──
+  const noteEl=document.getElementById('dbt-plan-note');
+  if(plan && noteEl){
+    // เทียบกับการจ่ายขั้นต่ำอย่างเดียว เพื่อบอกว่าจ่ายเพิ่มคุ้มแค่ไหน
+    const basePlan=buildDebtPlan(sb.liabAccounts,{...cfg,extraPerMonth:0});
+    let cmp='';
+    if(cfg.extraPerMonth>0 && basePlan && isFinite(basePlan.months) && isFinite(plan.months)){
+      const saveM=basePlan.months-plan.months, saveB=basePlan.totalInterest-plan.totalInterest;
+      if(saveM>0||saveB>0) cmp=`<br><span style="color:var(--gain)">จ่ายเพิ่ม ${fmt(cfg.extraPerMonth)}/เดือน
+        → หมดเร็วขึ้น ${saveM} เดือน ประหยัดดอกเบี้ย ${fmt(Math.round(saveB))}</span>`;
+    }
+    noteEl.innerHTML=`งบจ่ายหนี้รวม <strong style="color:var(--white)">${fmt(Math.round(plan.budget))}/เดือน</strong>
+      (ขั้นต่ำ ${fmt(Math.round(plan.baseMin))} + เพิ่ม ${fmt(cfg.extraPerMonth||0)})
+      · ลำดับโจมตี: ${plan.order.filter(o=>o.bal>0).map(o=>o.name.split(' ')[0]).join(' → ')}${cmp}`;
+  }
+  if(plan && plan.timeline.length){
+    mkLineChart('dbt-chart',plan.timeline.map(p=>'เดือน '+p.m),[
+      {label:'ยอดหนี้คงเหลือ',data:plan.timeline.map(p=>Math.round(p.total)),
+       borderColor:'#ff4060',backgroundColor:'rgba(255,64,96,.07)',tension:.25,pointRadius:0,borderWidth:2,fill:true}
+    ]);
+  }
+}
+
 let pageRenderFns={
   overview:renderOverview,cashflow:renderCashflow,yearly:renderYearly,
   accounts:renderAccounts,portfolio:renderPortfolio,
@@ -4083,7 +4307,8 @@ let pageRenderFns={
   insurance:renderInsurance,
   flow:renderFlow,realized:renderRealized,
   engine:renderEngine,dividends:renderDividends,
-  goals:renderGoals
+  goals:renderGoals,
+  debt:renderDebt
 };
 let renderedPages=new Set();
 
@@ -4091,7 +4316,7 @@ function switchPage(name){
   document.querySelectorAll('.sb-item').forEach(el=>{el.classList.toggle('active',el.dataset.page===name);});
   document.querySelectorAll('.page').forEach(el=>{el.classList.toggle('active',el.id===`page-${name}`);});
   if(!renderedPages.has(name)&&pageRenderFns[name]){
-    try{ pageRenderFns[name](); renderedPages.add(name); updateBudgetBadge(); }
+    try{ pageRenderFns[name](); renderedPages.add(name); updateBudgetBadge(); try{updateDebtBadge();}catch(e){} }
     catch(e){ console.error('[Page] render failed:',name,e); }
   }
   if(window.innerWidth<=700){document.getElementById('sidebar').classList.remove('open');}
@@ -4730,7 +4955,7 @@ async function loadData(file){
     document.getElementById('app').style.display='flex';
     renderedPages=new Set();
     loadGoals();
-    updateBudgetBadge();
+    updateBudgetBadge(); try{updateDebtBadge();}catch(e){}
     const badge=document.getElementById('sb-goals-badge');
     if(badge&&goals.length){badge.style.display='inline';badge.textContent=goals.length;}
     switchPage('overview');

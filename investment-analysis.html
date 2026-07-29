@@ -758,6 +758,16 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 
 <script src="shared.js"></script>
 <script>
+// v40: เดิมลงทะเบียน SW เฉพาะ index.html — ถ้าเปิดหน้านี้เป็นหน้าแรก
+// (หรือ add-to-homescreen จากหน้านี้) จะไม่มี SW เลย offline พัง
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('./service-worker.js',{updateViaCache:'none'})
+      .catch(e=>console.warn('[SW] register failed:',e.message));
+  });
+}
+</script>
+<script>
 // ── Navigation ──
 function switchPage(id, el){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
