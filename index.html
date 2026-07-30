@@ -50,15 +50,40 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 
 /* ── Sidebar ── */
 .sidebar{width:var(--sidebar-w);background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:100;transition:transform .2s}
-.sb-brand{padding:20px 16px 16px;border-bottom:1px solid var(--border)}
+.sb-brand{padding:20px 16px 16px;border-bottom:1px solid var(--border);flex:0 0 auto}
 .sb-logo{font-family:'Google Sans',sans-serif;font-size:16px;font-weight:800;color:var(--income);letter-spacing:.04em}
 .sb-sub{font-size:10px;color:var(--muted);margin-top:2px;letter-spacing:.06em}
 .sb-status{font-size:10px;color:var(--muted);margin-top:8px;display:flex;align-items:center;gap:5px}
 .dot-live{width:5px;height:5px;border-radius:50%;background:var(--income);animation:pulse 2s infinite;display:inline-block}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-.sb-nav{padding:12px 8px;flex:1;display:flex;flex-direction:column;gap:2px}
-.sb-section{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:10px 8px 4px;margin-top:4px}
-.sb-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;cursor:pointer;transition:all .15s;color:var(--muted2);font-size:12px;border:1px solid transparent}
+/* v40 — sidebar ต้องเลื่อนได้เมื่อเมนูยาวกว่าจอ
+   min-height:0 จำเป็นสำหรับ flex child ทุกตัวที่ต้องหด (ค่า default คือ auto
+   ซึ่งแปลว่า "ห้ามหดต่ำกว่าเนื้อหา" → overflow-y จะไม่มีผลถ้าไม่ตั้ง) */
+.sb-nav{padding:10px 8px;flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;
+  display:flex;flex-direction:column;gap:1px;scrollbar-width:thin;scrollbar-color:var(--border2) transparent}
+.sb-nav::-webkit-scrollbar{width:6px}
+.sb-nav::-webkit-scrollbar-track{background:transparent}
+.sb-nav::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+.sb-nav::-webkit-scrollbar-thumb:hover{background:var(--muted)}
+/* หัวข้อกลุ่มค้างไว้ด้านบนตอนเลื่อน — ไม่หลงว่าตอนนี้อยู่หมวดไหน */
+.sb-section{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);
+  padding:9px 8px 3px;margin-top:2px;position:sticky;top:0;background:var(--bg2);z-index:1}
+.sb-nav>.sb-section:first-child{margin-top:0;padding-top:2px}
+.sb-item{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:8px;cursor:pointer;
+  transition:all .15s;color:var(--muted2);font-size:12px;border:1px solid transparent;flex:0 0 auto}
+/* ปุ่มด้านล่างต้องไม่ถูกบีบหาย เมื่อ nav ยาว */
+.sb-bottom{flex:0 0 auto}
+/* จอเตี้ย (โน้ตบุ๊ก 13" / เบราว์เซอร์ที่มี bookmark bar) — บีบให้กระชับขึ้นอีก */
+@media (max-height:820px){
+  .sb-brand{padding:14px 16px 12px}
+  .sb-item{padding:6px 10px;font-size:11.5px}
+  .sb-section{padding:7px 8px 3px}
+  .sb-bottom .btn-pdf,.sb-bottom .sb-upload-btn{padding-top:7px;padding-bottom:7px}
+}
+@media (max-height:680px){
+  .sb-status{display:none}
+  .sb-item{padding:5px 10px}
+}
 .sb-item:hover{background:var(--bg3);color:var(--text)}
 .sb-item.active{background:var(--bg3);border-color:var(--border);color:var(--white)}
 .sb-item.active .sb-icon{color:var(--income)}
@@ -4181,10 +4206,35 @@ function dbtSaveCfg(){
                 extraPerMonth: ex?(parseFloat(ex.value)||0):0 });
   renderDebt();
 }
+// escape สำหรับค่าที่ไปอยู่ใน HTML attribute — ชื่อบัญชีมาจากชีต ควบคุมไม่ได้
+function escAttr(s){
+  return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;')
+                  .replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
 function dbtSetApr(name, val){
   const v=parseFloat(val);
-  saveDebtCfg({ apr: { [name]: isFinite(v)&&v>=0 ? v : 0 } });
+  saveDebtCfg({ apr: { [name]: isFinite(v)&&v>=0 ? Math.min(v,99) : 0 } });
   renderDebt(); renderOverview(); updateDebtBadge();
+}
+// ผูก listener ครั้งเดียวที่ tbody — innerHTML ที่ re-render ไม่ทำให้ listener หลุด
+// (เดิมใช้ inline onchange ซึ่งพังเพราะชื่อบัญชีมีช่องว่างและถูก quote ซ้อน)
+let _dbtBound=false;
+function dbtBindInputs(){
+  if(_dbtBound) return;
+  const tb=document.getElementById('dbt-body'); if(!tb) return;
+  const handler=e=>{
+    const el=e.target;
+    if(!el.classList || !el.classList.contains('dbt-apr')) return;
+    dbtSetApr(el.dataset.acct, el.value);
+  };
+  tb.addEventListener('change', handler);
+  // Enter = ยืนยันทันที ไม่ต้องคลิกออกจากช่อง
+  tb.addEventListener('keydown', e=>{
+    if(e.key==='Enter' && e.target.classList && e.target.classList.contains('dbt-apr')){
+      e.preventDefault(); e.target.blur();
+    }
+  });
+  _dbtBound=true;
 }
 function updateDebtBadge(){
   const el=document.getElementById('debt-badge'); if(!el) return;
@@ -4267,15 +4317,19 @@ function renderDebt(){
     return `<tr>
       <td>${r.name}</td>
       <td class="r" style="color:var(--loss)">${fmt(r.bal)}</td>
-      <td class="r"><input type="number" value="${r.apr||''}" step="0.5" min="0" max="99" placeholder="0"
-        onchange="dbtSetApr(${JSON.stringify(r.name)},this.value)"
-        style="background:var(--bg4);color:${r.apr>0?'var(--debt)':'var(--muted)'};border:1px solid var(--border2);
-        border-radius:6px;padding:4px 7px;width:72px;text-align:right;font-family:inherit;font-size:11.5px"></td>
+      <td class="r"><span style="display:inline-flex;align-items:center;gap:4px;justify-content:flex-end">
+        <input type="number" class="dbt-apr" value="${r.apr||''}" step="0.5" min="0" max="99" placeholder="0"
+        data-acct="${escAttr(r.name)}" inputmode="decimal" title="ใส่ดอกเบี้ยต่อปี เช่น 16"
+        style="background:var(--bg4);color:${r.apr>0?'var(--debt)':'var(--muted)'};border:1px solid ${r.apr>0?'rgba(255,149,0,.45)':'var(--border2)'};
+        border-radius:6px;padding:5px 8px;width:72px;text-align:right;font-family:inherit;font-size:12px"
+        ><span style="color:var(--muted2);font-size:11px">%</span></span></td>
       <td class="r" style="color:var(--debt)">${r.apr>0?fmt(Math.round(monthlyInt)):'—'}</td>
       <td class="r" style="color:var(--muted2)">${fmt(Math.round(minPay))}</td>
       <td style="color:var(--muted2)">${pm?('เดือนที่ '+pm):(plan?'—':'')}</td>
     </tr>`;
   }).join('');
+
+  dbtBindInputs();
 
   // ── โน้ตแผน + กราฟ ──
   const noteEl=document.getElementById('dbt-plan-note');
