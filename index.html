@@ -61,6 +61,14 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
    ซึ่งแปลว่า "ห้ามหดต่ำกว่าเนื้อหา" → overflow-y จะไม่มีผลถ้าไม่ตั้ง) */
 .sb-nav{padding:10px 8px;flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;
   display:flex;flex-direction:column;gap:1px;scrollbar-width:thin;scrollbar-color:var(--border2) transparent}
+/* ลูกศร spinner ของ input[type=number] ทับตัวเลขที่ text-align:right
+   และกดพลาดง่ายบนทัชแพด — พิมพ์ตัวเลขตรงๆ สะดวกกว่าอยู่แล้ว */
+.dbt-apr::-webkit-outer-spin-button,
+.dbt-apr::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.dbt-apr{-moz-appearance:textfield;appearance:textfield;transition:border-color .15s,box-shadow .15s}
+.dbt-apr::placeholder{color:var(--muted);opacity:.55}
+.dbt-apr:hover{border-color:rgba(255,149,0,.5)!important}
+.dbt-apr:focus{outline:none;border-color:var(--debt)!important;box-shadow:0 0 0 2px rgba(255,149,0,.15)}
 .sb-nav::-webkit-scrollbar{width:6px}
 .sb-nav::-webkit-scrollbar-track{background:transparent}
 .sb-nav::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
@@ -203,8 +211,12 @@ select.month-display{text-align-last:center;outline:none}
 .tw{overflow-x:auto;border-radius:9px;border:1px solid var(--border)}
 .at{width:100%;border-collapse:collapse;font-size:12px}
 .at th{background:var(--bg3);color:var(--white);font-weight:600;letter-spacing:.06em;text-transform:uppercase;font-size:10px;padding:9px 12px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}
-.at th.r{text-align:right}
+.at th.r{text-align:right;font-variant-numeric:tabular-nums}
 .at td{padding:9px 12px;border-bottom:1px solid var(--border);color:var(--muted2);white-space:nowrap}
+/* v40 FIX — rule นี้ขาดหายมาตั้งแต่แรก: th.r ตั้ง text-align:right ไว้
+   แต่ td.r ไม่เคยถูกตั้ง ค่าตัวเลขจึงชิดซ้ายไม่ตรงกับหัวคอลัมน์ทุกตาราง
+   tabular-nums = บังคับเลขทุกตัวกว้างเท่ากัน หลักพัน/หมื่นจะเรียงตรงกันเวลาเทียบยอด */
+.at td.r{text-align:right;font-variant-numeric:tabular-nums}
 .at tr:last-child td{border-bottom:none}
 .at tr:hover td{background:rgba(255,255,255,.02)}
 .tk{color:var(--white);font-weight:500;font-size:12px}
@@ -4318,7 +4330,7 @@ function renderDebt(){
       <td>${r.name}</td>
       <td class="r" style="color:var(--loss)">${fmt(r.bal)}</td>
       <td class="r"><span style="display:inline-flex;align-items:center;gap:4px;justify-content:flex-end">
-        <input type="number" class="dbt-apr" value="${r.apr||''}" step="0.5" min="0" max="99" placeholder="0"
+        <input type="number" class="dbt-apr" value="${r.apr||''}" step="0.5" min="0" max="99" placeholder="?"
         data-acct="${escAttr(r.name)}" inputmode="decimal" title="ใส่ดอกเบี้ยต่อปี เช่น 16"
         style="background:var(--bg4);color:${r.apr>0?'var(--debt)':'var(--muted)'};border:1px solid ${r.apr>0?'rgba(255,149,0,.45)':'var(--border2)'};
         border-radius:6px;padding:5px 8px;width:72px;text-align:right;font-family:inherit;font-size:12px"
