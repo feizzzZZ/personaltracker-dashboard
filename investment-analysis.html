@@ -1085,6 +1085,7 @@ function renderSignals(){
 
   // Fed chart
   const fedCtx=document.getElementById('fed-chart').getContext('2d');
+  const prevFed=Chart.getChart(fedCtx.canvas); if(prevFed) prevFed.destroy();
   new Chart(fedCtx,{
     type:'line',
     data:{
@@ -1771,6 +1772,7 @@ function renderPortfolio(){
 
   // Risk-Return chart
   const rrCtx=document.getElementById('rr-chart').getContext('2d');
+  const prevRr=Chart.getChart(rrCtx.canvas); if(prevRr) prevRr.destroy();
   new Chart(rrCtx,{
     type:'scatter',
     data:{datasets:[

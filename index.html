@@ -1737,14 +1737,8 @@ function parseFile(file){
         trackerRows2.filter(r=>IS_COST_TX.has(r.txType)).sort((a,b)=>a.date-b.date)
           .forEach(r=>{platMap[r.ticker]=r.platform;});
 
-        // Realized P&L (Sell transactions)
-        realized=trackerRows2.filter(r=>TX_SELL.includes(r.txType)).map(r=>({
-          date:r.date.toISOString().slice(0,10),ticker:r.ticker,group:r.group,
-          qty:r.qty,wacc:waccMap[r.ticker]||0,
-          proceeds:Math.abs(r.amtTHB),
-          costBasis:r.qty*(waccMap[r.ticker]||0),
-          pnl:Math.abs(r.amtTHB)-r.qty*(waccMap[r.ticker]||0)
-        }));
+        // Realized P&L (Sell transactions) — running-WACC ต่อ ticker (กัน look-ahead bias)
+        realized=computeRunningWaccRealized(trackerRows2, IS_COST_TX, TX_SELL);
 
         // ── 4. Asset_Live_Price_Feed — current prices (THB) ──
         // Asset_Dashboard.Current_Price = NaN in new file format
@@ -2199,10 +2193,14 @@ function renderTxTable(rows){
 function renderYearly(){
   const years=[...new Set(txRows.map(r=>r.year))].sort();
 
-  // Populate dropdown
+  // Populate dropdown — สร้างใหม่ทุกครั้งที่เรียก (ไม่งั้นค้างช่วงปีของไฟล์แรกที่เคยโหลด
+  // ถ้าผู้ใช้อัปโหลดไฟล์ใหม่ที่มีช่วงปีต่างออกไป) guard ไว้แค่การผูก event listener ซ้ำ
   const sel=document.getElementById('yr-select');
+  const prevYrVal=sel.value;
+  sel.innerHTML='<option value="all">All years</option>'
+    + years.map(yr=>`<option value="${yr}">${yr}</option>`).join('');
+  sel.value = years.includes(parseInt(prevYrVal)) ? prevYrVal : 'all';
   if(!sel.dataset.init){
-    years.forEach(yr=>{const o=document.createElement('option');o.value=yr;o.textContent=yr;sel.appendChild(o);});
     sel.dataset.init='1';
     sel.addEventListener('change',()=>renderYearlySelected(parseInt(sel.value)||null));
   }
@@ -2332,8 +2330,6 @@ function renderAccounts(){
 
   // ── Year-end balance calculation ──
   // Reconstruct year-end cash by working backwards from current balance
-  const bankColKeys=['SCB_Bank','K_Bank','Krungsri_Bank','Bangkok_Bank','Make_Kbank',
-    'GSB_Bank','SCB_Up2ME_CC','KBank_Line_Point','On_Wallet','Rabbit_Card'];
   const current=bankBals.reduce((s,b)=>s+b.balance,0);
 
   // Sum net flows per year — Transfer excluded (internal account moves, net=0 by definition)
@@ -2343,20 +2339,26 @@ function renderAccounts(){
     flowByYear[r.year]+=r.amount;
   });
 
-  // Build year-end balances working backwards
-  const years=[2023,2024,2025,2026];
+  // Years derived จากข้อมูลจริง + ปีปัจจุบัน (เดิม hardcode [2023,2024,2025,2026] ทำให้ไฟล์
+  // ที่มีช่วงปีต่างออกไป หรือใช้แอปหลังปี 2026 ได้ scorecard/กราฟผิด)
+  const curYear=new Date().getFullYear();
+  const years=[...new Set([...txRows.map(r=>r.year),curYear])].sort((a,b)=>a-b);
+  const anchorYear=years[years.length-1];
+
+  // Build year-end balances working backwards from the most recent (anchor) year
   const endBal={};
-  endBal[2026]=current; // current = mid-2026
-  endBal[2025]=current-(flowByYear[2026]||0);
-  endBal[2024]=endBal[2025]-(flowByYear[2025]||0);
-  endBal[2023]=endBal[2024]-(flowByYear[2024]||0);
+  endBal[anchorYear]=current;
+  for(let i=years.length-2;i>=0;i--){
+    const yr=years[i],nextYr=years[i+1];
+    endBal[yr]=endBal[nextYr]-(flowByYear[nextYr]||0);
+  }
 
   // Scorecard
-  const yearColors={'2023':'#4cc9f0','2024':'#7c6fec','2025':'#00d4a0','2026':'#ffd166'};
-  document.getElementById('acc-year-grid').innerHTML=years.map(yr=>{
+  const yearPalette=['#4cc9f0','#7c6fec','#00d4a0','#ffd166','#ff9500','#06d6a0','#118ab2','#f72585'];
+  document.getElementById('acc-year-grid').innerHTML=years.map((yr,i)=>{
     const bal=endBal[yr]||0;
-    const col=yearColors[yr]||'var(--text)';
-    const label=yr===2026?'2026 (current)':String(yr);
+    const col=yearPalette[i%yearPalette.length];
+    const label=yr===anchorYear?`${yr} (current)`:String(yr);
     return `<div class="sc" style="--g:${col}22;text-align:center">
       <div class="sc-lbl" style="justify-content:center">${label}</div>
       <div class="sc-val" style="color:${col};font-size:18px">${fmt(bal)}</div>
@@ -2384,7 +2386,8 @@ function renderAccounts(){
   }).join('');
 
   // Line chart
-  const chartLabels=years.map(y=>y===2026?'2026 (Jun)':String(y));
+  const curMonAbbr=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][new Date().getMonth()];
+  const chartLabels=years.map(y=>y===anchorYear?`${y} (${curMonAbbr})`:String(y));
   const balData=years.map(y=>endBal[y]||0);
   const ptColors=balData.map((v,i)=>i>0?(v>=balData[i-1]?'#00d4a0':'#ff4060'):'#00d4a0');
 
@@ -2999,8 +3002,12 @@ function renderFlow(){
     document.getElementById('flow-yr-row').style.display='flex';
     const allYrs=[...new Set(buyRows.map(r=>r.year))].sort();
     const yrRow=document.getElementById('flow-yr-row');
+    // สร้างปุ่มใหม่ทุกครั้ง (ไม่งั้นค้างช่วงปีของไฟล์แรกที่เคยโหลดถ้าอัปโหลดไฟล์ใหม่ที่ปีต่างออกไป)
+    // คงปีที่เลือกไว้ถ้ายังมีอยู่ในไฟล์ใหม่ ไม่งั้น fallback เป็น All
+    const prevActiveYr=yrRow.querySelector('.yr-btn.active')?.dataset.yr||'All';
+    const keepYr=prevActiveYr==='All'||allYrs.includes(parseInt(prevActiveYr))?prevActiveYr:'All';
+    yrRow.innerHTML=['All',...allYrs].map(y=>`<button class="yr-btn${String(y)===String(keepYr)?' active':''}" data-yr="${y}">${y}</button>`).join('');
     if(!yrRow.dataset.init){
-      yrRow.innerHTML=['All',...allYrs].map(y=>`<button class="yr-btn${y==='All'?' active':''}" data-yr="${y}">${y}</button>`).join('');
       yrRow.dataset.init='1';
       yrRow.addEventListener('click',e=>{const b=e.target.closest('.yr-btn');if(!b)return;
         yrRow.querySelectorAll('.yr-btn').forEach(x=>x.classList.remove('active'));b.classList.add('active');renderFlow();});
@@ -3385,7 +3392,12 @@ function gsProcessData(map){
       const bankNameRow = txRaw[1]||[];
       const bankBalRow  = txRaw[2]||[];
       const bankTypeRow = txRaw[0]||[];
-      for(let b=0;b<10;b++){
+      // นับจำนวนคอลัมน์บัญชีแบบไดนามิกจากแถวชื่อบัญชีจริง (เดิม hardcode 10 คอลัมน์
+      // ทำให้บัญชีที่ 11 ขึ้นไปหายไปเงียบๆ — ต่างจากเส้นทาง Excel ที่นับจาก header)
+      let bankColCount=0;
+      while(bankNameRow[bankStart+bankColCount]!=null && String(bankNameRow[bankStart+bankColCount]).trim()!=='') bankColCount++;
+      if(bankColCount===0) bankColCount=10; // fallback กันชีตรูปแบบเก่าที่ไม่มีชื่อบัญชีในแถวนี้
+      for(let b=0;b<bankColCount;b++){
         const col  = bankStart+b;
         const name = bankNameRow[col]!=null?String(bankNameRow[col]).trim():null;
         const bal  = parseFloat(bankBalRow[col]);
@@ -3400,7 +3412,7 @@ function gsProcessData(map){
         const rawDate=r[ti('Date')];
         const d=parseDate(rawDate);if(!d||isNaN(d.getTime()))continue;
         let amt=0;
-        for(let b=0;b<10;b++){const v=parseFloat(r[bankStart+b]||0);if(!isNaN(v))amt+=v;}
+        for(let b=0;b<bankColCount;b++){const v=parseFloat(r[bankStart+b]||0);if(!isNaN(v))amt+=v;}
         if(amt===0&&txType!=='Transfer')continue;
         rows.push({date:d,
           dateStr:`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`,
@@ -3528,12 +3540,8 @@ function gsParseAssetTracker(rows){
   waccMap={};for(const[t,v]of Object.entries(waccAcc2))waccMap[t]=v.qty>0?v.cost/v.qty:0;
   platMap={};trackerRows2.filter(r=>['Buy','Split'].includes(r.txType)).sort((a,b)=>a.date-b.date).forEach(r=>{platMap[r.ticker]=r.platform;});
   totalFee=trackerRows2.filter(r=>['Buy','Split'].includes(r.txType)).reduce((s,r)=>s+r.commTHB,0);
-  realized=trackerRows2.filter(r=>TX_SELL.includes(r.txType)).map(r=>({
-    date:r.date.toISOString().slice(0,10),ticker:r.ticker,group:r.group,
-    qty:r.qty,wacc:waccMap[r.ticker]||0,
-    proceeds:Math.abs(r.amtTHB),costBasis:r.qty*(waccMap[r.ticker]||0),
-    pnl:Math.abs(r.amtTHB)-r.qty*(waccMap[r.ticker]||0)
-  }));
+  // Realized P&L — running-WACC ต่อ ticker (กัน look-ahead bias) — ดู shared.js
+  realized=computeRunningWaccRealized(trackerRows2, IS_COST, TX_SELL);
   const cpMap=window._gsCurPriceMap||{};
   const processedTickers=new Set(trackerRows2.map(r=>r.ticker));
   const assetList=[];
@@ -4196,7 +4204,7 @@ function savePortfolioToStorage(){
       totalValue:Math.round(totalVal),totalCost:Math.round(totalCost),
       pnl:Math.round(totalPnl),pnlPct:totalCost>0?Math.round(totalPnl/totalCost*100):0,
       allocation:groupMap,topHoldings,
-      cashBalance:bankBals.reduce((s,b)=>s+b.balance,0),
+      cashBalance:splitBalances(bankBals).cash,
       lastUpdated:new Date().toISOString().slice(0,10)
     };
     localStorage.setItem('finOS_portfolio',JSON.stringify(summary));

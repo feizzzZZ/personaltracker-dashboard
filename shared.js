@@ -8,7 +8,7 @@
 //   • XIRR engine
 // กติกา: ไฟล์นี้ห้ามแตะ DOM ของหน้าใดหน้าหนึ่ง — pure data layer เท่านั้น
 // ═══════════════════════════════════════════════════════════════════
-const APP_BUILD = 'v40';
+const APP_BUILD = 'v41';
 console.log('[Finance OS shared] build', APP_BUILD);
 
 // ═══ LIVE_META — นิยามการ์ดข้อมูลตลาด ═══
@@ -497,18 +497,57 @@ function classifyAccount(b){
 
 // แยก bankBals เป็นสองฝั่ง + ยอดรวม
 // คืน: {cashAccounts, liabAccounts, cash, liabilities, net}
-//   cash        = เงินสดที่ใช้ได้จริง (บวกเท่านั้น)
+//   cash        = เงินสดที่ใช้ได้จริง (รวมยอดบวกของบัญชี credit ที่จ่ายเกินด้วย)
 //   liabilities = หนี้ (ค่าบวกเสมอ — เป็นจำนวนที่ค้างชำระ)
-//   net         = cash - liabilities (เท่ากับผลรวมเดิมทุกประการ ไม่มี regression)
+//   net         = cash - liabilities
 function splitBalances(bals){
   const cashAccounts = [], liabAccounts = [];
   (bals||[]).forEach(b=>{
     if(classifyAccount(b)==='liability') liabAccounts.push(b);
     else cashAccounts.push(b);
   });
-  const cash = cashAccounts.reduce((s,b)=>s+b.balance, 0);
+  // บัญชี credit ที่ถูกจัดเป็น liability แต่ยอดเป็นบวก (จ่ายเกิน) ต้องนับเป็นเงินสดด้วย
+  // ไม่งั้นยอดบวกนั้นหายไปทั้งจาก cash และ liabilities (liabilities ใช้ min(0,balance) จึงเป็น 0)
+  const cash = cashAccounts.reduce((s,b)=>s+b.balance, 0)
+             + liabAccounts.reduce((s,b)=>s+Math.max(0,b.balance), 0);
   const liabilities = liabAccounts.reduce((s,b)=>s+Math.abs(Math.min(0,b.balance)), 0);
   return { cashAccounts, liabAccounts, cash, liabilities, net: cash-liabilities };
+}
+
+// ═══ Realized P&L — running-WACC ═══
+// waccMap (เฉลี่ยจากยอดซื้อทั้งหมด) ใช้ประเมิน cost basis ของ "หุ้นที่ถืออยู่ตอนนี้" ได้ถูกต้อง
+// (เพราะ WACC เฉลี่ยไม่เปลี่ยนตอนขาย) แต่ใช้ค่าเดียวนี้ย้อนไปคำนวณ P&L ของการขายในอดีต "ผิด"
+// เพราะการซื้อที่เกิดขึ้นทีหลังการขายไม่ควรมีผลย้อนหลังต่อ cost basis ของการขายนั้น (look-ahead bias)
+// ฟังก์ชันนี้ไล่ตามลำดับวันที่ต่อ ticker แล้วใช้ WACC ณ เวลาที่ขายจริงแทน
+function computeRunningWaccRealized(trackerRows, isCostTx, sellTxTypes){
+  const byTicker = {};
+  (trackerRows||[]).forEach(r=>{
+    (byTicker[r.ticker] ||= []).push(r);
+  });
+  const realized = [];
+  Object.values(byTicker).forEach(rowsForTicker=>{
+    const rows = rowsForTicker.slice().sort((a,b)=>a.date-b.date);
+    let runQty = 0, runCost = 0;
+    rows.forEach(r=>{
+      if(isCostTx.has(r.txType) && r.qty>0){
+        runCost += r.trueCost;
+        runQty += r.qty;
+      } else if(sellTxTypes.includes(r.txType)){
+        const wacc = runQty>0 ? runCost/runQty : 0;
+        const costBasis = r.qty*wacc;
+        realized.push({
+          date: r.date.toISOString().slice(0,10), ticker:r.ticker, group:r.group,
+          qty:r.qty, wacc,
+          proceeds: Math.abs(r.amtTHB),
+          costBasis,
+          pnl: Math.abs(r.amtTHB)-costBasis
+        });
+        runQty = Math.max(0, runQty - r.qty);
+        runCost = Math.max(0, runCost - costBasis);
+      }
+    });
+  });
+  return realized;
 }
 
 // ═══ DEBT CONFIG — ดอกเบี้ย/ขั้นต่ำต่อบัญชี (ผู้ใช้กรอกเอง เก็บในเครื่อง) ═══
