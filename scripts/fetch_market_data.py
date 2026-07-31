@@ -324,8 +324,8 @@ for sym, name in SECTORS:
     print(f"  ✓ {sym:<5} {name:<15} 3M {c3m}%  RS {entry.get('rs3m')}")
     time.sleep(0.3)   # กัน rate limit ของ Yahoo
 
-if sectors:
-    history["sectors"] = sectors
+# หมายเหตุ: ไม่ประกอบ history["sectors"] ที่นี่ — merge แบบราย-symbol ด้านล่าง
+# เพื่อไม่ให้ symbol ที่ fetch fail รอบนี้หายไปทั้งก้อนตอน merged_hist.update(history)
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -343,6 +343,12 @@ merged_data = dict(prev.get("data", {}))
 merged_data.update(data)
 merged_hist = dict(prev.get("history", {}))
 merged_hist.update(history)
+# sectors merge แบบราย-symbol (ไม่ใช่แทนที่ทั้ง dict) — เดิมถ้า symbol ไหน fetch fail
+# รอบนี้ history["sectors"] จะถูกแทนที่ทั้งก้อนแล้วข้อมูล symbol นั้นหายถาวร
+merged_sectors = dict(merged_hist.get("sectors", {}))
+merged_sectors.update(sectors)
+if merged_sectors:
+    merged_hist["sectors"] = merged_sectors
 
 payload = {
     "generated_at": FETCHED_AT,
@@ -364,6 +370,8 @@ print("────────────────────────�
 print(f"เขียน {OUT}: {len(data)} keys รอบนี้ · {len(merged_data)} keys รวม · "
       f"{len(sectors)} sectors · {len(warnings)} warnings")
 
-# ถ้าดึงได้น้อยกว่าครึ่งของที่ควรได้ = มีอะไรผิดปกติจริง ให้ workflow ฟ้อง
+# ถ้าดึงได้น้อยกว่าครึ่งของที่ควรได้ = มีอะไรผิดปกติจริง ให้ job fail จริง (ไฟล์เขียนไปแล้ว
+# ด้วยข้อมูล merge เก็บค่าเดิม แต่ workflow ต้องไม่รายงานว่าสำเร็จ)
 if len(data) < 15:
-    print(f"::warning::ดึงได้แค่ {len(data)} keys (ปกติ ~30) — ตรวจสอบ warnings ด้านบน")
+    print(f"::error::ดึงได้แค่ {len(data)} keys (ปกติ ~30) — ตรวจสอบ warnings ด้านบน")
+    sys.exit(1)
