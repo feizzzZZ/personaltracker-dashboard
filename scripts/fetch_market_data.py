@@ -53,7 +53,10 @@ def http_get(url: str, tries: int = 3, timeout: int = 30) -> bytes | None:
             with urllib.request.urlopen(req, timeout=timeout, context=_ctx) as r:
                 return r.read()
         except urllib.error.HTTPError as e:
-            if e.code in (429, 502, 503) and attempt < tries - 1:
+            # 401/403 จาก Yahoo มักเป็น anti-bot/rate-limit ชั่วคราว ไม่ใช่ auth error จริง
+            # (endpoint พวกนี้เป็น public ไม่ต้องใช้ credential) → ต้อง retry ด้วย
+            # ไม่งั้นรอบเดียวที่โดนจะทำหลาย key fail พร้อมกันแบบกู้ไม่ได้
+            if e.code in (401, 403, 429, 502, 503) and attempt < tries - 1:
                 time.sleep(2 ** attempt * 2)
                 continue
             warn(f"HTTP {e.code} · {url[:80]}")
@@ -311,7 +314,9 @@ for sym, name in SECTORS:
     if not v:
         continue
     c1m, c3m = pct_change(v, 21), pct_change(v, 63)
-    entry = {"name": name, "chg1m": c1m, "chg3m": c3m, "rsi": rsi14(v)}
+    # price ต้องมีเสมอ — ไฟล์ที่ commit อยู่มี field นี้ ถ้าไม่ใส่ shape จะไม่ตรงกัน
+    entry = {"name": name, "price": round(v[-1], 2),
+             "chg1m": c1m, "chg3m": c3m, "rsi": rsi14(v)}
     if len(v) >= 200:
         ma = sum(v[-200:]) / 200
         entry["vsMA200"] = round((v[-1] / ma - 1) * 100, 2)
