@@ -1,7 +1,7 @@
 // Finance OS — Service Worker v2
 // Cache strategy: Cache-first for shell, Network-first for CDN
 
-const CACHE_NAME = 'finance-os-v41';  // bump version so old cache is cleared on deploy
+const CACHE_NAME = 'finance-os-v42';  // bump version so old cache is cleared on deploy
 const BASE = '/personaltracker-dashboard';
 
 // App shell — files to pre-cache on install
@@ -85,14 +85,33 @@ self.addEventListener('fetch', event => {
   const isHTML = event.request.mode === 'navigate' || cleanUrl.endsWith('.html')
               || cleanUrl.endsWith('.json');   // market-data.json เปลี่ยนทุกวัน — ห้ามติด cache
   if (isHTML && (url.includes(BASE) || url.includes(self.location.origin))) {
+    const isJSON = cleanUrl.endsWith('.json');
     event.respondWith(
       fetch(event.request).then(response => {
         if (response.ok) {
           const clone = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+          // v41 #21: market-data.json ถูกเรียกด้วย ?t=<วันที่> กัน cache
+          // ถ้าเก็บด้วย Request เต็ม (รวม query) จะได้ entry ใหม่ทุกวันและไม่มีวันถูกลบ
+          // → เก็บด้วย URL ที่ตัด query ทิ้ง ให้ทับ entry เดิมเสมอ
+          caches.open(CACHE_NAME).then(cache => cache.put(isJSON ? cleanUrl : event.request, clone));
         }
         return response;
-      }).catch(() => caches.match(event.request).then(c => c || caches.match(BASE + '/index.html')))
+      }).catch(() =>
+        caches.match(isJSON ? cleanUrl : event.request).then(c => {
+          if (c) return c;
+          // v41 #20: ห้ามคืน index.html ให้ request ที่คาดหวัง JSON —
+          // ผู้เรียกทำ r.json() แล้วจะได้ SyntaxError "Unexpected token <" ซึ่งหาสาเหตุยาก
+          // คืน 504 ให้ตรงไปตรงมาว่าออฟไลน์และไม่มีข้อมูลใน cache
+          if (isJSON) {
+            return new Response(
+              JSON.stringify({ error: 'offline', message: 'ไม่มีข้อมูลใน cache และเชื่อมต่อไม่ได้' }),
+              { status: 504, statusText: 'Gateway Timeout',
+                headers: { 'Content-Type': 'application/json' } }
+            );
+          }
+          return caches.match(BASE + '/index.html');
+        })
+      )
     );
     return;
   }

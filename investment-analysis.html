@@ -637,7 +637,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
     <div><div class="pg-title">Investment Playbook</div><div class="pg-sub">กลยุทธ์การลงทุนตามสถานการณ์ปัจจุบัน</div></div>
   </div>
 
-  <div class="sl">What to BUY / HOLD / AVOID — มิ.ย. 2026</div>
+  <div class="sl">What to BUY / HOLD / AVOID<span id="pb-regime-tag" style="color:var(--muted2);font-weight:400"></span></div>
   <div class="strat-grid" id="strategy-cards"></div>
 
   <div class="sl sl-mt purple">DCA Action Plan</div>
@@ -653,7 +653,17 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
   </div>
 
   <div class="sl sl-mt orange">Scenario Analysis</div>
-  <div class="cr3" id="scenario-grid"></div>
+  <div id="scenario-grid" style="background:var(--bg3);border:1px solid var(--border2);border-radius:12px;
+    padding:18px 20px;display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+    <div style="flex:1;min-width:220px;font-size:12px;line-height:1.85;color:var(--muted2)">
+      จำลองผลกระทบต่อพอร์ตจริงของคุณเมื่อตลาด/ดอกเบี้ย/ค่าเงินเปลี่ยน
+      <span style="color:var(--muted)">— คำนวณสดจาก holdings ปัจจุบัน</span>
+    </div>
+    <button onclick="switchPage('scenario')" style="background:var(--bg4);color:var(--text);
+      border:1px solid var(--border2);border-radius:9px;padding:9px 16px;font-family:inherit;
+      font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">
+      🔮 เปิด Scenario Planner →</button>
+  </div>
 </div>
 
 <!-- ══ SECTORS ══ -->
@@ -865,7 +875,7 @@ function injectFreshnessBanners(){
   ['page-signals','page-calendar'].forEach(pid=>{
     const pg = document.getElementById(pid);
     if(!pg || pg.querySelector('.fresh-banner')) return;
-    const head = pg.querySelector('.pg-head') || pg.firstElementChild;
+    const head = pg.querySelector('.pg-hdr') || pg.firstElementChild;   // #18 คลาสจริงคือ .pg-hdr
     if(head) head.insertAdjacentHTML('afterend', html);
   });
 }
@@ -999,7 +1009,10 @@ function renderLiveMarket(){
   if(!host){
     host=document.createElement('div'); host.id='live-market-section';
     const banner=pg.querySelector('.fresh-banner');
-    (banner||pg.querySelector('.pg-head')).insertAdjacentElement('afterend', host);
+    // #18 — คลาสจริงคือ .pg-hdr และต้องมี fallback ไม่งั้น null.insertAdjacentElement() throw
+    const anchor = banner || pg.querySelector('.pg-hdr') || pg.firstElementChild;
+    if(anchor) anchor.insertAdjacentElement('afterend', host);
+    else pg.appendChild(host);
   }
   const md=loadMarketData();
   if(!md || !md.data || !Object.keys(md.data).length){

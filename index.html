@@ -1897,7 +1897,11 @@ function renderOverview(){
   const netWorth=cashAssets-liabTotal+portVal+insCV;
   document.getElementById('ov-networth').textContent=fmt(netWorth);
   document.getElementById('ov-cash').textContent=fmt(cashAssets);
-  document.getElementById('ov-cash-sub').textContent=`${_sb.cashAccounts.filter(b=>b.balance!==0).length} accounts`;
+  // #26 — cash รวมยอดบวกของบัญชี credit ที่จ่ายเกินไว้ด้วย ตัวนับจึงต้องนับด้วยเหมือนกัน
+  // ไม่งั้นจำนวนบัญชีไม่สอดคล้องกับยอดเงินที่แสดงอยู่ข้างบน
+  const _nCash=_sb.cashAccounts.filter(b=>b.balance!==0).length
+             + _sb.liabAccounts.filter(b=>b.balance>0).length;
+  document.getElementById('ov-cash-sub').textContent=`${_nCash} accounts`;
   const _lEl=document.getElementById('ov-liab');
   if(_lEl){
     _lEl.textContent=liabTotal>0?'−'+fmt(liabTotal):fmt(0);
@@ -2538,7 +2542,15 @@ function exportSettings(){
   a.download = `finance-os-backup-${new Date().toISOString().slice(0,10)}.json`;
   a.click(); URL.revokeObjectURL(a.href);
   const n = Object.keys(data).length;
-  const logN = data.finOS_valueLog ? JSON.parse(data.finOS_valueLog).length : 0;
+  let logN = 0;
+  if(data.finOS_valueLog){
+    try{
+      const parsed = JSON.parse(data.finOS_valueLog);
+      logN = Array.isArray(parsed) ? parsed.length : 0;
+    }catch(e){
+      console.warn('[backup] finOS_valueLog เสียหาย อ่านจำนวนวันไม่ได้:', e.message);
+    }
+  }
   alert(`💾 สำรองแล้ว ${n} รายการ${logN?` (รวมประวัติ TWR ${logN} วัน)`:''}\n⚠ ไฟล์นี้มี API key — เก็บในที่ปลอดภัย อย่าแชร์`);
 }
 function importSettings(input){
@@ -2654,7 +2666,7 @@ function renderPerformance(totalVal){
   const bEl=document.getElementById('perf-bench'), bsEl=document.getElementById('perf-bench-sub');
   if(bEl && bsEl){
     const bm = benchmarkXIRR(flows);
-    if(bm && r!==null){
+    if(bm && !bm.error && r!==null){
       const diff=(r-bm.rate)*100;
       const verdict = diff>=0
         ? `<strong style="color:var(--gain)">🏆 ชนะตลาด +${diff.toFixed(2)}pp</strong>`
@@ -2664,8 +2676,29 @@ function renderPerformance(totalVal){
       bsEl.textContent = `จำลอง ${flows.length} cashflows เข้า ^GSPC ราคารายสัปดาห์ × USD/THB · `+
         `มูลค่าปลายทางจำลอง ${fmt(bm.terminal)} vs จริง ${fmt(totalVal)} · ราคาถึง ${bm.asOf}`;
     } else {
-      bEl.textContent='⏳ รอข้อมูลราคาย้อนหลังจาก pipeline';
-      bsEl.textContent='pipeline รอบถัดไป (06:30 พรุ่งเช้า) จะส่ง S&P history มาให้ — หรือกด Run workflow เองที่ GitHub Actions ได้เลย';
+      // #24 — บอกเหตุผลจริงที่เทียบไม่ได้ แทนข้อความเดียวที่ใช้ครอบทุกกรณี
+      const e = bm && bm.error;
+      if(e==='out_of_range'){
+        bEl.textContent='⚠️ เทียบไม่ได้ — ธุรกรรมเก่ากว่าช่วงข้อมูลราคา';
+        bEl.style.color='var(--debt)';
+        bsEl.textContent=`ธุรกรรม ${bm.nOutside}/${bm.nTotal} รายการเกิดก่อน ${bm.coverageFrom} `+
+          `(เก่าสุด ${bm.earliestFlow}) ซึ่งอยู่นอกช่วงราคาย้อนหลัง 5 ปีที่ pipeline ส่งมา — `+
+          `จำลองต่อจะได้ตัวเลขที่ผิด จึงไม่แสดง`;
+      } else if(e==='gap'){
+        bEl.textContent='⚠️ เทียบไม่ได้ — ข้อมูลราคาขาดช่วง';
+        bEl.style.color='var(--debt)';
+        bsEl.textContent=`ไม่มีราคา S&P 500 หรือ USD/THB ณ ${bm.at} — รอ pipeline เติมข้อมูลรอบถัดไป`;
+      } else if(e==='xirr_no_solution'){
+        bEl.textContent='⚠️ คำนวณ XIRR ไม่ลู่เข้า';
+        bEl.style.color='var(--debt)';
+        bsEl.textContent='รูปแบบ cashflow ไม่มีคำตอบเดียวที่ชัดเจน (มักเกิดเมื่อเงินเข้า-ออกสลับกันถี่มาก)';
+      } else if(r===null){
+        bEl.textContent='⏳ ยังคำนวณ XIRR พอร์ตไม่ได้';
+        bsEl.textContent='ต้องมีธุรกรรมซื้อ/ขายอย่างน้อย 2 รายการต่างวันกัน จึงจะเทียบกับตลาดได้';
+      } else {
+        bEl.textContent='⏳ รอข้อมูลราคาย้อนหลังจาก pipeline';
+        bsEl.textContent='pipeline รอบถัดไป (06:30 พรุ่งเช้า) จะส่ง S&P history มาให้ — หรือกด Run workflow เองที่ GitHub Actions ได้เลย';
+      }
     }
   }
 
@@ -3328,7 +3361,10 @@ async function gsSync(){
     const OPT = ['Asset_Dashboard','Insurance_Policies','Insurance_Coverage','Market_Data','Value_Log'];
     for(const s of OPT){
       try{
-        const ro=await fetch(BASE+'&ranges='+encodeURIComponent(s+'!A1:Z500'),{headers:hdrs});
+        // Value_Log เป็น time series วันละแถว — 500 แถว = ~1.4 ปีเท่านั้น
+        // ชีตอื่นเป็นตารางอ้างอิงขนาดคงที่ 500 พอ
+        const rng = (s==='Value_Log') ? '!A1:Z2000' : '!A1:Z500';
+        const ro=await fetch(BASE+'&ranges='+encodeURIComponent(s+rng),{headers:hdrs});
         if(ro.ok){const do_=(await ro.json());if(do_.valueRanges?.[0]?.values)map[s]=do_.valueRanges[0].values;
           console.log('[GS] Optional loaded:',s,map[s].length,'rows');}
         else console.log('[GS] Optional skipped:',s,ro.status);
@@ -3392,13 +3428,21 @@ function gsProcessData(map){
       const bankNameRow = txRaw[1]||[];
       const bankBalRow  = txRaw[2]||[];
       const bankTypeRow = txRaw[0]||[];
-      // นับจำนวนคอลัมน์บัญชีแบบไดนามิกจากแถวชื่อบัญชีจริง (เดิม hardcode 10 คอลัมน์
-      // ทำให้บัญชีที่ 11 ขึ้นไปหายไปเงียบๆ — ต่างจากเส้นทาง Excel ที่นับจาก header)
-      let bankColCount=0;
-      while(bankNameRow[bankStart+bankColCount]!=null && String(bankNameRow[bankStart+bankColCount]).trim()!=='') bankColCount++;
-      if(bankColCount===0) bankColCount=10; // fallback กันชีตรูปแบบเก่าที่ไม่มีชื่อบัญชีในแถวนี้
-      for(let b=0;b<bankColCount;b++){
-        const col  = bankStart+b;
+      // #25 — เก็บ "รายการ index ของคอลัมน์บัญชี" จาก header row ให้เหมือนเส้นทาง Excel เป๊ะ
+      // (Excel: for i=Details+1..txH.length ถ้า txH[i] มีค่าก็ push)
+      // เวอร์ชันก่อนหน้าใช้ while แล้วหยุดที่ช่องว่างแรก → ชีตที่เว้นคอลัมน์คั่นกลาง
+      // จะทำบัญชีทั้งหมดหลังช่องว่างหายไปเงียบๆ ต้องไล่จนสุดแถวแล้วข้ามช่องว่างแทน
+      const bankCols=[];
+      const scanEnd = Math.max(hArr.length, bankNameRow.length, bankBalRow.length);
+      for(let i=bankStart;i<scanEnd;i++){
+        const nm = bankNameRow[i]!=null?String(bankNameRow[i]).trim():'';
+        const hd = hArr[i]!=null?String(hArr[i]).trim():'';
+        if(nm!=='' || hd!=='') bankCols.push(i);   // ข้ามเฉพาะคอลัมน์ที่ว่างทั้งสองแถว
+      }
+      // fallback กันชีตรูปแบบเก่าที่ไม่มีทั้งชื่อบัญชีและ header ในช่วงนี้
+      if(!bankCols.length) for(let b=0;b<10;b++) bankCols.push(bankStart+b);
+      console.log('[GS] bank columns:', bankCols.length, 'cols @', bankCols.join(','));
+      for(const col of bankCols){
         const name = bankNameRow[col]!=null?String(bankNameRow[col]).trim():null;
         const bal  = parseFloat(bankBalRow[col]);
         const accT = bankTypeRow[col]!=null?String(bankTypeRow[col]).trim():'Account #';
@@ -3412,7 +3456,7 @@ function gsProcessData(map){
         const rawDate=r[ti('Date')];
         const d=parseDate(rawDate);if(!d||isNaN(d.getTime()))continue;
         let amt=0;
-        for(let b=0;b<bankColCount;b++){const v=parseFloat(r[bankStart+b]||0);if(!isNaN(v))amt+=v;}
+        for(const ci of bankCols){const v=parseFloat(r[ci]||0);if(!isNaN(v))amt+=v;}
         if(amt===0&&txType!=='Transfer')continue;
         rows.push({date:d,
           dateStr:`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`,
@@ -4055,14 +4099,23 @@ function renderBudget(){
 
 function bgtCardHTML(cat, amount, limit, pct, st, barW, key, spentLabel, limitPrefix, barCol){
   const col = barCol||bgtColor(pct);
-  const esc = CSS.escape(cat);
-  const catJs = cat.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-  return `<div class="bgt-card ${st.cls}" id="bgt-card-${esc}">
+  // #12 — ชื่อหมวดมาจากชีต ควบคุมเนื้อหาไม่ได้ ต้อง escape ให้ครบทุกบริบทที่มันไปโผล่:
+  //  1) id attribute — CSS.escape() ทำเพื่อ CSS selector เท่านั้น มันคืน \" (มี " ดิบอยู่)
+  //     ซึ่งพอฝังใน id="..." จะปิด attribute กลางคัน → ต้อง escAttr ทับอีกชั้น
+  //     หมายเหตุ: DOM id จริงหลัง parser ถอด entity = CSS.escape(cat) เท่าเดิม
+  //     ดังนั้น getElementById ใน bgtToggleEdit/bgtSaveOne ยังใช้ CSS.escape(cat) ตรงๆ ได้
+  //  2) inline onclick — escape JS string ก่อน (\ และ ') แล้ว escAttr ทับ (" < >)
+  //  3) text node — escape HTML ล้วน
+  const escId = escAttr(CSS.escape(cat));
+  const catJs = escAttr(cat.replace(/\\/g,'\\\\').replace(/'/g,"\\'"));
+  const keyJs = escAttr(String(key).replace(/\\/g,'\\\\').replace(/'/g,"\\'"));
+  const catTxt = escHtml(cat);
+  return `<div class="bgt-card ${st.cls}" id="bgt-card-${escId}">
     <div class="bgt-card-top">
-      <div class="bgt-cat">${cat}</div>
+      <div class="bgt-cat">${catTxt}</div>
       <div style="display:flex;gap:6px;align-items:center">
         <span class="bgt-badge ${st.cls}">${st.label}</span>
-        <button class="bgt-edit-btn" onclick="bgtToggleEdit('${key}','${catJs}',${limit})">Edit</button>
+        <button class="bgt-edit-btn" onclick="bgtToggleEdit('${keyJs}','${catJs}',${limit})">Edit</button>
       </div>
     </div>
     <div class="bgt-amounts">
@@ -4070,10 +4123,10 @@ function bgtCardHTML(cat, amount, limit, pct, st, barW, key, spentLabel, limitPr
       <span class="bgt-limit">${limit>0?limitPrefix+fmt(limit):'ยังไม่ตั้ง'}</span>
     </div>
     <div class="bgt-bar2"><div class="bgt-bar2-fill" style="width:${barW}%;background:${col}"></div></div>
-    <div class="bgt-edit-row" id="bgt-edit-${esc}" style="display:none">
-      <input class="bgt-input" type="number" placeholder="${limitPrefix.trim()} (฿)"
-        value="${limit||''}" id="bgt-inp-${esc}">
-      <button class="bgt-save-btn" onclick="bgtSaveOne('${key}','${catJs}')">บันทึก</button>
+    <div class="bgt-edit-row" id="bgt-edit-${escId}" style="display:none">
+      <input class="bgt-input" type="number" placeholder="${escAttr(limitPrefix.trim())} (฿)"
+        value="${limit||''}" id="bgt-inp-${escId}">
+      <button class="bgt-save-btn" onclick="bgtSaveOne('${keyJs}','${catJs}')">บันทึก</button>
     </div>
   </div>`;
 }
@@ -4230,6 +4283,12 @@ function dbtSaveCfg(){
 function escAttr(s){
   return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;')
                   .replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+// escape สำหรับค่าที่ไปอยู่ใน text node (innerHTML) — กัน markup ที่ผู้ใช้/ชีตใส่มา
+// ใช้กับชื่อหมวดงบ ชื่อเป้าหมาย และ emoji icon ที่ผู้ใช้พิมพ์เอง
+function escHtml(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
+                  .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 function dbtSetApr(name, val){
   const v=parseFloat(val);
@@ -4645,7 +4704,8 @@ function renderGoals(){
 function renderAmountCard(g,idx,isDone=false){
   const p=computeGoalProgress(g);
   const col=GOAL_COLORS[idx%GOAL_COLORS.length];
-  const icon=g.icon||'🎯';
+  const icon=escHtml(g.icon||'🎯');   // #13 — icon ผู้ใช้พิมพ์เอง
+  const gName=escHtml(g.name||'');    // #13 — ชื่อเป้าหมายผู้ใช้พิมพ์เอง
   const deadlineTxt=g.deadline
     ?`<span style="margin-left:6px">· deadline ${new Date(g.deadline).toLocaleDateString('th-TH',{month:'short',year:'numeric'})}</span>`:'';
   const etaPill=p.etaText?`<span class="gc-pill ${p.etaClass}"><span aria-hidden="true" style="font-size:13px;">⏱</span></i>${p.etaText}</span>`:'';
@@ -4655,7 +4715,7 @@ function renderAmountCard(g,idx,isDone=false){
     <div class="gc-top">
       <div class="gc-icon" style="background:${col.bg}">${icon}</div>
       <div style="flex:1;min-width:0">
-        <div class="gc-name">${g.name}</div>
+        <div class="gc-name">${gName}</div>
         <div class="gc-meta" style="display:flex;align-items:center;gap:6px">Amount target${deadlineTxt}${doneBadge}</div>
       </div>
     </div>
@@ -4686,22 +4746,23 @@ function renderAmountCard(g,idx,isDone=false){
 function renderRateCard(g,idx,isDone=false){
   const p=computeGoalProgress(g);
   const col=GOAL_COLORS[idx%GOAL_COLORS.length];
-  const icon=g.icon||'📈';
+  const icon=escHtml(g.icon||'📈');   // #13 — icon ผู้ใช้พิมพ์เอง
+  const gName=escHtml(g.name||'');    // #13 — ชื่อเป้าหมายผู้ใช้พิมพ์เอง
   const maxR=Math.max(...(p.rates||[1]),p.target,1);
   const bars=(p.rates||[]).map((r,i)=>{
     const h=Math.max(4,Math.round(r/maxR*40));
     const isHit=r>=p.target;
     const c=isHit?col.fill:'var(--border2)';
-    return `<div class="gc-rate-bar" style="height:${h}px;background:${c}" title="${p.labels[i]}: ${r}%"></div>`;
+    return `<div class="gc-rate-bar" style="height:${h}px;background:${c}" title="${escAttr(p.labels[i])}: ${r}%"></div>`;
   }).join('');
-  const lbls=(p.labels||[]).map(l=>`<span>${l}</span>`).join('');
+  const lbls=(p.labels||[]).map(l=>`<span>${escHtml(l)}</span>`).join('');
   const doneStyle=isDone?'border-color:rgba(0,212,160,.3);opacity:.8;':'';
   const doneBadge=isDone?`<span style="font-size:10px;padding:2px 8px;border-radius:20px;background:rgba(0,212,160,.12);color:var(--gain);border:1px solid rgba(0,212,160,.3)"><span aria-hidden="true" style="font-size:13px;font-size:10px">✓</span></i> Completed</span>`:'';
   return `<div class="goal-card" style="${doneStyle}">
     <div class="gc-top">
       <div class="gc-icon" style="background:${col.bg}">${icon}</div>
       <div style="flex:1;min-width:0">
-        <div class="gc-name">${g.name}</div>
+        <div class="gc-name">${gName}</div>
         <div class="gc-meta" style="display:flex;align-items:center;gap:6px">Saving rate · เป้า ${p.target}%${doneBadge}</div>
       </div>
     </div>

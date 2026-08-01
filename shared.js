@@ -8,7 +8,7 @@
 //   • XIRR engine
 // กติกา: ไฟล์นี้ห้ามแตะ DOM ของหน้าใดหน้าหนึ่ง — pure data layer เท่านั้น
 // ═══════════════════════════════════════════════════════════════════
-const APP_BUILD = 'v41';
+const APP_BUILD = 'v42';
 console.log('[Finance OS shared] build', APP_BUILD);
 
 // ═══ LIVE_META — นิยามการ์ดข้อมูลตลาด ═══
@@ -88,13 +88,25 @@ function mergeActionsIntoMarket(md){
   });
   return md;
 }
+let _mdCacheKey = null, _mdCacheVal = null;
 function loadMarketData(){
   try{
-    let md = JSON.parse(localStorage.getItem('finOS_market')||'null');
+    // #28 — cache key = สตริงดิบของทุกแหล่งที่ merge เข้ามา
+    // ถ้าไม่มีอะไรเปลี่ยน ใช้ผลเดิม (เลี่ยง JSON.parse 3 ก้อนต่อการเรียกหนึ่งครั้ง)
+    const rawM = localStorage.getItem('finOS_market') || '';
+    const rawA = localStorage.getItem('finOS_actions') || '';
+    const rawE = localStorage.getItem('finOS_ext') || '';
+    const key  = rawM.length+':'+rawA.length+':'+rawE.length+'|'+rawM+'\u0000'+rawA+'\u0000'+rawE;
+    if(key === _mdCacheKey) return _mdCacheVal;
+    let md = rawM ? JSON.parse(rawM) : null;
     md = mergeActionsIntoMarket(md);   // Method 3
-    return mergeExtIntoMarket(md);     // Method 2 (crypto สดสุด ชนะเสมอ)
-  }catch(e){ return null; }
+    md = mergeExtIntoMarket(md);       // Method 2 (crypto สดสุด ชนะเสมอ)
+    _mdCacheKey = key; _mdCacheVal = md;
+    return md;
+  }catch(e){ _mdCacheKey = null; _mdCacheVal = null; return null; }
 }
+// เรียกเมื่อเขียนทับ localStorage โดยตรง (เช่น restore backup) เพื่อบังคับให้อ่านใหม่
+function invalidateMarketCache(){ _mdCacheKey = null; _mdCacheVal = null; }
 
 // ═══ Method 2 — external API layer (alternative.me + CoinGecko) ═══
 const EXT_TTL = 10*60e3;
@@ -142,7 +154,9 @@ const ALLOC_META = {
   'Provident Fund': {label:'Provident Fund',color:'#ffa94d',target:5},
   'Other':          {label:'Other',        color:'#5a5a8a', target:2},
 };
-const CASH_TARGET = 22; // default เท่านั้น — ค่าจริงมาจาก getTargets()
+const CASH_TARGET = 25; // default เท่านั้น — ค่าจริงมาจาก getTargets()
+// #16 — กองอื่นรวมกัน 75% (25+15+13+10+5+5+2) ดังนั้น cash ต้อง 25 ให้ครบ 100
+//       เดิมตั้ง 22 ทำให้ default รวมได้แค่ 97%
 
 // ═══ getTargets — เป้า allocation ของผู้ใช้ ═══
 function getTargets(){
@@ -236,22 +250,38 @@ function mergeValueLogFromSheet(rows){
 // USD/THB ณ วันเดียวกัน — FX คือส่วนหนึ่งของผลตอบแทนจริงของนักลงทุนไทย)
 function priceAt(series, tMs){
   // series = [[iso, price]] เรียงเก่า→ใหม่ · คืนราคาล่าสุดที่ไม่เกินวันนั้น
+  // #24 — ถ้า tMs เก่ากว่าจุดแรกของ series ต้องคืน null ไม่ใช่ราคาจุดแรก
+  // (history ครอบคลุม 5 ปี ธุรกรรมเก่ากว่านั้นเคยได้ราคาผิดยุคไปเงียบๆ
+  //  ทำให้ units ที่จำลองผิด → benchmark XIRR เพี้ยนโดยไม่มีสัญญาณเตือน)
   if(!series || !series.length) return null;
-  let best = series[0][1];
+  if(Date.parse(series[0][0]) > tMs) return null;   // ก่อนช่วงข้อมูล → ไม่รู้ราคา
+  let best = null;
   for(let i=0;i<series.length;i++){
     if(Date.parse(series[i][0]) <= tMs) best = series[i][1];
     else break;
   }
   return best;
 }
+// คืน {rate, terminal, asOf} เมื่อสำเร็จ · คืน {error, ...} เมื่อทำไม่ได้ (UI จะได้บอกเหตุผลจริง)
 function benchmarkXIRR(flows){
   const act = loadActions();
   const h = act && act.history;
-  if(!h || !h.SP500 || h.SP500.length<10 || !h.USDTHB || !h.USDTHB.length) return null;
+  if(!h || !h.SP500 || h.SP500.length<10 || !h.USDTHB || !h.USDTHB.length)
+    return { error:'no_history' };
+  // #24 — ธุรกรรมที่เก่ากว่าจุดเริ่มของ history จำลองไม่ได้ ต้องบอกให้ชัด
+  // ไม่ใช่เงียบแล้วใช้ราคาผิดยุค
+  const covFrom = h.SP500[0][0], fxFrom = h.USDTHB[0][0];
+  const startT = Math.max(Date.parse(covFrom), Date.parse(fxFrom));
+  const tooOld = flows.filter(f => f.t < startT);
+  if(tooOld.length){
+    const earliest = new Date(Math.min(...tooOld.map(f=>f.t))).toISOString().slice(0,10);
+    return { error:'out_of_range', coverageFrom: covFrom > fxFrom ? covFrom : fxFrom,
+             earliestFlow: earliest, nOutside: tooOld.length, nTotal: flows.length };
+  }
   let units = 0;
   for(const f of flows){
     const px = priceAt(h.SP500, f.t), fx = priceAt(h.USDTHB, f.t);
-    if(!px || !fx) return null;
+    if(!px || !fx) return { error:'gap', at:new Date(f.t).toISOString().slice(0,10) };
     units += (-f.v) / (px * fx);   // ซื้อ (cf<0) → units เพิ่ม · ถอน/ปันผล (cf>0) → units ลด
   }
   // terminal = ราคา ณ วันนี้ (ไม่ใช่แถวสุดท้ายของ series — กันกรณีข้อมูลลากเกินวันนี้)
@@ -262,7 +292,7 @@ function benchmarkXIRR(flows){
   const r = xirrJS([...flows, {t: nowT, v: terminal}]);
   let asOf = h.SP500[0][0];
   for(const [d] of h.SP500){ if(Date.parse(d) <= nowT) asOf = d; else break; }
-  return r===null ? null : { rate:r, terminal, asOf };
+  return r===null ? { error:'xirr_no_solution' } : { rate:r, terminal, asOf };
 }
 
 // ═══ WEALTH GOAL CONFIG — แหล่งเดียวของเป้าหมาย (ทุกหน้าต้องอ่านจากที่นี่) ═══
@@ -631,8 +661,10 @@ function buildDebtPlan(liabAccounts, cfg){
     payoffMonth, timeline,
     order: order.map(d=>({name:d.name, apr:d.apr,
                           bal: totalStartOf(liabAccounts, d.name)})),
-    // เทียบกับ "จ่ายขั้นต่ำอย่างเดียว" เพื่อบอกว่าการจ่ายเพิ่มคุ้มแค่ไหน
-    freeMonth: done ? month : null,
+    // #27 — เดิมมี field `freeMonth` ที่ค่าเท่ากับ `months` ทุกกรณี พร้อมคอมเมนต์อ้างว่า
+    // "เทียบกับการจ่ายขั้นต่ำอย่างเดียว" ซึ่งโค้ดไม่เคยทำ และไม่มีผู้เรียกรายไหนอ่านมัน
+    // การเปรียบเทียบ baseline ทำจริงที่ renderDebt() โดยเรียก buildDebtPlan ซ้ำด้วย
+    // extraPerMonth:0 แล้ว diff กัน — จึงลบ field ที่ทำให้เข้าใจผิดนี้ทิ้ง
   };
 }
 function totalStartOf(liabAccounts, name){
