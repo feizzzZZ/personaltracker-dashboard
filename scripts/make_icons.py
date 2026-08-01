@@ -10,7 +10,13 @@ maskable: manifest ระบุ purpose "maskable any" สำหรับ 192/51
 ได้ถึง ~20% ของแต่ละด้าน จึงวางเนื้อหาทั้งหมดไว้ในกรอบกลาง 60% (safe zone)
 และเว้นพื้นหลังทึบเต็มภาพ ไม่ให้มีมุมโปร่งใสที่จะกลายเป็นขอบดำ
 """
+from pathlib import Path
+
 from PIL import Image, ImageDraw
+
+# เขียนลงโฟลเดอร์ icon/ ที่ราก repo เสมอ — อ้างอิงจากตำแหน่งไฟล์สคริปต์
+# ไม่ใช่ cwd จึงรันจากที่ไหนก็ได้ (python3 scripts/make_icons.py หรือ cd scripts && python3 make_icons.py)
+OUT_DIR = Path(__file__).resolve().parent.parent / "icon"
 
 BG   = (9, 9, 15)        # #09090f — ตรงกับ theme_color/background_color ใน manifest
 GAIN = (0, 212, 160)     # #00d4a0
@@ -61,6 +67,8 @@ def make(size: int) -> Image.Image:
 
 
 if __name__ == "__main__":
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
     for s in SIZES:
-        make(s).save(f"icon-{s}x{s}.png", "PNG", optimize=True)
-        print(f"  ✓ icon-{s}x{s}.png")
+        path = OUT_DIR / f"icon-{s}x{s}.png"
+        make(s).save(path, "PNG", optimize=True)
+        print(f"  ✓ {path.relative_to(OUT_DIR.parent)}")
