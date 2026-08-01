@@ -4213,7 +4213,12 @@ function restoreDataCache(){
     tracker  = (p.tracker||[]).map(r=>({...r, date: r.date? new Date(r.date):null}));
     assets   = p.assets;  bankBals = p.bankBals||[];  realized = p.realized||[];
     waccMap  = p.waccMap||{}; fxMap = p.fxMap||{}; platMap = p.platMap||{};
-    insPolicies = p.insPolicies||[];
+    // ★ ต้องแปลง Date กลับเหมือนที่ทำกับ tracker — JSON เก็บ Date เป็น string
+    //   ถ้าไม่แปลง p.renewal.getMonth() จะ throw และหน้า Insurance ว่างทั้งหน้า
+    const _d = v => { if(!v) return null; const dt = (v instanceof Date) ? v : new Date(v);
+                      return isNaN(dt.getTime()) ? null : dt; };
+    insPolicies = (p.insPolicies||[]).map(r=>({...r,
+      renewal:_d(r.renewal), policyDate:_d(r.policyDate), maturity:_d(r.maturity)}));
     insCoverage = p.insCoverage||[];
     if(typeof p.totalFee==='number') totalFee = p.totalFee;
     availableMonths=[...new Set(txRows.map(r=>r.month))].sort();
@@ -4794,6 +4799,13 @@ function renderRateCard(g,idx,isDone=false){
 
 // ── Insurance ────────────────────────────────────────────────────────
 const MONTH_ABBR=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+// แปลงค่าที่อาจเป็น Date / string / null ให้เป็น Date ที่ใช้งานได้ หรือ null
+// จำเป็นเพราะข้อมูลอาจมาจาก 2 ทาง: parse จากไฟล์ (เป็น Date) หรือกู้จาก cache (เป็น string)
+function insDate(v){
+  if(!v) return null;
+  const d = (v instanceof Date) ? v : new Date(v);
+  return isNaN(d.getTime()) ? null : d;
+}
 const INS_COV_META={
   'Life':            {icon:'☂',  label:'Life',           color:'#00d4a0'},
   'Early_CI':        {icon:'⚕',  label:'Early CI',       color:'#4cc9f0'},
@@ -4842,17 +4854,20 @@ function renderInsurance(){
   const totalSurrender=insPolicies.reduce((s,p)=>s+p.surrender,0);
   // Nearest renewal
   const now=new Date();
-  const upcoming=activePolicies.filter(p=>p.renewal&&p.renewal>=now)
-    .sort((a,b)=>a.renewal-b.renewal);
-  const nearest=upcoming[0];
-  const daysToRenewal=nearest?Math.ceil((nearest.renewal-now)/86400000):null;
+  // ใช้ insDate() ทุกจุด — เดิมเทียบ string กับ Date ตรงๆ ได้ false เสมอ
+  // ทำให้ Next Renewal ขึ้น "—" ทั้งที่มีกรมธรรม์ที่ยังไม่ครบกำหนด
+  const upcoming=activePolicies.map(p=>({p,rd:insDate(p.renewal)}))
+    .filter(x=>x.rd&&x.rd>=now).sort((a,b)=>a.rd-b.rd);
+  const nearest=upcoming[0]?upcoming[0].p:null;
+  const nearestRd=upcoming[0]?upcoming[0].rd:null;
+  const daysToRenewal=nearestRd?Math.ceil((nearestRd-now)/86400000):null;
 
   const ovCards=[
     {lbl:'Active Policies',val:activePolicies.length+' กรมธรรม์',sub:`จากทั้งหมด ${insPolicies.length} · คลิกแสดง/ซ่อนรายการ`,color:'var(--income)',onclick:'insTogglePolicyTable()'},
     {lbl:'Total Annual Premium',val:fmt(totalPremium),sub:'เบี้ยรวมต่อปี (active) · คลิกดู breakdown',color:'var(--expense)',onclick:'insTogglePremium()'},
     {lbl:'Total Cash Value',val:fmt(totalSurrender),sub:'มูลค่าเวนคืนรวม',color:'var(--savings)',onclick:null},
     {lbl:'Next Renewal',
-      val:nearest?MONTH_ABBR[nearest.renewal.getMonth()]+' '+nearest.renewal.getDate():'—',
+      val:nearestRd?MONTH_ABBR[nearestRd.getMonth()]+' '+nearestRd.getDate():'—',
       sub:nearest?`${nearest.policyId} · เหลือ ${daysToRenewal} วัน`:'ไม่มีกำหนด',
       color:daysToRenewal!==null&&daysToRenewal<=30?'var(--debt)':'var(--text)',onclick:null},
   ];
@@ -4867,8 +4882,8 @@ function renderInsurance(){
   document.getElementById('ins-mypolicy-grid').innerHTML=insPolicies.map(p=>{
     const stCls=insStatusClass(p.status);
     const stColor=stCls==='inforce'?'var(--income)':stCls==='lapsed'?'var(--expense)':'var(--muted2)';
-    const renewalStr=p.renewal?
-      `${MONTH_ABBR[p.renewal.getMonth()]} ${p.renewal.getDate()}, ${p.renewal.getFullYear()}`:'—';
+    const rd=insDate(p.renewal);
+    const renewalStr=rd?`${MONTH_ABBR[rd.getMonth()]} ${rd.getDate()}, ${rd.getFullYear()}`:'—';
     return `<div class="ins-mypolicy-card">
       <div class="ins-mypolicy-top">
         <div>
@@ -5016,9 +5031,10 @@ function renderInsurance(){
   });
   document.getElementById('ins-policy-body').innerHTML=sortedPolicies.map(p=>{
     const stCls=insStatusClass(p.status);
-    const renewalStr=p.renewal?
-      `${p.renewal.getFullYear()}-${String(p.renewal.getMonth()+1).padStart(2,'0')}-${String(p.renewal.getDate()).padStart(2,'0')}`:'—';
-    const daysLeft=p.renewal?Math.ceil((p.renewal-now)/86400000):null;
+    const rd=insDate(p.renewal);
+    const renewalStr=rd?
+      `${rd.getFullYear()}-${String(rd.getMonth()+1).padStart(2,'0')}-${String(rd.getDate()).padStart(2,'0')}`:'—';
+    const daysLeft=rd?Math.ceil((rd-now)/86400000):null;
     const renewalCls=(daysLeft!==null&&daysLeft<=30&&daysLeft>=0)?'ins-renewal-soon':'';
     return `<tr>
       <td><span class="ins-status-pill ${stCls}">${p.status||'—'}</span></td>
