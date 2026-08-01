@@ -11,8 +11,8 @@ const SHELL_FILES = [
   BASE + '/investment-analysis.html',  // was missing — caused offline failure on nav
   BASE + '/shared.js',                 // data layer กลาง — ต้อง precache ให้ offline ทำงาน
   BASE + '/manifest.json',
-  BASE + '/icon-192x192.png',
-  BASE + '/icon-512x512.png',
+  BASE + '/icon/icon-192x192.png',
+  BASE + '/icon/icon-512x512.png',
 ];
 
 // CDN assets — cache on first use

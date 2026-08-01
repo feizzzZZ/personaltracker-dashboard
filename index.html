@@ -10,8 +10,8 @@
 <meta name="apple-mobile-web-app-title" content="Finance OS">
 <meta name="description" content="Personal finance tracker: cash flow, investments, insurance, budget alerts">
 <link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icon-180x180.png">
-<link rel="icon" type="image/png" sizes="192x192" href="icon-192x192.png">
+<link rel="apple-touch-icon" href="icon/icon-180x180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon/icon-192x192.png">
 <title>Finance OS</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&family=Google+Sans+Mono:wght@300;400;500&display=swap" rel="stylesheet">
@@ -2666,6 +2666,9 @@ function renderPerformance(totalVal){
   const bEl=document.getElementById('perf-bench'), bsEl=document.getElementById('perf-bench-sub');
   if(bEl && bsEl){
     const bm = benchmarkXIRR(flows);
+    // ★ รีเซ็ตสีทุกครั้งก่อนเขียนใหม่ — สาขา error ตั้ง style.color เป็น --debt ไว้
+    //   ถ้าไม่ล้าง พอ render รอบถัดไปสำเร็จ ข้อความจะยังเป็นสีส้มค้างจากรอบก่อน
+    bEl.style.color='';
     if(bm && !bm.error && r!==null){
       const diff=(r-bm.rate)*100;
       const verdict = diff>=0
@@ -4209,14 +4212,19 @@ function restoreDataCache(){
     if(!stamp || Date.now()-stamp > CACHE_TTL) return false;
     if(!Array.isArray(p.txRows) || !Array.isArray(p.assets) || !p.assets.length) return false;
     // date ถูก serialize เป็น string → แปลงกลับ
-    txRows   = p.txRows;
+    const _d = v => { if(!v) return null; const dt = (v instanceof Date) ? v : new Date(v);
+                      return isNaN(dt.getTime()) ? null : dt; };
+    // ★ txRows ก็มี .date เป็น Date เหมือน tracker — เดิมคืนค่าดิบ (string) ทำให้:
+    //   • renderTxTable() sort ด้วย b.date-a.date ได้ NaN → ตารางไม่เรียงตามวันที่
+    //   • computeGoalProgress() กรอง r.date>=fromDate → string เทียบ Date ได้ false เสมอ
+    //     → เป้าหมายแบบ saving rate แสดง 0% ทั้งที่มีข้อมูล
+    //   ทั้งสองเคสไม่ throw จึงไม่มีสัญญาณเตือน เห็นแค่ผลลัพธ์ผิด
+    txRows   = (p.txRows||[]).map(r=>({...r, date:_d(r.date)}));
     tracker  = (p.tracker||[]).map(r=>({...r, date: r.date? new Date(r.date):null}));
     assets   = p.assets;  bankBals = p.bankBals||[];  realized = p.realized||[];
     waccMap  = p.waccMap||{}; fxMap = p.fxMap||{}; platMap = p.platMap||{};
     // ★ ต้องแปลง Date กลับเหมือนที่ทำกับ tracker — JSON เก็บ Date เป็น string
     //   ถ้าไม่แปลง p.renewal.getMonth() จะ throw และหน้า Insurance ว่างทั้งหน้า
-    const _d = v => { if(!v) return null; const dt = (v instanceof Date) ? v : new Date(v);
-                      return isNaN(dt.getTime()) ? null : dt; };
     insPolicies = (p.insPolicies||[]).map(r=>({...r,
       renewal:_d(r.renewal), policyDate:_d(r.policyDate), maturity:_d(r.maturity)}));
     insCoverage = p.insCoverage||[];
