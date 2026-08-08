@@ -14,12 +14,20 @@
 <link rel="icon" type="image/png" sizes="192x192" href="icon/icon-192x192.png">
 <title>Finance OS</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&family=Google+Sans+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 :root{
+  /* ── Typography (#1,#9): The old GoogleSans / GoogleSansMono stack was Google-internal
+     and NOT served by fonts.googleapis.com -> the old <link> 400'd and
+     everything fell back to generic monospace, which has no Thai glyphs.
+     Latin font first, Thai font second: digits/EN render from Inter/JetBrains,
+     Thai automatically falls through to IBM Plex Sans Thai. ── */
+  --f-sans:'Inter','IBM Plex Sans Thai',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --f-mono:'JetBrains Mono','IBM Plex Sans Thai',ui-monospace,'SFMono-Regular',Menlo,monospace;
   --bg:#07070e;--bg2:#0d0d1a;--bg3:#111120;--bg4:#181830;
   --border:#1a1a30;--border2:#262640;--cb:#1e1e38;
   --income:#00d4a0;--expense:#ff4060;--savings:#7c6fec;--debt:#ff9500;
@@ -28,13 +36,13 @@
   --sidebar-w:200px;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--text);font-family:'Google Sans Mono',monospace;min-height:100vh;display:flex;overflow-x:hidden}
+body{background:var(--bg);color:var(--text);font-family:var(--f-mono);min-height:100vh;display:flex;overflow-x:hidden}
 body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.03) 2px,rgba(0,0,0,.03) 4px)}
 
 /* ── Upload ── */
 #up{position:fixed;inset:0;z-index:200;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;padding:24px}
-.logo-mark{font-family:'Google Sans',sans-serif;font-size:11px;font-weight:700;letter-spacing:.4em;color:var(--muted);text-transform:uppercase;margin-bottom:8px}
-.upload-title{font-family:'Google Sans',sans-serif;font-size:clamp(26px,5vw,48px);font-weight:800;line-height:1.1;text-align:center;letter-spacing:-.02em}
+.logo-mark{font-family:var(--f-sans);font-size:11px;font-weight:700;letter-spacing:.4em;color:var(--muted);text-transform:uppercase;margin-bottom:8px}
+.upload-title{font-family:var(--f-sans);font-size:clamp(26px,5vw,48px);font-weight:800;line-height:1.1;text-align:center;letter-spacing:-.02em}
 .upload-title span{color:var(--income)}
 .upload-zone{width:100%;max-width:460px;border:1px dashed var(--border2);border-radius:16px;padding:36px 24px;text-align:center;cursor:pointer;transition:all .2s;background:var(--bg2)}
 .upload-zone:hover,.upload-zone.drag{border-color:var(--income);background:rgba(0,212,160,.04)}
@@ -51,7 +59,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 /* ── Sidebar ── */
 .sidebar{width:var(--sidebar-w);background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:100;transition:transform .2s}
 .sb-brand{padding:20px 16px 16px;border-bottom:1px solid var(--border);flex:0 0 auto}
-.sb-logo{font-family:'Google Sans',sans-serif;font-size:16px;font-weight:800;color:var(--income);letter-spacing:.04em}
+.sb-logo{font-family:var(--f-sans);font-size:16px;font-weight:800;color:var(--income);letter-spacing:.04em}
 .sb-sub{font-size:10px;color:var(--muted);margin-top:2px;letter-spacing:.06em}
 .sb-status{font-size:10px;color:var(--muted);margin-top:8px;display:flex;align-items:center;gap:5px}
 .dot-live{width:5px;height:5px;border-radius:50%;background:var(--income);animation:pulse 2s infinite;display:inline-block}
@@ -100,7 +108,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 .sb-badge-warn{background:rgba(255,64,96,.2);color:var(--expense)}
 .sb-badge-alert{background:var(--expense);color:#fff}
 .sb-bottom{padding:12px 8px;border-top:1px solid var(--border)}
-.sb-upload-btn{display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:8px;cursor:pointer;transition:all .15s;color:var(--muted2);font-size:12px;border:1px solid var(--border);background:transparent;width:100%;font-family:'Google Sans Mono',monospace}
+.sb-upload-btn{display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:8px;cursor:pointer;transition:all .15s;color:var(--muted2);font-size:12px;border:1px solid var(--border);background:transparent;width:100%;font-family:var(--f-mono)}
 .sb-upload-btn:hover{border-color:var(--income);color:var(--income)}
 
 /* ── Main content ── */
@@ -110,20 +118,20 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 
 /* ── Page header ── */
 .pg-hdr{margin-bottom:20px;display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:10px}
-.pg-title{font-family:'Google Sans',sans-serif;font-size:22px;font-weight:800;color:var(--white);letter-spacing:-.02em}
+.pg-title{font-family:var(--f-sans);font-size:22px;font-weight:800;color:var(--white);letter-spacing:-.02em}
 .pg-sub{font-size:12px;color:var(--muted);margin-top:3px}
 .pg-controls{display:flex;gap:8px;align-items:center}
 .month-nav{display:flex;align-items:center;gap:4px}
-.month-btn{background:var(--bg3);border:1px solid var(--border);color:var(--muted2);padding:5px 9px;border-radius:7px;cursor:pointer;font-family:'Google Sans Mono',monospace;font-size:12px;transition:all .15s}
+.month-btn{background:var(--bg3);border:1px solid var(--border);color:var(--muted2);padding:5px 9px;border-radius:7px;cursor:pointer;font-family:var(--f-mono);font-size:12px;transition:all .15s}
 .month-btn:hover{border-color:var(--border2);color:var(--text)}
-.bm-scenario-btn{background:var(--bg4);border:1px solid var(--border);color:var(--muted2);padding:4px 9px;border-radius:6px;cursor:pointer;font-family:'Google Sans Mono',monospace;font-size:11px;transition:all .15s;white-space:nowrap}
+.bm-scenario-btn{background:var(--bg4);border:1px solid var(--border);color:var(--muted2);padding:4px 9px;border-radius:6px;cursor:pointer;font-family:var(--f-mono);font-size:11px;transition:all .15s;white-space:nowrap}
 .bm-scenario-btn:hover{border-color:var(--border2);color:var(--text)}
 .bm-scenario-btn.active{background:rgba(0,212,160,.12);border-color:rgba(0,212,160,.4);color:var(--gain);font-weight:600}
-.month-display{background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:5px 12px;border-radius:7px;font-family:'Google Sans',sans-serif;font-size:12px;font-weight:600;min-width:120px;text-align:center}
+.month-display{background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:5px 12px;border-radius:7px;font-family:var(--f-sans);font-size:12px;font-weight:600;min-width:120px;text-align:center}
 select.month-display{text-align-last:center;outline:none}
 
 /* ── Section label ── */
-.sl{font-family:'Google Sans',sans-serif;font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--white);margin:0 0 10px;display:flex;align-items:center;gap:10px;padding-left:10px;border-left:3px solid var(--income);border-radius:0}
+.sl{font-family:var(--f-sans);font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--white);margin:0 0 10px;display:flex;align-items:center;gap:10px;padding-left:10px;border-left:3px solid var(--income);border-radius:0}
 .sl::after{content:'';flex:1;height:1px;background:var(--border)}
 .sl.purple{border-left-color:var(--savings)}
 .sl.orange{border-left-color:var(--debt)}
@@ -144,7 +152,7 @@ select.month-display{text-align-last:center;outline:none}
 .nw-hero{background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:20px 24px;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
 .nw-main{display:flex;flex-direction:column;gap:4px}
 .nw-label{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2)}
-.nw-val{font-family:'Google Sans',sans-serif;font-size:clamp(28px,4vw,42px);font-weight:800;color:var(--white);letter-spacing:-.03em}
+.nw-val{font-family:var(--f-sans);font-size:clamp(28px,4vw,42px);font-weight:800;color:var(--white);letter-spacing:-.03em}
 .nw-sub{font-size:12px;color:var(--muted)}
 .nw-breakdown{display:flex;gap:24px;flex-wrap:wrap}
 .nw-part{display:flex;flex-direction:column;gap:3px}
@@ -154,11 +162,11 @@ select.month-display{text-align-last:center;outline:none}
 
 /* ── Chart cards ── */
 .cc{background:var(--bg3);border:1px solid var(--cb);border-radius:12px;padding:18px}
-.ct{font-family:'Google Sans',sans-serif;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--white);margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px}
-.ct span{font-size:10px;color:var(--muted);font-weight:400;font-family:'Google Sans Mono',monospace;letter-spacing:0;text-transform:none}
+.ct{font-family:var(--f-sans);font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--white);margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px}
+.ct span{font-size:10px;color:var(--muted);font-weight:400;font-family:var(--f-mono);letter-spacing:0;text-transform:none}
 .cr2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px}
 .cr3{display:grid;grid-template-columns:220px 1fr;gap:12px;margin-bottom:18px}
-@media(max-width:800px){.cr2,.cr3{grid-template-columns:1fr}.acc-layout{grid-template-columns:1fr}}
+@media(max-width:768px){.cr2,.cr3{grid-template-columns:1fr}.acc-layout{grid-template-columns:1fr}}
 
 /* ── Health items ── */
 .health-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;margin-bottom:18px}
@@ -205,7 +213,7 @@ select.month-display{text-align-last:center;outline:none}
 
 /* ── Tx table ── */
 .filter-row{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px}
-.fb-btn{background:var(--bg3);border:1px solid var(--border);color:var(--muted);padding:4px 10px;border-radius:20px;cursor:pointer;font-family:'Google Sans Mono',monospace;font-size:10px;transition:all .15s}
+.fb-btn{background:var(--bg3);border:1px solid var(--border);color:var(--muted);padding:4px 10px;border-radius:20px;cursor:pointer;font-family:var(--f-mono);font-size:10px;transition:all .15s}
 .fb-btn.active{border-color:var(--income);color:var(--income);background:rgba(0,212,160,.08)}
 .fb-btn.active.all{border-color:var(--white);color:var(--white);background:transparent}
 .tw{overflow-x:auto;border-radius:9px;border:1px solid var(--border)}
@@ -225,6 +233,16 @@ select.month-display{text-align-last:center;outline:none}
 .pill-Expense,.pill-Bills{color:var(--expense);border-color:rgba(255,64,96,.3);background:rgba(255,64,96,.07)}
 .pill-Savings{color:var(--savings);border-color:rgba(124,111,236,.3);background:rgba(124,111,236,.07)}
 .pill-Debt{color:var(--debt);border-color:rgba(255,149,0,.3);background:rgba(255,149,0,.07)}
+/* ── #11: tabular figures for every numeric surface ────────────────────
+   Right-alignment alone does not align digits in a proportional font.
+   tabular-nums forces equal advance width so columns of ฿ amounts line up
+   on the decimal; lining-nums stops old-style (descending) figures. */
+.nr,td,th,.nw-val,.ct span,.bgt-ov-val,.bgt-ov-stat-val,.ins-ov-val,
+.ins-cov-amount,.ins-detail-right,.gc-pct,.bm-return,.bm-class-return-val,
+.al-pct,.savrate-bar,[class*="-val"],[class*="-amount"],[class*="-pct"]{
+  font-variant-numeric:tabular-nums lining-nums;
+  font-feature-settings:"tnum" 1,"lnum" 1;
+}
 .nr{text-align:right}
 .pp{color:var(--gain);text-align:right;font-weight:500}
 .pn{color:var(--loss);text-align:right;font-weight:500}
@@ -259,7 +277,7 @@ select.month-display{text-align-last:center;outline:none}
 .yt th{background:var(--bg3);color:var(--white);font-weight:600;letter-spacing:.07em;text-transform:uppercase;font-size:10px;padding:9px 12px;text-align:right;border-bottom:1px solid var(--border)}
 .yt th:first-child{text-align:left}
 .yt td{padding:9px 12px;border-bottom:1px solid var(--border);text-align:right;color:var(--muted2)}
-.yt td:first-child{text-align:left;color:var(--white);font-family:'Google Sans',sans-serif;font-weight:600}
+.yt td:first-child{text-align:left;color:var(--white);font-family:var(--f-sans);font-weight:600}
 .yt tr:last-child td{border-bottom:none}
 .yt tr:hover td{background:rgba(255,255,255,.02)}
 .savrate-bar{width:100%;height:3px;background:var(--border);border-radius:2px;margin-top:3px;overflow:hidden}
@@ -268,15 +286,15 @@ select.month-display{text-align-last:center;outline:none}
 
 /* ── Period tabs ── */
 .tab-row{display:flex;gap:2px;background:var(--bg4);border-radius:7px;padding:2px;border:1px solid var(--border);width:fit-content}
-.tab{padding:4px 10px;border:none;border-radius:5px;cursor:pointer;font-family:'Google Sans Mono',monospace;font-size:11px;color:var(--muted2);background:transparent;transition:all .15s}
+.tab{padding:4px 10px;border:none;border-radius:5px;cursor:pointer;font-family:var(--f-mono);font-size:11px;color:var(--muted2);background:transparent;transition:all .15s}
 .tab.active{background:var(--bg3);color:var(--white);border:1px solid var(--border2)}
 .yr-row{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px}
-.yr-btn{background:var(--bg3);border:1px solid var(--border);color:var(--muted);padding:3px 9px;border-radius:20px;cursor:pointer;font-family:'Google Sans Mono',monospace;font-size:10px;transition:all .15s}
+.yr-btn{background:var(--bg3);border:1px solid var(--border);color:var(--muted);padding:3px 9px;border-radius:20px;cursor:pointer;font-family:var(--f-mono);font-size:10px;transition:all .15s}
 .yr-btn.active{border-color:var(--savings);color:var(--savings);background:rgba(124,111,236,.1)}
 
 /* ── Mobile sidebar toggle ── */
 .menu-toggle{display:none;position:fixed;top:14px;left:14px;z-index:150;background:var(--bg3);border:1px solid var(--border2);color:var(--text);width:36px;height:36px;border-radius:8px;cursor:pointer;font-size:16px;align-items:center;justify-content:center}
-@media(max-width:700px){
+@media(max-width:768px){
   .sidebar{transform:translateX(-100%)}
   .sidebar.open{transform:translateX(0)}
   .main-content{margin-left:0}
@@ -289,7 +307,7 @@ select.month-display{text-align-last:center;outline:none}
 .gs-card{background:var(--bg3);border:1px solid var(--cb);border-radius:10px;padding:12px 14px;text-align:center}
 .gs-val{font-size:20px;font-weight:500;color:var(--white)}
 .gs-lbl{font-size:10px;color:var(--muted2);margin-top:3px;letter-spacing:.04em;text-transform:uppercase}
-.goal-sl{font-family:'Google Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--white);margin:20px 0 10px;display:flex;align-items:center;gap:8px}
+.goal-sl{font-family:var(--f-sans);font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--white);margin:20px 0 10px;display:flex;align-items:center;gap:8px}
 .goal-sl::after{content:'';flex:1;height:1px;background:var(--border)}
 .goal-sl:first-of-type{margin-top:0}
 .goal-card{background:var(--bg3);border:1px solid var(--cb);border-radius:14px;padding:18px 20px;margin-bottom:10px;transition:border-color .2s}
@@ -298,14 +316,14 @@ select.month-display{text-align-last:center;outline:none}
 .gc-footer{display:flex;align-items:center;justify-content:space-between;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)}
 .gc-footer-actions{display:flex;gap:6px;flex-shrink:0}
 .gc-icon{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
-.gc-name{font-size:15px;font-weight:600;color:var(--white);font-family:'Google Sans',sans-serif;margin-bottom:3px}
+.gc-name{font-size:15px;font-weight:600;color:var(--white);font-family:var(--f-sans);margin-bottom:3px}
 .gc-meta{font-size:11px;color:var(--muted2)}
 .gc-actions{margin-left:auto;display:flex;gap:5px;flex-shrink:0}
 .gc-btn{width:30px;height:30px;border-radius:8px;background:var(--bg4);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted2);transition:all .15s}
 .gc-btn:hover{border-color:var(--border2);color:var(--text)}
 .gc-btn.del:hover{border-color:var(--expense);color:var(--expense)}
 .gc-progress-row{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px}
-.gc-pct{font-size:24px;font-weight:600;font-family:'Google Sans',sans-serif;line-height:1}
+.gc-pct{font-size:24px;font-weight:600;font-family:var(--f-sans);line-height:1}
 .gc-amounts{font-size:12px;color:var(--muted2);text-align:right}
 .gc-amounts b{color:var(--text);font-weight:500}
 .gc-track{height:8px;background:var(--border);border-radius:4px;overflow:hidden;margin-bottom:14px}
@@ -328,19 +346,19 @@ select.month-display{text-align-last:center;outline:none}
 .goals-empty i{font-size:32px;margin-bottom:12px;opacity:.4;display:block}
 /* Goal form */
 .goal-form-wrap{background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:20px;margin-bottom:20px}
-.gf-title{font-size:14px;font-weight:600;color:var(--white);font-family:'Google Sans',sans-serif;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.gf-title{font-size:14px;font-weight:600;color:var(--white);font-family:var(--f-sans);margin-bottom:16px;display:flex;align-items:center;gap:8px}
 .gf-type-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
-.gf-type-btn{background:var(--bg4);border:1px solid var(--border);color:var(--muted2);padding:10px 8px;border-radius:10px;cursor:pointer;font-family:'Google Sans Mono',monospace;font-size:11px;text-align:center;transition:all .15s;line-height:1.5}
+.gf-type-btn{background:var(--bg4);border:1px solid var(--border);color:var(--muted2);padding:10px 8px;border-radius:10px;cursor:pointer;font-family:var(--f-mono);font-size:11px;text-align:center;transition:all .15s;line-height:1.5}
 .gf-type-btn.sel-amount{border-color:var(--income);color:var(--income);background:rgba(0,212,160,.08)}
 .gf-type-btn.sel-rate{border-color:var(--savings);color:var(--savings);background:rgba(124,111,236,.08)}
 .gf-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
 .gf-row.full{grid-template-columns:1fr}
 .gf-lbl{font-size:11px;color:var(--muted2);margin-bottom:4px;letter-spacing:.03em}
-.gf-inp{background:var(--bg4);border:1px solid var(--border2);color:var(--text);padding:8px 12px;border-radius:8px;font-family:'Google Sans Mono',monospace;font-size:12px;width:100%;outline:none;transition:border-color .15s}
+.gf-inp{background:var(--bg4);border:1px solid var(--border2);color:var(--text);padding:8px 12px;border-radius:8px;font-family:var(--f-mono);font-size:12px;width:100%;outline:none;transition:border-color .15s}
 .gf-inp:focus{border-color:var(--income)}
-.gf-submit{background:var(--income);border:none;color:var(--bg);padding:10px 20px;border-radius:9px;cursor:pointer;font-family:'Google Sans',sans-serif;font-size:13px;font-weight:600;transition:opacity .15s;width:100%;margin-top:6px}
+.gf-submit{background:var(--income);border:none;color:var(--bg);padding:10px 20px;border-radius:9px;cursor:pointer;font-family:var(--f-sans);font-size:13px;font-weight:600;transition:opacity .15s;width:100%;margin-top:6px}
 .gf-submit:hover{opacity:.9}
-.gf-cancel{background:transparent;border:1px solid var(--border2);color:var(--muted2);padding:10px 16px;border-radius:9px;cursor:pointer;font-family:'Google Sans Mono',monospace;font-size:12px;transition:all .15s}
+.gf-cancel{background:transparent;border:1px solid var(--border2);color:var(--muted2);padding:10px 16px;border-radius:9px;cursor:pointer;font-family:var(--f-mono);font-size:12px;transition:all .15s}
 .gf-cancel:hover{border-color:var(--border2);color:var(--text)}
 
 
@@ -349,12 +367,12 @@ select.month-display{text-align-last:center;outline:none}
 .bm-hero-title{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2);margin-bottom:14px;display:flex;align-items:center;justify-content:space-between}
 .bm-hero-note{font-size:10px;color:var(--muted);background:var(--bg4);padding:3px 8px;border-radius:6px;border:1px solid var(--border)}
 .bm-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
-@media(max-width:700px){.bm-row{grid-template-columns:1fr}}
+@media(max-width:768px){.bm-row{grid-template-columns:1fr}}
 .bm-row .bm-card[style*="grid-column"]{grid-column:1/-1}
 .bm-card{background:var(--bg4);border:1px solid var(--border);border-radius:12px;padding:14px 16px;position:relative;overflow:hidden}
 .bm-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:12px 12px 0 0;background:var(--bm-color,var(--muted))}
 .bm-label{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted2);margin-bottom:8px}
-.bm-return{font-size:28px;font-weight:600;font-family:'Google Sans',sans-serif;line-height:1;margin-bottom:4px}
+.bm-return{font-size:28px;font-weight:600;font-family:var(--f-sans);line-height:1;margin-bottom:4px}
 .bm-period{font-size:11px;color:var(--muted2);margin-bottom:12px}
 .bm-detail-row{display:flex;justify-content:space-between;font-size:11px;padding:4px 0;border-bottom:1px solid var(--border)}
 .bm-detail-row:last-child{border-bottom:none}
@@ -368,25 +386,25 @@ select.month-display{text-align-last:center;outline:none}
 .bm-bar-fill{height:10px;border-radius:5px;transition:width .6s ease}
 .bm-bar-pct{font-size:12px;font-weight:500;min-width:52px;text-align:right}
 .bm-class-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px}
-@media(max-width:600px){.bm-class-grid{grid-template-columns:1fr}}
+@media(max-width:768px){.bm-class-grid{grid-template-columns:1fr}}
 .bm-class-card{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
 .bm-class-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.bm-class-name{font-size:13px;font-weight:600;color:var(--white);font-family:'Google Sans',sans-serif}
+.bm-class-name{font-size:13px;font-weight:600;color:var(--white);font-family:var(--f-sans)}
 .bm-class-vs{font-size:11px;color:var(--muted2)}
 .bm-class-returns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .bm-class-return-item{background:var(--bg4);border-radius:8px;padding:8px 10px;text-align:center}
 .bm-class-return-lbl{font-size:10px;color:var(--muted2);margin-bottom:3px}
-.bm-class-return-val{font-size:16px;font-weight:600;font-family:'Google Sans',sans-serif}
+.bm-class-return-val{font-size:16px;font-weight:600;font-family:var(--f-sans)}
 .bm-data-note{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-size:11px;color:var(--muted2);line-height:1.6;margin-top:16px}
 .bm-data-note b{color:var(--text)}
 
 /* ── Budget page ─────────────────────────────────── */
 .bgt-overview{background:var(--bg3);border:1px solid var(--border2);border-radius:14px;
   padding:18px 22px;margin-bottom:18px;display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:16px}
-@media(max-width:700px){.bgt-overview{grid-template-columns:1fr 1fr}}
+@media(max-width:768px){.bgt-overview{grid-template-columns:1fr 1fr}}
 .bgt-ov-item{text-align:center}
 .bgt-ov-lbl{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
-.bgt-ov-val{font-size:22px;font-weight:600;font-family:'Google Sans',sans-serif;line-height:1}
+.bgt-ov-val{font-size:22px;font-weight:600;font-family:var(--f-sans);line-height:1}
 .bgt-ov-sub{font-size:11px;color:var(--muted2);margin-top:4px}
 .bgt-bar-wrap{margin-top:12px;height:8px;background:var(--border);border-radius:4px;overflow:hidden;grid-column:1/-1}
 .bgt-bar-fill{height:8px;border-radius:4px;transition:width .5s ease}
@@ -414,7 +432,7 @@ select.month-display{text-align-last:center;outline:none}
 .bgt-bar2-fill{height:6px;border-radius:3px;transition:width .5s ease}
 .bgt-edit-row{display:flex;gap:6px;align-items:center;margin-top:8px}
 .bgt-input{background:var(--bg3);border:1px solid var(--border2);color:var(--text);
-  padding:5px 8px;border-radius:7px;font-family:'Google Sans Mono',monospace;font-size:12px;
+  padding:5px 8px;border-radius:7px;font-family:var(--f-mono);font-size:12px;
   width:100%;outline:none;transition:border-color .15s}
 .bgt-input:focus{border-color:var(--income)}
 .bgt-save-btn{background:var(--income);border:none;color:#000;padding:5px 12px;
@@ -427,20 +445,20 @@ select.month-display{text-align-last:center;outline:none}
   background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:12px 16px}
 .bgt-total-budget-row label{font-size:12px;color:var(--muted2);white-space:nowrap}
 .bgt-total-input{background:var(--bg4);border:1px solid var(--border2);color:var(--text);
-  padding:6px 10px;border-radius:8px;font-family:'Google Sans Mono',monospace;font-size:13px;
+  padding:6px 10px;border-radius:8px;font-family:var(--f-mono);font-size:13px;
   flex:1;outline:none;max-width:160px}
 .bgt-total-input:focus{border-color:var(--income)}
 
 /* Budget 2-column layout */
 .bgt-two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
-@media(max-width:800px){.bgt-two-col{grid-template-columns:1fr}}
+@media(max-width:768px){.bgt-two-col{grid-template-columns:1fr}}
 .bgt-col-header{display:flex;align-items:center;gap:8px;margin-bottom:10px}
-.bgt-col-title{font-family:'Google Sans',sans-serif;font-size:13px;font-weight:600;
+.bgt-col-title{font-family:var(--f-sans);font-size:13px;font-weight:600;
   letter-spacing:.04em;text-transform:uppercase;color:var(--muted2)}
 .bgt-col-dot{width:8px;height:8px;border-radius:50%}
 /* Overview 2-panel */
 .bgt-ov2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
-@media(max-width:700px){.bgt-ov2{grid-template-columns:1fr}}
+@media(max-width:768px){.bgt-ov2{grid-template-columns:1fr}}
 .bgt-ov-panel{background:var(--bg3);border:1px solid var(--border);
   border-radius:14px;padding:16px 20px}
 .bgt-ov-panel.exp{border-color:rgba(255,64,96,.25)}
@@ -450,7 +468,7 @@ select.month-display{text-align-last:center;outline:none}
 .bgt-ov-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px}
 .bgt-ov-stat{text-align:center}
 .bgt-ov-stat-lbl{font-size:10px;color:var(--muted);margin-bottom:4px}
-.bgt-ov-stat-val{font-size:18px;font-weight:600;font-family:'Google Sans',sans-serif;line-height:1}
+.bgt-ov-stat-val{font-size:18px;font-weight:600;font-family:var(--f-sans);line-height:1}
 .bgt-ov-bar-wrap{height:7px;background:var(--border);border-radius:4px;overflow:hidden}
 .bgt-ov-bar-fill{height:7px;border-radius:4px;transition:width .5s ease}
 
@@ -471,10 +489,10 @@ select.month-display{text-align-last:center;outline:none}
 .ins-mypolicy-rows{margin-top:10px;display:flex;flex-direction:column;gap:5px}
 .ins-mypolicy-row{display:flex;justify-content:space-between;font-size:11px}
 .ins-mypolicy-row span:first-child{color:var(--muted2)}
-.ins-mypolicy-row span:last-child{color:var(--text);font-weight:500;font-family:'Google Sans Mono',monospace}
+.ins-mypolicy-row span:last-child{color:var(--text);font-weight:500;font-family:var(--f-mono)}
 .ins-ov-card{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
 .ins-ov-lbl{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
-.ins-ov-val{font-size:20px;font-weight:600;font-family:'Google Sans',sans-serif;line-height:1}
+.ins-ov-val{font-size:20px;font-weight:600;font-family:var(--f-sans);line-height:1}
 .ins-ov-sub{font-size:11px;color:var(--muted2);margin-top:4px}
 
 .ins-cov-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:20px}
@@ -487,15 +505,15 @@ select.month-display{text-align-last:center;outline:none}
   text-transform:uppercase}
 .ins-cov-ring-wrap{position:relative;width:84px;height:84px;margin:0 auto 10px}
 .ins-cov-ring-val{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-  font-size:16px;font-weight:600;font-family:'Google Sans',sans-serif}
-.ins-cov-amount{font-size:14px;font-weight:600;color:var(--white);font-family:'Google Sans Mono',monospace}
+  font-size:16px;font-weight:600;font-family:var(--f-sans)}
+.ins-cov-amount{font-size:14px;font-weight:600;color:var(--white);font-family:var(--f-mono)}
 .ins-cov-unit{font-size:10px;color:var(--muted);margin-top:2px}
 .ins-cov-target{font-size:10px;color:var(--muted);margin-top:4px}
 
 .ins-detail-panel{background:var(--bg2);border:1px solid var(--border);border-radius:14px;
   padding:16px 20px;margin-bottom:20px;display:none}
 .ins-detail-panel.show{display:block}
-.ins-detail-title{font-family:'Google Sans',sans-serif;font-size:13px;font-weight:600;
+.ins-detail-title{font-family:var(--f-sans);font-size:13px;font-weight:600;
   letter-spacing:.04em;text-transform:uppercase;color:var(--muted2);margin-bottom:12px;
   display:flex;align-items:center;justify-content:space-between}
 .ins-detail-close{cursor:pointer;color:var(--muted);font-size:16px;line-height:1;
@@ -507,7 +525,7 @@ select.month-display{text-align-last:center;outline:none}
 .ins-detail-row:last-child{border-bottom:none}
 .ins-detail-left{color:var(--text)}
 .ins-detail-left small{display:block;color:var(--muted);font-size:10px;margin-top:2px}
-.ins-detail-right{color:var(--white);font-weight:500;font-family:'Google Sans Mono',monospace;
+.ins-detail-right{color:var(--white);font-weight:500;font-family:var(--f-mono);
   text-align:right}
 
 .ins-table-wrap{overflow-x:auto;border-radius:10px;border:1px solid var(--border)}
@@ -530,14 +548,14 @@ select.month-display{text-align-last:center;outline:none}
 /* PDF export button */
 .btn-pdf{background:rgba(124,111,236,.15);border:1px solid rgba(124,111,236,.4);
   color:var(--savings);padding:7px 14px;border-radius:8px;cursor:pointer;
-  font-family:'Google Sans Mono',monospace;font-size:11px;font-weight:500;
+  font-family:var(--f-mono);font-size:11px;font-weight:500;
   transition:all .15s;white-space:nowrap}
 .btn-pdf:hover{background:rgba(124,111,236,.25);border-color:var(--savings)}
 
 /* ── Google Sheets Sync ──────────────────────────────── */
 .gs-btn{display:flex;align-items:center;gap:8px;background:rgba(66,133,244,.12);
   border:1px solid rgba(66,133,244,.35);color:#4285f4;padding:7px 14px;
-  border-radius:8px;cursor:pointer;font-family:'Google Sans Mono',monospace;
+  border-radius:8px;cursor:pointer;font-family:var(--f-mono);
   font-size:11px;font-weight:500;transition:all .15s;white-space:nowrap}
 .gs-btn:hover{background:rgba(66,133,244,.22)}
 .gs-btn.connected{background:rgba(0,212,160,.08);border-color:rgba(0,212,160,.3);color:var(--income)}
@@ -563,7 +581,7 @@ select.month-display{text-align-last:center;outline:none}
 .gs-modal-overlay.show{display:flex}
 .gs-modal{background:var(--bg2);border:1px solid var(--border2);border-radius:16px;
   padding:24px;width:90%;max-width:440px;position:relative}
-.gs-modal-title{font-family:'Google Sans',sans-serif;font-size:16px;font-weight:600;
+.gs-modal-title{font-family:var(--f-sans);font-size:16px;font-weight:600;
   color:var(--white);margin-bottom:16px}
 .gs-modal-close{position:absolute;top:16px;right:16px;cursor:pointer;
   color:var(--muted);font-size:18px;line-height:1;padding:4px 8px;
@@ -574,7 +592,7 @@ select.month-display{text-align-last:center;outline:none}
   letter-spacing:.05em;text-transform:uppercase}
 .gs-input{width:100%;background:var(--bg3);border:1px solid var(--border);
   color:var(--text);padding:9px 12px;border-radius:8px;
-  font-family:'Google Sans Mono',monospace;font-size:12px;outline:none;
+  font-family:var(--f-mono);font-size:12px;outline:none;
   transition:border-color .15s}
 .gs-input:focus{border-color:var(--income)}
 .gs-modal-actions{display:flex;gap:8px;margin-top:16px}
@@ -594,7 +612,7 @@ select.month-display{text-align-last:center;outline:none}
   display:flex;align-items:center;padding:0 16px;gap:4px;
 }
 .top-nav-brand{
-  font-family:'Google Sans',sans-serif;font-size:11px;font-weight:700;
+  font-family:var(--f-sans);font-size:11px;font-weight:700;
   color:var(--muted);letter-spacing:.12em;text-transform:uppercase;
   padding-right:16px;border-right:1px solid var(--border);margin-right:8px;
   white-space:nowrap;
@@ -603,7 +621,7 @@ select.month-display{text-align-last:center;outline:none}
   display:flex;align-items:center;gap:7px;padding:5px 14px;border-radius:7px;
   font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;
   text-decoration:none;color:var(--muted2);border:1px solid transparent;
-  font-family:'Google Sans',monospace;white-space:nowrap;
+  font-family:var(--f-sans);white-space:nowrap;
 }
 .top-nav-tab:hover{background:var(--bg3);color:var(--text);border-color:var(--border);}
 .top-nav-tab.active{background:var(--bg3);color:var(--white);border-color:var(--border2);}
@@ -665,7 +683,7 @@ select.month-display{text-align-last:center;outline:none}
     <div class="sb-nav">
       <div class="sb-section">Dashboard</div>
       <div class="sb-item active" data-page="overview" onclick="switchPage('overview')">
-        <span class="sb-icon" aria-hidden="true">⌂</span></i>Overview
+        <span class="sb-icon" aria-hidden="true">⌂</span>Overview
       </div>
       <div class="sb-item" data-page="budget" onclick="switchPage('budget')">
         <span class="sb-icon" aria-hidden="true">฿</span>Budget
@@ -675,38 +693,38 @@ select.month-display{text-align-last:center;outline:none}
         <span class="sb-icon" aria-hidden="true">🛡</span>Insurance
       </div>
       <div class="sb-item" data-page="goals" onclick="switchPage('goals')">
-        <span class="sb-icon" aria-hidden="true">◎</span></i>Goals
+        <span class="sb-icon" aria-hidden="true">◎</span>Goals
         <span class="sb-badge" id="sb-goals-badge" style="display:none">0</span>
       </div>
       <div class="sb-section">Cash Flow</div>
       <div class="sb-item" data-page="accounts" onclick="switchPage('accounts')">
-        <span class="sb-icon" aria-hidden="true">🏦</span></i>Accounts
+        <span class="sb-icon" aria-hidden="true">🏦</span>Accounts
       </div>
       <div class="sb-item" data-page="debt" onclick="switchPage('debt')">
-        <span class="sb-icon" aria-hidden="true">💳</span></i>Debt
+        <span class="sb-icon" aria-hidden="true">💳</span>Debt
         <span class="bgt-badge" id="debt-badge" style="display:none;margin-left:auto"></span>
       </div>
       <div class="sb-item" data-page="cashflow" onclick="switchPage('cashflow')">
-        <span class="sb-icon" aria-hidden="true">📊</span></i>Monthly
+        <span class="sb-icon" aria-hidden="true">📊</span>Monthly
       </div>
       <div class="sb-item" data-page="yearly" onclick="switchPage('yearly')">
-        <span class="sb-icon" aria-hidden="true">📅</span></i>Yearly
+        <span class="sb-icon" aria-hidden="true">📅</span>Yearly
       </div>
       <div class="sb-item" data-page="engine" onclick="switchPage('engine')">
-        <span class="sb-icon" aria-hidden="true">💧</span></i>Wealth Engine
+        <span class="sb-icon" aria-hidden="true">💧</span>Wealth Engine
       </div>
       <div class="sb-section">Investment</div>
       <div class="sb-item" data-page="portfolio" onclick="switchPage('portfolio')">
-        <span class="sb-icon" aria-hidden="true">💼</span></i>Holdings
+        <span class="sb-icon" aria-hidden="true">💼</span>Holdings
       </div>
       <div class="sb-item" data-page="flow" onclick="switchPage('flow')">
-        <span class="sb-icon" aria-hidden="true">↗</span></i>Investment Flow
+        <span class="sb-icon" aria-hidden="true">↗</span>Investment Flow
       </div>
       <div class="sb-item" data-page="dividends" onclick="switchPage('dividends')">
-        <span class="sb-icon" aria-hidden="true">💵</span></i>Dividends
+        <span class="sb-icon" aria-hidden="true">💵</span>Dividends
       </div>
       <div class="sb-item" data-page="realized" onclick="switchPage('realized')">
-        <span class="sb-icon" aria-hidden="true">🧾</span></i>Realized P&L
+        <span class="sb-icon" aria-hidden="true">🧾</span>Realized P&L
       </div>
 
     </div>
@@ -715,7 +733,7 @@ select.month-display{text-align-last:center;outline:none}
         ⬇ Export PDF
       </button>
       <button class="sb-upload-btn" onclick="document.getElementById('fi2').click()">
-        <span aria-hidden="true" style="font-size:13px;font-size:14px">↑</span></i>New file
+        <span aria-hidden="true" style="font-size:13px;font-size:14px">↑</span>New file
         <input type="file" id="fi2" accept=".xlsx,.xls" style="display:none">
       </button>
       <div style="display:flex;gap:6px;margin-top:6px">
@@ -745,7 +763,7 @@ select.month-display{text-align-last:center;outline:none}
           <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2);margin-bottom:8px;display:flex;align-items:center;gap:6px">
             <div style="width:8px;height:8px;border-radius:50%;background:var(--income)"></div>Cash (ใช้ได้จริง)
           </div>
-          <div style="font-family:'Google Sans',sans-serif;font-size:clamp(20px,2.6vw,28px);font-weight:700;color:var(--income);letter-spacing:-.02em" id="ov-cash">฿0</div>
+          <div style="font-family:var(--f-sans);font-size:clamp(20px,2.6vw,28px);font-weight:700;color:var(--income);letter-spacing:-.02em" id="ov-cash">฿0</div>
           <div style="font-size:11px;color:var(--muted2);margin-top:6px" id="ov-cash-sub">— accounts</div>
         </div>
         <div style="background:var(--border)"></div>
@@ -754,7 +772,7 @@ select.month-display{text-align-last:center;outline:none}
           <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2);margin-bottom:8px;display:flex;align-items:center;gap:6px">
             <div style="width:8px;height:8px;border-radius:50%;background:var(--loss)"></div>Liabilities
           </div>
-          <div style="font-family:'Google Sans',sans-serif;font-size:clamp(20px,2.6vw,28px);font-weight:700;color:var(--loss);letter-spacing:-.02em" id="ov-liab">฿0</div>
+          <div style="font-family:var(--f-sans);font-size:clamp(20px,2.6vw,28px);font-weight:700;color:var(--loss);letter-spacing:-.02em" id="ov-liab">฿0</div>
           <div style="font-size:11px;color:var(--muted2);margin-top:6px" id="ov-liab-sub">— accounts</div>
         </div>
         <div style="background:var(--border)"></div>
@@ -763,7 +781,7 @@ select.month-display{text-align-last:center;outline:none}
           <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2);margin-bottom:8px;display:flex;align-items:center;gap:6px">
             <div style="width:8px;height:8px;border-radius:50%;background:var(--savings)"></div>Portfolio Value
           </div>
-          <div style="font-family:'Google Sans',sans-serif;font-size:clamp(20px,2.6vw,28px);font-weight:700;color:var(--savings);letter-spacing:-.02em" id="ov-portval">฿0</div>
+          <div style="font-family:var(--f-sans);font-size:clamp(20px,2.6vw,28px);font-weight:700;color:var(--savings);letter-spacing:-.02em" id="ov-portval">฿0</div>
           <div style="font-size:11px;margin-top:6px" id="ov-portpnl-sub"></div>
         </div>
         <div style="background:var(--border)"></div>
@@ -772,7 +790,7 @@ select.month-display{text-align-last:center;outline:none}
           <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2);margin-bottom:8px;display:flex;align-items:center;gap:6px">
             <div style="width:8px;height:8px;border-radius:50%;background:#7c6fec"></div>Insurance CV
           </div>
-          <div style="font-family:'Google Sans',sans-serif;font-size:clamp(20px,2.6vw,28px);font-weight:700;color:#7c6fec;letter-spacing:-.02em" id="ov-inscv">฿0</div>
+          <div style="font-family:var(--f-sans);font-size:clamp(20px,2.6vw,28px);font-weight:700;color:#7c6fec;letter-spacing:-.02em" id="ov-inscv">฿0</div>
           <div style="font-size:11px;color:var(--muted2);margin-top:6px" id="ov-inscv-sub">มูลค่าเวนคืน</div>
         </div>
         <div style="background:var(--border)"></div>
@@ -781,7 +799,7 @@ select.month-display{text-align-last:center;outline:none}
           <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2);margin-bottom:8px;display:flex;align-items:center;gap:6px">
             <div style="width:8px;height:8px;border-radius:2px;background:var(--white)"></div>Net Worth
           </div>
-          <div style="font-family:'Google Sans',sans-serif;font-size:clamp(22px,3vw,32px);font-weight:700;color:var(--white);letter-spacing:-.02em" id="ov-networth">฿0</div>
+          <div style="font-family:var(--f-sans);font-size:clamp(22px,3vw,32px);font-weight:700;color:var(--white);letter-spacing:-.02em" id="ov-networth">฿0</div>
           <div style="font-size:11px;color:var(--muted2);margin-top:6px">Cash − Debt + Portfolio + Ins CV</div>
         </div>
       </div>
@@ -792,12 +810,12 @@ select.month-display{text-align-last:center;outline:none}
           <div style="display:flex;align-items:center;gap:10px">
             <span style="font-size:20px">🎯</span>
             <div>
-              <div style="font-family:'Google Sans',sans-serif;font-size:15px;font-weight:600;color:var(--white)" id="ov-goal-title">Road to ฿3 Million</div>
+              <div style="font-family:var(--f-sans);font-size:15px;font-weight:600;color:var(--white)" id="ov-goal-title">Road to ฿3 Million</div>
               <div style="font-size:11px;color:var(--muted2)" id="ov-goal-sub">เป้าหมาย Net Worth ฿3,000,000</div>
             </div>
           </div>
           <div style="text-align:right">
-            <div style="font-family:'Google Sans',sans-serif;font-size:22px;font-weight:700;color:var(--gain)" id="ov-3m-pct">0%</div>
+            <div style="font-family:var(--f-sans);font-size:22px;font-weight:700;color:var(--gain)" id="ov-3m-pct">0%</div>
             <div style="font-size:10px;color:var(--muted2)" id="ov-3m-remain">เหลืออีก ฿3,000,000</div>
           </div>
         </div>
@@ -922,7 +940,7 @@ select.month-display{text-align-last:center;outline:none}
       <div class="pg-hdr">
         <div><div class="pg-title">Yearly Summary</div><div class="pg-sub">เปรียบเทียบรายได้-รายจ่ายรายปี</div></div>
         <div class="pg-controls">
-          <select id="yr-select" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:6px 12px;border-radius:8px;font-family:'Google Sans Mono',monospace;font-size:12px;cursor:pointer;outline:none">
+          <select id="yr-select" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:6px 12px;border-radius:8px;font-family:var(--f-mono);font-size:12px;cursor:pointer;outline:none">
             <option value="all">All years</option>
           </select>
         </div>
@@ -1436,16 +1454,16 @@ select.month-display{text-align-last:center;outline:none}
 
       <!-- Form -->
       <div class="goal-form-wrap" id="goal-form" style="display:none">
-        <div class="gf-title"><span aria-hidden="true" style="font-size:13px;">◎</span></i><span id="gf-form-title">New goal</span></div>
+        <div class="gf-title"><span aria-hidden="true" style="font-size:13px;">◎</span><span id="gf-form-title">New goal</span></div>
         <input type="hidden" id="gf-id">
         <div class="gf-lbl">Goal type</div>
         <div class="gf-type-row">
           <button class="gf-type-btn sel-amount" id="gf-type-amount" onclick="setGoalType('amount')">
-            <span aria-hidden="true" style="font-size:13px;font-size:18px;display:block;margin-bottom:4px">🐷</span></i>
+            <span aria-hidden="true" style="font-size:13px;font-size:18px;display:block;margin-bottom:4px">🐷</span>
             Amount target<br><span style="font-size:10px;opacity:.7">เก็บเงินถึง ฿X</span>
           </button>
           <button class="gf-type-btn" id="gf-type-rate" onclick="setGoalType('rate')">
-            <span aria-hidden="true" style="font-size:13px;font-size:18px;display:block;margin-bottom:4px">📈</span></i>
+            <span aria-hidden="true" style="font-size:13px;font-size:18px;display:block;margin-bottom:4px">📈</span>
             Saving rate<br><span style="font-size:10px;opacity:.7">save X% ต่อเดือน</span>
           </button>
         </div>
@@ -1483,7 +1501,7 @@ select.month-display{text-align-last:center;outline:none}
       <div id="goals-content"></div>
 
       <div class="goals-empty" id="goals-empty">
-        <span aria-hidden="true" style="font-size:13px;">◎</span></i>
+        <span aria-hidden="true" style="font-size:13px;">◎</span>
         ยังไม่มี goal — กด "Add goal" เพื่อเริ่มต้น
       </div>
     </div>
@@ -1493,6 +1511,14 @@ select.month-display{text-align-last:center;outline:none}
 
 <script src="shared.js"></script>
 <script>
+/* ── #1: single source of truth for the Chart.js font stack ──────────────
+   Latin first, Thai second — matches --f-sans / --f-mono in CSS so canvas
+   text and DOM text render with the exact same fonts. */
+/* #2: LOC is also set by shared.js. Assigning to window (instead of
+   const/var) makes it idempotent, so load order can't cause a
+   'already been declared' SyntaxError that would kill the whole script. */
+window.LOC = window.LOC || 'th-TH-u-ca-gregory';
+const CHART_FONT = "'JetBrains Mono','IBM Plex Sans Thai',ui-monospace,monospace";
 // ── Constants ───────────────────────────────────────────────────────
 const GC={'Thai Stock':'#4cc9f0','US Stock':'#00d4a0','Crypto':'#ff9500',
           'Mutual Fund':'#7c6fec','Provident Fund':'#ffd166','Gold':'#ffa94d','Other':'#5a5a8a'};
@@ -1527,37 +1553,74 @@ let charts={},flowPeriod='monthly';
 const PAGE_SIZE=15;
 
 // ── Formatters ───────────────────────────────────────────────────────
-const fmt=v=>'฿'+Math.abs(v).toLocaleString('th-TH',{maximumFractionDigits:0});
-const fmtN=(v,d=2)=>v.toLocaleString('th-TH',{minimumFractionDigits:d,maximumFractionDigits:d});
-const fmtSign=v=>(v>=0?'+฿':'-฿')+Math.abs(v).toLocaleString('th-TH',{maximumFractionDigits:0});
-const fmtPct=v=>(v>=0?'+':'')+v.toFixed(1)+'%';
+/* #4 — fmt() used to be '฿'+Math.abs(v), which SILENTLY DELETED the minus
+   sign. A negative net worth, a negative MoM delta and a loss all rendered as
+   positive numbers. Sign now always survives; use U+2212 MINUS SIGN (−) not
+   hyphen so it aligns with digits in a tabular-nums column.
+   #11 — nz() also stops NaN/Infinity (0-denominator maths) reaching the DOM
+   as the literal text "NaN" or "∞". */
+/* #6 — the app had escaping in ONE module (budget) via escHtml/escAttr, but the
+   other ~90 innerHTML sites interpolated spreadsheet strings raw. A merchant or
+   note like "Fitness & Co <Gym>" made the parser treat <Gym> as a tag and
+   SWALLOW the rest of that row — a real cause of rows rendering wrong.
+   escHtml is now hoisted here (it used to be declared ~2800 lines below its
+   first use, relying on function hoisting) and no longer throws on null. */
+function escHtml(s){
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;')
+                        .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+const nz=v=>Number.isFinite(+v)?+v:0;
+/* #11 — every progress-bar width goes through this. Guards three ways a bar
+   used to break: NaN%% (0 denominator), Infinity%% (budget 0), and negative%%
+   (negative net worth / overspending) — all of which are INVALID CSS, so the
+   browser dropped the declaration and the bar silently rendered full-width
+   or empty instead of showing the real state. */
+const clampPct=v=>{const n=+v;
+  if(Number.isNaN(n)||v==null||v==='')return 0;   // unknown -> empty bar
+  if(n===Infinity)return 100;                     // overflow -> full bar, not empty
+  return Math.max(0,Math.min(100,n));};
+const fmt=v=>{const n=nz(v);return (n<0?'−':'')+'฿'+Math.abs(n).toLocaleString(LOC,{maximumFractionDigits:0});};
+const fmtN=(v,d=2)=>nz(v).toLocaleString(LOC,{minimumFractionDigits:d,maximumFractionDigits:d});
+const fmtSign=v=>{const n=nz(v);return (n>=0?'+฿':'−฿')+Math.abs(n).toLocaleString(LOC,{maximumFractionDigits:0});};
+const fmtPct=v=>{const n=nz(v);return (n>=0?'+':'−')+Math.abs(n).toFixed(1)+'%';};
 const monthKey=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
 const monthLabel=k=>{const[y,m]=k.split('-');return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m-1]+' '+y};
 const parseDate=v=>{if(!v)return null;if(v instanceof Date)return v;if(typeof v==='number'){const t=new Date(Math.round((v-25569)*86400*1000));return new Date(t.getUTCFullYear(),t.getUTCMonth(),t.getUTCDate());}const d=new Date(v);return isNaN(d)?null:d;};
 
 // ── Chart helpers ─────────────────────────────────────────────────────
-const CHART_OPTS={
+/* #3 CRITICAL FIX — this used to be a single shared options OBJECT that
+   mkBarChart / mkLineChart cloned with JSON.parse(JSON.stringify(...)).
+   JSON drops functions, so EVERY bar and line chart silently lost:
+     - plugins.tooltip.callbacks.label -> tooltip showed "6234" not "฿6,234"
+     - scales.y.ticks.callback         -> Y axis showed "6000000" not "6000k"
+   Only the donut escaped, because it declares its options inline.
+   A factory returns a fresh object per call: callbacks survive, and per-chart
+   mutation (e.g. stacked) still cannot leak into other charts.
+   NOTE: structuredClone() is NOT a valid alternative - it throws
+   DataCloneError when the object contains functions. */
+const axisTick = v => Math.abs(v) >= 1000 ? (v/1000).toFixed(0)+'k' : v;
+const chartOpts = () => ({
   responsive:true,maintainAspectRatio:false,
   plugins:{
-    legend:{labels:{color:'#6060a0',font:{family:'Google Sans Mono',size:10},boxWidth:10,padding:10}},
+    legend:{labels:{color:'#6060a0',font:{family:CHART_FONT,size:10},boxWidth:10,padding:10}},
     tooltip:{backgroundColor:'#12121a',borderColor:'#1e1e35',borderWidth:1,
-      titleColor:'#e2e2f0',bodyColor:'#9090c0',titleFont:{family:'Google Sans Mono'},bodyFont:{family:'Google Sans Mono',size:11},
-      callbacks:{label:c=>` ${c.dataset.label}: ฿${Math.round(c.raw).toLocaleString('th-TH')}`}}
+      titleColor:'#e2e2f0',bodyColor:'#9090c0',titleFont:{family:CHART_FONT},bodyFont:{family:CHART_FONT,size:11},
+      callbacks:{label:c=>` ${escHtml(c.dataset.label)}: ${fmt(Math.round(c.raw))}`}}
   },
   scales:{
-    x:{grid:{color:'rgba(30,30,53,.8)',lineWidth:.5},ticks:{color:'#6060a0',font:{family:'Google Sans Mono',size:9}}},
-    y:{grid:{color:'rgba(30,30,53,.8)',lineWidth:.5},ticks:{color:'#6060a0',font:{family:'Google Sans Mono',size:9},callback:v=>v>=1000?(v/1000).toFixed(0)+'k':v}}
+    x:{grid:{color:'rgba(30,30,53,.8)',lineWidth:.5},ticks:{color:'#6060a0',font:{family:CHART_FONT,size:9}}},
+    y:{grid:{color:'rgba(30,30,53,.8)',lineWidth:.5},ticks:{color:'#6060a0',font:{family:CHART_FONT,size:9},callback:axisTick}}
   }
-};
+});
 function mkBarChart(id,labels,datasets,stacked=false){
-  const opts=JSON.parse(JSON.stringify(CHART_OPTS));
+  const opts=chartOpts();
   if(stacked){opts.scales.x.stacked=true;opts.scales.y.stacked=true;}
   if(charts[id])charts[id].destroy();
   charts[id]=new Chart(document.getElementById(id).getContext('2d'),{type:'bar',data:{labels,datasets},options:opts});
 }
 function mkLineChart(id,labels,datasets){
   if(charts[id])charts[id].destroy();
-  charts[id]=new Chart(document.getElementById(id).getContext('2d'),{type:'line',data:{labels,datasets},options:{...JSON.parse(JSON.stringify(CHART_OPTS)),responsive:true,maintainAspectRatio:false}});
+  charts[id]=new Chart(document.getElementById(id).getContext('2d'),{type:'line',data:{labels,datasets},options:chartOpts()});
 }
 function mkDonut(id,labels,values,colors){
   if(charts[id])charts[id].destroy();
@@ -1565,8 +1628,8 @@ function mkDonut(id,labels,values,colors){
     type:'doughnut',data:{labels,datasets:[{data:values,backgroundColor:colors,borderWidth:0,hoverOffset:4}]},
     options:{cutout:'70%',responsive:true,maintainAspectRatio:true,
       plugins:{legend:{display:false},tooltip:{backgroundColor:'#12121a',borderColor:'#1e1e35',borderWidth:1,
-        titleColor:'#e2e2f0',bodyColor:'#9090c0',titleFont:{family:'Google Sans Mono'},bodyFont:{family:'Google Sans Mono',size:11},
-        callbacks:{label:c=>{const t=values.reduce((a,b)=>a+b,0);return `฿${Math.round(c.raw).toLocaleString('th-TH')} (${(c.raw/t*100).toFixed(1)}%)`;}}}}
+        titleColor:'#e2e2f0',bodyColor:'#9090c0',titleFont:{family:CHART_FONT},bodyFont:{family:CHART_FONT,size:11},
+        callbacks:{label:c=>{const t=values.reduce((a,b)=>a+b,0);return `฿${Math.round(c.raw).toLocaleString(LOC)} (${(c.raw/t*100).toFixed(1)}%)`;}}}}
     }
   });
 }
@@ -1922,7 +1985,7 @@ function renderOverview(){
 
   // ── 🎯 Road to ฿3M — Compound Projection Engine ────────────────────
   const GOAL=getGoalCfg().final;   // แหล่งเดียวจาก shared.js
-  const pct=Math.min(netWorth/GOAL*100,100);
+  const pct=clampPct(GOAL>0?netWorth/GOAL*100:0);   // #4/#11 negative net worth no longer emits width:-x%
   const remain=Math.max(GOAL-netWorth,0);
   document.getElementById('ov-3m-pct').textContent=pct.toFixed(1)+'%';
   document.getElementById('ov-3m-bar').style.width=pct+'%';
@@ -1990,7 +2053,7 @@ function computeGoalProjection(annualRetPct){
   const yrs=Math.floor(months/12), mos=months%12;
   const targetDate=new Date();
   targetDate.setMonth(targetDate.getMonth()+months);
-  const dateStr=targetDate.toLocaleDateString('th-TH',{year:'numeric',month:'short'});
+  const dateStr=targetDate.toLocaleDateString(LOC,{year:'numeric',month:'short'});
 
   // Compare vs 0% baseline to show compounding benefit
   const baselineMonths=Math.ceil(st.remain/st.monthlyContrib);
@@ -2058,7 +2121,7 @@ function _renderOverviewRest(){
     const noPrice=v.val===0&&v.cost>0;
     const pnl=v.val-v.cost;
     const pct=noPrice?null:(v.cost>0?(pnl/v.cost*100).toFixed(1):0);
-    const bw=Math.round(v.val/maxV*100),col=GC[g]||'#555';
+    const bw=clampPct(maxV>0?Math.round(v.val/maxV*100):0),col=GC[g]||'#555';
     const cls=noPrice?'':(pnl>0?'gain':pnl<0?'loss':'');
     const pnlStr=noPrice
       ?`<span style="color:var(--muted);font-size:10px">ไม่มีราคา</span>`
@@ -2088,11 +2151,13 @@ function _renderOverviewRest(){
   const feeR=inv.reduce((s,r)=>s+r.amtTHB,0);
   const feeRatio=feeR>0?totalFee/feeR*100:0;
   healthItems.push({s:feeRatio>0.5?'y':'g',title:`Fee ratio: ${feeRatio.toFixed(3)}%`,desc:`จ่าย fee รวม ${fmt(totalFee)}`});
-  const sr=s.income>0?Math.round(Math.abs(s.savings)/s.income*100):0;
+  /* #4 — was Math.abs(s.savings): a month that overspent (savings −10,000 on
+     income 50,000) reported a POSITIVE 20% savings rate instead of −20%. */
+  const sr=s.income>0?Math.round(s.savings/s.income*100):0;
   healthItems.push({s:sr>=20?'g':sr>=10?'y':'r',title:`Saving rate: ${sr}%`,desc:sr>=20?'ดีเยี่ยม':sr>=10?'พอใช้':'ต่ำกว่าเป้าหมาย'});
   document.getElementById('ov-health').innerHTML=healthItems.map(it=>`
     <div class="hi"><div class="hs ${it.s}"></div>
-    <div><div class="hi-title">${it.title}</div><div class="hi-desc">${it.desc}</div></div></div>`).join('');
+    <div><div class="hi-title">${escHtml(it.title)}</div><div class="hi-desc">${escHtml(it.desc)}</div></div></div>`).join('');
 }
 
 // ── Cash Flow helpers ─────────────────────────────────────────────────
@@ -2105,7 +2170,7 @@ function computeSummary(rows){
     if(r.type==='Debt'){debt+=r.amount;debtCount++;}
   });
   const net=income+expense+savings+debt;
-  const savRate=income>0?Math.round(Math.abs(savings)/income*100):0;
+  const savRate=income>0?Math.round(savings/income*100):0;   // #4 — see above, no Math.abs
   return{income,incomeCount,expense,expenseCount,savings,savingsCount,debt,debtCount,net,savRate};
 }
 
@@ -2179,12 +2244,12 @@ function renderTxTable(rows){
   body.innerHTML=total===0?`<tr><td colspan="5" class="nd">No transactions</td></tr>`:
     page.map(r=>{
       const ac=r.type==='Income'?'pp':r.type==='Savings'?'pz':r.type==='Debt'?'pz':'pn';
-      const at=r.amount>=0?'+฿'+Math.abs(r.amount).toLocaleString('th-TH'):'฿'+Math.abs(r.amount).toLocaleString('th-TH');
+      const at=r.amount>=0?'+฿'+Math.abs(r.amount).toLocaleString(LOC):'฿'+Math.abs(r.amount).toLocaleString(LOC);
       const TX_MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
       const fmtTxDate=ds=>{const[,m,d]=ds.split('-');return TX_MONTHS[+m-1]+'-'+d;};
       return `<tr><td style="color:var(--muted);font-size:11px">${fmtTxDate(r.dateStr)}</td>
-        <td><span class="tp pill-${r.type}">${r.type}</span></td>
-        <td style="font-size:11px;color:var(--muted2)">${r.category}</td>
+        <td><span class="tp pill-${escHtml(r.type)}">${escHtml(r.type)}</span></td>
+        <td style="font-size:11px;color:var(--muted2)">${escHtml(r.category)}</td>
         <td style="color:var(--text);max-width:160px;overflow:hidden;text-overflow:ellipsis" title="${r.details}">${r.details||'—'}</td>
         <td class="${ac}" style="text-align:right">${at}</td></tr>`;
     }).join('');
@@ -2213,7 +2278,9 @@ function renderYearly(){
   document.getElementById('yr-body').innerHTML=years.map(yr=>{
     const s=computeSummary(txRows.filter(r=>r.year===yr));
     const rc=s.savRate>=20?'var(--gain)':s.savRate>=10?'var(--debt)':'var(--loss)';
-    const bw=Math.min(s.savRate*2,100);
+    /* #4 — savRate can now legitimately be negative (overspending month).
+       Clamp to 0 so we never emit an invalid CSS `width:-40%`. */
+    const bw=clampPct(s.savRate*2);   // #11 unified on clampPct (savRate may be negative)
     return `<tr>
       <td>${yr}</td>
       <td style="color:var(--gain)">${fmt(s.income)}</td>
@@ -2313,7 +2380,7 @@ function renderAccounts(){
     const valColor=isNeg?'var(--loss)':'var(--income)';
     return `<div class="bank-card" style="--bank-accent:${meta.color}">
       <div class="bank-card-header">
-        <div class="bank-name" title="${b.name}">${b.name}</div>
+        <div class="bank-name" title="${escHtml(b.name)}">${escHtml(b.name)}</div>
         <span class="bank-type-badge" style="${meta.badge}">${accType==='Bank Account'?'BANK':accType==='Credit Card'?'CREDIT':accType==='E-Wallet'?'WALLET':'TRAVEL'}</span>
       </div>
       <div class="bank-val" style="color:${valColor}">${fmt(b.balance)}</div>
@@ -2329,7 +2396,7 @@ function renderAccounts(){
   document.getElementById('acc-donut-val').textContent=fmt(posTotal);
   mkDonut('acc-donut-chart',labels,values,colors.slice(0,labels.length));
   document.getElementById('acc-donut-legend').innerHTML=posOnly.map((b,i)=>`
-    <div class="ar"><div class="al-left"><div class="al-dot" style="background:${colors[i]}"></div><span>${b.name}</span></div>
+    <div class="ar"><div class="al-left"><div class="al-dot" style="background:${colors[i]}"></div><span>${escHtml(b.name)}</span></div>
     <div class="al-pct">${posTotal>0?(b.balance/posTotal*100).toFixed(1):0}%</div></div>`).join('');
 
   // ── Year-end balance calculation ──
@@ -2385,7 +2452,7 @@ function renderAccounts(){
     const border=d.chg>=0?'rgba(0,212,160,.25)':'rgba(255,64,96,.25)';
     const arrow=d.chg>=0?'▲':'▼';
     return `<span style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;font-size:12px;background:${bg};border:1px solid ${border};color:${col}">
-      ${arrow} ${d.label}: ${d.chg>=0?'+':''}${fmt(d.chg)} (${d.pct>=0?'+':''}${d.pct.toFixed(1)}%)
+      ${arrow} ${escHtml(d.label)}: ${d.chg>=0?'+':''}${fmt(d.chg)} (${fmtPct(d.pct)})
     </span>`;
   }).join('');
 
@@ -2419,16 +2486,16 @@ function renderAccounts(){
         tooltip:{
           backgroundColor:'#12121a',borderColor:'#1e1e35',borderWidth:1,
           titleColor:'#e2e2f0',bodyColor:'#9090c0',
-          titleFont:{family:'Google Sans Mono'},bodyFont:{family:'Google Sans Mono',size:11},
+          titleFont:{family:CHART_FONT},bodyFont:{family:CHART_FONT,size:11},
           callbacks:{
-            label:ctx=>{const i=ctx.dataIndex;const val=ctx.raw;const vStr='฿'+val.toLocaleString('th-TH',{maximumFractionDigits:0});if(i===0)return ' '+vStr;const prev=balData[i-1];const chg=val-prev;const pct=prev!==0?(chg/Math.abs(prev)*100).toFixed(1):'—';const sign=chg>=0?'+':'';return[' '+vStr,' YoY: '+sign+'฿'+Math.abs(chg).toLocaleString('th-TH',{maximumFractionDigits:0})+' ('+sign+pct+'%)'];}
+            label:ctx=>{const i=ctx.dataIndex;const val=ctx.raw;const vStr='฿'+val.toLocaleString(LOC,{maximumFractionDigits:0});if(i===0)return ' '+vStr;const prev=balData[i-1];const chg=val-prev;const pct=prev!==0?(chg/Math.abs(prev)*100).toFixed(1):'—';const sign=chg>=0?'+':'';return[' '+vStr,' YoY: '+sign+'฿'+Math.abs(chg).toLocaleString(LOC,{maximumFractionDigits:0})+' ('+sign+pct+'%)'];}
           }
         }
       },
       scales:{
-        x:{grid:{color:'rgba(30,30,53,.8)',lineWidth:.5},ticks:{color:'#6060a0',font:{family:'Google Sans Mono',size:10}}},
+        x:{grid:{color:'rgba(30,30,53,.8)',lineWidth:.5},ticks:{color:'#6060a0',font:{family:CHART_FONT,size:10}}},
         y:{grid:{color:'rgba(30,30,53,.8)',lineWidth:.5},
-           ticks:{color:'#6060a0',font:{family:'Google Sans Mono',size:9},
+           ticks:{color:'#6060a0',font:{family:CHART_FONT,size:9},
              callback:v=>v>=1000?(v/1000).toFixed(0)+'k':v}}
       }
     }
@@ -2482,7 +2549,7 @@ function renderLocationGrid(){
     const badge = BADGE[grp] || 'badge-other';
     const rows = platforms.map(([plat, v]) => {
       const pct = grpTotal > 0 ? (v.val/grpTotal*100).toFixed(0) : 0;
-      const barW = Math.min(parseFloat(pct), 100);
+      const barW = clampPct(parseFloat(pct));   // #11 parseFloat('') was NaN -> width:NaN%
       const tickers = [...new Set(v.tickers)].slice(0,5).join(' · ');
       const more = v.tickers.length > 5 ? ` +${v.tickers.length-5}` : '';
       return `<div style="padding:8px 0;border-bottom:0.5px solid var(--border)">
@@ -2505,7 +2572,7 @@ function renderLocationGrid(){
       <div style="padding:14px 16px;border-bottom:1px solid var(--border2);display:flex;align-items:center;justify-content:space-between">
         <div style="display:flex;align-items:center;gap:8px">
           <div style="width:10px;height:10px;border-radius:50%;background:${col}"></div>
-          <span style="font-size:14px;font-weight:600;color:var(--white);font-family:'Google Sans',sans-serif">${grp}</span>
+          <span style="font-size:14px;font-weight:600;color:var(--white);font-family:var(--f-sans)">${escHtml(grp)}</span>
         </div>
         <div style="text-align:right">
           <div style="font-size:16px;font-weight:600;color:var(--white)">${fmt(grpTotal)}</div>
@@ -2650,13 +2717,13 @@ function renderPerformance(totalVal){
   const t0=new Date(Math.min(...flows.map(f=>f.t)));
   const yrs=((nowT-t0.getTime())/(365*86400e3)).toFixed(1);
   const pEl=document.getElementById('perf-period');
-  if(pEl) pEl.textContent = `ตั้งแต่ ${t0.toLocaleDateString('th-TH',{month:'short',year:'2-digit'})} · ${yrs} ปี · ${flows.length} cashflows`;
+  if(pEl) pEl.textContent = `ตั้งแต่ ${t0.toLocaleDateString(LOC,{month:'short',year:'2-digit'})} · ${yrs} ปี · ${flows.length} cashflows`;
 
   // per-asset XIRR (เฉพาะที่ยังถือและมูลค่า > ฿3,000)
   const perAsset = assets.filter(a=>a.val>3000 && byTk[a.ticker]).map(a=>{
     return { ticker:a.ticker, val:a.val, r: xirrJS([...byTk[a.ticker], {t:nowT, v:a.val}]) };
   }).filter(x=>x.r!==null).sort((a,b)=>b.r-a.r);
-  const row = x => `<div style="display:flex;justify-content:space-between"><span>${x.ticker} <span style="color:var(--muted2);font-size:10px">${fmt(x.val)}</span></span><strong style="color:${x.r>=0?'var(--gain)':'var(--loss)'}">${(x.r>=0?'+':'')+(x.r*100).toFixed(1)}%/ปี</strong></div>`;
+  const row = x => `<div style="display:flex;justify-content:space-between"><span>${escHtml(x.ticker)} <span style="color:var(--muted2);font-size:10px">${fmt(x.val)}</span></span><strong style="color:${x.r>=0?'var(--gain)':'var(--loss)'}">${(x.r>=0?'+':'')+(x.r*100).toFixed(1)}%/ปี</strong></div>`;
   const topEl=document.getElementById('perf-top'), botEl=document.getElementById('perf-bottom');
   if(topEl) topEl.innerHTML = perAsset.slice(0,5).map(row).join('') || '—';
   if(botEl) botEl.innerHTML = perAsset.slice(-3).reverse().map(row).join('') || '—';
@@ -2760,7 +2827,7 @@ function renderPortfolio(){
     return `<div class="plat-card"><div class="bank-name">${p}</div>
       <div class="bank-val ${v.val>=0?'':''}" style="font-size:15px;color:var(--white)">${fmt(v.val)}</div>
       <div style="font-size:10px;color:var(--muted2);margin-top:2px;display:flex;justify-content:space-between"><span>${v.n} assets</span><span>${pct}%</span></div>
-      <div class="plat-bar-wrap"><div class="plat-bar" style="width:${pct}%"></div></div></div>`;
+      <div class="plat-bar-wrap"><div class="plat-bar" style="width:${clampPct(pct)}%"></div></div></div>`;
   }).join('');
   renderLocationGrid();
   renderAssetTable();
@@ -2783,17 +2850,17 @@ function renderAssetTable(){
     const ptt=a.pnlPct===0&&a.cost===0?'—':fmtPct(a.pnlPct);
     const bs=[...(specials[a.ticker]||[])].map(t=>t==='div'?`<span class="tx-badge tx-div">DIV</span>`:t==='sell'?`<span class="tx-badge tx-sell">SELL</span>`:`<span class="tx-badge tx-xfer">XFER</span>`).join('');
     return `<tr>
-      <td class="tk">${a.ticker}${bs}</td>
-      <td><span class="tp ${BADGE[a.group]||'badge-other'}">${a.group}</span></td>
+      <td class="tk">${escHtml(a.ticker)}${bs}</td>
+      <td><span class="tp ${BADGE[a.group]||'badge-other'}">${escHtml(a.group)}</span></td>
       <td style="font-size:11px;color:var(--muted2)">${a.platform}</td>
       <td class="ind" title="${a.industry}">${a.industry}</td>
-      <td class="nr">${a.qty%1===0?a.qty.toLocaleString():fmtN(a.qty)}</td>
+      <td class="nr">${a.qty%1===0?a.qty.toLocaleString(LOC):fmtN(a.qty)}</td>
       <td class="nr">${a.wacc>0?fmtN(a.wacc):'—'}</td>
       <td class="nr">${a.cur>0?fmtN(a.cur):'—'}</td>
       <td class="nr">${a.cost>0?fmt(a.cost):'—'}</td>
       <td class="nr" style="color:var(--white)">${a.val>0?fmt(a.val):'—'}</td>
       <td class="${pc}">${pt}</td><td class="${ptc}">${ptt}</td>
-      <td class="nr" style="font-size:10px;color:var(--muted2)">${a.currency}${a.currency==='USD'&&fxMap[a.ticker]?`<span style="font-size:9px;color:var(--muted)"> ~${fxMap[a.ticker]}</span>`:''}</td>
+      <td class="nr" style="font-size:10px;color:var(--muted2)">${escHtml(a.currency)}${a.currency==='USD'&&fxMap[a.ticker]?`<span style="font-size:9px;color:var(--muted)"> ~${fxMap[a.ticker]}</span>`:''}</td>
     </tr>`;
   }).join('');
 }
@@ -2815,8 +2882,8 @@ function renderDataQuality(){
       border-radius:10px;padding:12px 14px;margin-top:14px;font-size:12px;line-height:1.9">
     <div style="font-weight:600;color:var(--debt);margin-bottom:4px">
       ⚠ มี ${bad.length} สินทรัพย์ที่ถืออยู่จริงแต่ <u>หาราคาไม่เจอ</u> — ระบบนับมูลค่าเป็น ฿0</div>
-    ${bad.map(a=>`<div style="color:var(--muted)">• <strong>${a.ticker}</strong> (${a.group})
-       — ถือ ${(+a.qty).toLocaleString(undefined,{maximumFractionDigits:6})} หน่วย · ต้นทุน ${fmt(a.cost||0)}</div>`).join('')}
+    ${bad.map(a=>`<div style="color:var(--muted)">• <strong>${escHtml(a.ticker)}</strong> (${escHtml(a.group)})
+       — ถือ ${(+a.qty).toLocaleString(LOC,{maximumFractionDigits:6})} หน่วย · ต้นทุน ${fmt(a.cost||0)}</div>`).join('')}
     <div style="color:var(--muted2);font-size:11px;margin-top:6px">
       พอร์ตรวมจึง<strong>ต่ำกว่าความจริง</strong>อย่างน้อย ${fmt(lostCost)} (ราคาทุน) และสัดส่วนใน
       Allocation/Alerts จะเพี้ยนตาม → แก้ที่ชีต <strong>Asset_Live_Price_Feed</strong>:
@@ -3017,7 +3084,7 @@ function renderDividendTable(){
       const badge=BADGE[v.group]||'badge-other';
       return `<tr>
         <td class="tk">${ticker}</td>
-        <td><span class="tp ${badge}">${v.group}</span></td>
+        <td><span class="tp ${badge}">${escHtml(v.group)}</span></td>
         <td style="font-size:11px;color:var(--muted2)">${v.platform}</td>
         ${years.map(y=>`<td class="nr" style="color:var(--gain)">${v.byYear[y]?'+'+fmt(v.byYear[y]):'—'}</td>`).join('')}
         <td class="nr gain" style="font-weight:500">+${fmt(total)}</td>
@@ -3076,9 +3143,9 @@ function renderRealized(){
   document.getElementById('real-body').innerHTML=[...realized].sort((a,b)=>a.date.localeCompare(b.date)).map(r=>{
     const cls=r.pnl>0?'pp':r.pnl<0?'pn':'pz';
     return `<tr>
-      <td>${r.date}</td><td class="tk">${r.ticker}</td>
-      <td><span class="tp ${BADGE[r.group]||'badge-other'}">${r.group}</span></td>
-      <td class="nr">${r.qty%1===0?r.qty.toLocaleString():fmtN(r.qty)}</td>
+      <td>${r.date}</td><td class="tk">${escHtml(r.ticker)}</td>
+      <td><span class="tp ${BADGE[r.group]||'badge-other'}">${escHtml(r.group)}</span></td>
+      <td class="nr">${r.qty%1===0?r.qty.toLocaleString(LOC):fmtN(r.qty)}</td>
       <td class="nr">${r.wacc>0?fmtN(r.wacc):'—'}</td>
       <td class="nr">${r.costBasis>0?fmt(r.costBasis):'—'}</td>
       <td class="nr">${fmt(r.proceeds)}</td>
@@ -3161,7 +3228,7 @@ function gsInit(){
     const sbStatus=document.getElementById('sb-status');
     const ageTxt = cacheAge<60 ? cacheAge+' นาที' : cacheAge<1440 ? Math.round(cacheAge/60)+' ชม.'
                  : Math.round(cacheAge/1440)+' วัน';
-    if(sbStatus) sbStatus.textContent=txRows.length.toLocaleString()+' tx · '+assets.length+
+    if(sbStatus) sbStatus.textContent=txRows.length.toLocaleString(LOC)+' tx · '+assets.length+
       ' assets · ข้อมูล '+ageTxt+'ที่แล้ว';
     if(cacheAge>30){
       console.warn('[Cache] ข้อมูลเก่า '+ageTxt+' — กำลังพยายาม sync ใหม่');
@@ -3379,7 +3446,7 @@ async function gsSync(){
     mergeValueLogFromSheet(map['Value_Log']);   // ประวัติมูลค่าพอร์ตรายวัน → TWR ไม่มีวันโหว่
     gsLastSync=new Date();
     gsConnected=true;
-    gsSetStatus('✓ Sync '+gsLastSync.toLocaleTimeString('th-TH'),'ok');
+    gsSetStatus('✓ Sync '+gsLastSync.toLocaleTimeString(LOC),'ok');
     console.log('[GS] Done:',Object.keys(map));
     gsScheduleAutoSync();
   } catch(e){
@@ -3499,7 +3566,7 @@ function gsProcessData(map){
     // Show dashboard
     console.log('[GS] txRows:', txRows.length, 'assets:', assets.length, 'months:', availableMonths);
     const sbStatus=document.getElementById('sb-status');
-    if(sbStatus) sbStatus.textContent=txRows.length.toLocaleString()+' tx · '+assets.length+' assets · Sheets';
+    if(sbStatus) sbStatus.textContent=txRows.length.toLocaleString(LOC)+' tx · '+assets.length+' assets · Sheets';
     const upEl=document.getElementById('up');
     const appEl=document.getElementById('app');
     if(upEl) upEl.style.display='none';
@@ -3656,7 +3723,7 @@ function gsUpdateSyncBtn(loading=false){
   if(loading){btn.classList.add('syncing');if(dot)dot.classList.add('pulse');if(txt)txt.textContent='Syncing...';}
   else if(gsConnected){btn.classList.add('connected');btn.classList.remove('syncing');
     if(dot){dot.classList.remove('pulse');dot.style.background='var(--income)';}
-    if(txt)txt.textContent=gsLastSync?'Synced '+gsLastSync.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}):'Sync Sheets';}
+    if(txt)txt.textContent=gsLastSync?'Synced '+gsLastSync.toLocaleTimeString(LOC,{hour:'2-digit',minute:'2-digit'}):'Sync Sheets';}
   else{btn.classList.remove('connected','syncing');
     if(dot){dot.classList.remove('pulse');dot.style.background='var(--muted)';}
     if(txt)txt.textContent='Connect Sheets';}
@@ -3744,7 +3811,7 @@ function generateMonthlyPDF(){
     const spent=expMap[cat]||0;
     const bgt=parseFloat(budgets['exp_'+cat])||BGT_DEFAULTS[cat]||0;
     if(bgt<=0)return;
-    const pct=Math.round(spent/bgt*100);
+    const pct=bgt>0?Math.round(spent/bgt*100):0;   // #11 bgt=0 gave Infinity%
     if(pct>=80) budgetAlerts.push({cat,spent,bgt,pct});
   });
   budgetAlerts.sort((a,b)=>b.pct-a.pct);
@@ -3879,7 +3946,7 @@ body{font-family:'Sarabun',sans-serif;font-size:13px;color:#1a1a2e;background:#f
     ${top5.map(([cat,val],i)=>`<tr>
       <td style="color:#aaa;width:24px">${i+1}</td>
       <td><b>${cat}</b></td>
-      <td style="text-align:right;font-family:monospace">${fmt(val)}</td>
+      <td style="text-align:right;font-family:var(--f-mono)">${fmt(val)}</td>
       <td style="text-align:right">${totalExp>0?(val/totalExp*100).toFixed(1):'0'}%</td>
       <td><span class="cat-bar-wrap"><span class="cat-bar" style="width:${totalExp>0?Math.round(val/top5[0][1]*100):0}%"></span></span></td>
     </tr>`).join('')}
@@ -3895,9 +3962,9 @@ ${budgetAlerts.length>0?`
     <thead><tr><th>Category</th><th style="text-align:right">Spent</th><th style="text-align:right">Budget</th><th style="text-align:right">Used</th><th>Status</th></tr></thead>
     <tbody>
     ${budgetAlerts.map(b=>`<tr>
-      <td>${b.cat}</td>
-      <td style="text-align:right;font-family:monospace">${fmt(b.spent)}</td>
-      <td style="text-align:right;font-family:monospace">${fmt(b.bgt)}</td>
+      <td>${escHtml(b.cat)}</td>
+      <td style="text-align:right;font-family:var(--f-mono)">${fmt(b.spent)}</td>
+      <td style="text-align:right;font-family:var(--f-mono)">${fmt(b.bgt)}</td>
       <td style="text-align:right"><b>${b.pct}%</b></td>
       <td><span class="${b.pct>=100?'badge-over':'badge-warn'}">${b.pct>=100?'เกิน budget':'ใกล้เกิน'}</span></td>
     </tr>`).join('')}
@@ -4078,7 +4145,7 @@ function renderBudget(){
     const bgtAmt = parseFloat(budgets['exp_'+cat])||BGT_DEFAULTS[cat]||0;
     const pct    = bgtAmt>0?Math.round(spent/bgtAmt*100):0;
     const st     = bgtAmt>0?bgtStatus(pct):{label:'ยังไม่ตั้ง',cls:'unset'};
-    const barW   = bgtAmt>0?Math.min(pct,100):0;
+    const barW   = bgtAmt>0?clampPct(pct):0;   // #11
     const key    = 'exp_'+cat;
     return bgtCardHTML(cat, spent, bgtAmt, pct, st, barW, key, 'ใช้ไป', '/ ');
   }).join('');
@@ -4093,7 +4160,7 @@ function renderBudget(){
       ?(pct>=100?{label:'ถึง target!',cls:'ok'}:pct>=50?{label:'กำลังดี',cls:'warn'}:{label:'ต่ำกว่า target',cls:'over'})
       :{label:'ยังไม่ตั้ง',cls:'unset'};
     const barCol = pct>=100?'var(--income)':pct>=50?'var(--debt)':'var(--expense)';
-    const barW   = Math.min(pct,100);
+    const barW   = clampPct(pct);   // #11
     const key    = 'sav_'+cat;
     return bgtCardHTML(cat, saved, tgt, pct, savSt, barW, key, 'ออม', 'target ', barCol);
   }).join('');
@@ -4117,7 +4184,7 @@ function bgtCardHTML(cat, amount, limit, pct, st, barW, key, spentLabel, limitPr
     <div class="bgt-card-top">
       <div class="bgt-cat">${catTxt}</div>
       <div style="display:flex;gap:6px;align-items:center">
-        <span class="bgt-badge ${st.cls}">${st.label}</span>
+        <span class="bgt-badge ${st.cls}">${escHtml(st.label)}</span>
         <button class="bgt-edit-btn" onclick="bgtToggleEdit('${keyJs}','${catJs}',${limit})">Edit</button>
       </div>
     </div>
@@ -4136,20 +4203,22 @@ function bgtCardHTML(cat, amount, limit, pct, st, barW, key, spentLabel, limitPr
 
 function bgtToggleEdit(key,cat,currentVal){
   // key = 'exp_Foods & Drinks' or 'sav_US Stock', cat = display name
-  const esc=CSS.escape(cat);
-  const editRow=document.getElementById('bgt-edit-'+esc);
+  // #6 — renamed from `esc` (shadowed the global html escaper, a landmine
+  //      the moment anyone used escHtml() inside this function).
+  const escSel=CSS.escape(cat);
+  const editRow=document.getElementById('bgt-edit-'+escSel);
   if(!editRow)return;
   const visible=editRow.style.display!=='none';
   editRow.style.display=visible?'none':'flex';
   if(!visible){
-    const inp=document.getElementById('bgt-inp-'+esc);
+    const inp=document.getElementById('bgt-inp-'+escSel);
     if(inp){inp.value=currentVal||'';inp.focus();inp.select();}
   }
 }
 
 function bgtSaveOne(key,cat){
-  const esc=CSS.escape(cat);
-  const inp=document.getElementById('bgt-inp-'+esc);
+  const escSel=CSS.escape(cat);   // #6 — was `esc`, see bgtToggleEdit
+  const inp=document.getElementById('bgt-inp-'+escSel);
   if(!inp)return;
   const val=parseFloat(inp.value)||0;
   const data=bgtLoad();
@@ -4257,7 +4326,7 @@ function savePortfolioToStorage(){
     });
     const topHoldings=assets.filter(a=>a.val>0).sort((a,b)=>b.val-a.val).slice(0,8).map(a=>({
       ticker:a.ticker,value:Math.round(a.val),
-      pct:totalVal>0?Math.round(a.val/totalVal*100):0,
+      pct:totalVal>0?clampPct(Math.round(a.val/totalVal*100)):0,
       pnl:Math.round(a.val-a.cost),pnlPct:a.pnlPct||0,group:a.group
     }));
     const totalCost=assets.filter(a=>a.val>0).reduce((s,a)=>s+a.cost,0);
@@ -4299,10 +4368,7 @@ function escAttr(s){
 }
 // escape สำหรับค่าที่ไปอยู่ใน text node (innerHTML) — กัน markup ที่ผู้ใช้/ชีตใส่มา
 // ใช้กับชื่อหมวดงบ ชื่อเป้าหมาย และ emoji icon ที่ผู้ใช้พิมพ์เอง
-function escHtml(s){
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
-                  .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
+/* escHtml() hoisted to the top of the script — see #6 there. */
 function dbtSetApr(name, val){
   const v=parseFloat(val);
   saveDebtCfg({ apr: { [name]: isFinite(v)&&v>=0 ? Math.min(v,99) : 0 } });
@@ -4364,7 +4430,7 @@ function renderDebt(){
   if(plan && isFinite(plan.months)){
     mEl.textContent=plan.months+' เดือน';
     const d=new Date(); d.setMonth(d.getMonth()+plan.months);
-    document.getElementById('dbt-months-s').textContent='ราว '+d.toLocaleDateString('th-TH',{month:'short',year:'numeric'});
+    document.getElementById('dbt-months-s').textContent='ราว '+d.toLocaleDateString(LOC,{month:'short',year:'numeric'});
   }else{
     mEl.textContent='ไม่มีวันหมด'; mEl.style.color='var(--loss)';
     document.getElementById('dbt-months-s').textContent='จ่ายไม่พอดอกเบี้ย — หนี้โตขึ้นเรื่อยๆ';
@@ -4385,7 +4451,7 @@ function renderDebt(){
     const topApr=Math.max(...di.rows.map(r=>r.apr));
     const winAmt=win.reduce((s,r)=>s+r.bal,0);
     vEl.innerHTML=`<div style="background:linear-gradient(135deg,rgba(255,64,96,.08),rgba(255,149,0,.05));border:1px solid rgba(255,64,96,.28);border-radius:12px;padding:16px 20px">
-      <div style="font-family:'Google Sans',sans-serif;font-size:14px;font-weight:600;color:var(--white);margin-bottom:8px">
+      <div style="font-family:var(--f-sans);font-size:14px;font-weight:600;color:var(--white);margin-bottom:8px">
         ${win.length?'💡 จ่ายหนี้ก่อน — ชนะการลงทุนชัดเจน':'✅ ดอกเบี้ยต่ำกว่าผลตอบแทนคาดหวัง — ลงทุนก่อนได้'}</div>
       <div style="font-size:12px;line-height:1.95;color:var(--text)">
         ${win.length?`หนี้ ${fmt(winAmt)} ที่ดอกเบี้ยสูงสุด <strong style="color:var(--loss)">${topApr}%/ปี</strong>
@@ -4407,7 +4473,7 @@ function renderDebt(){
     const minPay=Math.min(r.bal,Math.max(cfg.minFloor,r.bal*cfg.minPct/100));
     const pm=plan&&plan.payoffMonth[r.name];
     return `<tr>
-      <td>${r.name}</td>
+      <td>${escHtml(r.name)}</td>
       <td class="r" style="color:var(--loss)">${fmt(r.bal)}</td>
       <td class="r"><span style="display:inline-flex;align-items:center;gap:4px;justify-content:flex-end">
         <input type="number" class="dbt-apr" value="${r.apr||''}" step="0.5" min="0" max="99" placeholder="?"
@@ -4602,14 +4668,14 @@ function saveGoal(){
 
 function computeGoalProgress(g){
   if(g.type==='amount'){
-    const pct=g.target>0?Math.min(Math.round(g.current/g.target*100),100):0;
+    const pct=clampPct(g.target>0?Math.round(g.current/g.target*100):0);
     const remaining=Math.max(g.target-g.current,0);
     let etaText='',etaClass='';
     if(remaining===0){etaText='บรรลุเป้าหมายแล้ว';etaClass='done';}
     else if(g.monthlyContrib>0){
       const etaM=Math.ceil(remaining/g.monthlyContrib);
       const d=new Date();d.setMonth(d.getMonth()+etaM);
-      const dStr=d.toLocaleDateString('th-TH',{month:'short',year:'numeric'});
+      const dStr=d.toLocaleDateString(LOC,{month:'short',year:'numeric'});
       etaText=`ถึงเป้าใน ~${etaM} เดือน (${dStr})`;
       etaClass='ok';
       if(g.deadline&&g.monthlyContrib>0){
@@ -4635,7 +4701,7 @@ function computeGoalProgress(g){
     const avg=rates.length?Math.round(rates.reduce((s,v)=>s+v,0)/rates.length):0;
     const latest=rates.length?rates[rates.length-1]:0;
     const target=g.rateTarget||20;
-    const pct=Math.min(Math.round(avg/target*100),100);
+    const pct=clampPct(target>0?Math.round(avg/target*100):0);
     const hitCount=rates.filter(r=>r>=target).length;
     const etaClass=avg>=target?'ok':'warn';
     const etaText=avg>=target?`เฉลี่ย ${avg}% ≥ เป้า ${target}% — บรรลุ ${hitCount}/${rates.length} เดือน`
@@ -4679,7 +4745,7 @@ function renderGoals(){
   // ── In Progress ──
   if(inProgress.length){
     html+=`<div class="goal-sl" style="margin-top:0">
-      <span aria-hidden="true" style="font-size:13px;font-size:13px">▷</span></i>
+      <span aria-hidden="true" style="font-size:13px;font-size:13px">▷</span>
       In progress
       <span style="font-size:11px;font-weight:400;color:var(--muted);letter-spacing:0;text-transform:none">${inProgress.length} goals</span>
     </div>`;
@@ -4692,7 +4758,7 @@ function renderGoals(){
   // ── Completed ──
   if(completed.length){
     html+=`<div class="goal-sl" style="${inProgress.length?'margin-top:28px':'margin-top:0'}">
-      <span aria-hidden="true" style="font-size:13px;font-size:13px;color:var(--gain)">✓</span></i>
+      <span aria-hidden="true" style="font-size:13px;font-size:13px;color:var(--gain)">✓</span>
       <span style="color:var(--gain)">Completed</span>
       <span style="font-size:11px;font-weight:400;color:var(--muted);letter-spacing:0;text-transform:none">${completed.length} goals</span>
     </div>`;
@@ -4705,9 +4771,9 @@ function renderGoals(){
 
   // Add card at bottom
   html+=`<div class="gc-add-card" onclick="toggleGoalForm()">
-    <div class="gc-add-icon"><span aria-hidden="true" style="font-size:13px;font-size:20px">+</span></i></div>
+    <div class="gc-add-icon"><span aria-hidden="true" style="font-size:13px;font-size:20px">+</span></div>
     <div>
-      <div style="font-size:14px;font-weight:600;color:var(--white);font-family:'Google Sans',sans-serif">Add new goal</div>
+      <div style="font-size:14px;font-weight:600;color:var(--white);font-family:var(--f-sans)">Add new goal</div>
       <div style="font-size:12px;color:var(--muted2);margin-top:2px">ตั้งเป้าหมายทางการเงินใหม่</div>
     </div>
   </div>`;
@@ -4720,10 +4786,10 @@ function renderAmountCard(g,idx,isDone=false){
   const icon=escHtml(g.icon||'🎯');   // #13 — icon ผู้ใช้พิมพ์เอง
   const gName=escHtml(g.name||'');    // #13 — ชื่อเป้าหมายผู้ใช้พิมพ์เอง
   const deadlineTxt=g.deadline
-    ?`<span style="margin-left:6px">· deadline ${new Date(g.deadline).toLocaleDateString('th-TH',{month:'short',year:'numeric'})}</span>`:'';
-  const etaPill=p.etaText?`<span class="gc-pill ${p.etaClass}"><span aria-hidden="true" style="font-size:13px;">⏱</span></i>${p.etaText}</span>`:'';
+    ?`<span style="margin-left:6px">· deadline ${new Date(g.deadline).toLocaleDateString(LOC,{month:'short',year:'numeric'})}</span>`:'';
+  const etaPill=p.etaText?`<span class="gc-pill ${p.etaClass}"><span aria-hidden="true" style="font-size:13px;">⏱</span>${p.etaText}</span>`:'';
   const doneStyle=isDone?'border-color:rgba(0,212,160,.3);opacity:.8;':'';
-  const doneBadge=isDone?`<span style="font-size:10px;padding:2px 8px;border-radius:20px;background:rgba(0,212,160,.12);color:var(--gain);border:1px solid rgba(0,212,160,.3)"><span aria-hidden="true" style="font-size:13px;font-size:10px">✓</span></i> Completed</span>`:'';
+  const doneBadge=isDone?`<span style="font-size:10px;padding:2px 8px;border-radius:20px;background:rgba(0,212,160,.12);color:var(--gain);border:1px solid rgba(0,212,160,.3)"><span aria-hidden="true" style="font-size:13px;font-size:10px">✓</span> Completed</span>`:'';
   return `<div class="goal-card" style="${doneStyle}">
     <div class="gc-top">
       <div class="gc-icon" style="background:${col.bg}">${icon}</div>
@@ -4738,18 +4804,18 @@ function renderAmountCard(g,idx,isDone=false){
     </div>
     <div class="gc-track"><div class="gc-fill" style="width:${p.pct}%;background:${col.fill}"></div></div>
     <div class="gc-pills">
-      <span class="gc-pill"><span aria-hidden="true" style="font-size:13px;">฿</span></i>เหลืออีก ${fmt(p.remaining)}</span>
-      ${g.monthlyContrib?`<span class="gc-pill"><span aria-hidden="true" style="font-size:13px;">↗</span></i>ออม ${fmt(g.monthlyContrib)}/เดือน</span>`:''}
+      <span class="gc-pill"><span aria-hidden="true" style="font-size:13px;">฿</span>เหลืออีก ${fmt(p.remaining)}</span>
+      ${g.monthlyContrib?`<span class="gc-pill"><span aria-hidden="true" style="font-size:13px;">↗</span>ออม ${fmt(g.monthlyContrib)}/เดือน</span>`:''}
       ${etaPill}
     </div>
     <div class="gc-footer">
-      <span style="font-size:11px;color:var(--muted2)">สร้างเมื่อ ${g.createdAt?new Date(g.createdAt).toLocaleDateString('th-TH',{month:'short',year:'numeric'}):'-'}</span>
+      <span style="font-size:11px;color:var(--muted2)">สร้างเมื่อ ${g.createdAt?new Date(g.createdAt).toLocaleDateString(LOC,{month:'short',year:'numeric'}):'-'}</span>
       <div class="gc-footer-actions">
         <div class="gc-btn" onclick="editGoal('${g.id}')" title="Edit" style="width:64px;height:34px;font-size:12px">
-          Edit</i>
+          Edit
         </div>
         <div class="gc-btn del" onclick="deleteGoal('${g.id}')" title="Delete" style="width:64px;height:34px;font-size:12px">
-          Delete</i>
+          Delete
         </div>
       </div>
     </div>
@@ -4770,7 +4836,7 @@ function renderRateCard(g,idx,isDone=false){
   }).join('');
   const lbls=(p.labels||[]).map(l=>`<span>${escHtml(l)}</span>`).join('');
   const doneStyle=isDone?'border-color:rgba(0,212,160,.3);opacity:.8;':'';
-  const doneBadge=isDone?`<span style="font-size:10px;padding:2px 8px;border-radius:20px;background:rgba(0,212,160,.12);color:var(--gain);border:1px solid rgba(0,212,160,.3)"><span aria-hidden="true" style="font-size:13px;font-size:10px">✓</span></i> Completed</span>`:'';
+  const doneBadge=isDone?`<span style="font-size:10px;padding:2px 8px;border-radius:20px;background:rgba(0,212,160,.12);color:var(--gain);border:1px solid rgba(0,212,160,.3)"><span aria-hidden="true" style="font-size:13px;font-size:10px">✓</span> Completed</span>`:'';
   return `<div class="goal-card" style="${doneStyle}">
     <div class="gc-top">
       <div class="gc-icon" style="background:${col.bg}">${icon}</div>
@@ -4786,17 +4852,17 @@ function renderRateCard(g,idx,isDone=false){
     <div class="gc-track"><div class="gc-fill" style="width:${p.pct}%;background:${col.fill}"></div></div>
     ${bars?`<div class="gc-rate-months" style="align-items:flex-end;gap:3px;height:44px">${bars}</div><div class="gc-rate-lbl">${lbls}</div>`:''}
     <div class="gc-pills">
-      <span class="gc-pill ${p.etaClass}"></i>${p.etaText}</span>
-      <span class="gc-pill"><span aria-hidden="true" style="font-size:13px;">📅</span></i>บรรลุ ${p.hitCount||0}/${p.total||0} เดือน</span>
+      <span class="gc-pill ${p.etaClass}">${escHtml(p.etaText)}</span>
+      <span class="gc-pill"><span aria-hidden="true" style="font-size:13px;">📅</span>บรรลุ ${p.hitCount||0}/${p.total||0} เดือน</span>
     </div>
     <div class="gc-footer">
-      <span style="font-size:11px;color:var(--muted2)">สร้างเมื่อ ${g.createdAt?new Date(g.createdAt).toLocaleDateString('th-TH',{month:'short',year:'numeric'}):'-'}</span>
+      <span style="font-size:11px;color:var(--muted2)">สร้างเมื่อ ${g.createdAt?new Date(g.createdAt).toLocaleDateString(LOC,{month:'short',year:'numeric'}):'-'}</span>
       <div class="gc-footer-actions">
         <div class="gc-btn" onclick="editGoal('${g.id}')" title="Edit" style="width:64px;height:34px;font-size:12px">
-          Edit</i>
+          Edit
         </div>
         <div class="gc-btn del" onclick="deleteGoal('${g.id}')" title="Delete" style="width:64px;height:34px;font-size:12px">
-          Delete</i>
+          Delete
         </div>
       </div>
     </div>
@@ -4896,7 +4962,7 @@ function renderInsurance(){
       <div class="ins-mypolicy-top">
         <div>
           <div class="ins-mypolicy-name">${p.planName}</div>
-          <div class="ins-mypolicy-provider">${p.provider} · ${p.category}</div>
+          <div class="ins-mypolicy-provider">${p.provider} · ${escHtml(p.category)}</div>
         </div>
         <span class="ins-status-pill ${stCls}">${p.status||'—'}</span>
       </div>
@@ -4939,7 +5005,7 @@ function renderInsurance(){
     const meta=INS_COV_META[ct]||INS_COV_META['Other'];
     const data=covByType[ct];
     const hasTarget=data.target>0;
-    const pct=hasTarget?Math.min(Math.round(data.amount/data.target*100),100):0;
+    const pct=hasTarget&&data.target>0?clampPct(Math.round(data.amount/data.target*100)):0;
     const ringColor=pct>=100?'var(--income)':pct>=50?'var(--debt)':meta.color;
     const unitLabel=INS_UNIT_LABEL[data.unit]||'บาท';
     const selected=insSelectedCov===ct?'selected':'';
@@ -4966,11 +5032,11 @@ function renderInsurance(){
     }
 
     return `<div class="ins-cov-card ${selected}" onclick="insSelectCov('${ct}')">
-      <div class="ins-cov-name">${meta.icon} ${meta.label}</div>
+      <div class="ins-cov-name">${meta.icon} ${escHtml(meta.label)}</div>
       ${ringHTML}
-      <div class="ins-cov-amount">${data.amount.toLocaleString('th-TH')}</div>
+      <div class="ins-cov-amount">${data.amount.toLocaleString(LOC)}</div>
       <div class="ins-cov-unit">${unitLabel}</div>
-      ${hasTarget?`<div class="ins-cov-target">เป้าหมาย ${data.target.toLocaleString('th-TH')}</div>`:''}
+      ${hasTarget?`<div class="ins-cov-target">เป้าหมาย ${data.target.toLocaleString(LOC)}</div>`:''}
     </div>`;
   }).join('');
 
@@ -4997,10 +5063,10 @@ function renderInsurance(){
       data:{labels:provLabels,datasets:[{data:provValues,
         backgroundColor:EXP_COLORS.slice(0,provLabels.length),borderWidth:0,hoverOffset:4}]},
       options:{cutout:'65%',responsive:true,maintainAspectRatio:false,
-        plugins:{legend:{position:'bottom',labels:{color:'#9090c0',font:{family:'Google Sans Mono',size:10},boxWidth:10,padding:10}},
+        plugins:{legend:{position:'bottom',labels:{color:'#9090c0',font:{family:CHART_FONT,size:10},boxWidth:10,padding:10}},
           tooltip:{backgroundColor:'#12121a',borderColor:'#1e1e35',borderWidth:1,
-            titleColor:'#e2e2f0',bodyColor:'#9090c0',titleFont:{family:'Google Sans Mono'},bodyFont:{family:'Google Sans Mono',size:11},
-            callbacks:{label:c=>` ${c.label}: ${fmt(c.raw)}`}}}}
+            titleColor:'#e2e2f0',bodyColor:'#9090c0',titleFont:{family:CHART_FONT},bodyFont:{family:CHART_FONT,size:11},
+            callbacks:{label:c=>` ${escHtml(c.label)}: ${fmt(c.raw)}`}}}}
     });
   }
 
@@ -5022,12 +5088,12 @@ function renderInsurance(){
       options:{responsive:true,maintainAspectRatio:false,
         plugins:{legend:{display:false},
           tooltip:{backgroundColor:'#12121a',borderColor:'#1e1e35',borderWidth:1,
-            titleColor:'#e2e2f0',bodyColor:'#9090c0',titleFont:{family:'Google Sans Mono'},bodyFont:{family:'Google Sans Mono',size:11},
+            titleColor:'#e2e2f0',bodyColor:'#9090c0',titleFont:{family:CHART_FONT},bodyFont:{family:CHART_FONT,size:11},
             callbacks:{label:c=>` ${fmt(c.raw)}`}}},
         scales:{
-          x:{grid:{color:'rgba(30,30,53,.8)',lineWidth:.5},ticks:{color:'#6060a0',font:{family:'Google Sans Mono',size:9}}},
+          x:{grid:{color:'rgba(30,30,53,.8)',lineWidth:.5},ticks:{color:'#6060a0',font:{family:CHART_FONT,size:9}}},
           y:{grid:{color:'rgba(30,30,53,.8)',lineWidth:.5},
-             ticks:{color:'#6060a0',font:{family:'Google Sans Mono',size:9},callback:v=>v>=1000?(v/1000).toFixed(0)+'k':v}}
+             ticks:{color:'#6060a0',font:{family:CHART_FONT,size:9},callback:v=>v>=1000?(v/1000).toFixed(0)+'k':v}}
         }}
     });
   }
@@ -5049,7 +5115,7 @@ function renderInsurance(){
       <td>${p.policyId}</td>
       <td>${p.provider}</td>
       <td>${p.planName}</td>
-      <td>${p.category}</td>
+      <td>${escHtml(p.category)}</td>
       <td style="text-align:right">${p.premium>0?fmt(p.premium):'—'}</td>
       <td class="${renewalCls}">${renewalStr}${renewalCls?` (${daysLeft}d)`:''}</td>
       <td style="text-align:right">${p.surrender>0?fmt(p.surrender):'—'}</td>
@@ -5086,7 +5152,7 @@ function insRenderDetail(covType,data){
   const meta=INS_COV_META[covType]||INS_COV_META['Other'];
   const panel=document.getElementById('ins-detail-panel');
   panel.classList.add('show');
-  document.getElementById('ins-detail-title-text').textContent=`${meta.icon} ${meta.label} — breakdown ตาม policy`;
+  document.getElementById('ins-detail-title-text').textContent=`${meta.icon} ${escHtml(meta.label)} — breakdown ตาม policy`;
 
   const unitLabel=INS_UNIT_LABEL[data.unit]||'บาท';
   document.getElementById('ins-detail-body').innerHTML=data.items.map(item=>{
@@ -5097,7 +5163,7 @@ function insRenderDetail(covType,data){
         ${planName}
         <small>${item.policyId}${item.benefit?' · '+item.benefit:''}</small>
       </div>
-      <div class="ins-detail-right">${item.amount.toLocaleString('th-TH')} ${unitLabel}</div>
+      <div class="ins-detail-right">${item.amount.toLocaleString(LOC)} ${unitLabel}</div>
     </div>`;
   }).join('');
 }
@@ -5109,7 +5175,7 @@ async function loadData(file){
   try{
     await parseFile(file);
     const total=txRows.length+assets.length;
-    document.getElementById('sb-status').textContent=`${txRows.length.toLocaleString()} tx · ${assets.length} assets`;
+    document.getElementById('sb-status').textContent=`${txRows.length.toLocaleString(LOC)} tx · ${assets.length} assets`;
     document.getElementById('up').style.display='none';
     document.getElementById('app').style.display='flex';
     renderedPages=new Set();

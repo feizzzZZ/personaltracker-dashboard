@@ -1,3 +1,11 @@
+/* ── #2 + #5: one locale constant for the whole app ─────────────────────
+   'th-TH' alone defaults to the BUDDHIST calendar in ICU, so
+   toLocaleDateString('th-TH',{year:'numeric'}) returned "2569" instead of
+   "2026" (543 years off) in 7 places, while monthLabel() printed Gregorian
+   English. -u-ca-gregory forces the Gregorian calendar while keeping Thai
+   month names and Latin digits/separators. Use LOC for EVERY
+   toLocaleString / toLocaleDateString call so nothing can drift again. */
+window.LOC = window.LOC || 'th-TH-u-ca-gregory';
 // ═══════════════════════════════════════════════════════════════════
 // Finance OS — shared.js : DATA LAYER กลางของทั้งสองหน้า
 // ═══════════════════════════════════════════════════════════════════
@@ -13,22 +21,22 @@ console.log('[Finance OS shared] build', APP_BUILD);
 
 // ═══ LIVE_META — นิยามการ์ดข้อมูลตลาด ═══
 const LIVE_META = {
-  SP500:     {label:'S&P 500',        fmt:v=>Number(v).toLocaleString(undefined,{maximumFractionDigits:0})},
+  SP500:     {label:'S&P 500',        fmt:v=>Number(v).toLocaleString(LOC,{maximumFractionDigits:0})},
   SP500_CHG: {label:'S&P 500 Δ วันนี้',fmt:v=>(v>=0?'+':'')+Number(v).toFixed(2)+'%', signed:true},
-  NASDAQ:    {label:'Nasdaq',         fmt:v=>Number(v).toLocaleString(undefined,{maximumFractionDigits:0})},
+  NASDAQ:    {label:'Nasdaq',         fmt:v=>Number(v).toLocaleString(LOC,{maximumFractionDigits:0})},
   VIX:       {label:'VIX (Fear)',     fmt:v=>Number(v).toFixed(1)},
-  SET_INDEX: {label:'SET Index',      fmt:v=>Number(v).toLocaleString(undefined,{maximumFractionDigits:1})},
+  SET_INDEX: {label:'SET Index',      fmt:v=>Number(v).toLocaleString(LOC,{maximumFractionDigits:1})},
   USDTHB:    {label:'USD/THB',        fmt:v=>Number(v).toFixed(2)},
-  BTCUSD:    {label:'Bitcoin',        fmt:v=>'$'+Number(v).toLocaleString(undefined,{maximumFractionDigits:0})},
-  ETHUSD:    {label:'Ethereum',       fmt:v=>'$'+Number(v).toLocaleString(undefined,{maximumFractionDigits:0})},
+  BTCUSD:    {label:'Bitcoin',        fmt:v=>'$'+Number(v).toLocaleString(LOC,{maximumFractionDigits:0})},
+  ETHUSD:    {label:'Ethereum',       fmt:v=>'$'+Number(v).toLocaleString(LOC,{maximumFractionDigits:0})},
   GOLD_GLD:  {label:'Gold (GLD proxy)',fmt:v=>'$'+Number(v).toFixed(1)},
   FED_RATE:  {label:'Fed Funds Rate', fmt:v=>Number(v).toFixed(2)+'%'},
   BOT_RATE:  {label:'BOT Policy Rate',fmt:v=>Number(v).toFixed(2)+'%'},
   US10Y:     {label:'US 10Y Yield',   fmt:v=>Number(v).toFixed(2)+'%'},
-  GOLD_XAU:  {label:'Gold Spot (XAU)',fmt:v=>'$'+Number(v).toLocaleString(undefined,{maximumFractionDigits:0})},
+  GOLD_XAU:  {label:'Gold Spot (XAU)',fmt:v=>'$'+Number(v).toLocaleString(LOC,{maximumFractionDigits:0})},
   US_CPI:    {label:'US CPI YoY',     fmt:v=>Number(v).toFixed(1)+'%'},
   US_PCE:    {label:'US PCE YoY',     fmt:v=>Number(v).toFixed(1)+'%'},
-  NFP:       {label:'NFP (Jobs)',     fmt:v=>(v>=0?'+':'')+Number(v).toLocaleString()+'K'},
+  NFP:       {label:'NFP (Jobs)',     fmt:v=>(v>=0?'+':'')+Number(v).toLocaleString(LOC)+'K'},
   US_GDP:    {label:'US GDP QoQ',     fmt:v=>(v>=0?'+':'')+Number(v).toFixed(1)+'%'},
   ISM_MFG:   {label:'ISM Manufacturing', fmt:v=>Number(v).toFixed(1)},
   ISM_SVC:   {label:'ISM Services',   fmt:v=>Number(v).toFixed(1)},
@@ -37,7 +45,7 @@ const LIVE_META = {
   TH_CPI:    {label:'CPI ไทย YoY',    fmt:v=>Number(v).toFixed(1)+'%'},
   TH_GDP:    {label:'GDP ไทย YoY',    fmt:v=>(v>=0?'+':'')+Number(v).toFixed(1)+'%'},
   TH_TOURISTS:{label:'นักท่องเที่ยว/เดือน', fmt:v=>Number(v).toFixed(1)+'M'},
-  TH_FDI:    {label:'FDI ไทย',        fmt:v=>'฿'+Number(v).toLocaleString()+'B'},
+  TH_FDI:    {label:'FDI ไทย',        fmt:v=>'฿'+Number(v).toLocaleString(LOC)+'B'},
   SP500_RSI: {label:'S&P 500 RSI (14d)', fmt:v=>Number(v).toFixed(0)},
   SET_RSI:   {label:'SET RSI (14d)',  fmt:v=>Number(v).toFixed(0)},
   PUT_CALL:  {label:'Put/Call Ratio', fmt:v=>Number(v).toFixed(2)},

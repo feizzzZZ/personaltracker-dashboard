@@ -13,10 +13,18 @@
 <link rel="icon" type="image/png" sizes="192x192" href="icon/icon-192x192.png">
 <title>Investment Analysis OS</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700;800&family=Google+Sans+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 :root{
+  /* ── Typography (#1,#9): The old GoogleSans / GoogleSansMono stack was Google-internal
+     and NOT served by fonts.googleapis.com -> the old <link> 400'd and
+     everything fell back to generic monospace, which has no Thai glyphs.
+     Latin font first, Thai font second: digits/EN render from Inter/JetBrains,
+     Thai automatically falls through to IBM Plex Sans Thai. ── */
+  --f-sans:'Inter','IBM Plex Sans Thai',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --f-mono:'JetBrains Mono','IBM Plex Sans Thai',ui-monospace,'SFMono-Regular',Menlo,monospace;
   --bg:#07070e;--bg2:#0d0d1a;--bg3:#111120;--bg4:#181830;
   --border:#1a1a30;--border2:#262640;--cb:#1e1e38;
   --income:#00d4a0;--expense:#ff4060;--savings:#7c6fec;--debt:#ff9500;
@@ -26,13 +34,13 @@
   --sidebar-w:200px;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--text);font-family:'Google Sans Mono',monospace;min-height:100vh;display:flex;overflow-x:hidden}
+body{background:var(--bg);color:var(--text);font-family:var(--f-mono);min-height:100vh;display:flex;overflow-x:hidden}
 body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.03) 2px,rgba(0,0,0,.03) 4px)}
 
 /* ── Sidebar ── */
 .sidebar{width:var(--sidebar-w);background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:100;transition:transform .2s}
 .sb-brand{padding:20px 16px 16px;border-bottom:1px solid var(--border)}
-.sb-logo{font-family:'Google Sans',sans-serif;font-size:14px;font-weight:800;color:var(--income);letter-spacing:.04em}
+.sb-logo{font-family:var(--f-sans);font-size:14px;font-weight:800;color:var(--income);letter-spacing:.04em}
 .sb-sub{font-size:10px;color:var(--muted);margin-top:2px;letter-spacing:.06em}
 .sb-status{font-size:10px;color:var(--muted);margin-top:8px;display:flex;align-items:center;gap:5px}
 .dot-live{width:5px;height:5px;border-radius:50%;background:var(--income);animation:pulse 2s infinite;display:inline-block}
@@ -57,11 +65,11 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 
 /* ── Page header ── */
 .pg-hdr{margin-bottom:20px;display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:10px}
-.pg-title{font-family:'Google Sans',sans-serif;font-size:22px;font-weight:800;color:var(--white);letter-spacing:-.02em}
+.pg-title{font-family:var(--f-sans);font-size:22px;font-weight:800;color:var(--white);letter-spacing:-.02em}
 .pg-sub{font-size:12px;color:var(--muted);margin-top:3px}
 
 /* ── Section label ── */
-.sl{font-family:'Google Sans',sans-serif;font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--white);margin:0 0 10px;display:flex;align-items:center;gap:10px;padding-left:10px;border-left:3px solid var(--income);border-radius:0}
+.sl{font-family:var(--f-sans);font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--white);margin:0 0 10px;display:flex;align-items:center;gap:10px;padding-left:10px;border-left:3px solid var(--income);border-radius:0}
 .sl::after{content:'';flex:1;height:1px;background:var(--border)}
 .sl.purple{border-left-color:var(--savings)}
 .sl.orange{border-left-color:var(--debt)}
@@ -82,10 +90,21 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 
 /* ── Chart cards ── */
 .cc{background:var(--bg3);border:1px solid var(--cb);border-radius:12px;padding:18px}
-.ct{font-family:'Google Sans',sans-serif;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--white);margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px}
-.ct span{font-size:10px;color:var(--muted);font-weight:400;font-family:'Google Sans Mono',monospace;letter-spacing:0;text-transform:none}
+.ct{font-family:var(--f-sans);font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--white);margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px}
+.ct span{font-size:10px;color:var(--muted);font-weight:400;font-family:var(--f-mono);letter-spacing:0;text-transform:none}
 .cr2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px}
 .cr3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:18px}
+/* ── #11: tabular figures for every numeric surface ────────────────────
+   Right-alignment alone does not align digits in a proportional font.
+   tabular-nums forces equal advance width so columns of ฿ amounts line up
+   on the decimal; lining-nums stops old-style (descending) figures. */
+.nr,td,th,.nw-val,.ct span,.bgt-ov-val,.bgt-ov-stat-val,.ins-ov-val,
+.ins-cov-amount,.ins-detail-right,.gc-pct,.bm-return,.bm-class-return-val,
+.al-pct,.savrate-bar,[class*="-val"],[class*="-amount"],[class*="-pct"]{
+  font-variant-numeric:tabular-nums lining-nums;
+  font-feature-settings:"tnum" 1,"lnum" 1;
+}
+.nr{text-align:right}
 @media(max-width:900px){.cr2,.cr3{grid-template-columns:1fr}}
 
 /* ── Situation Banner ── */
@@ -97,7 +116,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 .sit-left{display:flex;align-items:center;gap:16px}
 .sit-icon{font-size:36px;line-height:1}
 .sit-label{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2);margin-bottom:4px}
-.sit-title{font-family:'Google Sans',sans-serif;font-size:22px;font-weight:800;letter-spacing:-.02em}
+.sit-title{font-family:var(--f-sans);font-size:22px;font-weight:800;letter-spacing:-.02em}
 .sit-desc{font-size:12px;color:var(--muted2);margin-top:4px;max-width:500px;line-height:1.6}
 .sit-right{display:flex;flex-direction:column;gap:10px;min-width:200px}
 .sit-action{background:var(--bg4);border:1px solid var(--border2);border-radius:10px;padding:10px 14px}
@@ -136,7 +155,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 .badge-hold{background:rgba(124,111,236,.15);color:var(--savings);border:1px solid rgba(124,111,236,.3)}
 .badge-avoid{background:rgba(255,64,96,.15);color:var(--loss);border:1px solid rgba(255,64,96,.3)}
 .badge-watch{background:rgba(255,149,0,.15);color:var(--debt);border:1px solid rgba(255,149,0,.3)}
-.strat-title{font-family:'Google Sans',sans-serif;font-size:15px;font-weight:700;color:var(--white);margin-bottom:4px}
+.strat-title{font-family:var(--f-sans);font-size:15px;font-weight:700;color:var(--white);margin-bottom:4px}
 .strat-sub{font-size:11px;color:var(--muted2);margin-bottom:10px}
 .strat-reasons{list-style:none;display:flex;flex-direction:column;gap:4px}
 .strat-reasons li{font-size:11px;color:var(--muted2);display:flex;gap:6px;align-items:flex-start}
@@ -148,7 +167,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 /* ── Fear & Greed ── */
 .fg-display{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 0 4px}
 .fg-arc{width:160px;height:80px;position:relative;margin:0 auto 8px}
-.fg-number{font-family:'Google Sans',sans-serif;font-size:40px;font-weight:800;text-align:center;line-height:1}
+.fg-number{font-family:var(--f-sans);font-size:40px;font-weight:800;text-align:center;line-height:1}
 .fg-label{font-size:11px;text-align:center;letter-spacing:.06em;text-transform:uppercase;color:var(--muted2);margin-top:4px}
 
 /* ── Timeline ── */
@@ -226,7 +245,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 
 /* ── Mobile ── */
 .menu-toggle{display:none;position:fixed;top:14px;left:14px;z-index:150;background:var(--bg3);border:1px solid var(--border2);color:var(--text);width:36px;height:36px;border-radius:8px;cursor:pointer;font-size:16px;align-items:center;justify-content:center}
-@media(max-width:700px){
+@media(max-width:768px){
   .sidebar{transform:translateX(-100%)}
   .sidebar.open{transform:translateX(0)}
   .main-content{margin-left:0}
@@ -236,7 +255,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 
 /* ── Tabs ── */
 .tab-row{display:flex;gap:2px;background:var(--bg4);border-radius:7px;padding:2px;border:1px solid var(--border);width:fit-content;margin-bottom:14px}
-.tab{padding:4px 12px;border:none;border-radius:5px;cursor:pointer;font-family:'Google Sans Mono',monospace;font-size:11px;color:var(--muted2);background:transparent;transition:all .15s}
+.tab{padding:4px 12px;border:none;border-radius:5px;cursor:pointer;font-family:var(--f-mono);font-size:11px;color:var(--muted2);background:transparent;transition:all .15s}
 .tab.active{background:var(--bg3);color:var(--white);border:1px solid var(--border2)}
 
 /* ── Trend indicator ── */
@@ -330,20 +349,20 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 .sc-edit-item label{font-size:10px;color:var(--muted2);display:block;margin-bottom:3px}
 .sc-edit-item input,.sc-edit-item select{width:100%;background:var(--bg2);border:1px solid var(--border);
   color:var(--text);padding:5px 8px;border-radius:6px;font-size:11px;outline:none;
-  font-family:'Google Sans Mono',monospace}
+  font-family:var(--f-mono)}
 .sc-edit-item input:focus{border-color:var(--income)}
 
 
 .top-nav{position:fixed;top:0;left:0;right:0;z-index:200;height:40px;
   background:rgba(7,7,14,.92);backdrop-filter:blur(12px);
   border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:4px}
-.top-nav-brand{font-family:'Google Sans',sans-serif;font-size:11px;font-weight:700;
+.top-nav-brand{font-family:var(--f-sans);font-size:11px;font-weight:700;
   color:var(--muted);letter-spacing:.12em;text-transform:uppercase;
   padding-right:16px;border-right:1px solid var(--border);margin-right:8px;white-space:nowrap}
 .top-nav-tab{display:flex;align-items:center;gap:7px;padding:5px 14px;border-radius:7px;
   font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;
   text-decoration:none;color:var(--muted2);border:1px solid transparent;
-  font-family:'Google Sans',monospace;white-space:nowrap}
+  font-family:var(--f-sans);white-space:nowrap}
 .top-nav-tab:hover{background:var(--bg3);color:var(--text);border-color:var(--border)}
 .top-nav-tab.active{background:var(--bg3);color:var(--white);border-color:var(--border2)}
 .top-nav-tab.active .tn-icon{color:var(--income)}
@@ -807,6 +826,20 @@ if('serviceWorker' in navigator){
 }
 </script>
 <script>
+/* ── #1: single source of truth for the Chart.js font stack ──────────────
+   Latin first, Thai second — matches --f-sans / --f-mono in CSS so canvas
+   text and DOM text render with the exact same fonts. */
+/* #2: LOC is also set by shared.js. Assigning to window (instead of
+   const/var) makes it idempotent, so load order can't cause a
+   'already been declared' SyntaxError that would kill the whole script. */
+/* #6 — there was NO html escaping anywhere, while 92 innerHTML sites
+   interpolate strings straight from the spreadsheet. A merchant/note such as
+   "Fitness & Co <Gym>" made the browser parse <Gym> as a tag and SWALLOW the
+   rest of that row — one of the real causes of rows rendering "wrong".
+   esc() is applied to every sheet-derived string field below. */
+const escHtml=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+window.LOC = window.LOC || 'th-TH-u-ca-gregory';
+const CHART_FONT = "'JetBrains Mono','IBM Plex Sans Thai',ui-monospace,monospace";
 // ── Navigation ──
 function switchPage(id, el){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -837,22 +870,22 @@ function setTimeframe(tf,el){
 function updateDate(){
   const now = new Date();
   const opts = {year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'};
-  document.getElementById('live-date').textContent = now.toLocaleDateString('th-TH',opts);
-  document.getElementById('last-update').textContent = 'อัปเดต: '+now.toLocaleDateString('th-TH',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'})+' · build '+APP_BUILD;
+  document.getElementById('live-date').textContent = now.toLocaleDateString(LOC,opts);
+  document.getElementById('last-update').textContent = 'อัปเดต: '+now.toLocaleDateString(LOC,{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'})+' · build '+APP_BUILD;
 }
 updateDate();
 setInterval(updateDate,60000);
 
 // ── Chart defaults ──
 Chart.defaults.color='#6060a0';
-Chart.defaults.font.family="'Google Sans Mono', monospace";
+Chart.defaults.font.family=CHART_FONT;
 Chart.defaults.font.size=10;
 
 const gridColor='rgba(30,30,53,.8)';
 const tooltipDefaults={
   backgroundColor:'#12121a',borderColor:'#1e1e35',borderWidth:1,
   titleColor:'#e2e2f0',bodyColor:'#9090c0',
-  titleFont:{family:'Google Sans Mono'},bodyFont:{family:'Google Sans Mono',size:11}
+  titleFont:{family:CHART_FONT},bodyFont:{family:CHART_FONT,size:11}
 };
 
 // ── Page renderers ──
@@ -890,7 +923,7 @@ function renderRegimeLive(){
   }
   const cmap={gain:'var(--gain)',debt:'var(--debt)',loss:'var(--loss)'};
   const icon = r.avg>=0.7?'🚀' : r.avg>=0.25?'📈' : r.avg>=-0.25?'⚖️' : r.avg>=-0.9?'🛡️' : '🔻';
-  const thDate = r.dataAsOf ? new Date(r.dataAsOf+'T00:00:00').toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit'}) : '—';
+  const thDate = r.dataAsOf ? new Date(r.dataAsOf+'T00:00:00').toLocaleDateString(LOC,{day:'numeric',month:'short',year:'2-digit'}) : '—';
 
   set('regime-asof', `Market Regime · คำนวณสดจาก ${r.signals.length} สัญญาณ · ข้อมูลถึง ${thDate}`);
   const t=document.getElementById('regime-title');
@@ -900,10 +933,10 @@ function renderRegimeLive(){
   const th=document.getElementById('regime-thumb'); if(th) th.style.left=r.spectrum+'%';
 
   // คำอธิบาย: ประกอบจากสัญญาณจริง อ้างเลขทุกคำ
-  const neg=r.negatives.slice(0,3).map(s=>`<strong>${s.label} ${s.val}</strong> (${s.note})`).join(' · ');
-  const pos=r.positives.slice(0,3).map(s=>`<strong>${s.label} ${s.val}</strong>`).join(' · ');
+  const neg=r.negatives.slice(0,3).map(s=>`<strong>${escHtml(s.label)} ${s.val}</strong> (${escHtml(s.note)})`).join(' · ');
+  const pos=r.positives.slice(0,3).map(s=>`<strong>${escHtml(s.label)} ${s.val}</strong>`).join(' · ');
   set('regime-desc',
-    `${r.desc} — คะแนนรวม <strong>${r.avg>=0?'+':''}${r.avg.toFixed(2)}</strong> จาก ${r.signals.length} สัญญาณ<br>`+
+    `${escHtml(r.desc)} — คะแนนรวม <strong>${r.avg>=0?'+':''}${r.avg.toFixed(2)}</strong> จาก ${r.signals.length} สัญญาณ<br>`+
     (pos?`🟢 <span style="color:var(--muted)">หนุน:</span> ${pos}<br>`:'')+
     (neg?`🔴 <span style="color:var(--muted)">ถ่วง:</span> ${neg}`:'🟢 ไม่มีสัญญาณลบในชุดข้อมูลปัจจุบัน'), true);
 
@@ -914,10 +947,10 @@ function renderRegimeLive(){
     const age= s.asOf ? Math.floor((Date.now()-Date.parse(s.asOf))/86400e3) : null;
     const ageTxt = age==null?'' : age<=1?'วันนี้' : age+' วัน';
     return `<tr>
-      <td style="padding:6px 8px">${dot} ${s.label}</td>
+      <td style="padding:6px 8px">${dot} ${escHtml(s.label)}</td>
       <td style="padding:6px 8px;text-align:right;font-weight:600;color:${c}">${s.val}</td>
       <td style="padding:6px 8px;text-align:right;color:${c}">${s.score>0?'+':''}${s.score}</td>
-      <td style="padding:6px 8px;color:var(--muted2);font-size:10.5px">${s.note}</td>
+      <td style="padding:6px 8px;color:var(--muted2);font-size:10.5px">${escHtml(s.note)}</td>
       <td style="padding:6px 8px;text-align:right;color:var(--muted2);font-size:10px">${ageTxt}</td></tr>`;
   }).join('');
   set('regime-signals', `<div class="sl" style="color:var(--gain)">🧮 สัญญาณที่ใช้คำนวณ Regime
@@ -949,7 +982,7 @@ function renderSituationLive(){
       valEl.classList.remove('gain','loss'); valEl.style.color='var(--text)';
       // S&P: ใช้ % เปลี่ยนวันนี้เป็นสีและ sub ถ้ามี
       const chg = hitKey==='SP500' && md.data.SP500_CHG ? Number(md.data.SP500_CHG.value) : null;
-      const upd = hit.updated ? new Date(hit.updated).toLocaleDateString('th-TH',{day:'numeric',month:'short'}) : 'จากชีต';
+      const upd = hit.updated ? new Date(hit.updated).toLocaleDateString(LOC,{day:'numeric',month:'short'}) : 'จากชีต';
       if(chg!=null && !isNaN(chg)){
         valEl.style.color = chg>=0?'var(--gain)':'var(--loss)';
         subEl.innerHTML = `<span style="color:${chg>=0?'var(--gain)':'var(--loss)'}">${chg>=0?'▲ +':'▼ '}${chg.toFixed(2)}% วันนี้</span> <span style="color:var(--muted2)">· ${upd}</span>`;
@@ -1029,14 +1062,14 @@ function renderLiveMarket(){
   const extraKeys = Object.keys(md.data).filter(k=>!LIVE_META[k] && ok(md.data[k].value));
   const cards = [...knownKeys, ...extraKeys].map(k=>{
     // key ที่ไม่รู้จัก → แสดงแบบ generic (เพิ่มแถวในชีตแล้วโผล่ทันที ไม่ต้องแก้โค้ด)
-    const meta=LIVE_META[k]||{label:k.replace(/_/g,' '), fmt:v=>typeof v==='number'?Number(v).toLocaleString():String(v)};
+    const meta=LIVE_META[k]||{label:k.replace(/_/g,' '), fmt:v=>typeof v==='number'?Number(v).toLocaleString(LOC):String(v)};
     const d=md.data[k];
     let vTxt; try{ vTxt=meta.fmt(d.value); }catch(e){ vTxt=String(d.value); }
     if(/NaN|Infinity/.test(vTxt)) vTxt='—';   // เกราะสุดท้าย ห้ามโชว์ NaN บนจอ
     const color = meta.signed ? (d.value>=0?'var(--gain)':'var(--loss)') : 'var(--text)';
-    const upd = d.updated ? new Date(d.updated).toLocaleDateString('th-TH',{day:'numeric',month:'short'}) : null;
+    const upd = d.updated ? new Date(d.updated).toLocaleDateString(LOC,{day:'numeric',month:'short'}) : null;
     return `<div class="signal-card" style="border-color:rgba(0,212,160,.25)">
-      <div class="sig-header"><div class="sig-name">${meta.label}</div><div class="sig-dot" style="background:var(--gain)"></div></div>
+      <div class="sig-header"><div class="sig-name">${escHtml(meta.label)}</div><div class="sig-dot" style="background:var(--gain)"></div></div>
       <div class="sig-val" style="color:${color}">${vTxt}</div>
       <div class="sig-change" style="color:var(--muted2)">${upd?'อัปเดต '+upd:'จาก Google Sheets'}</div>
       <div class="sig-note">${d.note||''}</div>
@@ -1085,10 +1118,10 @@ function renderSignals(){
       const dotColor=color;
       const changeColor=s.change.startsWith('▲')?'var(--gain)':s.change.startsWith('▼')?'var(--loss)':'var(--muted2)';
       return `<div class="signal-card">
-        <div class="sig-header"><div class="sig-name">${s.name}</div><div class="sig-dot" style="background:${dotColor}"></div></div>
+        <div class="sig-header"><div class="sig-name">${escHtml(s.name)}</div><div class="sig-dot" style="background:${dotColor}"></div></div>
         <div class="sig-val" style="color:${color}">${s.val}</div>
         <div class="sig-change" style="color:${changeColor}">${s.change}</div>
-        <div class="sig-note">${s.note}</div>
+        <div class="sig-note">${escHtml(s.note)}</div>
       </div>`;
     }).join('');
   }
@@ -1231,7 +1264,7 @@ function renderFearGreed(){
             <div style="min-width:130px;font-size:10.5px;color:var(--muted2)">${p.n}</div>
             <div style="flex:1;height:4px;background:var(--bg4);border-radius:3px;overflow:hidden"><div style="width:${p.v}%;height:4px;background:${pc}"></div></div>
             <div style="min-width:24px;font-size:10.5px;font-weight:600;color:${pc}">${p.v}</div>
-            <div style="min-width:70px;font-size:9.5px;color:var(--muted2);text-align:right">${p.note}</div>
+            <div style="min-width:70px;font-size:9.5px;color:var(--muted2);text-align:right">${escHtml(p.note)}</div>
           </div>`;}).join('')}
         <div style="font-size:9.5px;color:var(--muted2);margin-top:4px">ที่มา: ${s.src}</div>
       </div>`;}).join('');
@@ -1243,7 +1276,7 @@ function renderFearGreed(){
   if(ext?.fng?.history?.length){
     const h=ext.fng.history.slice(-90);
     new Chart(histCanvas.getContext('2d'),{type:'line',
-      data:{labels:h.map(p=>new Date(p.t).toLocaleDateString('th-TH',{day:'numeric',month:'short'})),
+      data:{labels:h.map(p=>new Date(p.t).toLocaleDateString(LOC,{day:'numeric',month:'short'})),
         datasets:[{data:h.map(p=>p.v),borderColor:'#7c6fec',backgroundColor:'rgba(124,111,236,.08)',fill:true,tension:.35,pointRadius:0,borderWidth:2}]},
       options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
         scales:{y:{min:0,max:100,ticks:{color:'#8080a0',font:{size:10}},grid:{color:'rgba(255,255,255,.04)'}},
@@ -1300,14 +1333,14 @@ function renderDcaPlan(list, totalVal, rg){
     const share=Math.abs(d.diff)/gapSum, amt=budget*share;
     const months=amt>0?Math.ceil(d.amt/amt):0;
     return `<div style="display:flex;align-items:center;gap:8px;font-size:11.5px">
-      <div style="min-width:104px">${d.label}</div>
+      <div style="min-width:104px">${escHtml(d.label)}</div>
       <div style="flex:1;height:6px;background:var(--bg4);border-radius:4px;overflow:hidden">
         <div style="width:${(share*100).toFixed(0)}%;height:6px;background:${d.color}"></div></div>
       <div style="min-width:74px;text-align:right;font-weight:600;color:var(--gain)">${fmt(amt)}</div>
       <div style="min-width:96px;text-align:right;color:var(--muted2);font-size:10px">ปิด gap ~${months} เดือน</div>
     </div>`;
   }).join('')+`<div style="font-size:10px;color:var(--muted2);margin-top:4px">
-    จัดสรรตามสัดส่วนช่องว่าง (หมวดที่ขาดมากได้เงินมาก)${rg?` · regime ${rg.label}`:''}</div>`;
+    จัดสรรตามสัดส่วนช่องว่าง (หมวดที่ขาดมากได้เงินมาก)${rg?` · regime ${escHtml(rg.label)}`:''}</div>`;
 }
 // ═══ PORTFOLIO TARGET WEIGHTS — เป้าคุณ vs ถืออยู่จริง ═══
 function renderTargetWeights(list){
@@ -1317,7 +1350,7 @@ function renderTargetWeights(list){
     const ok=Math.abs(d.diff)<5;
     return `<div style="margin-bottom:9px">
       <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px">
-        <span>${d.label}</span>
+        <span>${escHtml(d.label)}</span>
         <span><span style="color:var(--muted2)">เป้า ${d.target}%</span> ·
           <strong style="color:${ok?'var(--gain)':'var(--debt)'}">${d.cur.toFixed(1)}%</strong>
           ${ok?'✓':(d.diff>0?'▲':'▼')}</span></div>
@@ -1378,7 +1411,7 @@ function renderStrategy(){
       if(d.key==='US Stock' && riskOn) reasons.push('regime risk-on — หุ้นคุณภาพได้ประโยชน์');
       const trend = d.key==='Thai Stock' ? rg.signals.find(s=>s.key==='th')
                   : d.key==='US Stock'  ? rg.signals.find(s=>s.key==='trend') : null;
-      if(trend) reasons.push(`เทรนด์: ${trend.label} = ${trend.val}`);
+      if(trend) reasons.push(`เทรนด์: ${escHtml(trend.label)} = ${trend.val}`);
     }
     return {type,label,color,title:d.label,sub:`เป้า ${d.target}% · ถืออยู่ ${d.cur.toFixed(1)}%`,
             reasons,alloc:d.target+'%',action,priority:Math.abs(d.diff)};
@@ -1398,11 +1431,11 @@ function renderStrategy(){
   renderDcaPlan(list, totalVal, rg);
   renderTargetWeights(list);
   el.innerHTML = head + cards.map(c=>`
-    <div class="strat-card strat-${c.type}" style="border-top:2px solid ${c.color}">
+    <div class="strat-card strat-${escHtml(c.type)}" style="border-top:2px solid ${c.color}">
       <div class="strat-head">
-        <span class="strat-badge" style="background:rgba(255,255,255,.05);border:1px solid ${c.color};color:${c.color}">${c.label}</span>
+        <span class="strat-badge" style="background:rgba(255,255,255,.05);border:1px solid ${c.color};color:${c.color}">${escHtml(c.label)}</span>
       </div>
-      <div class="strat-title">${c.title}</div>
+      <div class="strat-title">${escHtml(c.title)}</div>
       <div class="strat-sub">${c.sub}</div>
       <div style="font-size:11.5px;color:${c.color};margin:6px 0 8px;font-weight:600">${c.action}</div>
       <ul class="strat-reasons">${c.reasons.map(r=>`<li>${r}</li>`).join('')}</ul>
@@ -1570,7 +1603,7 @@ function renderSectorFlow(secs){
   _secFlowChart=new Chart(cv.getContext('2d'),{
     type:'bar',
     data:{
-      labels:rows.map(s=>`${s.name} (${s.sym})`),
+      labels:rows.map(s=>`${escHtml(s.name)} (${s.sym})`),
       datasets:[{
         label:'ผลตอบแทนส่วนเกิน 3 เดือน เทียบ SPY (pp)',
         data:rows.map(s=>s.rs3m),
@@ -1626,8 +1659,8 @@ function renderSectors(){
     const trend = s.vsMA200==null?'' : (s.vsMA200>0?'เหนือ MA200':'ใต้ MA200');
     return `<div class="sector-card">
       <div class="sec-icon">${ICON[s.name]||'📊'}</div>
-      <div class="sec-name">${s.name} <span style="color:var(--muted2);font-size:9px">${s.sym}</span></div>
-      <div class="sec-rating" style="color:${c}">${r.label}</div>
+      <div class="sec-name">${escHtml(s.name)} <span style="color:var(--muted2);font-size:9px">${s.sym}</span></div>
+      <div class="sec-rating" style="color:${c}">${escHtml(r.label)}</div>
       <div class="sec-bar"><div class="sec-bar-fill" style="width:${Math.max(4,Math.min(100,50+(s.rs3m??0)*4))}%;background:${c}"></div></div>
       <div class="sec-note" style="line-height:1.6">
         <span style="color:${s.chg3m>=0?'var(--gain)':'var(--loss)'}">3M ${s.chg3m>=0?'+':''}${s.chg3m.toFixed(1)}%</span>
@@ -1749,7 +1782,7 @@ function renderPortfolio(){
     const sc=Math.abs(diff)<=2?'var(--muted)':diff>0?'var(--loss)':'var(--gain)';
     return `<div style="display:flex;align-items:center;gap:8px">
       <div style="width:8px;height:8px;border-radius:2px;background:${b.color};flex-shrink:0"></div>
-      <div style="flex:1;font-size:11px;color:var(--text)">${b.label}</div>
+      <div style="flex:1;font-size:11px;color:var(--text)">${escHtml(b.label)}</div>
       <div style="font-size:11px;color:var(--muted)">Target: ${b.target}%</div>
       <div style="font-size:11px;font-weight:600;color:${b.color}">${b.current}%</div>
       <div style="font-size:12px;color:${sc};min-width:14px">${status}</div>
@@ -1762,15 +1795,15 @@ function renderPortfolio(){
     const {list,totalVal}=computeDeviations(realAlloc);
     const TH=5;
     sigItems = list.filter(d=>Math.abs(d.diff)>=TH).map(d=> d.diff>0
-      ? {icon:'⚠️',title:`${d.label} Overweight (+${d.diff.toFixed(1)}pp)`,
-         desc:`ปัจจุบัน ${d.cur.toFixed(1)}% เกินเป้า ${d.target}% ≈ ฿${d.amt.toLocaleString()} — พิจารณา trim หรือหยุด DCA หมวดนี้ชั่วคราว`,
+      ? {icon:'⚠️',title:`${escHtml(d.label)} Overweight (+${d.diff.toFixed(1)}pp)`,
+         desc:`ปัจจุบัน ${d.cur.toFixed(1)}% เกินเป้า ${d.target}% ≈ ฿${d.amt.toLocaleString(LOC)} — พิจารณา trim หรือหยุด DCA หมวดนี้ชั่วคราว`,
          tag:'REBALANCE',tagColor:'var(--debt)'}
-      : {icon:'📉',title:`${d.label} Underweight (${d.diff.toFixed(1)}pp)`,
-         desc:`ปัจจุบัน ${d.cur.toFixed(1)}% ต่ำกว่าเป้า ${d.target}% ≈ ฿${d.amt.toLocaleString()} — จัด DCA รอบถัดไปเข้าหมวดนี้ก่อน`,
+      : {icon:'📉',title:`${escHtml(d.label)} Underweight (${d.diff.toFixed(1)}pp)`,
+         desc:`ปัจจุบัน ${d.cur.toFixed(1)}% ต่ำกว่าเป้า ${d.target}% ≈ ฿${d.amt.toLocaleString(LOC)} — จัด DCA รอบถัดไปเข้าหมวดนี้ก่อน`,
          tag:'ADD',tagColor:'var(--gain)'});
     if(!sigItems.length) sigItems=[{icon:'🎉',title:'พอร์ตอยู่ในกรอบเป้าทุกหมวด (±5pp)',
       desc:'ไม่มีหมวดที่ต้อง rebalance ตอนนี้ — คง DCA ตามแผนเดิม',tag:'ON TRACK',tagColor:'var(--gain)'}];
-    sigItems.unshift({icon:'📡',title:`คำนวณจากพอร์ตจริง ฿${Math.round(totalVal).toLocaleString()}`,
+    sigItems.unshift({icon:'📡',title:`คำนวณจากพอร์ตจริง ฿${Math.round(totalVal).toLocaleString(LOC)}`,
       desc:`เป้า allocation แก้ได้ที่หน้า Alerts → ⚙ ตั้งเป้า Allocation ของฉัน`,tag:'LIVE',tagColor:'var(--savings)'});
   } else {
     sigItems=[{icon:'🔌',title:'ยังไม่เชื่อมข้อมูลพอร์ตจริง',
@@ -1779,7 +1812,7 @@ function renderPortfolio(){
   }
   document.getElementById('rebalance-signals').innerHTML=sigItems.map(a=>`<div class="alert-item">
     <div class="alert-icon">${a.icon}</div>
-    <div><div class="alert-title">${a.title}</div><div class="alert-desc">${a.desc}</div>
+    <div><div class="alert-title">${escHtml(a.title)}</div><div class="alert-desc">${escHtml(a.desc)}</div>
     <div><span class="alert-tag" style="background:rgba(255,255,255,.05);border:1px solid ${a.tagColor};color:${a.tagColor}">${a.tag}</span></div></div>
   </div>`).join('');
 
@@ -1799,7 +1832,7 @@ function renderPortfolio(){
     ]},
     options:{
       responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{labels:{color:'#9090c0',boxWidth:10,font:{size:10},padding:8}},tooltip:{...tooltipDefaults,callbacks:{label:c=>` ${c.dataset.label}: Risk ${c.raw.x}% | Return ${c.raw.y}%`}}},
+      plugins:{legend:{labels:{color:'#9090c0',boxWidth:10,font:{size:10},padding:8}},tooltip:{...tooltipDefaults,callbacks:{label:c=>` ${escHtml(c.dataset.label)}: Risk ${c.raw.x}% | Return ${c.raw.y}%`}}},
       scales:{
         x:{grid:{color:gridColor,lineWidth:.5},title:{display:true,text:'Risk (Volatility %)',color:'#5a5a8a'},ticks:{callback:v=>v+'%'}},
         y:{grid:{color:gridColor,lineWidth:.5},title:{display:true,text:'Expected Return %',color:'#5a5a8a'},ticks:{callback:v=>v+'%'}}
@@ -1817,7 +1850,7 @@ function renderAlerts(){
   const critEl=document.getElementById('alerts-critical');
   const warnEl=document.getElementById('alerts-warning');
   const oppEl =document.getElementById('alerts-opportunity');
-  const item=a=>`<div class="alert-item"><div class="alert-icon">${a.icon}</div><div><div class="alert-title">${a.title}</div><div class="alert-desc">${a.desc}</div></div></div>`;
+  const item=a=>`<div class="alert-item"><div class="alert-icon">${a.icon}</div><div><div class="alert-title">${escHtml(a.title)}</div><div class="alert-desc">${escHtml(a.desc)}</div></div></div>`;
 
   // ปุ่มตั้งเป้า — แสดงเสมอด้านบนคอลัมน์แรก
   const editBtn = `<div style="margin-bottom:10px"><button onclick="editTargets()" style="background:rgba(124,111,236,.12);border:1px solid rgba(124,111,236,.4);color:var(--savings);padding:6px 12px;border-radius:6px;font-size:11px;cursor:pointer;font-family:inherit">⚙ ตั้งเป้า Allocation ของฉัน</button></div>`;
@@ -1835,20 +1868,20 @@ function renderAlerts(){
   const crit=[], warn=[], opp=[];
   devs.forEach(d=>{
     if(d.diff >= TH)
-      crit.push({icon:'🚨',title:`${d.label} Overweight ${d.cur.toFixed(1)}% (เป้า ${d.target}%)`,
-        desc:`เกินเป้า ${d.diff.toFixed(1)}pp ≈ ฿${d.amt.toLocaleString()} — พิจารณา trim หรือหยุด DCA ชั่วคราวเพื่อ rebalance`});
+      crit.push({icon:'🚨',title:`${escHtml(d.label)} Overweight ${d.cur.toFixed(1)}% (เป้า ${d.target}%)`,
+        desc:`เกินเป้า ${d.diff.toFixed(1)}pp ≈ ฿${d.amt.toLocaleString(LOC)} — พิจารณา trim หรือหยุด DCA ชั่วคราวเพื่อ rebalance`});
     else if(d.diff <= -TH && d.target>0)
-      warn.push({icon:'📉',title:`${d.label} Underweight ${d.cur.toFixed(1)}% (เป้า ${d.target}%)`,
-        desc:`ต่ำกว่าเป้า ${(-d.diff).toFixed(1)}pp ≈ ฿${d.amt.toLocaleString()} — เป็นหมวดที่ควรจัดสรร DCA รอบถัดไปเข้าก่อน`});
+      warn.push({icon:'📉',title:`${escHtml(d.label)} Underweight ${d.cur.toFixed(1)}% (เป้า ${d.target}%)`,
+        desc:`ต่ำกว่าเป้า ${(-d.diff).toFixed(1)}pp ≈ ฿${d.amt.toLocaleString(LOC)} — เป็นหมวดที่ควรจัดสรร DCA รอบถัดไปเข้าก่อน`});
     else
-      opp.push({icon:'✅',title:`${d.label} ${d.cur.toFixed(1)}% ใกล้เป้า (${d.target}%)`,
+      opp.push({icon:'✅',title:`${escHtml(d.label)} ${d.cur.toFixed(1)}% ใกล้เป้า (${d.target}%)`,
         desc:`เบี่ยงเบน ${d.diff>=0?'+':''}${d.diff.toFixed(1)}pp อยู่ในกรอบ ±${TH}pp — คงสัดส่วนไว้`});
   });
 
   // P&L flag จากข้อมูลจริง
   Object.entries(real.allocation).forEach(([k,v])=>{
     if(v.pnlPct<=-20) crit.push({icon:'🩸',title:`${ALLOC_META[k]?.label||k} ขาดทุน ${v.pnlPct}%`,
-      desc:`Unrealized loss ฿${Math.abs(v.pnl).toLocaleString()} — ทบทวน thesis: ถ้าเหตุผลที่ซื้อยังอยู่ = ถือ/DCA, ถ้าเปลี่ยนไปแล้ว = ตัดขาดทุนอย่างมีวินัย`});
+      desc:`Unrealized loss ฿${Math.abs(v.pnl).toLocaleString(LOC)} — ทบทวน thesis: ถ้าเหตุผลที่ซื้อยังอยู่ = ถือ/DCA, ถ้าเปลี่ยนไปแล้ว = ตัดขาดทุนอย่างมีวินัย`});
   });
 
   // เตือนถ้ามีสินทรัพย์ที่หาราคาไม่เจอ — สัดส่วนที่คำนวณจะเพี้ยน
@@ -1857,7 +1890,7 @@ function renderAlerts(){
       border-radius:8px;padding:8px 11px;margin-bottom:10px;font-size:11px;line-height:1.7;color:var(--debt)">
       ⚠ ${_unp.length} สินทรัพย์หาราคาไม่เจอ (${_unp.map(u=>u.ticker).join(', ')}) — ถูกนับเป็น ฿0
       <span style="color:var(--muted2)">สัดส่วนด้านล่างจึงคลาดเคลื่อน · แก้ที่ชีต Asset_Live_Price_Feed</span></div>` : '';
-  const asOfNote = unpWarn + `<div style="font-size:10px;color:var(--muted2);margin-bottom:10px">คำนวณจากพอร์ตจริง · มูลค่ารวม ฿${Math.round(totalVal).toLocaleString()} · เกณฑ์ ±${TH}pp</div>`;
+  const asOfNote = unpWarn + `<div style="font-size:10px;color:var(--muted2);margin-bottom:10px">คำนวณจากพอร์ตจริง · มูลค่ารวม ฿${Math.round(totalVal).toLocaleString(LOC)} · เกณฑ์ ±${TH}pp</div>`;
   critEl.innerHTML = editBtn + asOfNote + (crit.length?crit.map(item).join(''):item({icon:'🎉',title:'ไม่มีหมวดที่เกินเป้าเกินเกณฑ์',desc:'พอร์ตอยู่ในกรอบนโยบายที่ตั้งไว้'}));
   warnEl.innerHTML = warn.length?warn.map(item).join(''):item({icon:'—',title:'ไม่มีหมวด Underweight',desc:''});
   oppEl.innerHTML  = opp.map(item).join('');
@@ -1891,8 +1924,8 @@ function renderCalendar(){
           <div class="tl-date">${e.date}${isPast?' · <span style="color:var(--muted2)">ผ่านไปแล้ว</span>':''}</div>
           <span style="font-size:9px;padding:2px 7px;border-radius:3px;background:${impactBg};color:${impactColor};border:1px solid ${impactColor}44">${e.impact.toUpperCase()}</span>
         </div>
-        <div class="tl-title">${e.title}</div>
-        <div class="tl-desc">${e.desc}</div>
+        <div class="tl-title">${escHtml(e.title)}</div>
+        <div class="tl-desc">${escHtml(e.desc)}</div>
       </div>
     </div>`;
   }).join('');
@@ -1917,10 +1950,10 @@ function scInit(){
     if(raw) {
       scPortfolio = JSON.parse(raw);
       document.getElementById('sc-pf-val').textContent =
-        '฿' + Number(scPortfolio.totalValue||0).toLocaleString('th-TH',{maximumFractionDigits:0});
+        '฿' + Number(scPortfolio.totalValue||0).toLocaleString(LOC,{maximumFractionDigits:0});
       const pnl = scPortfolio.pnl||0;
       const pnlEl = document.getElementById('sc-pf-pnl');
-      pnlEl.textContent = (pnl>=0?'+':'')+'฿'+Math.abs(pnl).toLocaleString('th-TH',{maximumFractionDigits:0});
+      pnlEl.textContent = (pnl>=0?'+':'')+'฿'+Math.abs(pnl).toLocaleString(LOC,{maximumFractionDigits:0});
       pnlEl.style.color = pnl>=0?'var(--income)':'var(--expense)';
       const alloc = scPortfolio.allocation||{};
       const top = Object.entries(alloc).sort((a,b)=>b[1].pct-a[1].pct)[0];
@@ -1976,12 +2009,12 @@ function scEmptyCardHTML(scenario, period){
   const periodLabel = period==='3m'?'3 เดือนข้างหน้า':'6 เดือนข้างหน้า';
   return `<div class="sc-card ${meta.cls}">
     <div class="sc-card-head">
-      <div class="sc-card-title" style="color:${meta.color}">${meta.emoji} ${meta.label}</div>
+      <div class="sc-card-title" style="color:${meta.color}">${meta.emoji} ${escHtml(meta.label)}</div>
     </div>
     <div class="sc-card-body">
       <div class="sc-loading">
         <div style="font-size:28px;margin-bottom:8px">${meta.emoji}</div>
-        <div style="margin-bottom:12px;color:var(--muted2)">วิเคราะห์ ${meta.label}<br>${periodLabel}</div>
+        <div style="margin-bottom:12px;color:var(--muted2)">วิเคราะห์ ${escHtml(meta.label)}<br>${periodLabel}</div>
         <button class="sc-ai-btn gen" onclick="scGenerate('${period}','${scenario}',this)">
           ✨ Generate with AI
         </button>
@@ -2077,7 +2110,7 @@ async function scGenerate(period, scenario, btn){
 
   const periodLabel = period==='3m'?'3 months':'6 months';
   const portfolioStr = scPortfolio
-    ? `Portfolio: Total ฿${Number(scPortfolio.totalValue||0).toLocaleString()}, P&L ฿${Number(scPortfolio.pnl||0).toLocaleString()} (${scPortfolio.pnlPct||0}%), Allocation: ${JSON.stringify(scPortfolio.allocation||{})}, Top holdings: ${JSON.stringify((scPortfolio.topHoldings||[]).slice(0,5))}`
+    ? `Portfolio: Total ฿${Number(scPortfolio.totalValue||0).toLocaleString(LOC)}, P&L ฿${Number(scPortfolio.pnl||0).toLocaleString(LOC)} (${scPortfolio.pnlPct||0}%), Allocation: ${JSON.stringify(scPortfolio.allocation||{})}, Top holdings: ${JSON.stringify((scPortfolio.topHoldings||[]).slice(0,5))}`
     : 'Portfolio data not available';
 
   const scenarioDesc = {
@@ -2294,8 +2327,8 @@ function scNowHTML(){
           <div class="sc-bar"><div class="sc-bar-fill" style="width:${pct}%;background:var(--income)"></div></div>
         </div>
         <div style="font-size:12px;color:var(--muted2)">
-          Value: <b style="color:var(--text)">฿${Number(data.value||0).toLocaleString('th-TH',{maximumFractionDigits:0})}</b><br>
-          P&L: <b style="color:${pnlC}">${pnl>=0?'+':''}฿${Math.abs(pnl).toLocaleString('th-TH',{maximumFractionDigits:0})}</b>
+          Value: <b style="color:var(--text)">฿${Number(data.value||0).toLocaleString(LOC,{maximumFractionDigits:0})}</b><br>
+          P&L: <b style="color:${pnlC}">${pnl>=0?'+':''}฿${Math.abs(pnl).toLocaleString(LOC,{maximumFractionDigits:0})}</b>
         </div>
       </div>
     </div>`;

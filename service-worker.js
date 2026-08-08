@@ -1,7 +1,7 @@
 // Finance OS — Service Worker v2
 // Cache strategy: Cache-first for shell, Network-first for CDN
 
-const CACHE_NAME = 'finance-os-v43';  // bump version so old cache is cleared on deploy
+const CACHE_NAME = 'finance-os-v44';  // bump version so old cache is cleared on deploy
 const BASE = '/personaltracker-dashboard';
 
 // App shell — files to pre-cache on install
@@ -20,8 +20,12 @@ const SHELL_FILES = [
 const CDN_ASSETS = [
   'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js',
-  // Google Fonts: cache the CSS endpoint; actual font files are cached on first use below
-  'https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&family=Google+Sans+Mono:wght@300;400;500&display=swap',
+  // Google Fonts: cache the CSS endpoint; actual font files are cached on first use below.
+  // #1/#9 — MUST stay byte-identical to the href in both HTML files or the cache
+  // never hits. The old entry pointed at Google Sans / Google Sans Mono, which are
+  // Google-internal fonts that fonts.googleapis.com does not serve: the request
+  // 400'd, so this was caching a failure and Thai text had no font offline.
+  'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap',
 ];
 
 // ── Install: pre-cache app shell ──────────────────────────────────────
