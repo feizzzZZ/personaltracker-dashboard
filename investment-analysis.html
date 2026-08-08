@@ -870,7 +870,14 @@ function setTimeframe(tf,el){
 function updateDate(){
   const now = new Date();
   const opts = {year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'};
-  document.getElementById('live-date').textContent = now.toLocaleDateString(LOC,opts);
+  const _ld=document.getElementById('live-date');
+  _ld.textContent = now.toLocaleDateString(LOC,opts);
+  // #12 — เดิมโชว์ "วันนี้" ข้างจุดเขียวกระพริบ ทำให้ดูเหมือนราคาสดทุกครั้ง
+  //       ทั้งที่ market-data.json อาจเก่าหลายวัน
+  try{
+    const _age=paintFreshnessDot(document.querySelector('.sb-status .dot-live'),_ld);
+    if(_age && _age.level!=='fresh') _ld.textContent += ` · ⚠ ${_age.label}`;
+  }catch(e){}
   document.getElementById('last-update').textContent = 'อัปเดต: '+now.toLocaleDateString(LOC,{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'})+' · build '+APP_BUILD;
 }
 updateDate();

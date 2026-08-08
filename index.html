@@ -5175,7 +5175,11 @@ async function loadData(file){
   try{
     await parseFile(file);
     const total=txRows.length+assets.length;
-    document.getElementById('sb-status').textContent=`${txRows.length.toLocaleString(LOC)} tx · ${assets.length} assets`;
+    const _sb=document.getElementById('sb-status');
+    _sb.textContent=`${txRows.length.toLocaleString(LOC)} tx · ${assets.length} assets`;
+    // #12 — จุดสถานะต้องสะท้อนอายุข้อมูลจริง ไม่ใช่กระพริบเขียวตลอดเวลา
+    const _age=paintFreshnessDot(document.querySelector('.sb-status .dot-live'),_sb);
+    if(_age && _age.level!=='fresh') _sb.textContent+=` · ⚠ ${_age.label}`;
     document.getElementById('up').style.display='none';
     document.getElementById('app').style.display='flex';
     renderedPages=new Set();

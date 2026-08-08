@@ -116,6 +116,53 @@ function loadMarketData(){
 // เรียกเมื่อเขียนทับ localStorage โดยตรง (เช่น restore backup) เพื่อบังคับให้อ่านใหม่
 function invalidateMarketCache(){ _mdCacheKey = null; _mdCacheVal = null; }
 
+// ═══ #12 — pipeline freshness ═════════════════════════════════════════
+// เหตุผลที่ต้องมี: UI มีจุดเขียว .dot-live กระพริบ `animation:pulse 2s infinite`
+// ตลอดเวลา โดยไม่เคยเช็คอายุข้อมูลเลย ระหว่าง run #40-47 ของ GitHub Actions ที่
+// ถูกฆ่าเพราะ timeout ทุกรอบ market-data.json ค้างที่ 27-28 ก.ค. นานถึง 11 วัน
+// แต่ผู้ใช้ยังเห็นไฟเขียวกระพริบ = เชื่อว่าราคาสด = ตัดสินใจลงทุนบนราคาเก่า
+//
+// บั๊กแสดงผลอื่นผิดแบบ "เห็นได้" (฿NaN, 2569) อันนี้ผิดแบบ "น่าเชื่อถือ"
+// ซึ่งอันตรายกว่า เพราะไม่มีอะไรบอกให้สงสัย
+function marketDataAge(){
+  // คืน {hours, days, generatedAt, level, label} หรือ null ถ้าไม่มีไฟล์ pipeline เลย
+  let act = null;
+  try{ act = JSON.parse(localStorage.getItem('finOS_actions')||'null'); }catch(e){ return null; }
+  const ts = act && act.generated_at ? Date.parse(act.generated_at) : NaN;
+  if(!isFinite(ts)) return null;
+  const hours = (Date.now() - ts) / 36e5;
+  const days  = Math.floor(hours / 24);
+  // pipeline ควรรัน 2 ครั้ง/วัน → เกิน 24 ชม. = พลาดไปแล้วอย่างน้อย 2 รอบ
+  const level = hours < 24 ? 'fresh' : hours < 72 ? 'stale' : 'dead';
+  const label = hours < 1  ? 'สดใหม่'
+              : hours < 24 ? Math.floor(hours)+' ชม.ก่อน'
+              : days === 1 ? 'เมื่อวาน'
+              : 'ข้อมูล '+days+' วันก่อน';
+  return { hours, days, generatedAt: new Date(ts), level, label,
+           stats: (act && act.stats) || null };
+}
+
+// ผูกจุดสถานะกับอายุข้อมูลจริง — เขียว=สด / ส้ม=เริ่มเก่า / แดง=ตาย
+// และ "หยุดกระพริบ" เมื่อไม่สดแล้ว เพราะการกระพริบคือสิ่งที่สื่อว่า live
+function paintFreshnessDot(dotEl, textEl){
+  const a = marketDataAge();
+  if(!dotEl) return a;
+  if(!a){
+    dotEl.style.background = 'var(--muted)';
+    dotEl.style.animation  = 'none';
+    dotEl.title = 'ยังไม่มี market-data.json — pipeline ยังไม่เคยรันสำเร็จ';
+    return null;
+  }
+  const COLOR = { fresh:'var(--income)', stale:'var(--debt)', dead:'var(--expense)' };
+  dotEl.style.background = COLOR[a.level];
+  dotEl.style.animation  = a.level === 'fresh' ? '' : 'none';
+  const b = a.stats && a.stats.budget_exhausted
+          ? ' · pipeline หมดเวลา ดึงไม่ครบ' : '';
+  dotEl.title = 'ข้อมูล pipeline: ' + a.generatedAt.toLocaleString(LOC) + b;
+  if(textEl && a.level !== 'fresh') textEl.title = dotEl.title;
+  return a;
+}
+
 // ═══ Method 2 — external API layer (alternative.me + CoinGecko) ═══
 const EXT_TTL = 10*60e3;
 function loadExt(){ try{ return JSON.parse(localStorage.getItem('finOS_ext')||'null'); }catch(e){ return null; } }
