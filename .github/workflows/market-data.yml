@@ -19,7 +19,10 @@ concurrency:
 jobs:
   update:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # เพดานรวมของ job — เป็นตาข่ายชั้นนอกเท่านั้น ไม่ใช่ตัวคุมเวลาจริง
+    # ตัวคุมจริงคือ timeout-minutes ที่ step "Fetch market data" + MARKET_DATA_DEADLINE
+    # ต้องมากกว่า step timeout อย่างชัดเจน เผื่อเวลา checkout/setup-python/commit
+    timeout-minutes: 20
 
     steps:
       - name: Checkout
@@ -33,26 +36,66 @@ jobs:
       # สคริปต์ใช้ stdlib ล้วน — ไม่มี pip install ให้พังตอน CI
       # continue-on-error: ให้ commit ขั้นถัดไปยังรันด้วยข้อมูลที่ merge เก็บค่าเดิมไว้แล้ว
       # แต่ยัง fail job รวมได้ตอนท้าย (step ถัดไป) เพื่อไม่ให้ CI เขียวทั้งที่ fetch พังหนัก
+      #
+      # ★ ROOT CAUSE ของ run #40-47 ที่ตายทุกรอบที่ 15m18s ★
+      #   เดิม timeout-minutes: 15 อยู่ที่ระดับ JOB
+      #   พอชนเพดาน GitHub จะ "ยกเลิกทั้ง job" ไม่ใช่ "ทำให้ step นี้ fail"
+      #   -> continue-on-error ไม่มีผล เพราะมันดักได้แค่ step ที่ exit non-zero
+      #      ไม่ได้ดัก job cancellation
+      #   -> step "Commit if changed" ไม่เคยได้รันเลยสักครั้ง
+      #   -> market-data.json ค้างที่ 27-28 ก.ค. นาน 11 วัน
+      #      ทั้งที่ FRED หลาย key ดึงสำเร็จแล้วในรอบนั้น
+      #
+      #   ย้าย timeout มาไว้ที่ STEP: step ที่หมดเวลาจะนับเป็น "failed"
+      #   ซึ่ง continue-on-error ดักได้ -> commit step ได้รันต่อ -> ข้อมูลถูกบันทึก
+      #
+      #   ลำดับตัวเลขต้องเป็น: DEADLINE(8m) < step timeout(10m) < job timeout(20m)
+      #   เพื่อให้สคริปต์หยุดเองอย่างสุภาพก่อน แล้วเขียนไฟล์ทัน
+      #   ถ้าสคริปต์ค้างจริงๆ step timeout เป็นตาข่ายชั้นสอง
       - name: Fetch market data
         id: fetch
         continue-on-error: true
+        timeout-minutes: 10
+        env:
+          MARKET_DATA_DEADLINE: '480'   # 8 นาที (ดู fetch_market_data.py v41)
         run: python3 scripts/fetch_market_data.py
 
+      # if: always() — ต้องเห็น summary โดยเฉพาะรอบที่ fetch พัง
+      # และต้องไม่ crash เองถ้าไฟล์หาย ไม่งั้นมันจะบัง Commit step ข้างล่าง
       - name: Show summary
+        if: always()
         run: |
           python3 - <<'PY'
-          import json
+          import json, os
+          if not os.path.exists('market-data.json'):
+              print("::warning::ไม่มี market-data.json — fetch ตายก่อนเขียนไฟล์")
+              raise SystemExit(0)
           j = json.load(open('market-data.json'))
           s = j.get('stats', {})
           print(f"keys รอบนี้ : {s.get('keys_this_run')}")
           print(f"keys รวม    : {s.get('keys_total')}")
           print(f"sectors     : {s.get('sectors')}")
+          # telemetry ใหม่จาก v41 — แยกให้ออกว่า "หมดเวลา" กับ "API ล่ม" คนละเรื่อง
+          rt, bg = s.get('runtime_sec'), s.get('budget_sec')
+          if rt is not None:
+              print(f"runtime     : {rt}s / งบ {bg}s")
+          if s.get('budget_exhausted'):
+              print(f"::warning::หมดงบเวลา — ข้าม {s.get('skipped_for_budget')} request "
+                    f"ไฟล์ถูกเขียนด้วยข้อมูลเท่าที่ดึงทัน + ค่าเดิมที่ merge ไว้")
           for w in s.get('warnings', []):
               print(f"  ⚠️  {w}")
           PY
 
+      # if: always() — จุดสำคัญที่สุดของไฟล์นี้
+      # สคริปต์ merge ข้อมูลเดิมไว้ในไฟล์แล้วเสมอ ดังนั้นไฟล์ที่ได้จะดีกว่าหรือเท่ากับของเดิม
+      # ไม่มีเหตุผลใดที่จะไม่ commit แม้รอบนั้นดึงได้ไม่ครบ
       - name: Commit if changed
+        if: always()
         run: |
+          if [ ! -f market-data.json ]; then
+            echo "::warning::ไม่มีไฟล์ให้ commit — ข้าม"
+            exit 0
+          fi
           git config user.name  "market-data-bot"
           git config user.email "market-data-bot@users.noreply.github.com"
           git add market-data.json
@@ -67,8 +110,9 @@ jobs:
             git push
           fi
 
+      # outcome รวมทั้ง 'failure' (exit≠0) และ 'cancelled' (step timeout)
       - name: Fail job if fetch was degraded
-        if: steps.fetch.outcome == 'failure'
+        if: always() && steps.fetch.outcome != 'success'
         run: |
           echo "::error::fetch_market_data.py จบด้วย exit code ผิดปกติ — ข้อมูลที่ merge ไว้อาจถูก commit ไปแล้ว แต่ต้องตรวจ warnings ในขั้นตอน Fetch market data ด้านบน"
           exit 1
