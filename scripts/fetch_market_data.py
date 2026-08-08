@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Finance OS — market data pipeline  (v41)
+Finance OS — market data pipeline  (v42)
 ────────────────────────────────────────────────────────────────────────
 สร้าง market-data.json ให้ dashboard อ่าน
 
@@ -33,7 +33,20 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone, timedelta
 
 OUT = os.environ.get("MARKET_DATA_OUT", "market-data.json")
-UA = "Mozilla/5.0 (compatible; FinanceOS-pipeline/41)"
+# v42: UA เดิม "Mozilla/5.0 (compatible; FinanceOS-pipeline/42)" มี token ที่ไม่ใช่
+# เบราว์เซอร์จริง ซึ่งเป็นผู้ต้องสงสัยอันดับแรกของการโดนบล็อกแบบ tarpit
+# (fredgraph.csv รับ connection แล้วไม่ส่งข้อมูลกลับ -> read timeout ทั้ง 14 ตัว)
+# ส่ง header ชุดเดียวกับเบราว์เซอร์จริงเพื่อตัดตัวแปรนี้ออก
+UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+      "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
+REQ_HEADERS = {
+    "User-Agent": UA,
+    "Accept": "text/csv,text/plain,application/json,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Accept-Encoding": "identity",     # เลี่ยง gzip — เราไม่ได้ decode
+    "Connection": "close",
+}
+FRED_API_KEY = os.environ.get("FRED_API_KEY", "").strip()
 NOW = datetime.now(timezone.utc)
 FETCHED_AT = NOW.isoformat()
 
@@ -106,7 +119,7 @@ def http_get(url: str, tries: int = 2, timeout: int = 12) -> bytes | None:
         try:
             # อย่าให้ request เดียวกินงบที่เหลือทั้งหมด
             eff = max(3, min(timeout, int(budget_left())))
-            req = urllib.request.Request(url, headers={"User-Agent": UA})
+            req = urllib.request.Request(url, headers=REQ_HEADERS)
             with urllib.request.urlopen(req, timeout=eff, context=_ctx) as r:
                 return r.read()
         except urllib.error.HTTPError as e:
@@ -130,8 +143,115 @@ def http_get(url: str, tries: int = 2, timeout: int = 12) -> bytes | None:
 # ══════════════════════════════════════════════════════════════════════
 # FRED — ข้อมูลมหภาค (CSV endpoint สาธารณะ ไม่ต้องใช้ API key)
 # ══════════════════════════════════════════════════════════════════════
+# ══════════════════════════════════════════════════════════════════════
+# v42 — FRED endpoint fallback chain
+# ══════════════════════════════════════════════════════════════════════
+# ปัญหาที่เกิดขึ้นจริง (run วันที่ 8 ส.ค. 11:55 UTC):
+#   FRED 14/14 ล้มด้วย "TimeoutError: The read operation timed out"
+#   Yahoo 17/17 สำเร็จในรอบเดียวกัน -> ไม่ใช่ปัญหาเน็ตของ runner
+#   ค่าล่าสุดที่ FRED ให้มาสำเร็จคือ 2026-07-28 = วันที่ข้อมูลเริ่มค้างเป๊ะ
+#   => fredgraph.csv เริ่มบล็อก IP/UA ของ GitHub Actions ราว 28-29 ก.ค.
+#      และนั่นคือ "ต้นตอจริง" ของทั้งเหตุการณ์: 14 x 3 tries x 30s = 21 นาที
+#      > เพดาน job 15 นาที -> job ถูกฆ่า -> commit ไม่รัน -> ข้อมูลค้าง 11 วัน
+#
+# read timeout (ไม่ใช่ connect timeout) = TCP ต่อติด แต่ server ไม่ส่งอะไรกลับ
+# = อาการ tarpit / silent block ไม่ใช่ server ช้า การเพิ่ม timeout จึงไม่ช่วย
+#
+# แก้แบบไม่เดา: ลองหลาย endpoint ต่อกันจนได้ตัวที่ทำงาน แล้วรายงานว่าตัวไหนชนะ
+# ลำดับความน่าเชื่อถือ:
+#   1. official API  — ต้องมี FRED_API_KEY (ฟรี) เป็น endpoint ที่ FRED support จริง
+#   2. fredgraph.csv  — ตัวเดิม (ตอนนี้ถูกบล็อก)
+#   3. /data/{id}.txt — endpoint เก่า คนละ path คนละ handler
+#   4. downloaddata   — path ที่ UI ใช้ตอนกดปุ่ม download
+_fred_endpoint_used: dict[str, str] = {}
+_fred_cache: dict[str, list[tuple[str, float]]] = {}
+
+
+def _parse_fred_csv(raw: bytes) -> list[tuple[str, float]]:
+    out = []
+    for line in raw.decode("utf-8", "replace").splitlines()[1:]:
+        parts = line.replace("\t", ",").split(",")
+        if len(parts) < 2:
+            continue
+        d, v = parts[0].strip().strip('"'), parts[1].strip().strip('"')
+        if not v or v == "." or not d[:4].isdigit():
+            continue
+        try:
+            out.append((d, float(v)))
+        except ValueError:
+            continue
+    return out
+
+
+def _parse_fred_txt(raw: bytes) -> list[tuple[str, float]]:
+    """/data/{id}.txt เป็น fixed-width มี header แล้วคั่นด้วยช่องว่าง"""
+    out = []
+    for line in raw.decode("utf-8", "replace").splitlines():
+        parts = line.split()
+        if len(parts) < 2 or not parts[0][:4].isdigit():
+            continue
+        if parts[1] == ".":
+            continue
+        try:
+            out.append((parts[0], float(parts[1])))
+        except ValueError:
+            continue
+    return out
+
+
+def _parse_fred_api(raw: bytes) -> list[tuple[str, float]]:
+    try:
+        obs = json.loads(raw.decode("utf-8", "replace")).get("observations", [])
+    except (json.JSONDecodeError, AttributeError):
+        return []
+    out = []
+    for o in obs:
+        v = (o.get("value") or "").strip()
+        if not v or v == ".":
+            continue
+        try:
+            out.append((o.get("date", ""), float(v)))
+        except ValueError:
+            continue
+    return out
+
+
 def fred_series(series_id: str) -> list[tuple[str, float]]:
-    """คืน [(date, value)] เรียงเก่า→ใหม่ ข้ามค่า '.' ที่ FRED ใช้แทน N/A"""
+    """คืน [(date, value)] เรียงเก่า→ใหม่ ข้ามค่า '.' ที่ FRED ใช้แทน N/A
+
+    ลองหลาย endpoint จนได้ตัวที่ทำงาน (ดูคำอธิบายด้านบน)
+    timeout ต่อ endpoint ตั้งสั้น (8s) เพราะตอนนี้ยิงขนานกันแล้ว
+    ต้นทุนของ endpoint ที่ตายจึงถูกลงมาก
+    """
+    if series_id in _fred_cache:
+        return _fred_cache[series_id]
+    chain: list[tuple[str, str, object]] = []
+    if FRED_API_KEY:
+        chain.append((
+            "api",
+            f"https://api.stlouisfed.org/fred/series/observations"
+            f"?series_id={series_id}&api_key={FRED_API_KEY}&file_type=json",
+            _parse_fred_api))
+    chain += [
+        ("fredgraph", f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={series_id}", _parse_fred_csv),
+        ("data-txt",  f"https://fred.stlouisfed.org/data/{series_id}.txt",              _parse_fred_txt),
+        ("download",  f"https://fred.stlouisfed.org/series/{series_id}/downloaddata/{series_id}.csv", _parse_fred_csv),
+    ]
+    for name, url, parse in chain:
+        if out_of_budget():
+            return []
+        raw = http_get(url, tries=1, timeout=8)
+        if not raw:
+            continue
+        out = parse(raw)
+        if out:
+            _fred_endpoint_used[series_id] = name
+            return out
+    warn(f"FRED {series_id}: ทุก endpoint ใช้ไม่ได้ ({len(chain)} ตัว)")
+    return []
+
+
+def _fred_series_legacy_unused(series_id: str) -> list[tuple[str, float]]:
     raw = http_get(f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={series_id}")
     if not raw:
         return []
@@ -286,7 +406,46 @@ def parallel_charts(specs: list[tuple], workers: int = 6):
     return out
 
 
+def prefetch_fred(series_ids: list[str], workers: int = 5) -> None:
+    """ดึง FRED ทุก series ขนานกันใส่ cache
+
+    เหตุผล: run ล่าสุด FRED 14 ตัวยิงแบบ sequential แล้ว timeout ทุกตัว
+    = 14 x 2 tries x 12s = 336s จาก runtime รวม 352s "เสียเวลาไปเกือบทั้งหมด
+    เพื่อให้ได้ 0 key" ขณะที่ Yahoo (ขนานอยู่แล้ว) ใช้แค่ ~16s ได้ครบ 17 key
+
+    ยิงขนาน 5 ตัว + endpoint chain 3-4 ตัว timeout 8s
+    worst case ~ 14/5 x 4 x 8s ≈ 90s แทน 336s
+    ถ้า FRED กลับมาทำงาน จะเหลือ ~3s
+    """
+    if not series_ids:
+        return
+    uniq = list(dict.fromkeys(series_ids))
+    with ThreadPoolExecutor(max_workers=workers) as ex:
+        futs = {ex.submit(fred_series, sid): sid for sid in uniq}
+        for f, sid in futs.items():
+            try:
+                _fred_cache[sid] = f.result()
+            except Exception as e:  # noqa: BLE001
+                warn(f"{type(e).__name__}: {e} · FRED {sid}")
+                _fred_cache[sid] = []
+
+
 print("── FRED (macro) ─────────────────────────────")
+# ทุก series ที่จะใช้ด้านล่าง — ดึงขนานกันทีเดียวก่อน
+prefetch_fred([
+    "DFEDTARU", "DGS10", "DGS2", "DFII10", "BAMLH0A0HYM2", "VIXCLS",
+    "UNRATE", "A191RL1Q225SBEA", "T10Y2Y",
+    "CPIAUCSL", "CPILFESL", "PCEPI", "PCEPILFE", "PAYEMS",
+])
+_fred_ok = sum(1 for v in _fred_cache.values() if v)
+print(f"  prefetch: {_fred_ok}/{len(_fred_cache)} series · {elapsed():.0f}s")
+if _fred_endpoint_used:
+    from collections import Counter
+    print(f"  endpoint ที่ใช้ได้: {dict(Counter(_fred_endpoint_used.values()))}")
+elif not _fred_ok:
+    print("::warning::FRED ใช้ไม่ได้ทุก endpoint — ตั้ง secret FRED_API_KEY "
+          "แล้วส่งเป็น env FRED_API_KEY จะได้ endpoint ที่ FRED support จริง")
+
 FRED_LEVEL = [
     ("FED_RATE",      "DFEDTARU",     "FRED: target upper bound",   2),
     ("US10Y",         "DGS10",        "FRED: DGS10",                2),
@@ -453,6 +612,9 @@ payload = {
         "runtime_sec": round(elapsed(), 1),
         "budget_sec": DEADLINE_SEC,
         "budget_exhausted": _budget_skips > 0,
+        "fred_ok": sum(1 for v in _fred_cache.values() if v),
+        "fred_total": len(_fred_cache),
+        "fred_endpoint": (sorted(set(_fred_endpoint_used.values())) or None),
         "skipped_for_budget": _budget_skips,
         "warnings": warnings,
     },
