@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Finance OS — market data pipeline  (v40)
+Finance OS — market data pipeline  (v41)
 ────────────────────────────────────────────────────────────────────────
 สร้าง market-data.json ให้ dashboard อ่าน
 
@@ -29,12 +29,57 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone, timedelta
 
 OUT = os.environ.get("MARKET_DATA_OUT", "market-data.json")
-UA = "Mozilla/5.0 (compatible; FinanceOS-pipeline/40)"
+UA = "Mozilla/5.0 (compatible; FinanceOS-pipeline/41)"
 NOW = datetime.now(timezone.utc)
 FETCHED_AT = NOW.isoformat()
+
+# ══════════════════════════════════════════════════════════════════════
+# RUNTIME BUDGET  — เหตุผลที่ต้องมี (root cause ของ run #40-47 ที่ถูกฆ่าทุกรอบ)
+# ══════════════════════════════════════════════════════════════════════
+# อาการ: ทุก run จบที่ 15m18s / 15m22s พร้อม
+#        "The job has exceeded the maximum execution time of 15m0s"
+#
+# เลขที่ทำให้พัง:
+#   ~36 request แบบ sequential  (13 FRED + 23 Yahoo)
+#   worst case ต่อ request = tries(3) x timeout(30s) + backoff(2+4s) = 96s
+#   worst case รวม          = 36 x 96s = 57.6 นาที   >>  job cap 15 นาที
+#   แค่ 25% ของ request ที่ stall ก็กิน 14.4 นาทีแล้ว
+#
+# แต่ปัญหาที่ร้ายกว่าคือ "ลำดับการเขียนไฟล์":
+#   การ merge + เขียน market-data.json อยู่บรรทัดท้ายสุดของสคริปต์
+#   พอ job ถูกฆ่ากลางทาง  ->  ไฟล์ไม่ถูกเขียน  ->  git commit step ไม่ได้รัน
+#   ->  ข้อมูลค้างที่ 27-28 ก.ค. ทั้งที่ FRED หลาย key ดึงสำเร็จแล้วในรอบนั้น
+#
+#   กลไก fail-safe merge ที่ README ภูมิใจ ป้องกันได้แค่ "API รายตัวล่ม"
+#   มันป้องกัน "job หมดเวลา" ไม่ได้เลย เพราะ merge เกิดหลังสุด
+#
+# ทางแก้: ให้ทุก fetch เช็ค deadline ก่อน ถ้าหมดงบก็คืน None ทันที
+#         สคริปต์จะเดินถึงขั้น merge+write เสมอ = ได้เท่าที่ดึงทัน + ของเดิมอยู่ครบ
+DEADLINE_SEC = int(os.environ.get("MARKET_DATA_DEADLINE", "480"))   # 8 นาที
+_T0 = time.monotonic()
+_budget_skips = 0
+
+
+def elapsed() -> float:
+    return time.monotonic() - _T0
+
+
+def budget_left() -> float:
+    return DEADLINE_SEC - elapsed()
+
+
+def out_of_budget() -> bool:
+    """True เมื่อเหลือเวลาไม่พอ — คนเรียกต้องข้ามแล้วปล่อยให้ไปถึงขั้นเขียนไฟล์"""
+    global _budget_skips
+    if budget_left() <= 0:
+        _budget_skips += 1
+        return True
+    return False
+
 
 _ctx = ssl.create_default_context()
 warnings: list[str] = []
@@ -45,25 +90,37 @@ def warn(msg: str) -> None:
     print(f"  ⚠️  {msg}", file=sys.stderr)
 
 
-def http_get(url: str, tries: int = 3, timeout: int = 30) -> bytes | None:
-    """GET แบบมี retry + backoff — API พวกนี้ rate-limit บ่อยตอน CI รันพร้อมกัน"""
+def http_get(url: str, tries: int = 2, timeout: int = 12) -> bytes | None:
+    """GET แบบมี retry + backoff — API พวกนี้ rate-limit บ่อยตอน CI รันพร้อมกัน
+
+    timeout 30->12 และ tries 3->2:
+      FRED/Yahoo ที่ทำงานปกติตอบใน <2s  ค่า 30s ไม่ได้ช่วยให้สำเร็จมากขึ้น
+      มันแค่ยืดเวลาที่เสียไปกับ socket ที่ค้างอยู่แล้ว
+      หมายเหตุ: timeout ของ urlopen คุมแค่ระดับ socket operation ไม่ใช่เวลารวม
+      ของ request — ถ้า server ส่งข้อมูลมาแบบหยอด r.read() ยังค้างเกิน 12s ได้
+      จึงต้องมี deadline ระดับสคริปต์ (out_of_budget) เป็นตาข่ายอีกชั้น
+    """
     for attempt in range(tries):
+        if out_of_budget():
+            return None
         try:
+            # อย่าให้ request เดียวกินงบที่เหลือทั้งหมด
+            eff = max(3, min(timeout, int(budget_left())))
             req = urllib.request.Request(url, headers={"User-Agent": UA})
-            with urllib.request.urlopen(req, timeout=timeout, context=_ctx) as r:
+            with urllib.request.urlopen(req, timeout=eff, context=_ctx) as r:
                 return r.read()
         except urllib.error.HTTPError as e:
             # 401/403 จาก Yahoo มักเป็น anti-bot/rate-limit ชั่วคราว ไม่ใช่ auth error จริง
             # (endpoint พวกนี้เป็น public ไม่ต้องใช้ credential) → ต้อง retry ด้วย
             # ไม่งั้นรอบเดียวที่โดนจะทำหลาย key fail พร้อมกันแบบกู้ไม่ได้
             if e.code in (401, 403, 429, 502, 503) and attempt < tries - 1:
-                time.sleep(2 ** attempt * 2)
+                time.sleep(min(2 ** attempt * 2, max(0, budget_left())))
                 continue
             warn(f"HTTP {e.code} · {url[:80]}")
             return None
         except Exception as e:  # noqa: BLE001
             if attempt < tries - 1:
-                time.sleep(2 ** attempt)
+                time.sleep(min(2 ** attempt, max(0, budget_left())))
                 continue
             warn(f"{type(e).__name__}: {e} · {url[:80]}")
             return None
@@ -204,6 +261,31 @@ def put(key: str, value, observed: str | None, note: str) -> None:
     }
 
 
+def parallel_charts(specs: list[tuple], workers: int = 6):
+    """ดึง yahoo_chart หลายตัวขนานกัน — คืน {symbol: (dates, closes)}
+
+    เดิมทั้ง 23 Yahoo request เป็น sequential ซึ่งเป็นตัวกินเวลาหลัก
+    งานนี้เป็น network-bound ล้วน GIL จึงไม่เป็นคอขวด ThreadPoolExecutor
+    ใช้ได้เต็มประสิทธิภาพ และเป็น stdlib ตามข้อจำกัดเดิม (ไม่ต้อง pip install)
+
+    workers=6 ไม่มากกว่านี้เพราะ Yahoo กัน rate limit จาก IP ของ GitHub Actions
+    ค่อนข้างดุ ยิงพร้อมกันเยอะเกินจะได้ 401/403 ยกชุด
+    """
+    out: dict[str, tuple[list, list]] = {}
+    if out_of_budget():
+        return out
+    with ThreadPoolExecutor(max_workers=workers) as ex:
+        futs = {ex.submit(yahoo_chart, sym, rng, iv): sym for sym, rng, iv in specs}
+        for f, sym in futs.items():
+            try:
+                d, v = f.result()
+                if v:
+                    out[sym] = (d, v)
+            except Exception as e:  # noqa: BLE001
+                warn(f"{type(e).__name__}: {e} · {sym}")
+    return out
+
+
 print("── FRED (macro) ─────────────────────────────")
 FRED_LEVEL = [
     ("FED_RATE",      "DFEDTARU",     "FRED: target upper bound",   2),
@@ -257,12 +339,14 @@ PRICES = [
     ("BTCUSD",    "BTC-USD",   0, "Yahoo BTC-USD"),
     ("ETHUSD",    "ETH-USD",   0, "Yahoo ETH-USD"),
 ]
-closes_cache: dict[str, tuple[list, list]] = {}
+# ดึงทุก symbol ขนานกันก่อน แล้วค่อยประมวลผลตามลำดับเดิม
+# (ผลลัพธ์เหมือนเดิมทุกอย่าง เปลี่ยนแค่เวลาที่ใช้)
+closes_cache: dict[str, tuple[list, list]] = parallel_charts(
+    [(sym, "2y", "1d") for _, sym, _, _ in PRICES])
 for key, sym, nd, note in PRICES:
-    d, v = yahoo_chart(sym, "2y", "1d")
+    d, v = closes_cache.get(sym, ([], []))
     if not v:
         continue
-    closes_cache[sym] = (d, v)
     put(key, round(v[-1], nd), d[-1], note)
     print(f"  ✓ {key:<14} {round(v[-1], nd)}")
     if key == "SP500" and len(v) > 1:
@@ -289,8 +373,9 @@ for key_rsi, key_ma, sym, label in [
 
 
 print("── History (benchmark) ──────────────────────")
+_hist_charts = parallel_charts([("^GSPC", "5y", "1d"), ("THB=X", "5y", "1d")], workers=2)
 for hkey, sym in [("SP500", "^GSPC"), ("USDTHB", "THB=X")]:
-    d, v = yahoo_chart(sym, "5y", "1d")
+    d, v = _hist_charts.get(sym, ([], []))
     if v:
         history[hkey] = weekly(d, v, years=5)
         print(f"  ✓ {hkey:<14} {len(history[hkey])} จุด")
@@ -304,13 +389,16 @@ SECTORS = [
     ("XLE",  "Energy"),     ("XLU",  "Utilities"),    ("XLRE", "Real Estate"),
     ("XLB",  "Materials"),
 ]
-spy_d, spy_v = yahoo_chart("SPY", "2y", "1d")
+# SPY + sector ETF 10 ตัว = 11 request ดึงพร้อมกันในชุดเดียว
+_sector_charts = parallel_charts(
+    [("SPY", "2y", "1d")] + [(sym, "2y", "1d") for sym, _ in SECTORS])
+spy_d, spy_v = _sector_charts.get("SPY", ([], []))
 spy_1m = pct_change(spy_v, 21) if spy_v else None
 spy_3m = pct_change(spy_v, 63) if spy_v else None
 
 sectors: dict = {}
 for sym, name in SECTORS:
-    d, v = yahoo_chart(sym, "2y", "1d")
+    d, v = _sector_charts.get(sym, ([], []))
     if not v:
         continue
     c1m, c3m = pct_change(v, 21), pct_change(v, 63)
@@ -327,7 +415,6 @@ for sym, name in SECTORS:
         entry["rs3m"] = round(c3m - spy_3m, 2)
     sectors[sym] = entry
     print(f"  ✓ {sym:<5} {name:<15} 3M {c3m}%  RS {entry.get('rs3m')}")
-    time.sleep(0.3)   # กัน rate limit ของ Yahoo
 
 # หมายเหตุ: ไม่ประกอบ history["sectors"] ที่นี่ — merge แบบราย-symbol ด้านล่าง
 # เพื่อไม่ให้ symbol ที่ fetch fail รอบนี้หายไปทั้งก้อนตอน merged_hist.update(history)
@@ -362,6 +449,11 @@ payload = {
         "keys_this_run": len(data),
         "keys_total": len(merged_data),
         "sectors": len(sectors),
+        # runtime/budget telemetry — ให้ debug ได้ว่ารอบไหนหมดเวลา ไม่ใช่ API ล่ม
+        "runtime_sec": round(elapsed(), 1),
+        "budget_sec": DEADLINE_SEC,
+        "budget_exhausted": _budget_skips > 0,
+        "skipped_for_budget": _budget_skips,
         "warnings": warnings,
     },
     "data": merged_data,
@@ -373,7 +465,12 @@ with open(OUT, "w", encoding="utf-8") as f:
 
 print("─────────────────────────────────────────────")
 print(f"เขียน {OUT}: {len(data)} keys รอบนี้ · {len(merged_data)} keys รวม · "
-      f"{len(sectors)} sectors · {len(warnings)} warnings")
+      f"{len(sectors)} sectors · {len(warnings)} warnings · {elapsed():.0f}s")
+
+if _budget_skips:
+    # ไฟล์ถูกเขียนแล้ว (ข้อมูลเดิม merge ไว้ครบ) แต่ต้องเห็นใน log ว่ารอบนี้ไม่สมบูรณ์
+    print(f"::warning::หมดงบเวลา {DEADLINE_SEC}s — ข้าม {_budget_skips} request "
+          f"ไฟล์ถูกเขียนด้วยข้อมูลเท่าที่ดึงทัน + ค่าเดิมที่ merge ไว้")
 
 # ถ้าดึงได้น้อยกว่าครึ่งของที่ควรได้ = มีอะไรผิดปกติจริง ให้ job fail จริง (ไฟล์เขียนไปแล้ว
 # ด้วยข้อมูล merge เก็บค่าเดิม แต่ workflow ต้องไม่รายงานว่าสำเร็จ)
