@@ -52,12 +52,62 @@ jobs:
       #   ลำดับตัวเลขต้องเป็น: DEADLINE(8m) < step timeout(10m) < job timeout(20m)
       #   เพื่อให้สคริปต์หยุดเองอย่างสุภาพก่อน แล้วเขียนไฟล์ทัน
       #   ถ้าสคริปต์ค้างจริงๆ step timeout เป็นตาข่ายชั้นสอง
+      # ── v42 diagnostic ─────────────────────────────────────────────
+      # ทดสอบจาก runner จริงว่า FRED endpoint ไหนใช้ได้ แทนการเดา
+      # (run 8 ส.ค. 11:55 UTC: FRED 14/14 ล้มด้วย read timeout ขณะที่ Yahoo 17/17 ผ่าน)
+      # continue-on-error — step นี้เป็นแค่ข้อมูล ไม่ควรทำให้ job พัง
+      - name: Probe FRED endpoints
+        continue-on-error: true
+        timeout-minutes: 3
+        env:
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+        run: |
+          python3 - <<'PY'
+          import os, time, urllib.request, urllib.error
+          H = {"User-Agent": ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                              "AppleWebKit/537.36 (KHTML, like Gecko) "
+                              "Chrome/126.0.0.0 Safari/537.36"),
+               "Accept": "text/csv,text/plain,application/json,*/*;q=0.8",
+               "Accept-Language": "en-US,en;q=0.9",
+               "Accept-Encoding": "identity", "Connection": "close"}
+          KEY = os.environ.get("FRED_API_KEY", "").strip()
+          cands = [
+            ("fredgraph.csv          ", "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DGS10"),
+            ("/data/DGS10.txt        ", "https://fred.stlouisfed.org/data/DGS10.txt"),
+            ("downloaddata csv       ", "https://fred.stlouisfed.org/series/DGS10/downloaddata/DGS10.csv"),
+          ]
+          if KEY:
+            cands.insert(0, ("official API           ",
+              f"https://api.stlouisfed.org/fred/series/observations?series_id=DGS10&api_key={KEY}&file_type=json"))
+          else:
+            print("  (ยังไม่ได้ตั้ง secret FRED_API_KEY — ข้าม official API)")
+          # ยิงด้วย UA ของเบราว์เซอร์ และ UA แบบ bot เพื่อดูว่าโดนบล็อกที่ UA หรือ IP
+          for ua_name, ua in (("browser-UA", H["User-Agent"]), ("bot-UA", "FinanceOS-pipeline/42")):
+            print(f"\n=== {ua_name} ===")
+            for name, url in cands:
+              h = dict(H); h["User-Agent"] = ua
+              t0 = time.time()
+              try:
+                req = urllib.request.Request(url, headers=h)
+                with urllib.request.urlopen(req, timeout=10) as r:
+                  body = r.read()
+                print(f"  OK    {name} {r.status}  {len(body):>7} bytes  {time.time()-t0:.1f}s")
+              except urllib.error.HTTPError as e:
+                print(f"  HTTP  {name} {e.code}                    {time.time()-t0:.1f}s")
+              except Exception as e:
+                print(f"  FAIL  {name} {type(e).__name__}: {e}   {time.time()-t0:.1f}s")
+          PY
+
       - name: Fetch market data
         id: fetch
         continue-on-error: true
         timeout-minutes: 10
         env:
-          MARKET_DATA_DEADLINE: '480'   # 8 นาที (ดู fetch_market_data.py v41)
+          MARKET_DATA_DEADLINE: '480'   # 8 นาที (ดู fetch_market_data.py v42)
+          # v42: ถ้าตั้ง secret นี้ สคริปต์จะใช้ official FRED API เป็น endpoint แรก
+          # ซึ่งเป็นทางที่ FRED support จริง (ฟรี ขอที่ fred.stlouisfed.org/docs/api/api_key.html)
+          # ถ้าไม่ตั้ง จะ fallback ไปลอง endpoint สาธารณะ 3 ตัวตามลำดับ
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
         run: python3 scripts/fetch_market_data.py
 
       # if: always() — ต้องเห็น summary โดยเฉพาะรอบที่ fetch พัง
@@ -79,6 +129,13 @@ jobs:
           rt, bg = s.get('runtime_sec'), s.get('budget_sec')
           if rt is not None:
               print(f"runtime     : {rt}s / งบ {bg}s")
+          fo, ft = s.get('fred_ok'), s.get('fred_total')
+          if ft:
+              ep = s.get('fred_endpoint') or 'ไม่มีตัวไหนใช้ได้'
+              print(f"FRED        : {fo}/{ft} series · endpoint: {ep}")
+              if not fo:
+                  print("::warning::FRED ใช้ไม่ได้ทุก endpoint — ค่า macro ทั้ง 14 ตัวเป็นของเก่าที่ merge เก็บไว้ "
+                        "ดู step 'Probe FRED endpoints' ว่าตัวไหนตอบ แล้วตั้ง secret FRED_API_KEY")
           if s.get('budget_exhausted'):
               print(f"::warning::หมดงบเวลา — ข้าม {s.get('skipped_for_budget')} request "
                     f"ไฟล์ถูกเขียนด้วยข้อมูลเท่าที่ดึงทัน + ค่าเดิมที่ merge ไว้")
