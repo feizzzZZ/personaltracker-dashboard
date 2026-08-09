@@ -639,6 +639,9 @@ function computeRunningWaccRealized(trackerRows, isCostTx, sellTxTypes){
 // ดอกเบี้ยไม่ได้อยู่ในชีต — ต้องให้ผู้ใช้ใส่ ไม่งั้นแผนปลดหนี้เป็นแค่การเดา
 const DEBT_DEFAULT = {
   apr: {},              // { 'SCB Up2ME Credit Card': 16 }  หน่วย %/ปี
+  free: {},             // ข้อ 3 — ยอดที่ปลอดดอกเบี้ยในใบนั้น (เช่นยอดผ่อน 0%)
+                        // { 'SCB Up2ME Credit Card': 12000 } หน่วยบาท
+                        // ดอกเบี้ยจะคิดจาก (ยอดค้าง − free) เท่านั้น
   minPct: 10,           // ขั้นต่ำมาตรฐานบัตรเครดิตไทย = 10% ของยอดคงเหลือ (ขั้นต่ำ ฿500)
   minFloor: 500,
   strategy: 'avalanche',// avalanche = จ่ายดอกสูงสุดก่อน (ประหยัดเงินที่สุด)
@@ -646,12 +649,12 @@ const DEBT_DEFAULT = {
 };
 function getDebtCfg(){
   try{ const s = JSON.parse(localStorage.getItem('finOS_debtCfg')||'null');
-       if(s && typeof s==='object') return {...DEBT_DEFAULT, ...s, apr:{...DEBT_DEFAULT.apr, ...(s.apr||{})}}; }catch(e){}
+       if(s && typeof s==='object') return {...DEBT_DEFAULT, ...s, apr:{...DEBT_DEFAULT.apr, ...(s.apr||{})}, free:{...(DEBT_DEFAULT.free||{}), ...(s.free||{})}}; }catch(e){}
   return JSON.parse(JSON.stringify(DEBT_DEFAULT));
 }
 function saveDebtCfg(cfg){
   const cur = getDebtCfg();
-  localStorage.setItem('finOS_debtCfg', JSON.stringify({...cur, ...cfg, apr:{...cur.apr, ...(cfg.apr||{})}}));
+  localStorage.setItem('finOS_debtCfg', JSON.stringify({...cur, ...cfg, apr:{...cur.apr, ...(cfg.apr||{})}, free:{...(cur.free||{}), ...(cfg.free||{})}}));
 }
 
 // ═══ buildDebtPlan — จำลองการปลดหนี้เดือนต่อเดือน ═══
@@ -733,11 +736,30 @@ function totalStartOf(liabAccounts, name){
 function debtVsInvest(liabAccounts, cfg){
   cfg = cfg || getDebtCfg();
   const exp = getGoalCfg().expectedReturn || 7;
+  /* ══ ข้อ 3 — บัตรเครดิตใบเดียวมักมีทั้งยอดที่คิดดอกและยอดที่ไม่คิด ══════
+     เช่น SCB Up2ME: ยอดผ่อน 0% กับยอด revolving 16% อยู่ในใบเดียวกัน
+     เดิมโมเดลมี apr เดียวต่อบัญชี -> ต้องเลือกว่าจะคิด 16% ทั้งก้อน
+     (ดอกเบี้ยเกินจริง) หรือใส่ 0 (ดอกเบี้ยหายไปเลย) ผิดทั้งสองทาง
+     เพิ่ม cfg.free[name] = ยอดที่ปลอดดอกเบี้ย แล้วคิดดอกเฉพาะส่วนที่เหลือ
+     ผลกระทบ: ดอกเบี้ย/เดือน, แผนปลดหนี้ และการเทียบ "จ่ายหนี้ vs ลงทุน"
+     จะอิงยอดที่คิดดอกจริงเท่านั้น */
   const rows = (liabAccounts||[])
-    .map(b=>({ name:b.name, bal:Math.abs(Math.min(0,b.balance)), apr:Number(cfg.apr[b.name] ?? 0) }))
+    .map(b=>{
+      const bal  = Math.abs(Math.min(0,b.balance));
+      const free = Math.max(0, Math.min(Number(cfg.free?.[b.name] ?? 0), bal));
+      return { name:b.name, bal, free, intBal: bal-free, apr:Number(cfg.apr[b.name] ?? 0) };
+    })
     .filter(d=>d.bal>0.5)
-    .map(d=>({ ...d, edge: d.apr-exp, verdict: d.apr>exp ? 'จ่ายหนี้ก่อน' : d.apr>0 ? 'ลงทุนก่อน' : 'ยังไม่ได้ใส่ดอกเบี้ย' }));
-  const yearlyInterest = rows.reduce((s,d)=>s + d.bal*d.apr/100, 0);
+    .map(d=>({ ...d,
+      // APR ที่มีผลจริงกับทั้งใบ = ดอกจริง ÷ ยอดรวม (ใช้เทียบกับผลตอบแทนลงทุน)
+      effApr: d.bal>0 ? d.apr*d.intBal/d.bal : 0,
+      edge: (d.bal>0 ? d.apr*d.intBal/d.bal : 0)-exp,
+      verdict: (d.bal>0 ? d.apr*d.intBal/d.bal : 0)>exp ? 'จ่ายหนี้ก่อน'
+             : d.apr>0 ? 'ลงทุนก่อน' : 'ยังไม่ได้ใส่ดอกเบี้ย' }));
+  // ดอกเบี้ยคิดจาก intBal เท่านั้น ไม่ใช่ bal
+  const yearlyInterest = rows.reduce((s,d)=>s + d.intBal*d.apr/100, 0);
+  const freeTotal = rows.reduce((s,d)=>s + d.free, 0);
+  const intTotal  = rows.reduce((s,d)=>s + d.intBal, 0);
   return { rows, expectedReturn: exp, yearlyInterest,
-           monthlyInterest: yearlyInterest/12 };
+           monthlyInterest: yearlyInterest/12, freeTotal, intTotal };
 }
