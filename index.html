@@ -31,7 +31,9 @@
   --bg:#07070e;--bg2:#0d0d1a;--bg3:#111120;--bg4:#181830;
   --border:#1a1a30;--border2:#262640;--cb:#1e1e38;
   --income:#00d4a0;--expense:#ff4060;--savings:#7c6fec;--debt:#ff9500;
-  --white:#ffffff;--text:#dcdcf0;--muted:#5a5a8a;--muted2:#8080b0;
+  --white:#ffffff;--text:#dcdcf0;--muted:#8a8ac0;  /* P2-6: เดิม #5a5a8a = contrast 3.12:1 บนพื้น #07070e ต่ำกว่า WCAG AA (4.5:1)
+                       และถูกใช้กับข้อความ 9-10px ซึ่งนับเป็น normal text
+                       #8a8ac0 = 6.19:1 ผ่าน AA โดยคงลำดับชั้นสายตาเดิม */;--muted2:#8080b0;
   --gain:#00d4a0;--loss:#ff4060;
   --sidebar-w:200px;
 }
@@ -860,6 +862,7 @@ select.month-display{text-align-last:center;outline:none}
         <div class="sc" style="--g:rgba(0,212,160,.1)"><div class="sc-lbl">Income</div><div class="sc-val gain" id="ov-inc">฿0</div><div class="sc-sub" id="ov-inc-sub"></div></div>
         <div class="sc" style="--g:rgba(255,64,96,.1)"><div class="sc-lbl">Expense + Bills</div><div class="sc-val loss" id="ov-exp">฿0</div><div class="sc-sub" id="ov-exp-sub"></div></div>
         <div class="sc" style="--g:rgba(124,111,236,.08)"><div class="sc-lbl">Savings</div><div class="sc-val" id="ov-sav" style="color:var(--savings)">฿0</div><div class="sc-sub" id="ov-sav-sub">จาก Transaction sheet</div></div>
+        <div class="sc" style="--g:rgba(255,149,0,.08)"><div class="sc-lbl">Debt payment</div><div class="sc-val" id="ov-debt" style="color:var(--debt)">฿0</div><div class="sc-sub" id="ov-debt-sub"></div></div>
         <div class="sc"><div class="sc-lbl">Net cashflow</div><div class="sc-val" id="ov-net">฿0</div><div class="sc-delta" id="ov-net-lbl" style="font-size:11px;margin-top:5px"></div></div>
         <div class="sc" style="--g:rgba(0,212,160,.06)"><div class="sc-lbl">Saving rate</div><div class="sc-val" id="ov-savrate">0%</div><div class="sc-sub">savings ÷ income</div></div>
         <div class="sc" style="--g:rgba(0,212,160,.06)"><div class="sc-lbl">Dividend (all time)</div><div class="sc-val gain" id="ov-div">฿0</div><div class="sc-sub">ผลตอบแทนสะสม</div></div>
@@ -1326,9 +1329,9 @@ select.month-display{text-align-last:center;outline:none}
         <div id="dbt-verdict" style="margin-bottom:18px"></div>
 
         <!-- ตั้งค่าดอกเบี้ย -->
-        <div class="sl orange" style="margin-bottom:10px">ดอกเบี้ยแต่ละใบ · ต้องกรอกเอง (ชีตไม่มีข้อมูลนี้)</div>
+        <div class="sl orange" style="margin-bottom:10px">ดอกเบี้ยแต่ละใบ · ต้องกรอกเอง (ชีตไม่มีข้อมูลนี้) — แยกยอดผ่อน 0% ออกจากยอดที่คิดดอกได้</div>
         <div class="tw" style="margin-bottom:18px"><table class="at"><thead><tr>
-          <th>บัญชี</th><th class="r">ยอดค้าง</th><th class="r">ดอกเบี้ย %/ปี</th>
+          <th>บัญชี</th><th class="r">ยอดค้าง</th><th class="r">ปลอดดอกเบี้ย</th><th class="r">คิดดอกจริง</th><th class="r">ดอกเบี้ย %/ปี</th>
           <th class="r">ดอกเบี้ย/เดือน</th><th class="r">ขั้นต่ำ/เดือน</th><th>ปลดหนี้เดือนที่</th>
         </tr></thead><tbody id="dbt-body"></tbody></table></div>
 
@@ -1622,7 +1625,10 @@ const chartOpts = (unit='baht') => ({
     legend:{labels:{color:'#6060a0',font:{family:CHART_FONT,size:10},boxWidth:10,padding:10}},
     tooltip:{backgroundColor:'#12121a',borderColor:'#1e1e35',borderWidth:1,
       titleColor:'#e2e2f0',bodyColor:'#9090c0',titleFont:{family:CHART_FONT},bodyFont:{family:CHART_FONT,size:11},
-      callbacks:{label:c=>` ${escHtml(c.dataset.label)}: ${fmt(Math.round(c.raw))}`}}
+      /* ข้อ 1 — ต้องผ่าน UNIT[unit] ไม่ใช่ fmt() ตรงๆ
+         ไม่งั้นกราฟที่เป็น % จะได้ '฿' ติดมาด้วย (เดิม "Invest %: ฿47")
+         แกน Y ใช้ UNIT อยู่แล้ว แต่ tooltip ตกหล่นไป — สองที่ต้องใช้หน่วยเดียวกัน */
+      callbacks:{label:c=>` ${escHtml(c.dataset.label)}: ${(UNIT[unit]||UNIT.baht).tip(c.raw)}`}}
   },
   scales:{
     x:{grid:{color:'rgba(30,30,53,.8)',lineWidth:.5},ticks:{color:'#6060a0',font:{family:CHART_FONT,size:9}}},
@@ -2001,6 +2007,45 @@ function renderOverview(){
   if(insEl) insEl.textContent=fmt(insCV);
   document.getElementById('ov-div').textContent=fmt(totalDiv);
 
+  /* ══ PART 2 — Total Wealth ═══════════════════════════════════════════
+     P2-5 Net Worth ต้อง reconcile ได้ด้วยตา: เดิมเขียนสูตรเป็นข้อความ
+     "Cash - Debt + Portfolio + Ins CV" แต่ไม่บอกว่าแต่ละก้อนเท่าไรเทียบกับ
+     ทั้งหมด ใส่แถบสัดส่วนให้เห็นทันทีว่าความมั่งคั่งมาจากไหน */
+  try{
+    const cashHist=deriveCashHistory(cashAssets,12);
+    /* การ์ด Total Wealth ไม่มี class (เป็น div + inline style) — closest() จึงคืน null
+       ยึดกับ *-sub ซึ่งมี id แน่นอนแล้ว append ต่อท้าย ปลอดภัยกว่าเดาชื่อ class */
+    const _cSub=document.getElementById('ov-cash-sub');
+    const cCard=_cSub && _cSub.parentElement;
+    if(cCard && cashHist.length>1){
+      let sp=cCard.querySelector('.spark-slot');
+      if(!sp){ sp=document.createElement('div'); sp.className='spark-slot'; cCard.appendChild(sp); }
+      const up=cashHist[cashHist.length-1]>=cashHist[0];
+      sp.innerHTML=sparkline(cashHist,{color:up?'var(--gain)':'var(--loss)',zero:true});
+      sp.title=`เงินสด ${cashHist.length} เดือนล่าสุด: ${fmt(cashHist[0])} → ${fmt(cashHist[cashHist.length-1])}`;
+    }
+
+    const _nEl=document.getElementById('ov-networth');
+    const nwCard=_nEl && _nEl.parentElement;
+    if(nwCard && netWorth>0){
+      const parts=[
+        ['เงินสด',    Math.max(cashAssets,0), 'var(--income)'],
+        ['พอร์ต',     Math.max(portVal,0),    'var(--savings)'],
+        ['ประกัน CV', Math.max(insCV,0),      'var(--accent)'],
+      ].filter(p=>p[1]>0);
+      const gross=parts.reduce((a,p)=>a+p[1],0);
+      if(gross>0){
+        let bar=nwCard.querySelector('.nw-mix');
+        if(!bar){ bar=document.createElement('div'); bar.className='nw-mix'; nwCard.appendChild(bar); }
+        const segs=parts.map(([n,v,c])=>`<span style="width:${(v/gross*100).toFixed(1)}%;background:${c}" title="${escHtml(n)} ${fmt(v)} · ${(v/gross*100).toFixed(0)}%"></span>`).join('');
+        bar.innerHTML=`<div class="nw-mix-bar">${segs}</div>`+
+          (liabTotal>0
+            ? `<div class="nw-mix-lbl">หนี้ ${fmt(liabTotal)} = ${Math.min(liabTotal/gross*100,100).toFixed(0)}% ของสินทรัพย์รวม ${fmtC(gross)}</div>`
+            : `<div class="nw-mix-lbl">สินทรัพย์รวม ${fmtC(gross)} · ปลอดหนี้</div>`);
+      }
+    }
+  }catch(e){ console.warn('[P2] wealth cards:', e.message); }
+
   // ── 🎯 Road to ฿3M — Compound Projection Engine ────────────────────
   const GOAL=getGoalCfg().final;   // แหล่งเดียวจาก shared.js
   const pct=clampPct(GOAL>0?netWorth/GOAL*100:0);   // #4/#11 negative net worth no longer emits width:-x%
@@ -2159,8 +2204,37 @@ function _renderOverviewRest(){
   netEl.textContent=fmtSign(s.net);netEl.className='sc-val '+(s.net>=0?'gain':'loss');
   const nlEl=document.getElementById('ov-net-lbl');
   nlEl.textContent=s.net>=0?'▲ surplus':'▼ deficit';nlEl.style.color=s.net>=0?'var(--gain)':'var(--loss)';
+  /* P2-1 — การ์ด Debt payment: สูตรคือ net = income+expense+savings+debt
+     แต่หน้า Overview ไม่เคยแสดงพจน์ debt -> ผู้ใช้บวก 3 ตัวบนจอแล้วไม่มีทาง
+     ตรงกับ Net เลย (จริง: 0−6,993−1,000 = −7,993 แต่ Net โชว์ −9,377
+     หายไป −1,384 คือหนี้ที่ซ่อนอยู่) ตัวเลขบนแดชบอร์ดการเงินต้อง
+     reconcile ได้ด้วยตา ไม่งั้นความเชื่อถือในทุกตัวเลขที่เหลือพังไปด้วย */
+  const dbEl=document.getElementById('ov-debt');
+  if(dbEl){
+    dbEl.textContent=fmt(s.debt);
+    const dbSub=document.getElementById('ov-debt-sub');
+    if(dbSub) dbSub.textContent=`${s.debtCount} tx`;
+  }
+
+  /* P2-2 — savings ÷ income เมื่อ income = 0 คือ "ไม่นิยาม" ไม่ใช่ "0%" */
   const srEl=document.getElementById('ov-savrate');
-  srEl.textContent=s.savRate+'%';srEl.style.color=s.savRate>=20?'var(--gain)':s.savRate>=10?'var(--debt)':'var(--loss)';
+  const rate=fmtRate(s.savings, s.income);
+  srEl.textContent=rate.text; srEl.style.color=rate.color;
+  srEl.title=rate.undef?'เดือนนี้ไม่มีรายรับ จึงคำนวณอัตราการออมไม่ได้':'';
+  const srSub=srEl.parentElement && srEl.parentElement.querySelector('.sc-sub');
+  if(srSub) srSub.textContent=rate.undef?'ไม่มีรายรับเดือนนี้':'savings ÷ income';
+
+  /* P2-1 — sparkbars 12 เดือนบนการ์ด Net cashflow */
+  try{
+    const netSeries=monthlyNetSeries(12);
+    const nCard=netEl.closest('.sc') || netEl.parentElement;
+    if(nCard && netSeries.length>1){
+      let sp=nCard.querySelector('.spark-slot');
+      if(!sp){ sp=document.createElement('div'); sp.className='spark-slot'; nCard.appendChild(sp); }
+      sp.innerHTML=sparkbars(netSeries);
+      sp.title=netSeries.length+' เดือนล่าสุด · แท่งแดง = เดือนที่ขาดดุล';
+    }
+  }catch(e){ console.warn('[P2] net sparkline:', e.message); }
 
   // allocation donut
   const gm={};assets.forEach(a=>{if(!gm[a.group])gm[a.group]=0;gm[a.group]+=a.val;});
@@ -2223,6 +2297,92 @@ function _renderOverviewRest(){
 }
 
 // ── Cash Flow helpers ─────────────────────────────────────────────────
+/* ══════════════════════════════════════════════════════════════════
+   PART 2 — display helpers
+   หมายเหตุสำคัญ: ชุดนี้เคยหายไปหนึ่งรอบเพราะผมเขียนทับไฟล์ตอนเริ่มงานใหม่
+   ผลคือ fmtC() ไม่มีตัวจริง แต่โค้ดในการ์ดเป้าหมายยังเรียกอยู่ -> ReferenceError
+   -> renderOverview พังกลางทาง -> cashflow / allocation กลายเป็น ฿0 ทั้งแถว
+   node --check จับไม่ได้เพราะเป็น syntax ที่ถูกต้อง จับได้แค่ตอน runtime
+   จึงเพิ่ม refcheck.py ไว้ตรวจ identifier ที่ถูกเรียกแต่ไม่มีการประกาศ
+   ══════════════════════════════════════════════════════════════════ */
+
+/* P2-3 — compact notation: "฿1,247,382" สมองต้องนับหลักก่อนจึงเทียบได้
+   "฿1.25M" เทียบได้ทันที · ตัวเลขเต็มยังอยู่ใน title และในตารางเสมอ
+   ไม่ย่อค่าที่ต่ำกว่าแสน เพราะย่อแล้วเสียความละเอียดโดยไม่ได้อะไรกลับมา */
+function fmtC(v){
+  const n = nz(v), a = Math.abs(n), sg = n < 0 ? '−' : '';
+  if(a >= 1e6) return sg+'฿'+(a/1e6).toFixed(a >= 1e7 ? 1 : 2).replace(/\.?0+$/,'')+'M';
+  if(a >= 1e5) return sg+'฿'+Math.round(a/1e3)+'k';
+  return fmt(n);
+}
+
+/* P2-2 — อัตราส่วนที่ตัวหารเป็น 0 คือ "ไม่นิยาม" ไม่ใช่ "ศูนย์"
+   เดือนที่ไม่มีรายรับแต่ออมได้ ฿1,000 เดิมแสดง "0%" สีแดง = บอกว่าออม 0% ซึ่งผิด */
+function fmtRate(num, den){
+  if(!(den > 0)) return {text:'—', color:'var(--muted)', undef:true};
+  const p = Math.round(num/den*100);
+  return {text:p+'%', undef:false,
+          color: p >= 20 ? 'var(--gain)' : p >= 10 ? 'var(--debt)' : 'var(--loss)'};
+}
+
+/* P2-1 — sparkline เป็น inline SVG ไม่พึ่ง Chart.js
+   5 การ์ด = 5 canvas + 5 instance ที่ต้อง destroy แต่ SVG เป็น string ธรรมดา
+   ไม่มี lifecycle ให้รั่ว และตัวเลขเดี่ยวบอกได้แค่ "ตอนนี้เท่าไร"
+   ทิศทางย้อนหลังคือสิ่งที่ทำให้ตัดสินใจได้ โดยกินที่แค่ 26px */
+function sparkline(vals, opts){
+  const o = Object.assign({w:104, h:26, color:'var(--accent)', fill:true, zero:false}, opts||{});
+  const pts = (vals||[]).map(nz).filter(Number.isFinite);
+  if(pts.length < 2) return '';
+  let lo = Math.min(...pts), hi = Math.max(...pts);
+  if(o.zero) lo = Math.min(lo, 0);
+  if(hi === lo) hi = lo + 1;                      // เส้นแบน: กัน div-by-zero
+  const pad = 2, W = o.w, H = o.h;
+  const x = i => pad + i*(W-2*pad)/(pts.length-1);
+  const y = v => H-pad - (v-lo)*(H-2*pad)/(hi-lo);
+  const d = pts.map((v,i)=>(i?'L':'M')+x(i).toFixed(1)+' '+y(v).toFixed(1)).join(' ');
+  const last = pts[pts.length-1];
+  const area = o.fill ? `<path d="${d} L ${x(pts.length-1).toFixed(1)} ${H-pad} L ${x(0).toFixed(1)} ${H-pad} Z" fill="${o.color}" opacity=".13"/>` : '';
+  const zl = (lo < 0 && hi > 0) ? `<line x1="${pad}" y1="${y(0).toFixed(1)}" x2="${W-pad}" y2="${y(0).toFixed(1)}" stroke="var(--muted)" stroke-width=".5" stroke-dasharray="2 2" opacity=".5"/>` : '';
+  return `<svg class="spark" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true" focusable="false">${area}${zl}<path d="${d}" fill="none" stroke="${o.color}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${x(pts.length-1).toFixed(1)}" cy="${y(last).toFixed(1)}" r="2" fill="${o.color}"/></svg>`;
+}
+
+/* P2-1b — มินิบาร์: เส้นสื่อ "ระดับ" ได้ดี แต่สื่อ "เดือนไหนขาดดุล" ได้ไม่ชัดเท่าแท่ง */
+function sparkbars(vals, opts){
+  const o = Object.assign({w:104, h:26}, opts||{});
+  const pts = (vals||[]).map(nz).filter(Number.isFinite);
+  if(!pts.length) return '';
+  const mx = Math.max(...pts.map(Math.abs)) || 1;
+  const W=o.w, H=o.h, mid=H/2, bw=Math.max(1.5, W/pts.length - 1.5);
+  const bars = pts.map((v,i)=>{
+    const h = Math.max(1, Math.abs(v)/mx*(mid-1));
+    return `<rect x="${(i*W/pts.length).toFixed(1)}" y="${(v>=0?mid-h:mid).toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx=".8" fill="${v>=0?'var(--gain)':'var(--loss)'}" opacity="${i===pts.length-1?1:.55}"/>`;
+  }).join('');
+  return `<svg class="spark" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true" focusable="false"><line x1="0" y1="${mid}" x2="${W}" y2="${mid}" stroke="var(--muted)" stroke-width=".5" opacity=".45"/>${bars}</svg>`;
+}
+
+/* P2-1c — ประวัติเงินสด สร้างจากธุรกรรมจริง ไม่ต้องรอเก็บ snapshot
+   cash สิ้นเดือน M = cash ปัจจุบัน − ผลรวม net ของทุกเดือนหลัง M
+   ทำได้เพราะ net ต่อเดือน = การเปลี่ยนแปลงเงินสดพอดี (income+expense+savings+debt) */
+function deriveCashHistory(currentCash, nMonths){
+  try{
+    const ms = (availableMonths||[]).slice().sort();
+    if(ms.length < 2) return [];
+    const out = new Array(ms.length);
+    let bal = nz(currentCash);
+    for(let i = ms.length-1; i >= 0; i--){
+      out[i] = bal;
+      bal -= nz(computeSummary(txRows.filter(r=>r.month===ms[i])).net);
+    }
+    return out.slice(-(nMonths||12));
+  }catch(e){ return []; }
+}
+function monthlyNetSeries(nMonths){
+  try{
+    return (availableMonths||[]).slice().sort().slice(-(nMonths||12))
+      .map(mk => computeSummary(txRows.filter(r=>r.month===mk)).net);
+  }catch(e){ return []; }
+}
+
 function computeSummary(rows){
   let income=0,incomeCount=0,expense=0,expenseCount=0,savings=0,savingsCount=0,debt=0,debtCount=0;
   rows.forEach(r=>{
@@ -4542,12 +4702,24 @@ function renderDebt(){
   // ── ตารางดอกเบี้ย ──
   document.getElementById('dbt-body').innerHTML=di.rows
     .sort((a,b)=>b.apr-a.apr||b.bal-a.bal).map(r=>{
-    const monthlyInt=r.bal*r.apr/100/12;
+    /* ข้อ 3 — ดอกเบี้ยคิดจาก intBal (ยอดค้าง − ยอดปลอดดอก) ไม่ใช่ยอดค้างทั้งก้อน
+       บัตรใบเดียวมักมียอดผ่อน 0% ปนกับยอด revolving ที่คิดดอก
+       เดิมโมเดลมี APR เดียวต่อบัญชี -> ต้องเลือกระหว่างคิด 16% ทั้งก้อน
+       (ดอกเกินจริง) หรือใส่ 0 (ดอกหายไปเลย) ผิดทั้งสองทาง */
+    const monthlyInt=r.intBal*r.apr/100/12;
     const minPay=Math.min(r.bal,Math.max(cfg.minFloor,r.bal*cfg.minPct/100));
     const pm=plan&&plan.payoffMonth[r.name];
     return `<tr>
       <td>${escHtml(r.name)}</td>
       <td class="r" style="color:var(--loss)">${fmt(r.bal)}</td>
+      <td class="r"><span style="display:inline-flex;align-items:center;gap:4px;justify-content:flex-end">
+        <span style="color:var(--muted2);font-size:11px">฿</span><input type="number" class="dbt-free" value="${r.free||''}"
+        step="100" min="0" max="${Math.round(r.bal)}" placeholder="0"
+        data-acct="${escAttr(r.name)}" inputmode="decimal"
+        title="ยอดในใบนี้ที่ไม่คิดดอกเบี้ย เช่นยอดผ่อน 0% — ดอกเบี้ยจะคิดจากส่วนที่เหลือเท่านั้น"
+        style="background:var(--bg4);color:${r.free>0?'var(--gain)':'var(--muted)'};border:1px solid ${r.free>0?'rgba(0,212,160,.45)':'var(--border2)'};
+        border-radius:6px;padding:5px 8px;width:88px;text-align:right;font-family:inherit;font-size:12px"></span></td>
+      <td class="r" style="color:${r.intBal>0?'var(--debt)':'var(--muted)'}">${fmt(Math.round(r.intBal))}${r.free>0?`<div style="font-size:9px;color:var(--muted)">${(r.intBal/r.bal*100).toFixed(0)}% ของใบ</div>`:''}</td>
       <td class="r"><span style="display:inline-flex;align-items:center;gap:4px;justify-content:flex-end">
         <input type="number" class="dbt-apr" value="${r.apr||''}" step="0.5" min="0" max="99" placeholder="?"
         data-acct="${escAttr(r.name)}" inputmode="decimal" title="ใส่ดอกเบี้ยต่อปี เช่น 16"
