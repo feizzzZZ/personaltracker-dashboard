@@ -31,7 +31,10 @@
   --bg:#07070e;--bg2:#0d0d1a;--bg3:#111120;--bg4:#181830;
   --border:#1a1a30;--border2:#262640;--cb:#1e1e38;
   --income:#00d4a0;--expense:#ff4060;--savings:#7c6fec;--debt:#ff9500;
-  --white:#ffffff;--text:#dcdcf0;--muted:#5a5a8a;--muted2:#8080b0;
+  --white:#ffffff;--text:#dcdcf0;--muted:#8a8ac0;  /* P2-6: เดิม #5a5a8a ได้ contrast 3.12:1 บนพื้น #07070e
+                       ต่ำกว่า WCAG AA (4.5:1) และถูกใช้กับข้อความ 9-10px
+                       ซึ่งนับเป็น normal text อ่านไม่ออกจริงบนมือถือกลางแดด
+                       #8a8ac0 = 6.19:1 ผ่าน AA โดยยังคงลำดับชั้นสายตาเดิม */;--muted2:#8080b0;
   --gain:#00d4a0;--loss:#ff4060;
   --sidebar-w:200px;
 }
@@ -233,6 +236,16 @@ select.month-display{text-align-last:center;outline:none}
 .pill-Expense,.pill-Bills{color:var(--expense);border-color:rgba(255,64,96,.3);background:rgba(255,64,96,.07)}
 .pill-Savings{color:var(--savings);border-color:rgba(124,111,236,.3);background:rgba(124,111,236,.07)}
 .pill-Debt{color:var(--debt);border-color:rgba(255,149,0,.3);background:rgba(255,149,0,.07)}
+
+/* ══ PART 2 — display effectiveness ═════════════════════════════════ */
+.spark-slot{margin-top:8px;line-height:0;opacity:.9}
+.spark-slot svg.spark{display:block;width:100%;height:26px}
+.nw-mix{margin-top:9px}
+.nw-mix-bar{display:flex;height:5px;border-radius:3px;overflow:hidden;background:rgba(255,255,255,.05)}
+.nw-mix-bar span{display:block;height:100%}
+.nw-mix-bar span+span{margin-left:1px}
+.nw-mix-lbl{font-size:9.5px;color:var(--muted);margin-top:5px;letter-spacing:.2px}
+
 /* ── #11: tabular figures for every numeric surface ────────────────────
    Right-alignment alone does not align digits in a proportional font.
    tabular-nums forces equal advance width so columns of ฿ amounts line up
@@ -855,6 +868,7 @@ select.month-display{text-align-last:center;outline:none}
         <div class="sc" style="--g:rgba(0,212,160,.1)"><div class="sc-lbl">Income</div><div class="sc-val gain" id="ov-inc">฿0</div><div class="sc-sub" id="ov-inc-sub"></div></div>
         <div class="sc" style="--g:rgba(255,64,96,.1)"><div class="sc-lbl">Expense + Bills</div><div class="sc-val loss" id="ov-exp">฿0</div><div class="sc-sub" id="ov-exp-sub"></div></div>
         <div class="sc" style="--g:rgba(124,111,236,.08)"><div class="sc-lbl">Savings</div><div class="sc-val" id="ov-sav" style="color:var(--savings)">฿0</div><div class="sc-sub" id="ov-sav-sub">จาก Transaction sheet</div></div>
+        <div class="sc" style="--g:rgba(255,149,0,.08)"><div class="sc-lbl">Debt payment</div><div class="sc-val" id="ov-debt" style="color:var(--debt)">฿0</div><div class="sc-sub" id="ov-debt-sub"></div></div>
         <div class="sc"><div class="sc-lbl">Net cashflow</div><div class="sc-val" id="ov-net">฿0</div><div class="sc-delta" id="ov-net-lbl" style="font-size:11px;margin-top:5px"></div></div>
         <div class="sc" style="--g:rgba(0,212,160,.06)"><div class="sc-lbl">Saving rate</div><div class="sc-val" id="ov-savrate">0%</div><div class="sc-sub">savings ÷ income</div></div>
         <div class="sc" style="--g:rgba(0,212,160,.06)"><div class="sc-lbl">Dividend (all time)</div><div class="sc-val gain" id="ov-div">฿0</div><div class="sc-sub">ผลตอบแทนสะสม</div></div>
@@ -1983,6 +1997,51 @@ function renderOverview(){
   if(insEl) insEl.textContent=fmt(insCV);
   document.getElementById('ov-div').textContent=fmt(totalDiv);
 
+  /* ══ PART 2 — Total Wealth cards ═════════════════════════════════════
+     P2-4 สีต้องมีความหมายเดียว: --income (เขียว) เดิมถูกใช้ทั้ง "รายรับ",
+          "กำไร", "สถานะ live" และโลโก้ พอสีสื่อหลายอย่างมันก็อ่านค่าไม่ได้
+          การ์ด Cash/Portfolio/Insurance เป็น "ยอดคงเหลือ" ไม่ใช่ "ดี/แย่"
+          จึงไม่ควรถูกระบายเขียว-แดง สงวนเขียว/แดงไว้ให้ค่าที่ตัดสินได้จริง
+          (P&L, net cashflow, delta) เท่านั้น
+     P2-5 Net Worth ต้อง reconcile ได้ด้วยตา: เดิมเขียนสูตรเป็นข้อความ
+          "Cash - Debt + Portfolio + Ins CV" แต่ไม่ได้โชว์ว่าแต่ละก้อนเท่าไร
+          เทียบกับทั้งหมด ใส่แถบสัดส่วนให้เห็นทันทีว่าความมั่งคั่งมาจากไหน */
+  try{
+    // sparkline เงินสด — สร้างจากธุรกรรมจริงย้อนหลัง ไม่ต้องรอเก็บ snapshot
+    const cashHist=deriveCashHistory(cashAssets,12);
+    const cCard=document.getElementById('ov-cash')?.closest('.wc,.sc,.card')
+             || document.getElementById('ov-cash')?.parentElement;
+    if(cCard && cashHist.length>1){
+      let sp=cCard.querySelector('.spark-slot');
+      if(!sp){ sp=document.createElement('div'); sp.className='spark-slot'; cCard.appendChild(sp); }
+      const up=cashHist[cashHist.length-1]>=cashHist[0];
+      sp.innerHTML=sparkline(cashHist,{color:up?'var(--gain)':'var(--loss)',zero:true});
+      sp.title=`เงินสด ${cashHist.length} เดือนล่าสุด: ${fmt(cashHist[0])} → ${fmt(cashHist[cashHist.length-1])}`;
+    }
+
+    // แถบองค์ประกอบ Net Worth — ให้เห็นว่าความมั่งคั่งมาจากก้อนไหน
+    const nwCard=document.getElementById('ov-networth')?.closest('.wc,.sc,.card')
+              || document.getElementById('ov-networth')?.parentElement;
+    if(nwCard && netWorth>0){
+      const parts=[
+        ['เงินสด',    Math.max(cashAssets,0), 'var(--income)'],
+        ['พอร์ต',     Math.max(portVal,0),    'var(--savings)'],
+        ['ประกัน CV', Math.max(insCV,0),      'var(--accent)'],
+      ].filter(p=>p[1]>0);
+      const gross=parts.reduce((a,p)=>a+p[1],0);
+      if(gross>0){
+        let bar=nwCard.querySelector('.nw-mix');
+        if(!bar){ bar=document.createElement('div'); bar.className='nw-mix'; nwCard.appendChild(bar); }
+        const segs=parts.map(([n,v,c])=>
+          `<span style="width:${(v/gross*100).toFixed(1)}%;background:${c}" title="${escHtml(n)} ${fmt(v)} · ${(v/gross*100).toFixed(0)}%"></span>`).join('');
+        const debtPct=gross>0?Math.min(liabTotal/gross*100,100):0;
+        bar.innerHTML=`<div class="nw-mix-bar">${segs}</div>`+
+          (liabTotal>0?`<div class="nw-mix-lbl">หนี้ ${fmt(liabTotal)} = ${debtPct.toFixed(0)}% ของสินทรัพย์รวม ${fmtC(gross)}</div>`
+                      :`<div class="nw-mix-lbl">สินทรัพย์รวม ${fmtC(gross)} · ปลอดหนี้</div>`);
+      }
+    }
+  }catch(e){ console.warn('[P2] wealth cards:', e.message); }
+
   // ── 🎯 Road to ฿3M — Compound Projection Engine ────────────────────
   const GOAL=getGoalCfg().final;   // แหล่งเดียวจาก shared.js
   const pct=clampPct(GOAL>0?netWorth/GOAL*100:0);   // #4/#11 negative net worth no longer emits width:-x%
@@ -2093,12 +2152,45 @@ function _renderOverviewRest(){
   document.getElementById('ov-exp-sub').textContent=`${s.expenseCount} tx`;
   document.getElementById('ov-sav').textContent=fmt(s.savings);
   document.getElementById('ov-sav-sub').textContent=`${s.savingsCount} tx`;
+
+  /* P2-1 — การ์ด Debt payment: เดิมสูตร net = income+expense+savings+debt
+     มีพจน์ debt แต่หน้า Overview ไม่เคยแสดงมัน ผู้ใช้บวก 3 ตัวบนจอ
+     แล้วไม่มีทางตรงกับ Net เลย (ตัวอย่างจริง: 0−6,993−1,000 = −7,993
+     แต่ Net แสดง −9,377 หายไป −1,384 คือหนี้ที่ซ่อนอยู่)
+     ตัวเลขบนแดชบอร์ดการเงินต้อง reconcile ได้ด้วยตา ไม่งั้นความเชื่อถือพัง */
+  const dbEl=document.getElementById('ov-debt');
+  if(dbEl){
+    dbEl.textContent=fmt(s.debt);
+    document.getElementById('ov-debt-sub').textContent=`${s.debtCount} tx`;
+  }
+
   const netEl=document.getElementById('ov-net');
   netEl.textContent=fmtSign(s.net);netEl.className='sc-val '+(s.net>=0?'gain':'loss');
   const nlEl=document.getElementById('ov-net-lbl');
   nlEl.textContent=s.net>=0?'▲ surplus':'▼ deficit';nlEl.style.color=s.net>=0?'var(--gain)':'var(--loss)';
+
+  /* P2-2 — savings ÷ income เมื่อ income = 0 คือ "ไม่นิยาม" ไม่ใช่ "0%"
+     เดือนนี้คุณออม ฿1,000 แต่ไม่มีรายรับ เดิมแสดง "0%" สีแดง
+     = แอปบอกว่าคุณออม 0% ทั้งที่ออมจริง แค่หารด้วยศูนย์ไม่ได้ */
   const srEl=document.getElementById('ov-savrate');
-  srEl.textContent=s.savRate+'%';srEl.style.color=s.savRate>=20?'var(--gain)':s.savRate>=10?'var(--debt)':'var(--loss)';
+  const rate=fmtRate(s.savings, s.income);
+  srEl.textContent=rate.text; srEl.style.color=rate.color;
+  srEl.title=rate.undef?'เดือนนี้ไม่มีรายรับ จึงคำนวณอัตราการออมไม่ได้':'';
+  const srSub=srEl.parentElement.querySelector('.sc-sub');
+  if(srSub) srSub.textContent=rate.undef?'ไม่มีรายรับเดือนนี้':'savings ÷ income';
+
+  /* P2-1 — sparkline 12 เดือน: ตัวเลขเดี่ยวบอกได้แค่ "ตอนนี้เท่าไร"
+     ทิศทางย้อนหลังคือสิ่งที่ทำให้ตัดสินใจได้ และกินที่แค่ 26px */
+  try{
+    const netSeries=monthlyNetSeries(12);
+    const nCard=netEl.closest('.sc');
+    if(nCard && netSeries.length>1){
+      let sp=nCard.querySelector('.spark-slot');
+      if(!sp){ sp=document.createElement('div'); sp.className='spark-slot'; nCard.appendChild(sp); }
+      sp.innerHTML=sparkbars(netSeries);
+      sp.title=netSeries.length+' เดือนล่าสุด · แท่งแดง = เดือนที่ขาดดุล';
+    }
+  }catch(e){ console.warn('[P2] net sparkline:', e.message); }
 
   // allocation donut
   const gm={};assets.forEach(a=>{if(!gm[a.group])gm[a.group]=0;gm[a.group]+=a.val;});
@@ -2161,6 +2253,107 @@ function _renderOverviewRest(){
 }
 
 // ── Cash Flow helpers ─────────────────────────────────────────────────
+/* ══════════════════════════════════════════════════════════════════
+   PART 2 — display effectiveness helpers
+   ══════════════════════════════════════════════════════════════════ */
+
+/* P2-3 — compact notation for headline numbers.
+   "฿1,247,382" ใช้เวลาสมองอ่านนานกว่า "฿1.25M" มาก เวลาเทียบสองตัวเลข
+   สมองต้องนับหลักก่อนถึงจะเทียบได้ 3 significant figures พอสำหรับการ์ดสรุป
+   ตัวเลขเต็มยังอยู่ใน title (hover) และในตารางเสมอ ไม่ได้ทำข้อมูลหาย */
+function fmtC(v){
+  const n = nz(v), a = Math.abs(n), sg = n < 0 ? '−' : '';
+  if(a >= 1e6) return sg+'฿'+(a/1e6).toFixed(a >= 1e7 ? 1 : 2).replace(/\.?0+$/,'')+'M';
+  if(a >= 1e5) return sg+'฿'+Math.round(a/1e3)+'k';
+  return fmt(n);
+}
+
+/* P2-2 — อัตราส่วนที่ตัวหารเป็น 0 คือ "ไม่นิยาม" ไม่ใช่ "ศูนย์"
+   เดือนที่ไม่มีรายรับแต่ออมได้ ฿1,000 เดิมแสดง "0%" สีแดง
+   = บอกว่า "คุณออม 0%" ซึ่งผิด ความจริงคืออัตราส่วนนี้คำนวณไม่ได้ */
+function fmtRate(num, den){
+  if(!(den > 0)) return {text:'—', color:'var(--muted)', undef:true};
+  const p = Math.round(num/den*100);
+  return {text:p+'%', undef:false,
+          color: p >= 20 ? 'var(--gain)' : p >= 10 ? 'var(--debt)' : 'var(--loss)'};
+}
+
+/* P2-1 — sparkline: inline SVG, ไม่พึ่ง Chart.js เลย
+   ตัวเลขเดี่ยวๆ บอกได้แค่ "ตอนนี้เท่าไร" แต่ตัดสินใจไม่ได้
+   ทิศทางย้อนหลังคือสิ่งที่ทำให้ตัวเลขมีความหมาย และกินพื้นที่แค่ 24px
+   ไม่ใช้ Chart.js เพราะ 5 การ์ด = 5 canvas + 5 instance ที่ต้อง destroy
+   inline SVG เป็น string ธรรมดา ไม่มี lifecycle ให้รั่ว */
+function sparkline(vals, opts){
+  const o = Object.assign({w:104, h:26, color:'var(--accent)', fill:true, zero:false}, opts||{});
+  const pts = (vals||[]).map(nz).filter(Number.isFinite);
+  if(pts.length < 2) return '';
+  let lo = Math.min(...pts), hi = Math.max(...pts);
+  if(o.zero) lo = Math.min(lo, 0);
+  if(hi === lo){ hi = lo + 1; }                       // เส้นแบน: กัน div-by-zero
+  const pad = 2, W = o.w, H = o.h;
+  const x = i => pad + i*(W-2*pad)/(pts.length-1);
+  const y = v => H-pad - (v-lo)*(H-2*pad)/(hi-lo);
+  const d = pts.map((v,i)=>(i?'L':'M')+x(i).toFixed(1)+' '+y(v).toFixed(1)).join(' ');
+  const last = pts[pts.length-1];
+  const area = o.fill
+    ? `<path d="${d} L ${x(pts.length-1).toFixed(1)} ${H-pad} L ${x(0).toFixed(1)} ${H-pad} Z"
+             fill="${o.color}" opacity=".13"/>` : '';
+  // เส้นศูนย์: ถ้าช่วงข้อมูลคร่อม 0 ต้องเห็นว่าตรงไหนคือบวก/ลบ
+  const zl = (lo < 0 && hi > 0)
+    ? `<line x1="${pad}" y1="${y(0).toFixed(1)}" x2="${W-pad}" y2="${y(0).toFixed(1)}"
+             stroke="var(--muted)" stroke-width=".5" stroke-dasharray="2 2" opacity=".5"/>` : '';
+  return `<svg class="spark" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"
+      preserveAspectRatio="none" aria-hidden="true" focusable="false">
+    ${area}${zl}<path d="${d}" fill="none" stroke="${o.color}" stroke-width="1.5"
+      stroke-linejoin="round" stroke-linecap="round"/>
+    <circle cx="${x(pts.length-1).toFixed(1)}" cy="${y(last).toFixed(1)}" r="2" fill="${o.color}"/>
+  </svg>`;
+}
+
+/* P2-1b — มินิบาร์สำหรับค่าที่มีบวก/ลบ (เช่น net cashflow รายเดือน)
+   เส้น sparkline สื่อ "ระดับ" ได้ดี แต่สื่อ "เดือนไหนขาดดุล" ได้ไม่ชัดเท่าแท่ง */
+function sparkbars(vals, opts){
+  const o = Object.assign({w:104, h:26}, opts||{});
+  const pts = (vals||[]).map(nz).filter(Number.isFinite);
+  if(!pts.length) return '';
+  const mx = Math.max(...pts.map(Math.abs)) || 1;
+  const W=o.w, H=o.h, mid=H/2, bw=Math.max(1.5, W/pts.length - 1.5);
+  const bars = pts.map((v,i)=>{
+    const h = Math.max(1, Math.abs(v)/mx*(mid-1));
+    const xx = (i*W/pts.length).toFixed(1);
+    const yy = (v >= 0 ? mid-h : mid).toFixed(1);
+    return `<rect x="${xx}" y="${yy}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx=".8"
+      fill="${v>=0?'var(--gain)':'var(--loss)'}" opacity="${i===pts.length-1?1:.55}"/>`;
+  }).join('');
+  return `<svg class="spark" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"
+      aria-hidden="true" focusable="false">
+    <line x1="0" y1="${mid}" x2="${W}" y2="${mid}" stroke="var(--muted)" stroke-width=".5" opacity=".45"/>
+    ${bars}</svg>`;
+}
+
+/* P2-1c — ประวัติเงินสดย้อนหลัง สร้างจากธุรกรรมจริง ไม่ต้องรอเก็บ snapshot
+   cash ณ สิ้นเดือน M = cash ปัจจุบัน − ผลรวม net cashflow ของทุกเดือนหลัง M
+   ทำได้เพราะ net ต่อเดือน = การเปลี่ยนแปลงของเงินสดพอดี (income+expense+savings+debt)
+   คืนค่าเรียงเก่า→ใหม่ */
+function deriveCashHistory(currentCash, nMonths){
+  try{
+    const ms = (availableMonths||[]).slice().sort();
+    if(ms.length < 2) return [];
+    const netByMonth = {};
+    ms.forEach(mk => { netByMonth[mk] = computeSummary(txRows.filter(r=>r.month===mk)).net; });
+    const out = new Array(ms.length);
+    let bal = nz(currentCash);
+    for(let i = ms.length-1; i >= 0; i--){ out[i] = bal; bal -= nz(netByMonth[ms[i]]); }
+    return out.slice(-(nMonths||12));
+  }catch(e){ return []; }
+}
+function monthlyNetSeries(nMonths){
+  try{
+    return (availableMonths||[]).slice().sort().slice(-(nMonths||12))
+      .map(mk => computeSummary(txRows.filter(r=>r.month===mk)).net);
+  }catch(e){ return []; }
+}
+
 function computeSummary(rows){
   let income=0,incomeCount=0,expense=0,expenseCount=0,savings=0,savingsCount=0,debt=0,debtCount=0;
   rows.forEach(r=>{

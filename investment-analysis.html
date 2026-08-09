@@ -28,7 +28,10 @@
   --bg:#07070e;--bg2:#0d0d1a;--bg3:#111120;--bg4:#181830;
   --border:#1a1a30;--border2:#262640;--cb:#1e1e38;
   --income:#00d4a0;--expense:#ff4060;--savings:#7c6fec;--debt:#ff9500;
-  --white:#ffffff;--text:#dcdcf0;--muted:#5a5a8a;--muted2:#8080b0;
+  --white:#ffffff;--text:#dcdcf0;--muted:#8a8ac0;  /* P2-6: เดิม #5a5a8a ได้ contrast 3.12:1 บนพื้น #07070e
+                       ต่ำกว่า WCAG AA (4.5:1) และถูกใช้กับข้อความ 9-10px
+                       ซึ่งนับเป็น normal text อ่านไม่ออกจริงบนมือถือกลางแดด
+                       #8a8ac0 = 6.19:1 ผ่าน AA โดยยังคงลำดับชั้นสายตาเดิม */;--muted2:#8080b0;
   --gain:#00d4a0;--loss:#ff4060;
   --accent1:#4cc9f0;--accent2:#f72585;--accent3:#ffd166;
   --sidebar-w:200px;
