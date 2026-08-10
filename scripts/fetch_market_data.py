@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Finance OS — market data pipeline  (v42)
+Finance OS — market data pipeline  (v43)
 ────────────────────────────────────────────────────────────────────────
 สร้าง market-data.json ให้ dashboard อ่าน
 
@@ -33,19 +33,61 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone, timedelta
 
 OUT = os.environ.get("MARKET_DATA_OUT", "market-data.json")
-# v42: UA เดิม "Mozilla/5.0 (compatible; FinanceOS-pipeline/42)" มี token ที่ไม่ใช่
-# เบราว์เซอร์จริง ซึ่งเป็นผู้ต้องสงสัยอันดับแรกของการโดนบล็อกแบบ tarpit
-# (fredgraph.csv รับ connection แล้วไม่ส่งข้อมูลกลับ -> read timeout ทั้ง 14 ตัว)
-# ส่ง header ชุดเดียวกับเบราว์เซอร์จริงเพื่อตัดตัวแปรนี้ออก
-UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
-      "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
-REQ_HEADERS = {
-    "User-Agent": UA,
+# ══════════════════════════════════════════════════════════════════════
+# v43 — HEADERS ต้องแยกตาม host  (แก้ regression ที่ v42 ทำไว้)
+# ══════════════════════════════════════════════════════════════════════
+#   v41  Yahoo 17/17 ผ่าน · FRED 0/14 ล้ม   (UA แบบ bot ตรงๆ)
+#   v42  Yahoo  0/17 ล้ม  · FRED 0/14 ล้ม   (Chrome UA + browser headers)
+# ตัวแปรเดียวที่เปลี่ยนคือ headers และ v42 เอาไปใช้กับ *ทุก* request
+# ทั้งที่ตั้งใจแก้แค่ FRED -> Yahoo ที่เคยทำงานได้พังไปด้วย
+#
+# ทำไม Yahoo พังกับ browser UA:
+#   query1.finance.yahoo.com คาดหวัง cookie + crumb เมื่อเห็น UA ของเบราว์เซอร์จริง
+#   ส่ง UA เบราว์เซอร์แต่ไม่มี cookie = ดูเหมือน scraper ปลอมตัว -> 401/429 ทันที
+#   ขณะที่ UA แบบ bot ตรงๆ ผ่าน endpoint สาธารณะได้ตามปกติ
+#   duration 2m3s เร็วเกินกว่าจะเป็น timeout ทั้งหมด = ถูกปฏิเสธเร็ว (4xx)
+#
+# บทเรียน: อย่าเปลี่ยน header ระดับ global เพื่อแก้ host เดียว
+from collections import defaultdict
+
+UA_BOT = "Mozilla/5.0 (compatible; FinanceOS-pipeline/43)"
+UA_BROWSER = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+              "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
+UA = UA_BOT                                     # ค่าปลอดภัยเป็นค่าเริ่มต้น
+
+HEADERS_YAHOO = {"User-Agent": UA_BOT}          # ชุดเดิมของ v41 ที่ได้ 17/17 — ห้ามแตะ
+HEADERS_FRED = {                                # browser headers ไว้สู้ tarpit (ยังเป็นสมมติฐาน)
+    "User-Agent": UA_BROWSER,
     "Accept": "text/csv,text/plain,application/json,*/*;q=0.8",
     "Accept-Language": "en-US,en;q=0.9",
-    "Accept-Encoding": "identity",     # เลี่ยง gzip — เราไม่ได้ decode
-    "Connection": "close",
 }
+REQ_HEADERS = {"User-Agent": UA_BOT}            # default สำหรับ host อื่น
+
+_host_stat: dict = defaultdict(dict)
+
+
+def _host(url: str) -> str:
+    try:
+        return url.split("/")[2]
+    except IndexError:
+        return "?"
+
+
+def _bump(url: str, key: str) -> None:
+    d = _host_stat[_host(url)]
+    d[key] = d.get(key, 0) + 1
+
+
+def headers_for(url: str) -> dict:
+    """เลือก header ตาม host — ไม่ให้การแก้ host หนึ่งไปกระทบ host อื่นอีก"""
+    h = _host(url)
+    if "yahoo.com" in h:
+        return HEADERS_YAHOO
+    if "stlouisfed.org" in h:
+        return HEADERS_FRED
+    return REQ_HEADERS
+
+
 FRED_API_KEY = os.environ.get("FRED_API_KEY", "").strip()
 NOW = datetime.now(timezone.utc)
 FETCHED_AT = NOW.isoformat()
@@ -119,19 +161,23 @@ def http_get(url: str, tries: int = 2, timeout: int = 12) -> bytes | None:
         try:
             # อย่าให้ request เดียวกินงบที่เหลือทั้งหมด
             eff = max(3, min(timeout, int(budget_left())))
-            req = urllib.request.Request(url, headers=REQ_HEADERS)
+            req = urllib.request.Request(url, headers=headers_for(url))
             with urllib.request.urlopen(req, timeout=eff, context=_ctx) as r:
-                return r.read()
+                body = r.read()
+                _bump(url, "ok")
+                return body
         except urllib.error.HTTPError as e:
             # 401/403 จาก Yahoo มักเป็น anti-bot/rate-limit ชั่วคราว ไม่ใช่ auth error จริง
             # (endpoint พวกนี้เป็น public ไม่ต้องใช้ credential) → ต้อง retry ด้วย
             # ไม่งั้นรอบเดียวที่โดนจะทำหลาย key fail พร้อมกันแบบกู้ไม่ได้
+            _bump(url, f"HTTP {e.code}")
             if e.code in (401, 403, 429, 502, 503) and attempt < tries - 1:
                 time.sleep(min(2 ** attempt * 2, max(0, budget_left())))
                 continue
             warn(f"HTTP {e.code} · {url[:80]}")
             return None
         except Exception as e:  # noqa: BLE001
+            _bump(url, type(e).__name__)
             if attempt < tries - 1:
                 time.sleep(min(2 ** attempt, max(0, budget_left())))
                 continue
@@ -615,6 +661,7 @@ payload = {
         "fred_ok": sum(1 for v in _fred_cache.values() if v),
         "fred_total": len(_fred_cache),
         "fred_endpoint": (sorted(set(_fred_endpoint_used.values())) or None),
+        "host_stats": {h: dict(v) for h, v in _host_stat.items()},
         "skipped_for_budget": _budget_skips,
         "warnings": warnings,
     },
@@ -628,6 +675,10 @@ with open(OUT, "w", encoding="utf-8") as f:
 print("─────────────────────────────────────────────")
 print(f"เขียน {OUT}: {len(data)} keys รอบนี้ · {len(merged_data)} keys รวม · "
       f"{len(sectors)} sectors · {len(warnings)} warnings · {elapsed():.0f}s")
+
+print("  ผลต่อ host:")
+for _h, _v in sorted(_host_stat.items()):
+    print(f"    {_h:32s} {dict(_v)}")
 
 if _budget_skips:
     # ไฟล์ถูกเขียนแล้ว (ข้อมูลเดิม merge ไว้ครบ) แต่ต้องเห็นใน log ว่ารอบนี้ไม่สมบูรณ์
