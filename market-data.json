@@ -1,97 +1,82 @@
 {
- "generated_at": "2026-08-10T12:10:25.820093+00:00",
+ "generated_at": "2026-08-10T23:57:09.669540+00:00",
  "source": "github-actions pipeline v40 (FRED + Yahoo)",
  "stats": {
-  "keys_this_run": 0,
+  "keys_this_run": 17,
   "keys_total": 31,
-  "sectors": 0,
-  "runtime_sec": 83.7,
+  "sectors": 10,
+  "runtime_sec": 73.8,
   "budget_sec": 480,
   "budget_exhausted": false,
   "fred_ok": 0,
   "fred_total": 14,
   "fred_endpoint": null,
+  "host_stats": {
+   "fred.stlouisfed.org": {
+    "TimeoutError": 42
+   },
+   "query1.finance.yahoo.com": {
+    "ok": 23
+   }
+  },
   "skipped_for_budget": 0,
   "warnings": [
-   "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/graph/fredgraph.csv?id=DFEDTARU",
-   "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/graph/fredgraph.csv?id=DGS10",
-   "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/graph/fredgraph.csv?id=DFII10",
    "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/graph/fredgraph.csv?id=BAMLH0A0HYM2",
+   "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/graph/fredgraph.csv?id=DFEDTARU",
+   "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/graph/fredgraph.csv?id=DFII10",
    "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/graph/fredgraph.csv?id=DGS2",
-   "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/data/DFII10.txt",
-   "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/data/DFEDTARU.txt",
-   "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/data/DGS10.txt",
+   "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/graph/fredgraph.csv?id=DGS10",
    "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/data/BAMLH0A0HYM2.txt",
    "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/data/DGS2.txt",
-   "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/series/DGS2/downloaddata/DGS2.csv",
-   "FRED DGS2: ทุก endpoint ใช้ไม่ได้ (3 ตัว)",
-   "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/series/DFEDTARU/downloaddata/DFEDTARU.csv",
-   "FRED DFEDTARU: ทุก endpoint ใช้ไม่ได้ (3 ตัว)",
+   "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/data/DFII10.txt",
+   "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/data/DGS10.txt",
+   "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/data/DFEDTARU.txt",
    "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/series/DGS10/downloaddata/DGS10.csv",
    "FRED DGS10: ทุก endpoint ใช้ไม่ได้ (3 ตัว)",
-   "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/series/BAMLH0A0HYM2/downloaddata/BAMLH0A0HYM2.csv",
-   "FRED BAMLH0A0HYM2: ทุก endpoint ใช้ไม่ได้ (3 ตัว)",
    "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/series/DFII10/downloaddata/DFII10.csv",
    "FRED DFII10: ทุก endpoint ใช้ไม่ได้ (3 ตัว)",
+   "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/series/DFEDTARU/downloaddata/DFEDTARU.csv",
+   "FRED DFEDTARU: ทุก endpoint ใช้ไม่ได้ (3 ตัว)",
+   "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/series/DGS2/downloaddata/DGS2.csv",
+   "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/series/BAMLH0A0HYM2/downloaddata/BAMLH0A0HYM2.csv",
+   "FRED DGS2: ทุก endpoint ใช้ไม่ได้ (3 ตัว)",
+   "FRED BAMLH0A0HYM2: ทุก endpoint ใช้ไม่ได้ (3 ตัว)",
    "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/graph/fredgraph.csv?id=VIXCLS",
-   "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/graph/fredgraph.csv?id=T10Y2Y",
    "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/graph/fredgraph.csv?id=UNRATE",
    "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/graph/fredgraph.csv?id=A191RL1Q225SBEA",
    "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/graph/fredgraph.csv?id=CPIAUCSL",
+   "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/graph/fredgraph.csv?id=T10Y2Y",
+   "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/data/VIXCLS.txt",
    "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/data/A191RL1Q225SBEA.txt",
-   "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/data/T10Y2Y.txt",
    "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/data/UNRATE.txt",
    "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/data/CPIAUCSL.txt",
-   "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/data/VIXCLS.txt",
-   "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/series/CPIAUCSL/downloaddata/CPIAUCSL.csv",
-   "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/series/VIXCLS/downloaddata/VIXCLS.csv",
-   "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/series/A191RL1Q225SBEA/downloaddata/A191RL1Q225SBEA.",
-   "FRED CPIAUCSL: ทุก endpoint ใช้ไม่ได้ (3 ตัว)",
-   "FRED A191RL1Q225SBEA: ทุก endpoint ใช้ไม่ได้ (3 ตัว)",
+   "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/data/T10Y2Y.txt",
    "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/series/UNRATE/downloaddata/UNRATE.csv",
-   "FRED VIXCLS: ทุก endpoint ใช้ไม่ได้ (3 ตัว)",
    "FRED UNRATE: ทุก endpoint ใช้ไม่ได้ (3 ตัว)",
+   "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/series/A191RL1Q225SBEA/downloaddata/A191RL1Q225SBEA.",
+   "FRED A191RL1Q225SBEA: ทุก endpoint ใช้ไม่ได้ (3 ตัว)",
+   "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/series/VIXCLS/downloaddata/VIXCLS.csv",
+   "FRED VIXCLS: ทุก endpoint ใช้ไม่ได้ (3 ตัว)",
+   "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/series/CPIAUCSL/downloaddata/CPIAUCSL.csv",
+   "FRED CPIAUCSL: ทุก endpoint ใช้ไม่ได้ (3 ตัว)",
    "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/series/T10Y2Y/downloaddata/T10Y2Y.csv",
    "FRED T10Y2Y: ทุก endpoint ใช้ไม่ได้ (3 ตัว)",
-   "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/graph/fredgraph.csv?id=CPILFESL",
-   "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/graph/fredgraph.csv?id=PCEPI",
    "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/graph/fredgraph.csv?id=PCEPILFE",
+   "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/graph/fredgraph.csv?id=PCEPI",
+   "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/graph/fredgraph.csv?id=CPILFESL",
    "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/graph/fredgraph.csv?id=PAYEMS",
-   "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/data/PCEPILFE.txt",
    "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/data/CPILFESL.txt",
    "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/data/PCEPI.txt",
+   "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/data/PCEPILFE.txt",
    "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/data/PAYEMS.txt",
+   "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/series/CPILFESL/downloaddata/CPILFESL.csv",
+   "FRED CPILFESL: ทุก endpoint ใช้ไม่ได้ (3 ตัว)",
+   "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/series/PCEPI/downloaddata/PCEPI.csv",
+   "FRED PCEPI: ทุก endpoint ใช้ไม่ได้ (3 ตัว)",
    "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/series/PCEPILFE/downloaddata/PCEPILFE.csv",
    "FRED PCEPILFE: ทุก endpoint ใช้ไม่ได้ (3 ตัว)",
    "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/series/PAYEMS/downloaddata/PAYEMS.csv",
-   "FRED PAYEMS: ทุก endpoint ใช้ไม่ได้ (3 ตัว)",
-   "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/series/PCEPI/downloaddata/PCEPI.csv",
-   "FRED PCEPI: ทุก endpoint ใช้ไม่ได้ (3 ตัว)",
-   "TimeoutError: The read operation timed out · https://fred.stlouisfed.org/series/CPILFESL/downloaddata/CPILFESL.csv",
-   "FRED CPILFESL: ทุก endpoint ใช้ไม่ได้ (3 ตัว)",
-   "HTTP 429 · https://query1.finance.yahoo.com/v8/finance/chart/THB%3DX?range=2y&interval=1d",
-   "HTTP 429 · https://query1.finance.yahoo.com/v8/finance/chart/GC%3DF?range=2y&interval=1d",
-   "HTTP 429 · https://query1.finance.yahoo.com/v8/finance/chart/GLD?range=2y&interval=1d",
-   "HTTP 429 · https://query1.finance.yahoo.com/v8/finance/chart/%5EGSPC?range=2y&interval=1d",
-   "HTTP 429 · https://query1.finance.yahoo.com/v8/finance/chart/%5EIXIC?range=2y&interval=1d",
-   "HTTP 429 · https://query1.finance.yahoo.com/v8/finance/chart/%5ESET.BK?range=2y&interval=1d",
-   "HTTP 429 · https://query1.finance.yahoo.com/v8/finance/chart/CL%3DF?range=2y&interval=1d",
-   "HTTP 429 · https://query1.finance.yahoo.com/v8/finance/chart/ETH-USD?range=2y&interval=1d",
-   "HTTP 429 · https://query1.finance.yahoo.com/v8/finance/chart/DX-Y.NYB?range=2y&interval=1d",
-   "HTTP 429 · https://query1.finance.yahoo.com/v8/finance/chart/BTC-USD?range=2y&interval=1d",
-   "HTTP 429 · https://query1.finance.yahoo.com/v8/finance/chart/%5EGSPC?range=5y&interval=1d",
-   "HTTP 429 · https://query1.finance.yahoo.com/v8/finance/chart/THB%3DX?range=5y&interval=1d",
-   "HTTP 429 · https://query1.finance.yahoo.com/v8/finance/chart/XLK?range=2y&interval=1d",
-   "HTTP 429 · https://query1.finance.yahoo.com/v8/finance/chart/XLV?range=2y&interval=1d",
-   "HTTP 429 · https://query1.finance.yahoo.com/v8/finance/chart/XLY?range=2y&interval=1d",
-   "HTTP 429 · https://query1.finance.yahoo.com/v8/finance/chart/XLF?range=2y&interval=1d",
-   "HTTP 429 · https://query1.finance.yahoo.com/v8/finance/chart/SPY?range=2y&interval=1d",
-   "HTTP 429 · https://query1.finance.yahoo.com/v8/finance/chart/XLP?range=2y&interval=1d",
-   "HTTP 429 · https://query1.finance.yahoo.com/v8/finance/chart/XLI?range=2y&interval=1d",
-   "HTTP 429 · https://query1.finance.yahoo.com/v8/finance/chart/XLE?range=2y&interval=1d",
-   "HTTP 429 · https://query1.finance.yahoo.com/v8/finance/chart/XLRE?range=2y&interval=1d",
-   "HTTP 429 · https://query1.finance.yahoo.com/v8/finance/chart/XLB?range=2y&interval=1d",
-   "HTTP 429 · https://query1.finance.yahoo.com/v8/finance/chart/XLU?range=2y&interval=1d"
+   "FRED PAYEMS: ทุก endpoint ใช้ไม่ได้ (3 ตัว)"
   ]
  },
  "data": {
@@ -131,9 +116,9 @@
    "note": "FRED DFII10: 10Y TIPS real yield"
   },
   "OIL_WTI": {
-   "value": 78.18,
-   "updated": "2026-08-07",
-   "fetched_at": "2026-08-08T11:55:41.236428+00:00",
+   "value": 82.15,
+   "updated": "2026-08-10",
+   "fetched_at": "2026-08-10T23:57:09.669540+00:00",
    "note": "Yahoo CL=F"
   },
   "US_CPI": {
@@ -172,99 +157,99 @@
    "note": "2s10s spread (bps)"
   },
   "SP500": {
-   "value": 7758.0,
-   "updated": "2026-08-07",
-   "fetched_at": "2026-08-08T11:55:41.236428+00:00",
+   "value": 7753.0,
+   "updated": "2026-08-10",
+   "fetched_at": "2026-08-10T23:57:09.669540+00:00",
    "note": "Yahoo ^GSPC"
   },
   "SP500_CHG": {
-   "value": 0.62,
-   "updated": "2026-08-07",
-   "fetched_at": "2026-08-08T11:55:41.236428+00:00",
+   "value": -0.06,
+   "updated": "2026-08-10",
+   "fetched_at": "2026-08-10T23:57:09.669540+00:00",
    "note": "Yahoo ^GSPC daily change"
   },
   "NASDAQ": {
-   "value": 26691.0,
-   "updated": "2026-08-07",
-   "fetched_at": "2026-08-08T11:55:41.236428+00:00",
+   "value": 26605.0,
+   "updated": "2026-08-10",
+   "fetched_at": "2026-08-10T23:57:09.669540+00:00",
    "note": "Yahoo ^IXIC"
   },
   "SET_INDEX": {
    "value": 1639.04,
    "updated": "2026-07-17",
-   "fetched_at": "2026-08-08T11:55:41.236428+00:00",
+   "fetched_at": "2026-08-10T23:57:09.669540+00:00",
    "note": "Yahoo ^SET.BK"
   },
   "GOLD_XAU": {
-   "value": 4340.7,
-   "updated": "2026-08-07",
-   "fetched_at": "2026-08-08T11:55:41.236428+00:00",
+   "value": 4457.6,
+   "updated": "2026-08-10",
+   "fetched_at": "2026-08-10T23:57:09.669540+00:00",
    "note": "Yahoo GC=F"
   },
   "USDTHB": {
-   "value": 33.02,
-   "updated": "2026-08-07",
-   "fetched_at": "2026-08-08T11:55:41.236428+00:00",
+   "value": 32.98,
+   "updated": "2026-08-10",
+   "fetched_at": "2026-08-10T23:57:09.669540+00:00",
    "note": "Yahoo THB=X"
   },
   "DXY": {
-   "value": 99.6,
-   "updated": "2026-08-07",
-   "fetched_at": "2026-08-08T11:55:41.236428+00:00",
+   "value": 99.79,
+   "updated": "2026-08-10",
+   "fetched_at": "2026-08-10T23:57:09.669540+00:00",
    "note": "Yahoo DXY"
   },
   "SP500_RSI": {
-   "value": 66.3,
-   "updated": "2026-08-07",
-   "fetched_at": "2026-08-08T11:55:41.236428+00:00",
+   "value": 65.9,
+   "updated": "2026-08-10",
+   "fetched_at": "2026-08-10T23:57:09.669540+00:00",
    "note": "Yahoo ^GSPC RSI(14)"
   },
   "SP500_MA200": {
    "value": "Above",
-   "updated": "2026-08-07",
-   "fetched_at": "2026-08-08T11:55:41.236428+00:00",
-   "note": "close 7,758 vs MA200 7,050"
+   "updated": "2026-08-10",
+   "fetched_at": "2026-08-10T23:57:09.669540+00:00",
+   "note": "close 7,753 vs MA200 7,055"
   },
   "SET_RSI": {
    "value": 64.9,
    "updated": "2026-07-17",
-   "fetched_at": "2026-08-08T11:55:41.236428+00:00",
+   "fetched_at": "2026-08-10T23:57:09.669540+00:00",
    "note": "Yahoo ^SET.BK RSI(14)"
   },
   "SET_MA200": {
    "value": "Above",
    "updated": "2026-07-17",
-   "fetched_at": "2026-08-08T11:55:41.236428+00:00",
+   "fetched_at": "2026-08-10T23:57:09.669540+00:00",
    "note": "close 1,639 vs MA200 1,404"
   },
   "NDX_RSI": {
-   "value": 61.4,
-   "updated": "2026-08-07",
-   "fetched_at": "2026-08-08T11:55:41.236428+00:00",
+   "value": 60.1,
+   "updated": "2026-08-10",
+   "fetched_at": "2026-08-10T23:57:09.669540+00:00",
    "note": "Yahoo ^IXIC RSI(14)"
   },
   "NDX_MA200": {
    "value": "Above",
-   "updated": "2026-08-07",
-   "fetched_at": "2026-08-08T11:55:41.236428+00:00",
-   "note": "close 26,691 vs MA200 24,090"
+   "updated": "2026-08-10",
+   "fetched_at": "2026-08-10T23:57:09.669540+00:00",
+   "note": "close 26,605 vs MA200 24,109"
   },
   "GOLD_GLD": {
-   "value": 398.47,
-   "updated": "2026-08-07",
-   "fetched_at": "2026-08-08T11:55:41.236428+00:00",
+   "value": 402.54,
+   "updated": "2026-08-10",
+   "fetched_at": "2026-08-10T23:57:09.669540+00:00",
    "note": "Yahoo GLD"
   },
   "BTCUSD": {
-   "value": 64916.0,
-   "updated": "2026-08-08",
-   "fetched_at": "2026-08-08T11:55:41.236428+00:00",
+   "value": 63906.0,
+   "updated": "2026-08-10",
+   "fetched_at": "2026-08-10T23:57:09.669540+00:00",
    "note": "Yahoo BTC-USD"
   },
   "ETHUSD": {
-   "value": 1920.0,
-   "updated": "2026-08-08",
-   "fetched_at": "2026-08-08T11:55:41.236428+00:00",
+   "value": 1871.0,
+   "updated": "2026-08-10",
+   "fetched_at": "2026-08-10T23:57:09.669540+00:00",
    "note": "Yahoo ETH-USD"
   }
  },
@@ -272,109 +257,109 @@
   "sectors": {
    "XLK": {
     "name": "Technology",
-    "price": 187.97,
-    "chg1m": 1.41,
-    "chg3m": 10.77,
-    "rsi": 59.1,
-    "vsMA200": 20.14,
-    "rs1m": -1.46,
-    "rs3m": 5.07
+    "price": 186.32,
+    "chg1m": 0.29,
+    "chg3m": 6.15,
+    "rsi": 56.9,
+    "vsMA200": 18.92,
+    "rs1m": -2.1,
+    "rs3m": 1.35
    },
    "XLV": {
     "name": "Healthcare",
-    "price": 165.68,
-    "chg1m": 2.16,
-    "chg3m": 14.48,
-    "rsi": 61.6,
-    "vsMA200": 8.32,
-    "rs1m": -0.71,
-    "rs3m": 8.78
+    "price": 168.44,
+    "chg1m": 4.73,
+    "chg3m": 17.39,
+    "rsi": 66.7,
+    "vsMA200": 10.04,
+    "rs1m": 2.34,
+    "rs3m": 12.59
    },
    "XLF": {
     "name": "Financials",
-    "price": 57.6,
-    "chg1m": 3.71,
-    "chg3m": 11.74,
-    "rsi": 63.7,
-    "vsMA200": 8.75,
-    "rs1m": 0.84,
-    "rs3m": 6.04
+    "price": 57.81,
+    "chg1m": 3.77,
+    "chg3m": 12.82,
+    "rsi": 65.3,
+    "vsMA200": 9.09,
+    "rs1m": 1.38,
+    "rs3m": 8.02
    },
    "XLY": {
     "name": "Cons. Disc.",
-    "price": 119.86,
-    "chg1m": 2.58,
-    "chg3m": -0.02,
-    "rsi": 62.2,
-    "vsMA200": 2.34,
-    "rs1m": -0.29,
-    "rs3m": -5.72
+    "price": 119.67,
+    "chg1m": 2.07,
+    "chg3m": -0.44,
+    "rsi": 61.5,
+    "vsMA200": 2.18,
+    "rs1m": -0.32,
+    "rs3m": -5.24
    },
    "XLP": {
     "name": "Cons. Staples",
-    "price": 85.12,
-    "chg1m": 2.31,
-    "chg3m": 1.36,
-    "rsi": 51.4,
-    "vsMA200": 3.17,
-    "rs1m": -0.56,
-    "rs3m": -4.34
+    "price": 84.95,
+    "chg1m": 0.99,
+    "chg3m": 0.91,
+    "rsi": 50.4,
+    "vsMA200": 2.93,
+    "rs1m": -1.4,
+    "rs3m": -3.89
    },
    "XLI": {
     "name": "Industrials",
-    "price": 185.18,
-    "chg1m": 2.25,
-    "chg3m": 6.43,
-    "rsi": 58.7,
-    "vsMA200": 10.16,
-    "rs1m": -0.62,
-    "rs3m": 0.73
+    "price": 184.6,
+    "chg1m": 1.47,
+    "chg3m": 6.58,
+    "rsi": 57.1,
+    "vsMA200": 9.72,
+    "rs1m": -0.92,
+    "rs3m": 1.78
    },
    "XLE": {
     "name": "Energy",
-    "price": 57.5,
-    "chg1m": 4.89,
-    "chg3m": 2.77,
-    "rsi": 49.7,
-    "vsMA200": 8.52,
-    "rs1m": 2.02,
-    "rs3m": -2.93
+    "price": 60.18,
+    "chg1m": 9.26,
+    "chg3m": 8.04,
+    "rsi": 61.5,
+    "vsMA200": 13.4,
+    "rs1m": 6.87,
+    "rs3m": 3.24
    },
    "XLU": {
     "name": "Utilities",
-    "price": 43.61,
-    "chg1m": -3.37,
-    "chg3m": -3.35,
-    "rsi": 35.9,
-    "vsMA200": -2.69,
-    "rs1m": -6.24,
-    "rs3m": -9.05
+    "price": 43.13,
+    "chg1m": -5.02,
+    "chg3m": -3.56,
+    "rsi": 32.3,
+    "vsMA200": -3.73,
+    "rs1m": -7.41,
+    "rs3m": -8.36
    },
    "XLRE": {
     "name": "Real Estate",
-    "price": 44.98,
-    "chg1m": 1.7,
-    "chg3m": 1.31,
-    "rsi": 49.0,
-    "vsMA200": 5.23,
-    "rs1m": -1.17,
-    "rs3m": -4.39
+    "price": 44.4,
+    "chg1m": -0.11,
+    "chg3m": -0.02,
+    "rsi": 42.1,
+    "vsMA200": 3.84,
+    "rs1m": -2.5,
+    "rs3m": -4.82
    },
    "XLB": {
     "name": "Materials",
-    "price": 52.86,
-    "chg1m": 5.17,
-    "chg3m": 2.84,
-    "rsi": 59.8,
-    "vsMA200": 7.57,
-    "rs1m": 2.3,
-    "rs3m": -2.86
+    "price": 53.18,
+    "chg1m": 4.5,
+    "chg3m": 3.08,
+    "rsi": 61.4,
+    "vsMA200": 8.12,
+    "rs1m": 2.11,
+    "rs3m": -1.72
    }
   },
   "SP500": [
    [
-    "2021-08-09",
-    4432.3501
+    "2021-08-11",
+    4442.4102
    ],
    [
     "2021-08-16",
@@ -1415,12 +1400,16 @@
    [
     "2026-08-03",
     7600.5
+   ],
+   [
+    "2026-08-10",
+    7753.1099
    ]
   ],
   "USDTHB": [
    [
-    "2021-08-09",
-    33.46
+    "2021-08-11",
+    33.098
    ],
    [
     "2021-08-16",
@@ -2461,6 +2450,10 @@
    [
     "2026-08-03",
     33.4
+   ],
+   [
+    "2026-08-10",
+    32.98
    ]
   ]
  }
