@@ -129,6 +129,16 @@ jobs:
           rt, bg = s.get('runtime_sec'), s.get('budget_sec')
           if rt is not None:
               print(f"runtime     : {rt}s / งบ {bg}s")
+          # v43 — แสดงผลต่อ host เพื่อแยก "ถูกบล็อก (4xx)" ออกจาก "timeout"
+          # สองอย่างนี้ต้องแก้ต่างกันคนละทาง เดิม log บอกไม่ได้
+          hs = s.get('host_stats') or {}
+          if hs:
+              print("ผลต่อ host  :")
+              for h, v in sorted(hs.items()):
+                  ok = v.get('ok', 0)
+                  bad = {k: n for k, n in v.items() if k != 'ok'}
+                  flag = '' if ok and not bad else '  <-- มีปัญหา'
+                  print(f"              {h:32s} ok={ok} {bad or ''}{flag}")
           fo, ft = s.get('fred_ok'), s.get('fred_total')
           if ft:
               ep = s.get('fred_endpoint') or 'ไม่มีตัวไหนใช้ได้'
