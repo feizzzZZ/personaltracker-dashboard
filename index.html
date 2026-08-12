@@ -175,6 +175,41 @@ select.month-display{text-align-last:center;outline:none}
 .cr3{display:grid;grid-template-columns:220px 1fr;gap:12px;margin-bottom:18px}
 @media(max-width:768px){.cr2,.cr3{grid-template-columns:1fr}.acc-layout{grid-template-columns:1fr}}
 
+/* ══ Total Wealth strip (v44) ══════════════════════════════════════════
+   เดิมกริด 9 แทร็กถูกเขียนเป็น inline style ซึ่ง media query override ไม่ได้
+   บนจอ 375px: 5 ช่องตัวเลข + 4 เส้นคั่น + padding 24px = เนื้อที่จริง ~27px/ช่อง
+   แต่ font เป็น clamp(20px,2.6vw,28px) และต้องแสดง ฿1,234,567 → ตัวเลขทับกัน
+   ย้ายมาเป็น class เพื่อให้ breakpoint ทำงาน  */
+.wealth-strip{
+  display:grid;
+  grid-template-columns:1fr 1px 1fr 1px 1fr 1px 1fr 1px 1.25fr;
+  gap:0;background:var(--bg3);border:1px solid var(--border2);
+  border-radius:14px;overflow:hidden;margin-bottom:14px;
+}
+.wealth-strip>div{min-width:0}                 /* ให้ตัวเลขยาวหุบได้ ไม่ดันกริด */
+.ws-div{background:var(--border)}
+.wealth-strip .ws-val{overflow-wrap:anywhere}
+
+/* แท็บเล็ต — 3 คอลัมน์ ซ่อนเส้นคั่นแล้วใช้เส้นขอบแทน */
+@media(max-width:1100px){
+  .wealth-strip{grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border)}
+  .wealth-strip>div:not(.ws-div){background:var(--bg3)}
+  .ws-div{display:none}
+  .wealth-strip>div:last-child{grid-column:1 / -1}   /* Net Worth เต็มแถว */
+}
+/* มือถือ — 2 คอลัมน์ ลดขนาดตัวเลขและ padding */
+@media(max-width:768px){
+  .wealth-strip{grid-template-columns:1fr 1fr}
+  .wealth-strip>div:not(.ws-div){padding:14px 14px!important}
+  .wealth-strip .ws-val{font-size:clamp(15px,4.6vw,20px)!important;letter-spacing:-.01em}
+  .wealth-strip .ws-lbl{font-size:9px!important}
+}
+/* จอเล็กมาก (SE) — เรียงเดี่ยว ให้ตัวเลขอ่านได้เต็มบรรทัด */
+@media(max-width:380px){
+  .wealth-strip{grid-template-columns:1fr}
+  .wealth-strip>div:last-child{grid-column:auto}
+}
+
 /* ── Health items ── */
 .health-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;margin-bottom:18px}
 .hi{background:var(--bg4);border:1px solid var(--border);border-radius:10px;padding:11px 13px;display:flex;align-items:flex-start;gap:10px}
@@ -762,51 +797,54 @@ select.month-display{text-align-last:center;outline:none}
         <div><div class="pg-title">Overview</div><div class="pg-sub">ภาพรวมทางการเงินทั้งหมด</div></div>
       </div>
 
+      <!-- v44: Action needed — ทุกอย่างที่ต้องลงมือ รวมไว้บนสุด -->
+      <div id="ov-action" style="display:none;margin-bottom:14px"></div>
+
       <!-- Total Wealth 4-part section -->
       <div class="sl" style="margin-bottom:12px">Total Wealth</div>
-      <div class="wealth-strip" style="display:grid;grid-template-columns:1fr 1px 1fr 1px 1fr 1px 1fr 1px 1.25fr;gap:0;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;overflow:hidden;margin-bottom:14px">
+      <div class="wealth-strip">
         <!-- Cash -->
         <div style="padding:20px 24px">
-          <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2);margin-bottom:8px;display:flex;align-items:center;gap:6px">
+          <div class="ws-lbl" style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2);margin-bottom:8px;display:flex;align-items:center;gap:6px">
             <div style="width:8px;height:8px;border-radius:50%;background:var(--income)"></div>Cash (ใช้ได้จริง)
           </div>
-          <div style="font-family:var(--f-sans);font-size:clamp(20px,2.6vw,28px);font-weight:700;color:var(--income);letter-spacing:-.02em" id="ov-cash">฿0</div>
+          <div class="ws-val" style="font-family:var(--f-sans);font-size:clamp(20px,2.6vw,28px);font-weight:700;color:var(--income);letter-spacing:-.02em" id="ov-cash">฿0</div>
           <div style="font-size:11px;color:var(--muted2);margin-top:6px" id="ov-cash-sub">— accounts</div>
         </div>
-        <div style="background:var(--border)"></div>
+        <div class="ws-div"></div>
         <!-- Liabilities (v40 — เดิมถูกซ่อนอยู่ในยอด Cash) -->
         <div style="padding:20px 24px;cursor:pointer" onclick="switchPage('debt')" title="ดูแผนปลดหนี้">
-          <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2);margin-bottom:8px;display:flex;align-items:center;gap:6px">
+          <div class="ws-lbl" style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2);margin-bottom:8px;display:flex;align-items:center;gap:6px">
             <div style="width:8px;height:8px;border-radius:50%;background:var(--loss)"></div>Liabilities
           </div>
-          <div style="font-family:var(--f-sans);font-size:clamp(20px,2.6vw,28px);font-weight:700;color:var(--loss);letter-spacing:-.02em" id="ov-liab">฿0</div>
+          <div class="ws-val" style="font-family:var(--f-sans);font-size:clamp(20px,2.6vw,28px);font-weight:700;color:var(--loss);letter-spacing:-.02em" id="ov-liab">฿0</div>
           <div style="font-size:11px;color:var(--muted2);margin-top:6px" id="ov-liab-sub">— accounts</div>
         </div>
-        <div style="background:var(--border)"></div>
+        <div class="ws-div"></div>
         <!-- Portfolio -->
         <div style="padding:20px 24px">
-          <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2);margin-bottom:8px;display:flex;align-items:center;gap:6px">
+          <div class="ws-lbl" style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2);margin-bottom:8px;display:flex;align-items:center;gap:6px">
             <div style="width:8px;height:8px;border-radius:50%;background:var(--savings)"></div>Portfolio Value
           </div>
-          <div style="font-family:var(--f-sans);font-size:clamp(20px,2.6vw,28px);font-weight:700;color:var(--savings);letter-spacing:-.02em" id="ov-portval">฿0</div>
+          <div class="ws-val" style="font-family:var(--f-sans);font-size:clamp(20px,2.6vw,28px);font-weight:700;color:var(--savings);letter-spacing:-.02em" id="ov-portval">฿0</div>
           <div style="font-size:11px;margin-top:6px" id="ov-portpnl-sub"></div>
         </div>
-        <div style="background:var(--border)"></div>
+        <div class="ws-div"></div>
         <!-- Insurance Cash Value -->
         <div style="padding:20px 24px">
-          <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2);margin-bottom:8px;display:flex;align-items:center;gap:6px">
+          <div class="ws-lbl" style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2);margin-bottom:8px;display:flex;align-items:center;gap:6px">
             <div style="width:8px;height:8px;border-radius:50%;background:#7c6fec"></div>Insurance CV
           </div>
-          <div style="font-family:var(--f-sans);font-size:clamp(20px,2.6vw,28px);font-weight:700;color:#7c6fec;letter-spacing:-.02em" id="ov-inscv">฿0</div>
+          <div class="ws-val" style="font-family:var(--f-sans);font-size:clamp(20px,2.6vw,28px);font-weight:700;color:#7c6fec;letter-spacing:-.02em" id="ov-inscv">฿0</div>
           <div style="font-size:11px;color:var(--muted2);margin-top:6px" id="ov-inscv-sub">มูลค่าเวนคืน</div>
         </div>
-        <div style="background:var(--border)"></div>
+        <div class="ws-div"></div>
         <!-- Net Worth -->
         <div style="padding:20px 24px;background:rgba(0,212,160,.04)">
-          <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2);margin-bottom:8px;display:flex;align-items:center;gap:6px">
+          <div class="ws-lbl" style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2);margin-bottom:8px;display:flex;align-items:center;gap:6px">
             <div style="width:8px;height:8px;border-radius:2px;background:var(--white)"></div>Net Worth
           </div>
-          <div style="font-family:var(--f-sans);font-size:clamp(22px,3vw,32px);font-weight:700;color:var(--white);letter-spacing:-.02em" id="ov-networth">฿0</div>
+          <div class="ws-val" style="font-family:var(--f-sans);font-size:clamp(22px,3vw,32px);font-weight:700;color:var(--white);letter-spacing:-.02em" id="ov-networth">฿0</div>
           <div style="font-size:11px;color:var(--muted2);margin-top:6px">Cash − Debt + Portfolio + Ins CV</div>
         </div>
       </div>
@@ -855,6 +893,10 @@ select.month-display{text-align-last:center;outline:none}
           <span style="font-size:10px;color:var(--muted);margin-left:auto" id="ov-3m-compound-note"></span>
         </div>
       </div>
+
+      <!-- v44: Emergency Fund — ความเสี่ยงอันดับ 1 ต่อเป้าล้านแรก -->
+      <div class="sl sl-mt">Emergency fund</div>
+      <div id="ov-ef" style="background:var(--bg3);border:1px solid var(--cb);border-radius:14px;padding:18px 20px;margin-bottom:14px"></div>
 
       <!-- Summary cards -->
       <div class="sl">This month cashflow</div>
@@ -1012,6 +1054,10 @@ select.month-display{text-align-last:center;outline:none}
         </div>
         <div class="bank-grid" id="acc-bank-grid" style="align-content:start"></div>
       </div>
+
+      <!-- v44: Reconciliation — ยอดคำนวณ vs ยอดจริงจากแอปธนาคาร -->
+      <div class="sl sl-mt">Reconciliation</div>
+      <div id="acc-recon" style="margin-bottom:20px"></div>
 
       <!-- Row 2: Year-end balance scorecard -->
       <div class="sl sl-mt">Year-end balance</div>
@@ -1555,6 +1601,7 @@ const EXP_COLORS=['#ff4060','#ff6b35','#ffd166','#06d6a0','#118ab2','#7b61ff','#
 
 // ── State ────────────────────────────────────────────────────────────
 let txRows=[],assets=[],tracker=[],bankBals=[],fxMap={},waccMap={},platMap={},realized=[];
+let reconMap={};   // v44 — ชีต Reconcile: { ชื่อบัญชี: {date, actual, note} }
 let insPolicies=[],insCoverage=[];
 let totalFee=0,availableMonths=[],curMonthIdx=0,cfFilter='all',cfPage=0,pfFilter='all';
 let charts={},flowPeriod='monthly';
@@ -1833,6 +1880,10 @@ function parseFile(file){
         if(wb.Sheets['Market_Data']){
           saveMarketData(XLSX.utils.sheet_to_json(wb.Sheets['Market_Data'],{header:1,raw:true,defval:null}));
         }
+        // v44 — ชีต Reconcile (ไม่มีก็ได้ ระบบทำงานต่อเหมือนเดิม)
+        reconMap = wb.Sheets['Reconcile']
+          ? parseReconcileRows(XLSX.utils.sheet_to_json(wb.Sheets['Reconcile'],{header:1,raw:true,defval:null}))
+          : {};
         if(wb.Sheets['Value_Log']){
           mergeValueLogFromSheet(XLSX.utils.sheet_to_json(wb.Sheets['Value_Log'],{header:1,raw:true,defval:null}));
         }
@@ -1877,6 +1928,16 @@ function parseFile(file){
             }
           }
         }catch(e){console.warn('[FinOS] Asset_Dashboard sheet not found or parse error — skipping fallback',e.message);}
+
+        // ── v44: รวมราคาจาก pipeline + ราคาล่าสุดที่จำไว้ เข้ากับราคาจากชีต ──
+        // ลำดับ: pipeline(สด) > ชีต > pipeline(ค้าง) > ราคาล่าสุดที่รู้
+        // เหตุผลที่ต้องมี: สูตรในชีตขึ้น #N/A เป็นระยะ (หุ้นไทย 6 ตัว + ทอง)
+        // แล้วโค้ดเดิม `curPriceMap[ticker]||0` นับสินทรัพย์นั้นเป็น ฿0 เงียบๆ
+        {
+          const _res = resolvePrices(curPriceMap);
+          Object.assign(curPriceMap, _res.priceMap);
+          window.priceSrc = _res.srcMap;
+        }
 
         // ── Build assets[] from net qty × current price ──
         const assetList=[];
@@ -2224,6 +2285,10 @@ function _renderOverviewRest(){
   const srSub=srEl.parentElement && srEl.parentElement.querySelector('.sc-sub');
   if(srSub) srSub.textContent=rate.undef?'ไม่มีรายรับเดือนนี้':'savings ÷ income';
 
+  /* v44 — เงินสำรองฉุกเฉิน + สรุปสิ่งที่ต้องลงมือ */
+  try{ renderActionNeeded(renderEmergencyFund()); }
+  catch(e){ console.warn('[v44] emergency/action render:', e.message); }
+
   /* P2-1 — sparkbars 12 เดือนบนการ์ด Net cashflow */
   try{
     const netSeries=monthlyNetSeries(12);
@@ -2381,6 +2446,169 @@ function monthlyNetSeries(nMonths){
     return (availableMonths||[]).slice().sort().slice(-(nMonths||12))
       .map(mk => computeSummary(txRows.filter(r=>r.month===mk)).net);
   }catch(e){ return []; }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// v44 — EMERGENCY FUND
+// ══════════════════════════════════════════════════════════════════════
+// เดิมมีแค่ประโยคเตือนใน caption ของหน้า Wealth Engine ซึ่งไม่มีใครเห็น
+// ทำไมต้องเป็น metric ชั้นหนึ่ง: มีหนี้บัตรเครดิต + คริปโตในพอร์ต ถ้าไม่มี
+// สำรอง วันที่รายได้สะดุดต้องขายพอร์ตตอนตลาดแย่ หรือกดบัตรเพิ่ม ซึ่งย้อน
+// ทำลาย compound ทั้งหมด — เป็นความเสี่ยงอันดับ 1 ต่อเป้า ไม่ใช่การเลือกหุ้นผิด
+//
+// นับเฉพาะ "เงินสดที่ใช้ได้จริง" (splitBalances().cash) ไม่รวมพอร์ตและไม่รวม
+// มูลค่าเวนคืนประกัน เพราะสองอย่างนั้นแปลงเป็นเงินไม่ทันตอนฉุกเฉิน
+function computeEmergencyFund(nMonths){
+  const N = nMonths || 6;
+  const months = (availableMonths||[]).slice().sort().slice(-N);
+  if(!months.length) return null;
+
+  // ค่าใช้จ่ายจำเป็นต่อเดือน = Expense + Bills + Debt (หนี้ต้องจ่ายต่อแม้ตกงาน)
+  let totalNeed = 0;
+  months.forEach(mk=>{
+    const sm = computeSummary(txRows.filter(r=>r.month===mk));
+    totalNeed += Math.abs(sm.expense) + Math.abs(sm.debt);
+  });
+  const burn = totalNeed / months.length;
+  if(!(burn > 0)) return null;
+
+  const cash = splitBalances(bankBals).cash;
+  const monthsCovered = cash / burn;
+  const level = monthsCovered >= 6 ? 'ok' : monthsCovered >= 3 ? 'warn' : 'risk';
+  return { burn, cash, monthsCovered, level, basisMonths: months.length,
+           target3: burn*3, target6: burn*6, gap6: Math.max(0, burn*6 - cash) };
+}
+
+function renderEmergencyFund(){
+  const el = document.getElementById('ov-ef');
+  if(!el) return null;
+  const ef = computeEmergencyFund(6);
+  if(!ef){
+    el.innerHTML = '<div style="font-size:12px;color:var(--muted2)">ยังไม่มีข้อมูลรายจ่ายพอคำนวณ</div>';
+    return null;
+  }
+  const COLOR = { ok:'var(--gain)', warn:'var(--debt)', risk:'var(--loss)' };
+  const LABEL = { ok:'ปลอดภัย', warn:'ยังไม่พอ', risk:'เสี่ยงสูง' };
+  const c = COLOR[ef.level];
+  const pct6 = Math.min(100, ef.cash / ef.target6 * 100);
+  const m3 = 50;   // 3 เดือน = ครึ่งทางของเป้า 6 เดือน
+
+  el.style.borderColor = ef.level==='risk' ? 'rgba(255,69,58,.45)' : 'var(--cb)';
+  el.innerHTML = `
+    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div>
+        <div style="font-family:var(--f-sans);font-size:clamp(22px,3vw,30px);font-weight:700;color:${c};letter-spacing:-.02em">
+          ${ef.monthsCovered.toFixed(1)} <span style="font-size:14px;font-weight:500">เดือน</span></div>
+        <div style="font-size:11px;color:var(--muted2);margin-top:4px">
+          เงินสด ${fmt(ef.cash)} ÷ รายจ่ายจำเป็น ${fmt(ef.burn)}/เดือน</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:11px;font-weight:600;color:${c};text-transform:uppercase;letter-spacing:.08em">${LABEL[ef.level]}</div>
+        <div style="font-size:11px;color:var(--muted2);margin-top:4px">
+          ${ef.gap6>0 ? 'ขาดอีก '+fmt(ef.gap6)+' ถึงเป้า 6 เดือน' : 'ครบเป้า 6 เดือนแล้ว'}</div>
+      </div>
+    </div>
+    <div style="position:relative;height:8px;background:var(--bg4);border-radius:99px;margin:14px 0 6px;overflow:hidden">
+      <div style="height:100%;width:${pct6}%;background:${c};border-radius:99px;transition:width .4s"></div>
+      <div style="position:absolute;left:${m3}%;top:-3px;width:2px;height:14px;background:var(--muted2)"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted2)">
+      <span>฿0</span><span style="margin-left:auto;margin-right:auto">3 เดือน ${fmt(ef.target3)}</span><span>6 เดือน ${fmt(ef.target6)}</span>
+    </div>
+    <div style="font-size:11px;color:var(--muted2);margin-top:10px;line-height:1.7">
+      คำนวณจากรายจ่าย+บิล+ภาระหนี้เฉลี่ย ${ef.basisMonths} เดือนล่าสุด · นับเฉพาะเงินสด
+      (ไม่รวมพอร์ตและมูลค่าเวนคืนประกัน เพราะแปลงเป็นเงินไม่ทันตอนฉุกเฉิน)
+      ${ef.level!=='ok' ? '<br><strong style="color:'+c+'">ควรเติมกองนี้ให้ครบก่อนเพิ่มเงินลงทุน</strong> — ขาดทุนจากการถูกบังคับขายตอนตลาดแย่ มักมากกว่าผลตอบแทนที่ได้จากการลงทุนเร็วขึ้น 2-3 เดือน' : ''}
+    </div>`;
+  return ef;
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// v44 — ACTION NEEDED: รวมทุกอย่างที่ต้องลงมือไว้บนสุดของ Overview
+// ══════════════════════════════════════════════════════════════════════
+// เดิม Overview ตอบได้แค่ "รวยขึ้นหรือจนลง" แต่ไม่ตอบ "วันนี้ต้องทำอะไร"
+// และคำเตือนกระจายอยู่คนละหน้า (ราคาขาดอยู่หน้า Holdings เท่านั้น)
+function renderActionNeeded(ef){
+  const el = document.getElementById('ov-action');
+  if(!el) return;
+  const items = [];
+
+  // ① ราคาสินทรัพย์
+  const srcs = window.priceSrc || {};
+  const held = (assets||[]).filter(a=>a.qty>1e-8);
+  const missing  = held.filter(a=>!(a.val>0));
+  const degraded = held.filter(a=>['cached','stale'].includes(srcs[a.ticker]));
+  if(missing.length) items.push({lv:'alert',
+    t:`ราคาหาไม่เจอ ${missing.length} ตัว — มูลค่าถูกนับเป็น ฿0`,
+    d:`${missing.slice(0,6).map(a=>a.ticker).join(', ')} · แก้ที่ Asset_Live_Price_Feed หรือรอ pipeline รอบถัดไป`,
+    go:'portfolio'});
+  else if(degraded.length) items.push({lv:'warn',
+    t:`ใช้ราคาล่าสุดที่จำไว้ ${degraded.length} ตัว`,
+    d:`${degraded.slice(0,6).map(a=>a.ticker).join(', ')} · pipeline ยังไม่ส่งราคาสด — ตัวเลขใช้ได้แต่ไม่ใช่ราคาวันนี้`,
+    go:'portfolio'});
+
+  // ② เงินสำรองฉุกเฉิน
+  if(ef && ef.level!=='ok') items.push({lv: ef.level==='risk'?'alert':'warn',
+    t:`เงินสำรองฉุกเฉิน ${ef.monthsCovered.toFixed(1)} เดือน (เป้า 6)`,
+    d:`ขาดอีก ${fmt(ef.gap6)} — ควรเติมก่อนเพิ่มเงินลงทุน`});
+
+  // ③ ดอกเบี้ยหนี้ที่ยังไม่กรอก → แผนปลดหนี้เป็นแค่การเดา
+  try{
+    const cfg = getDebtCfg();
+    const liab = splitBalances(bankBals).liabAccounts.filter(b=>b.balance<0);
+    const noApr = liab.filter(b=>!(cfg.apr && cfg.apr[b.name]>0));
+    if(noApr.length) items.push({lv:'warn',
+      t:`ยังไม่ได้ใส่ดอกเบี้ย ${noApr.length} บัญชี`,
+      d:`${noApr.map(b=>b.name).join(', ')} · ไม่มี APR = แผนปลดหนี้และการเทียบ "จ่ายหนี้ vs ลงทุน" คำนวณไม่ได้`,
+      go:'debt'});
+  }catch(e){}
+
+  // ④ reconciliation — ยอดบัญชียัง verify ไม่ได้
+  try{
+    const rc = computeReconciliation(bankBals, reconMap);
+    if(!rc.checkedCount) items.push({lv:'warn',
+      t:'ยอดบัญชียังไม่เคย verify กับธนาคาร',
+      d:`${rc.totalCount} บัญชี · ยอดที่เห็นคือผลรวมธุรกรรมที่กรอกมือ 12,000+ แถว — สร้างชีต Reconcile เพื่อจับรายการตกหล่น`,
+      go:'accounts'});
+    else if(rc.unmatched) items.push({lv:'alert',
+      t:`ยอดไม่ตรง ${rc.unmatched} บัญชี — ต่างรวม ${fmt(rc.totalDrift)}`,
+      d:'มีธุรกรรมตกหล่นหรือกรอกเกิน — แก้ที่ชีต Transaction',
+      go:'accounts'});
+    else if(rc.stale) items.push({lv:'warn',
+      t:`ยัง reconcile ไม่ครบรอบ (${rc.ageDays} วันก่อน)`,
+      d:'แนะนำสัปดาห์ละครั้ง — ยิ่งทิ้งนาน ยิ่งหาต้นตอของผลต่างยาก',
+      go:'accounts'});
+  }catch(e){}
+
+  // ⑤ อายุข้อมูล pipeline
+  try{
+    const a = marketDataAge();
+    if(a && a.level!=='fresh') items.push({lv: a.level==='dead'?'alert':'warn',
+      t:`ข้อมูลตลาด ${a.label}`,
+      d:'pipeline ควรรัน 2 ครั้ง/วัน — ตรวจ GitHub Actions ว่า workflow ยังทำงานอยู่'});
+  }catch(e){}
+
+  if(!items.length){ el.style.display='none'; el.innerHTML=''; return; }
+
+  const C = { alert:{b:'rgba(255,69,58,.4)',g:'rgba(255,69,58,.07)',c:'var(--loss)',i:'●'},
+              warn: {b:'rgba(255,149,0,.4)', g:'rgba(255,149,0,.07)', c:'var(--debt)',i:'▲'} };
+  const worst = items.some(i=>i.lv==='alert') ? 'alert' : 'warn';
+  el.style.display='block';
+  el.innerHTML = `
+    <div style="background:${C[worst].g};border:1px solid ${C[worst].b};border-radius:12px;padding:14px 16px">
+      <div style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:${C[worst].c};margin-bottom:10px">
+        ⚡ ต้องลงมือ · ${items.length} เรื่อง</div>
+      ${items.map(it=>`
+        <div ${it.go?`onclick="switchPage('${it.go}')" style="cursor:pointer"`:''}
+             style="display:flex;gap:9px;padding:7px 0;border-top:1px solid var(--border);align-items:flex-start">
+          <span style="color:${C[it.lv].c};font-size:9px;line-height:1.7;flex-shrink:0">${C[it.lv].i}</span>
+          <div style="min-width:0">
+            <div style="font-size:12px;font-weight:600;color:var(--text)">${escHtml(it.t)}</div>
+            ${it.d?`<div style="font-size:11px;color:var(--muted2);margin-top:2px;line-height:1.6">${escHtml(it.d)}</div>`:''}
+          </div>
+          ${it.go?'<span style="margin-left:auto;color:var(--muted2);font-size:13px;flex-shrink:0">›</span>':''}
+        </div>`).join('')}
+    </div>`;
 }
 
 function computeSummary(rows){
@@ -2565,9 +2793,90 @@ function renderYearlySelected(yr){
 }
 
 // ── Accounts ──────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════
+// v44 — RECONCILIATION CARD
+// ══════════════════════════════════════════════════════════════════════
+// อ่านชีต `Reconcile` แล้วเทียบกับยอดที่คำนวณจากธุรกรรม
+// เจตนาของการออกแบบ: ไม่มีช่องกรอกใน dashboard — ให้กรอกในชีตเหมือนธุรกรรมอื่น
+// เพราะประวัติการ verify ควรอยู่ที่เดียวกับ source of truth ไม่ใช่ใน localStorage
+// ที่หายเวลาเปลี่ยนเครื่อง (และการจดในชีตคือส่วนที่หายไปจากวินัย: มี input แล้ว
+// ยังไม่มี verify)
+function renderReconciliation(){
+  const el = document.getElementById('acc-recon');
+  if(!el) return null;
+
+  const r = computeReconciliation(bankBals, reconMap);
+
+  // ยังไม่มีชีต Reconcile เลย → สอนวิธีตั้ง ไม่ใช่ปล่อยว่าง
+  if(!r.checkedCount){
+    el.innerHTML = `<div style="background:var(--bg3);border:1px dashed var(--border2);border-radius:12px;padding:16px 18px;font-size:12px;line-height:1.9;color:var(--muted)">
+      <div style="font-weight:600;color:var(--text);margin-bottom:6px">ยังไม่ได้ตั้งค่า Reconciliation</div>
+      ยอดบัญชีที่เห็นทั้งหมดคือ<strong>ผลรวมของธุรกรรมที่กรอกมือ</strong> ไม่ใช่ยอดจริง
+      — ยังไม่มีอะไรจับได้ถ้ามีรายการตกหล่น<br>
+      <div style="margin-top:8px;color:var(--muted2);font-size:11px">
+        สร้างชีตชื่อ <strong style="color:var(--text)">Reconcile</strong> แล้วใส่หัวคอลัมน์:
+        <code style="background:var(--bg4);padding:2px 6px;border-radius:4px;color:var(--savings)">Date · Account · Actual_Balance · Note</code><br>
+        แล้วสัปดาห์ละครั้ง เปิดแอปธนาคารจดยอดจริงลงไปหนึ่งแถวต่อบัญชี
+        (ชื่อใน <em>Account</em> ต้องตรงกับหัวคอลัมน์บัญชีในชีต Transaction)</div>
+    </div>`;
+    return r;
+  }
+
+  const C = r.clean ? 'var(--gain)' : 'var(--loss)';
+  const ageTxt = r.ageDays == null ? 'ไม่ทราบวันที่'
+    : r.ageDays === 0 ? 'วันนี้' : r.ageDays === 1 ? 'เมื่อวาน' : r.ageDays+' วันก่อน';
+
+  const rows = r.accounts.map(a=>{
+    if(!a.checked) return `<tr style="opacity:.5">
+      <td style="padding:7px 10px">${escHtml(a.name)}</td>
+      <td class="nr" style="padding:7px 10px">${fmt(a.computed)}</td>
+      <td class="nr" style="padding:7px 10px;color:var(--muted2)">—</td>
+      <td class="nr" style="padding:7px 10px;font-size:11px;color:var(--muted2)">ยังไม่เช็ค</td></tr>`;
+    const dc = a.ok ? 'var(--muted2)' : (a.diff>0 ? 'var(--gain)' : 'var(--loss)');
+    return `<tr>
+      <td style="padding:7px 10px">${escHtml(a.name)}
+        ${a.note?`<div style="font-size:10px;color:var(--muted2)">${escHtml(a.note)}</div>`:''}</td>
+      <td class="nr" style="padding:7px 10px">${fmt(a.computed)}</td>
+      <td class="nr" style="padding:7px 10px">${fmt(a.actual)}</td>
+      <td class="nr" style="padding:7px 10px;color:${dc};font-weight:${a.ok?'400':'600'}">
+        ${a.ok?'✓':fmtSign(a.diff)}</td></tr>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div style="background:var(--bg3);border:1px solid ${r.clean?'var(--cb)':'rgba(255,69,58,.35)'};border-radius:12px;overflow:hidden">
+      <div style="padding:14px 18px;display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;border-bottom:1px solid var(--border)">
+        <div>
+          <div style="font-family:var(--f-sans);font-size:20px;font-weight:700;color:${C}">
+            ${r.clean ? 'ตรงทุกบัญชี' : 'ต่าง '+fmt(r.totalDrift)}</div>
+          <div style="font-size:11px;color:var(--muted2);margin-top:3px">
+            เช็คแล้ว ${r.checkedCount}/${r.totalCount} บัญชี · verify ล่าสุด ${ageTxt}</div>
+        </div>
+        ${r.stale?`<div style="margin-left:auto;font-size:11px;color:var(--debt);text-align:right">
+          ⏰ ถึงเวลา reconcile รอบใหม่<br>
+          <span style="color:var(--muted2)">แนะนำสัปดาห์ละครั้ง</span></div>`:''}
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted2)">
+          <th style="text-align:left;padding:8px 10px;font-weight:600">บัญชี</th>
+          <th style="text-align:right;padding:8px 10px;font-weight:600">คำนวณได้</th>
+          <th style="text-align:right;padding:8px 10px;font-weight:600">ยอดจริง</th>
+          <th style="text-align:right;padding:8px 10px;font-weight:600">ต่าง</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      ${!r.clean?`<div style="padding:12px 18px;border-top:1px solid var(--border);font-size:11px;color:var(--muted2);line-height:1.8">
+        <strong style="color:var(--text)">ผลต่างเป็นบวก</strong> = มีเงินจริงมากกว่าที่บันทึก (ลืมกรอกรายรับ หรือกรอกรายจ่ายเกิน) ·
+        <strong style="color:var(--text)">เป็นลบ</strong> = เงินจริงน้อยกว่า (ลืมกรอกรายจ่าย ค่าธรรมเนียม หรือดอกเบี้ยที่ธนาคารหักเอง)<br>
+        แก้โดยเพิ่มธุรกรรมที่ตกหล่นในชีต Transaction — ไม่ใช่แก้ยอดในชีต Reconcile
+        เพราะ Reconcile คือบันทึกความจริงจากธนาคาร ไม่ใช่ตัวปรับให้เลขสวย</div>`:''}
+    </div>`;
+  return r;
+}
+
 function renderAccounts(){
   const total=bankBals.reduce((s,b)=>s+b.balance,0);
   document.getElementById('acc-total').textContent=fmt(total);
+  try{ renderReconciliation(); }catch(e){ console.warn('[v44] recon:', e.message); }
   const active=bankBals.filter(b=>b.balance!==0);
   // Assign accent color + badge style by account type
   const BANK_ACCENT={
@@ -2895,15 +3204,74 @@ function buildPerfFlows(){
   return {flows, byTk};
 }
 // TWR: ต้องมีมูลค่าพอร์ตย้อนหลัง — เริ่มเก็บ snapshot รายวันตั้งแต่วันนี้
+// ══════════════════════════════════════════════════════════════════════
+// v44 — logValueSnapshot: ห้ามบันทึกวันที่ข้อมูลไม่ครบ
+// ══════════════════════════════════════════════════════════════════════
+// บั๊กเดิม: ฟังก์ชันนี้เขียนค่าลงทุกครั้งที่โหลดหน้า โดยไม่เช็คว่าราคาครบไหม
+// ทั้งที่ findUnpricedAssets() อยู่ในไฟล์เดียวกันแล้ว ผลคือ Value_Log จริง
+// แกว่ง ±14% วันเว้นวันตลอด 26 วัน (267k ↔ 311k) เพราะวันที่หุ้นไทย 6 ตัว
+// + ทองขึ้น #N/A มูลค่าถูกนับเป็น ฿0 → TWR / benchmark XIRR ใช้ไม่ได้เลย
+//
+// กฎใหม่:
+//   ราคาขาดแม้ตัวเดียว        → ไม่บันทึก (ข้อมูลผิดแย่กว่าไม่มีข้อมูล)
+//   ราคาครบแต่บางตัวไม่สด     → บันทึกพร้อมธง partial ให้กราฟวาดเป็นเส้นประ
 function logValueSnapshot(totalVal){
   try{
+    if(!(totalVal > 0)) return JSON.parse(localStorage.getItem('finOS_valueLog')||'[]');
+
+    const missing = (typeof findUnpricedAssets==='function') ? findUnpricedAssets() : [];
+    if(missing.length){
+      console.warn('[valueLog] ข้ามการบันทึก — ราคาขาด '+missing.length+' ตัว: '
+                   + missing.map(a=>a.ticker).join(', '));
+      return JSON.parse(localStorage.getItem('finOS_valueLog')||'[]');
+    }
+
+    // ราคาครบ แต่มาจาก cache/ราคาค้างหรือไม่ → ติดธงไว้ ไม่ซ่อน
+    const srcs = window.priceSrc || {};
+    const degraded = (typeof assets!=='undefined' ? assets : [])
+      .filter(a=>a.qty>1e-8 && ['cached','stale'].includes(srcs[a.ticker]))
+      .map(a=>a.ticker);
+
     const log = JSON.parse(localStorage.getItem('finOS_valueLog')||'[]');
     const today = new Date().toISOString().slice(0,10);
+    const entry = {d:today, v:totalVal};
+    if(degraded.length){ entry.partial = true; entry.degraded = degraded.length; }
+
     const i = log.findIndex(e=>e.d===today);
-    if(i>=0) log[i].v = totalVal; else log.push({d:today, v:totalVal});
+    if(i>=0) log[i] = entry; else log.push(entry);
     localStorage.setItem('finOS_valueLog', JSON.stringify(log.slice(-730)));
     return log;
   }catch(e){ return []; }
+}
+
+// ══ v44 — ล้าง snapshot ที่เพี้ยนออกจากประวัติ (ทำครั้งเดียว) ══
+// snapshot 26 แถวเดิมกู้ไม่ได้: ต่างกัน ~฿43,000 วันเว้นวัน ไม่มีทางรู้ว่าวันไหนถูก
+// ตรวจจับด้วยการหา jump ที่ใหญ่เกินกว่าตลาดจะทำได้ในวันเดียวโดยไม่มีเงินเข้า-ออก
+const VLOG_PURGED_KEY = 'finOS_valueLogPurged_v44';
+function purgeCorruptValueLog(){
+  if(localStorage.getItem(VLOG_PURGED_KEY)==='1') return null;
+  try{
+    const log = JSON.parse(localStorage.getItem('finOS_valueLog')||'[]')
+                .filter(e=>e && e.d && e.v>0)
+                .sort((a,b)=>a.d.localeCompare(b.d));
+    if(log.length < 2){ localStorage.setItem(VLOG_PURGED_KEY,'1'); return null; }
+
+    // ถ้ามี jump >8% ในวันติดกันเกิน 2 ครั้ง = สัญญาณว่า log ชุดนี้ปนข้อมูลขาดราคา
+    let jumps = 0;
+    for(let i=1;i<log.length;i++){
+      const d0=new Date(log[i-1].d), d1=new Date(log[i].d);
+      const gap=(d1-d0)/864e5;
+      if(gap<=2 && Math.abs(log[i].v/log[i-1].v - 1) > 0.08) jumps++;
+    }
+    localStorage.setItem(VLOG_PURGED_KEY,'1');
+    if(jumps > 2){
+      localStorage.setItem('finOS_valueLog','[]');
+      console.warn('[valueLog] ล้างประวัติ '+log.length+' แถว — พบ jump ผิดปกติ '
+                   +jumps+' ครั้ง (ราคาขาดเป็นระยะ) เริ่มเก็บใหม่จากวันนี้');
+      return {purged:log.length, jumps};
+    }
+    return null;
+  }catch(e){ return null; }
 }
 function computeTWR(log, flows){
   if(!log || log.length<2) return null;
@@ -2994,6 +3362,7 @@ function renderPerformance(totalVal){
     }
   }
 
+  purgeCorruptValueLog();          // v44: ล้างประวัติเสียก่อน (ทำครั้งเดียว)
   const log = logValueSnapshot(totalVal);
   const twr = computeTWR(log, flows);
   const tEl=document.getElementById('perf-twr'), tsEl=document.getElementById('perf-twr-sub');
@@ -3650,7 +4019,7 @@ async function gsSync(){
     console.log('[GS] Required:', Object.keys(map));
 
     // Optional sheets (skip if missing)
-    const OPT = ['Asset_Dashboard','Insurance_Policies','Insurance_Coverage','Market_Data','Value_Log'];
+    const OPT = ['Asset_Dashboard','Insurance_Policies','Insurance_Coverage','Market_Data','Value_Log','Reconcile'];
     for(const s of OPT){
       try{
         // Value_Log เป็น time series วันละแถว — 500 แถว = ~1.4 ปีเท่านั้น
@@ -3666,6 +4035,7 @@ async function gsSync(){
     gsProcessData(map);
     saveMarketData(map['Market_Data']);
     mergeValueLogFromSheet(map['Value_Log']);   // ประวัติมูลค่าพอร์ตรายวัน → TWR ไม่มีวันโหว่
+    reconMap = parseReconcileRows(map['Reconcile']);   // v44 — ยอดจริงจากแอปธนาคาร
     gsLastSync=new Date();
     gsConnected=true;
     gsSetStatus('✓ Sync '+gsLastSync.toLocaleTimeString(LOC),'ok');
@@ -3878,7 +4248,10 @@ function gsParseAssetTracker(rows){
   totalFee=trackerRows2.filter(r=>['Buy','Split'].includes(r.txType)).reduce((s,r)=>s+r.commTHB,0);
   // Realized P&L — running-WACC ต่อ ticker (กัน look-ahead bias) — ดู shared.js
   realized=computeRunningWaccRealized(trackerRows2, IS_COST, TX_SELL);
-  const cpMap=window._gsCurPriceMap||{};
+  // v44: เส้นทาง Sync ต้องผ่าน resolvePrices เหมือนเส้นทางอัปโหลดไฟล์
+  // (เดิมสองเส้นทางนี้แยกกัน ทำให้แก้ที่เดียวแล้วอีกทางยังพังอยู่)
+  const cpMap=(()=>{ const _r=resolvePrices(window._gsCurPriceMap||{});
+                     window.priceSrc=_r.srcMap; return _r.priceMap; })();
   const processedTickers=new Set(trackerRows2.map(r=>r.ticker));
   const assetList=[];
   for(const ticker of processedTickers){

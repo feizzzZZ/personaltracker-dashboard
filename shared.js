@@ -16,7 +16,7 @@ window.LOC = window.LOC || 'th-TH-u-ca-gregory';
 //   • XIRR engine
 // กติกา: ไฟล์นี้ห้ามแตะ DOM ของหน้าใดหน้าหนึ่ง — pure data layer เท่านั้น
 // ═══════════════════════════════════════════════════════════════════
-const APP_BUILD = 'v43';
+const APP_BUILD = 'v44';
 console.log('[Finance OS shared] build', APP_BUILD);
 
 // ═══ LIVE_META — นิยามการ์ดข้อมูลตลาด ═══
@@ -161,6 +161,199 @@ function paintFreshnessDot(dotEl, textEl){
   dotEl.title = 'ข้อมูล pipeline: ' + a.generatedAt.toLocaleString(LOC) + b;
   if(textEl && a.level !== 'fresh') textEl.title = dotEl.title;
   return a;
+}
+
+// ═══ v44 — HOLDING PRICES จาก pipeline (ช่องทางใหม่ แทนสูตรในชีต) ═══
+// ปัญหาเดิม: ราคาพอร์ตมาจาก Asset_Live_Price_Feed ทางเดียว พอ IMPORTXML ขึ้น
+// #N/A (หุ้นไทย 6 ตัว + Gold) → index.html นับสินทรัพย์นั้นเป็น ฿0 เงียบๆ
+//
+// สำคัญ: pipeline คืนราคาในสกุลที่ *ชีตบันทึกไว้* (ccy) ไม่ใช่สกุลตลาด
+//   THB → ใช้ตรงๆ  |  USD → คูณ USDTHB
+//
+// staleness: Yahoo มีเคส "fetch สำเร็จแต่ข้อมูลค้าง" (พบจริงกับ ^SET.BK ที่
+// updated ค้าง 26 วันโดยไม่ error) ซึ่งอันตรายกว่า error เพราะเงียบ
+// จึงต้องเช็คอายุจาก `updated` (วันของราคา) ไม่ใช่ `generated_at` (เวลาที่รัน)
+const PRICE_STALE_DAYS = 4;    // > นี้ = ติดธง stale แต่ยังใช้ได้
+const PRICE_MAX_DAYS   = 12;   // > นี้ = ทิ้ง ไม่เอามาใช้เลย
+
+// คืน { TICKER: {p, ccy, updated, ageDays, stale, src} } — p เป็น THB แล้ว
+// หมายเหตุ: mdNum(key) รับ argument เดียวและเรียก loadMarketData() เอง
+// (ห้ามส่ง md เข้าไปเป็นตัวแรก — จะกลายเป็น md.data[object] = undefined เงียบๆ)
+function pipelinePricesTHB(staleDays){
+  const act = loadActions();
+  const src = act && act.prices;
+  if(!src || typeof src !== 'object') return {};
+
+  const fx = mdNum('USDTHB');
+  const out = {};
+  const today = Date.now();
+
+  Object.entries(src).forEach(([tk, o])=>{
+    if(!o || !(Number(o.price) > 0)) return;
+    const ccy = o.ccy === 'THB' ? 'THB' : 'USD';
+    // ไม่มี FX = แปลง USD ไม่ได้ → ข้ามเฉพาะตัว USD ตัว THB ยังใช้ได้
+    if(ccy === 'USD' && !(fx > 0)) return;
+
+    const t = o.updated ? Date.parse(o.updated + 'T00:00:00Z') : NaN;
+    if(!isFinite(t)) return;                       // ไม่รู้วัน = ไม่กล้าใช้
+    const ageDays = (today - t) / 864e5;
+    if(ageDays > PRICE_MAX_DAYS) return;           // เก่าเกินไป ทิ้ง
+
+    out[tk] = {
+      p: ccy === 'THB' ? Number(o.price) : Number(o.price) * fx,
+      ccy, updated: o.updated,
+      ageDays: Math.max(0, Math.round(ageDays)),
+      stale: ageDays > (staleDays || PRICE_STALE_DAYS),
+      src: o.src || 'pipeline',
+    };
+  });
+  return out;
+}
+
+// ═══ v44 — LAST KNOWN PRICE: กันพอร์ตกระตุกเวลาไม่มีราคา ═══
+// เดิมราคาหาไม่เจอ = นับเป็น ฿0 ทำให้ Value_Log แกว่ง ±14% วันเว้นวัน
+// (ต่างกัน ~฿43,000 คือหุ้นไทย 6 ตัว + ทอง ที่หลุดสลับกันไปมา)
+// การใช้ราคาล่าสุดที่รู้จึงถูกกว่าเสมอ — ฿0 ไม่ใช่ประมาณการที่ดี มันคือคำโกหก
+const LKP_KEY = 'finOS_lastPrice';
+function loadLastKnownPrices(){
+  try{ return JSON.parse(localStorage.getItem(LKP_KEY)||'{}') || {}; }catch(e){ return {}; }
+}
+function saveLastKnownPrices(map){
+  try{ localStorage.setItem(LKP_KEY, JSON.stringify(map)); }catch(e){}
+}
+
+// รวมทุกแหล่งเป็นแผนที่ราคาเดียว + บอกที่มาของทุก ticker
+//   pipeline (สด) > ชีต > pipeline (stale) > ราคาล่าสุดที่จำไว้
+// คืน { priceMap, srcMap }  โดย srcMap[tk] ∈ pipeline|sheet|stale|cached
+function resolvePrices(sheetPriceMap){
+  const priceMap = Object.assign({}, sheetPriceMap || {});
+  const srcMap   = {};
+  Object.keys(priceMap).forEach(t=>{ if(priceMap[t] > 0) srcMap[t] = 'sheet'; });
+
+  const pp = pipelinePricesTHB();
+  Object.entries(pp).forEach(([tk, o])=>{
+    // ราคา stale ใช้เฉพาะเมื่อชีตไม่มีให้ — ชีตที่มีค่าจริงยังน่าเชื่อกว่าราคาค้าง
+    if(o.stale && priceMap[tk] > 0) return;
+    priceMap[tk] = o.p;
+    srcMap[tk]   = o.stale ? 'stale' : 'pipeline';
+  });
+
+  const lkp = loadLastKnownPrices();
+  Object.keys(lkp).forEach(tk=>{
+    if(!(priceMap[tk] > 0) && lkp[tk] && lkp[tk].p > 0){
+      priceMap[tk] = lkp[tk].p;
+      srcMap[tk]   = 'cached';
+    }
+  });
+
+  // จำราคาที่ "รู้จริง" รอบนี้ไว้ใช้คราวหน้า — ไม่จำค่าที่มาจาก cache เอง
+  const today = new Date().toISOString().slice(0,10);
+  Object.entries(priceMap).forEach(([tk, p])=>{
+    if(p > 0 && srcMap[tk] !== 'cached') lkp[tk] = { p, d: today, src: srcMap[tk] };
+  });
+  saveLastKnownPrices(lkp);
+
+  return { priceMap, srcMap };
+}
+
+// สรุปคุณภาพราคาให้ UI ใช้ — ไม่ต้องคำนวณซ้ำหลายที่
+function priceQuality(srcMap, tickersHeld){
+  const q = { pipeline:0, sheet:0, stale:0, cached:0, missing:[] };
+  (tickersHeld||[]).forEach(tk=>{
+    const s = srcMap[tk];
+    if(s) q[s]++; else q.missing.push(tk);
+  });
+  q.degraded = q.stale + q.cached;      // ใช้ได้ แต่ไม่ใช่ราคาสด
+  q.trustworthy = q.missing.length === 0;
+  return q;
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// v44 — RECONCILIATION  (ชีต `Reconcile`)
+// ══════════════════════════════════════════════════════════════════════
+// ทำไมต้องมี: ยอดบัญชีใน dashboard คือ "ผลรวมของธุรกรรมที่กรอกมือ 12,337 แถว"
+// ไม่ใช่ยอดจริง ระบบกรอกมือจะ drift แน่นอน (ลืมกรอก / กรอกซ้ำ / คอลัมน์ผิด /
+// ดอกเบี้ย-ค่าธรรมเนียมที่ธนาคารหักเอง) แล้วไม่มีอะไรจับได้เลย
+// พอผ่านไป 6 เดือน จะไม่รู้ว่า ฿3,568 ที่เห็นคือความจริงหรือ error สะสม
+// และ Net Worth / Emergency fund / เป้าล้านแรก ยืนอยู่บนเลขนั้นทั้งหมด
+//
+// โครงชีต `Reconcile` (แถว 1 = header ภาษาอังกฤษ):
+//   Date | Account | Actual_Balance | Note
+//   2026-08-12 | SCB Bank      | 1155.75  | ตรง
+//   2026-08-12 | Kasikorn Bank | 3980.00  | ลืมกรอกค่าน้ำ
+//   ‣ Account ต้องสะกดตรงกับหัวคอลัมน์บัญชีในชีต Transaction แถว 2
+//   ‣ กรอกทับได้เรื่อยๆ — ระบบใช้ "แถวล่าสุดต่อบัญชี" เท่านั้น
+const RECON_STALE_DAYS = 10;   // เกินนี้ = เตือนว่าถึงเวลา reconcile
+
+// แปลงแถวดิบจากชีตเป็น { account: {date, actual, note} } เอาแถวล่าสุดต่อบัญชี
+// รับ rows แบบ array-of-array (header อยู่แถว 0) เหมือน sheet_to_json({header:1})
+function parseReconcileRows(rows){
+  if(!rows || !rows.length) return {};
+  const H = (rows[0]||[]).map(h=>h==null?'':String(h).trim());
+  const idx = n => H.findIndex(h=>h.toLowerCase()===n);
+  const iD = idx('date'), iA = idx('account'),
+        iB = H.findIndex(h=>/^actual_?balance$/i.test(h)), iN = idx('note');
+  if(iA < 0 || iB < 0) return {};
+
+  const out = {};
+  for(let i=1;i<rows.length;i++){
+    const r = rows[i]; if(!r) continue;
+    const acc = r[iA]==null ? '' : String(r[iA]).trim();
+    if(!acc) continue;
+    const bal = parseFloat(r[iB]);
+    if(!isFinite(bal)) continue;                 // ช่องว่าง/#N/A → ข้าม
+
+    // วันที่: รับทั้ง Date, ISO string และ Google serial number
+    let d = '';
+    const raw = r[iD];
+    if(raw instanceof Date) d = raw.toISOString().slice(0,10);
+    // gserialToISO คืน ISO เต็ม ('2026-07-31T00:00:00.000Z') ต้องตัดเหลือ 10 ตัว
+    // ไม่งั้นการเทียบ d >= prev.date จะข้ามฟอร์แมตกัน ('2026-07-31T…' vs '2026-08-01')
+    else if(typeof raw === 'number' && raw > 20000) d = (gserialToISO(raw)||'').slice(0,10);
+    else if(raw) d = String(raw).trim().slice(0,10);
+
+    const prev = out[acc];
+    if(!prev || (d && d >= prev.date)) out[acc] = { date:d, actual:bal,
+      note: iN>=0 && r[iN] ? String(r[iN]).trim() : '' };
+  }
+  return out;
+}
+
+// เทียบยอดคำนวณ vs ยอดจริง → คืนรายการที่ต่างกัน + สถานะรวม
+// tolerance: ต่างไม่เกิน 1 บาท = ถือว่าตรง (ปัดเศษ/ดอกเบี้ยเล็กน้อย)
+function computeReconciliation(bals, reconMap, tolerance){
+  const tol = tolerance == null ? 1 : tolerance;
+  const map = reconMap || {};
+  const accounts = [];
+  let worstDate = null, unmatched = 0, totalDrift = 0;
+
+  (bals||[]).forEach(b=>{
+    const rec = map[b.name];
+    if(!rec){ accounts.push({name:b.name, computed:b.balance, checked:false}); return; }
+    const diff = rec.actual - b.balance;          // + = มีเงินมากกว่าที่บันทึก
+    const ok = Math.abs(diff) <= tol;
+    if(!ok){ unmatched++; totalDrift += Math.abs(diff); }
+    if(rec.date && (!worstDate || rec.date < worstDate)) worstDate = rec.date;
+    accounts.push({name:b.name, computed:b.balance, actual:rec.actual,
+                   diff, ok, checked:true, date:rec.date, note:rec.note});
+  });
+
+  const checked = accounts.filter(a=>a.checked);
+  // อายุ = วันที่ reconcile "เก่าสุด" ในบรรดาบัญชีที่เคยเช็ค — ไม่ใช่ล่าสุด
+  // เพราะเช็คแค่บัญชีเดียวเมื่อวานไม่ได้แปลว่าทั้งพอร์ตถูก verify แล้ว
+  const ageDays = worstDate
+    ? Math.floor((Date.now() - Date.parse(worstDate+'T00:00:00Z'))/864e5) : null;
+
+  return {
+    accounts,
+    checkedCount: checked.length,
+    totalCount: accounts.length,
+    neverChecked: accounts.filter(a=>!a.checked).map(a=>a.name),
+    unmatched, totalDrift,
+    oldestDate: worstDate, ageDays,
+    stale: ageDays == null || ageDays > RECON_STALE_DAYS,
+    clean: checked.length > 0 && unmatched === 0,
+  };
 }
 
 // ═══ Method 2 — external API layer (alternative.me + CoinGecko) ═══
