@@ -1,7 +1,23 @@
 // Finance OS — Service Worker v2
 // Cache strategy: Cache-first for shell, Network-first for CDN
 
-const CACHE_NAME = 'finance-os-v44';  // bump version so old cache is cleared on deploy
+// ══════════════════════════════════════════════════════════════════════
+// v45 — bug ที่ทำให้ Sync ล้มและหน้า Debt โชว์ ฿0
+// ══════════════════════════════════════════════════════════════════════
+// อาการ: index.html เวอร์ชันใหม่ + shared.js เวอร์ชันเก่า ทำงานคู่กัน
+//   → resolvePrices / parseReconcileRows is not defined  (Sync ล้ม)
+//   → r.intBal เป็น undefined → fmt(NaN) = ฿0  (ดอกเบี้ยไม่ขยับเวลาแก้ APR)
+//
+// ต้นเหตุ: `.html`/`.json` เป็น network-first (เห็นของใหม่ทันที) แต่ `.js`
+// ตกไปเข้า cache-first ด้านล่าง ถ้า CACHE_NAME ไม่เปลี่ยน shared.js เก่า
+// จะถูกเสิร์ฟจาก cache ตลอดไป — และมันเงียบ ไม่มี error ตอนโหลด
+//
+// แก้ 2 ชั้น:
+//   1. bump CACHE_NAME (แก้เฉพาะหน้า)
+//   2. ย้าย shared.js ไป network-first เหมือน HTML (แก้ถาวร)
+//      เหตุผล: shared.js คือ data layer ที่ index.html เรียกใช้โดยตรง
+//      สองไฟล์นี้ต้องมาจาก deploy เดียวกันเสมอ ไม่มีข้อยกเว้น
+const CACHE_NAME = 'finance-os-v45';  // bump version so old cache is cleared on deploy
 const BASE = '/personaltracker-dashboard';
 
 // App shell — files to pre-cache on install
@@ -87,7 +103,8 @@ self.addEventListener('fetch', event => {
   // (cache ใช้เฉพาะตอน offline) แก้ปัญหา "hard reload ทุกครั้งหลัง deploy" ถาวร
   const cleanUrl = url.split('?')[0];
   const isHTML = event.request.mode === 'navigate' || cleanUrl.endsWith('.html')
-              || cleanUrl.endsWith('.json');   // market-data.json เปลี่ยนทุกวัน — ห้ามติด cache
+              || cleanUrl.endsWith('.json')    // market-data.json เปลี่ยนทุกวัน — ห้ามติด cache
+              || cleanUrl.endsWith('.js');     // v45: shared.js ต้องเวอร์ชันเดียวกับ index.html เสมอ
   if (isHTML && (url.includes(BASE) || url.includes(self.location.origin))) {
     const isJSON = cleanUrl.endsWith('.json');
     event.respondWith(

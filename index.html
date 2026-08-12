@@ -3248,6 +3248,60 @@ function logValueSnapshot(totalVal){
 // snapshot 26 แถวเดิมกู้ไม่ได้: ต่างกัน ~฿43,000 วันเว้นวัน ไม่มีทางรู้ว่าวันไหนถูก
 // ตรวจจับด้วยการหา jump ที่ใหญ่เกินกว่าตลาดจะทำได้ในวันเดียวโดยไม่มีเงินเข้า-ออก
 const VLOG_PURGED_KEY = 'finOS_valueLogPurged_v44';
+// ══════════════════════════════════════════════════════════════════════
+// v45 — VERSION GUARD: จับกรณี shared.js คนละเวอร์ชันกับ index.html
+// ══════════════════════════════════════════════════════════════════════
+// เหตุการณ์จริง: service worker cache-first เสิร์ฟ shared.js เก่าไว้
+// index.html ใหม่เรียกฟังก์ชันที่ยังไม่มีในตัวเก่า ผลคือ
+//   • Sync ล้มด้วย "resolvePrices is not defined"
+//   • หน้า Debt โชว์ ฿0 เพราะ r.intBal undefined → fmt(NaN) → นิ่งเงียบ
+// อาการที่สองแย่กว่า เพราะไม่มี error ให้เห็น — เห็นแค่ตัวเลขผิด
+//
+// กฎ: ตรวจตอนโหลด ถ้าไม่ตรง บอกให้ชัด + ล้าง cache ให้เลย ไม่ต้องรอผู้ใช้เดา
+const EXPECTED_SHARED_BUILD = 'v45';
+const REQUIRED_SHARED_FNS = [
+  'resolvePrices', 'pipelinePricesTHB', 'parseReconcileRows',
+  'computeReconciliation', 'splitBalances', 'debtVsInvest', 'buildDebtPlan',
+];
+function checkSharedVersion(){
+  const missing = REQUIRED_SHARED_FNS.filter(f=>typeof window[f] !== 'function');
+  const build   = window.SHARED_BUILD || '(ไม่ทราบ)';
+  const mismatch = missing.length || build !== EXPECTED_SHARED_BUILD;
+  if(!mismatch) return true;
+
+  console.error('[v45] shared.js เวอร์ชันไม่ตรง — build:', build,
+                'ฟังก์ชันที่หาย:', missing);
+
+  const bar = document.createElement('div');
+  bar.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:99999;'
+    + 'background:#7a1c10;color:#fff;padding:12px 16px;font-size:13px;line-height:1.7;'
+    + 'font-family:var(--f-sans),system-ui;box-shadow:0 4px 20px rgba(0,0,0,.5)';
+  bar.innerHTML = `<strong>⚠ ไฟล์ไม่ตรงเวอร์ชัน</strong> — shared.js เป็น <code>${build}</code>
+    แต่ index.html ต้องการ <code>${EXPECTED_SHARED_BUILD}</code>
+    ${missing.length?`(ขาด ${missing.length} ฟังก์ชัน)`:''}<br>
+    <span style="opacity:.85">ตัวเลขบางส่วนจะผิดและ Sync จะล้ม — กดปุ่มนี้เพื่อล้าง cache แล้วโหลดใหม่</span>
+    <button id="v45-fix" style="margin-left:10px;background:#fff;color:#7a1c10;border:0;
+      padding:6px 14px;border-radius:6px;font-weight:700;cursor:pointer;font-family:inherit">
+      ล้าง cache &amp; โหลดใหม่</button>`;
+  document.body.appendChild(bar);
+  const btn = document.getElementById('v45-fix');
+  if(btn) btn.onclick = async ()=>{
+    btn.textContent = 'กำลังล้าง...';
+    try{
+      if('caches' in window){
+        const keys = await caches.keys();
+        await Promise.all(keys.map(k=>caches.delete(k)));
+      }
+      if(navigator.serviceWorker){
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map(r=>r.unregister()));
+      }
+    }catch(e){ console.warn('[v45] ล้าง cache ไม่สำเร็จ:', e.message); }
+    location.reload();
+  };
+  return false;
+}
+
 function purgeCorruptValueLog(){
   if(localStorage.getItem(VLOG_PURGED_KEY)==='1') return null;
   try{
@@ -4371,7 +4425,11 @@ function gsScheduleAutoSync(){
 }
 
 // Initialize on load
-window.addEventListener('DOMContentLoaded',()=>{setTimeout(gsInit,800);});
+window.addEventListener('DOMContentLoaded',()=>{
+  // v45 — ตรวจเวอร์ชันก่อนทำอย่างอื่น ถ้าไม่ตรงก็ไม่ต้องเสียเวลา sync (มันจะล้มอยู่ดี)
+  if(!checkSharedVersion()) return;
+  setTimeout(gsInit,800);
+});
 
 // GIS standard callback — fires when library fully loaded
 window.onGoogleLibraryLoad=function(){

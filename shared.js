@@ -16,8 +16,9 @@ window.LOC = window.LOC || 'th-TH-u-ca-gregory';
 //   • XIRR engine
 // กติกา: ไฟล์นี้ห้ามแตะ DOM ของหน้าใดหน้าหนึ่ง — pure data layer เท่านั้น
 // ═══════════════════════════════════════════════════════════════════
-const APP_BUILD = 'v44';
+const APP_BUILD = 'v45';
 console.log('[Finance OS shared] build', APP_BUILD);
+window.SHARED_BUILD = APP_BUILD;   // v45 — ให้ index.html ตรวจได้ว่าเวอร์ชันตรงกัน
 
 // ═══ LIVE_META — นิยามการ์ดข้อมูลตลาด ═══
 const LIVE_META = {
@@ -399,7 +400,12 @@ const ALLOC_META = {
   'Gold':           {label:'Gold',         color:'#ffd166', target:13},
   'Thai Stock':     {label:'Thai Stocks',  color:'#4cc9f0', target:10},
   'Crypto':         {label:'Crypto',       color:'#ff9500', target:5},
-  'Provident Fund': {label:'Provident Fund',color:'#ffa94d',target:5},
+  // v45 — illiquid: ขายไม่ได้จนออกจากงาน จึง rebalance ไม่ได้
+  // ผู้ใช้ถือ ~30% ของพอร์ตในกองนี้ ขณะที่ target = 5%
+  // ถ้านับรวมในฐานคำนวณ deviation จะบอกว่า "ขาย Provident Fund 21 จุด"
+  // ซึ่งเป็นคำแนะนำที่ทำตามไม่ได้ และมันดันให้ทุกกองอื่นดู under-weight
+  // ทั้งที่ความจริงคือสัดส่วนของ "เงินที่คุมได้" อาจตรงเป้าอยู่แล้ว
+  'Provident Fund': {label:'Provident Fund',color:'#ffa94d',target:5, illiquid:true},
   'Other':          {label:'Other',        color:'#5a5a8a', target:2},
 };
 const CASH_TARGET = 25; // default เท่านั้น — ค่าจริงมาจาก getTargets()
@@ -416,24 +422,57 @@ function getTargets(){
 }
 
 // ═══ computeDeviations — ตัวคำนวณกลาง Alerts/Allocation ═══
+// v45 — คิด deviation บนฐาน "เงินที่ rebalance ได้จริง" (ตัด illiquid ออก)
+// เหตุผล: target มีความหมายเฉพาะกับเงินที่คุณสั่งซื้อ-ขายได้ Provident Fund
+// ถอนไม่ได้จนออกจากงาน จึงไม่ควรอยู่ในสมการ ไม่ว่าจะ over หรือ under เป้า
+// คืน illiquid แยกไว้ให้ UI แสดงเป็นข้อมูลประกอบ ไม่ใช่รายการที่ต้องแก้
 function computeDeviations(real){
   const targets = getTargets();
   const cashBal = real.cashBalance||0;
-  const totalVal = (real.totalValue||0)+cashBal;
-  if(totalVal<=0) return {list:[],totalVal:0};
+  const alloc = real.allocation||{};
+
+  // แยกกองที่ขายไม่ได้ออกก่อน
+  const illiquid = [];
+  let illiquidVal = 0;
+  Object.entries(alloc).forEach(([k,v])=>{
+    if(ALLOC_META[k]?.illiquid && v.value>0){
+      illiquid.push({key:k, label:ALLOC_META[k].label||k, value:v.value,
+                     color:ALLOC_META[k].color||'#8080b0'});
+      illiquidVal += v.value;
+    }
+  });
+
+  const grossVal    = (real.totalValue||0)+cashBal;          // ทั้งพอร์ต+เงินสด
+  const totalVal    = grossVal - illiquidVal;                 // ฐานที่ rebalance ได้
+  if(totalVal<=0) return {list:[], totalVal:0, grossVal, illiquid, illiquidVal,
+                          illiquidPct: grossVal>0 ? illiquidVal/grossVal*100 : 0};
+
+  // target ของกอง illiquid ต้องถูกกระจายคืนให้กองที่เหลือ ไม่งั้นผลรวม target < 100
+  const illiquidTargetSum = illiquid.reduce((sum,i)=>sum+(targets[i.key]||0), 0);
+  const liquidTargetSum = Object.entries(targets)
+    .filter(([k])=>!ALLOC_META[k]?.illiquid)
+    .reduce((sum,[,t])=>sum+t, 0);
+  const scale = liquidTargetSum>0 ? (liquidTargetSum+illiquidTargetSum)/liquidTargetSum : 1;
+
   const cur={};
-  Object.entries(real.allocation||{}).forEach(([k,v])=>{ if(v.value>0) cur[k]=v.value/totalVal*100; });
+  Object.entries(alloc).forEach(([k,v])=>{
+    if(ALLOC_META[k]?.illiquid) return;
+    if(v.value>0) cur[k]=v.value/totalVal*100;
+  });
   cur['Cash']=cashBal/totalVal*100;
+
   const list=[];
   new Set([...Object.keys(cur),...Object.keys(targets)]).forEach(k=>{
-    const c=cur[k]||0, t=targets[k]??0;
+    if(ALLOC_META[k]?.illiquid) return;
+    const c=cur[k]||0, t=(targets[k]??0)*scale;
     if(t<=0 && c<=0) return;
     list.push({key:k, label:ALLOC_META[k]?.label||k, cur:c, target:t,
                diff:c-t, amt:Math.round(Math.abs(c-t)/100*totalVal),
                color:ALLOC_META[k]?.color||'#8080b0'});
   });
   list.sort((a,b)=>Math.abs(b.diff)-Math.abs(a.diff));
-  return {list, totalVal};
+  return {list, totalVal, grossVal, illiquid, illiquidVal,
+          illiquidPct: grossVal>0 ? illiquidVal/grossVal*100 : 0};
 }
 
 // ═══ Market bridge — ชีต → localStorage (ทั้ง Excel และ Sheets sync) ═══

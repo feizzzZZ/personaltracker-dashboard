@@ -1402,7 +1402,8 @@ function renderStrategy(){
     return;
   }
 
-  const {list, totalVal} = computeDeviations(real);
+  const dv = computeDeviations(real);
+  const {list, totalVal} = dv;
   const TH=5;
   // ปรับ bias ตาม regime: ตลาดแย่ → เอียงไป defensive/cash มากขึ้น
   const defensive = rg ? rg.avg < -0.25 : false;
@@ -1419,8 +1420,9 @@ function renderStrategy(){
 
     // เหตุผลประกอบจากข้อมูลจริง
     const reasons=[];
-    reasons.push(`ปัจจุบัน ${d.cur.toFixed(1)}% vs เป้าคุณ ${d.target}% (${d.diff>=0?'+':''}${d.diff.toFixed(1)}pp)`);
-    reasons.push(`คิดเป็นเงิน ${fmt(d.amt)} จากพอร์ต ${fmt(totalVal)}`);
+    // v45: target ถูก scale แล้ว (กระจายเป้าของกอง illiquid คืนมา) จึงมีทศนิยม
+    reasons.push(`ปัจจุบัน ${d.cur.toFixed(1)}% vs เป้าคุณ ${d.target.toFixed(1)}% (${d.diff>=0?'+':''}${d.diff.toFixed(1)}pp)`);
+    reasons.push(`คิดเป็นเงิน ${fmt(d.amt)} จากพอร์ตที่ปรับได้ ${fmt(totalVal)}`);
     const pnl = real.allocation[d.key];
     if(pnl && pnl.pnlPct!=null) reasons.push(`P&L หมวดนี้ ${pnl.pnlPct>=0?'+':''}${pnl.pnlPct}%`);
     // เชื่อมกับ regime
@@ -1433,13 +1435,28 @@ function renderStrategy(){
                   : d.key==='US Stock'  ? rg.signals.find(s=>s.key==='trend') : null;
       if(trend) reasons.push(`เทรนด์: ${escHtml(trend.label)} = ${trend.val}`);
     }
-    return {type,label,color,title:d.label,sub:`เป้า ${d.target}% · ถืออยู่ ${d.cur.toFixed(1)}%`,
-            reasons,alloc:d.target+'%',action,priority:Math.abs(d.diff)};
+    return {type,label,color,title:d.label,sub:`เป้า ${d.target.toFixed(1)}% · ถืออยู่ ${d.cur.toFixed(1)}%`,
+            reasons,alloc:d.target.toFixed(1)+'%',action,priority:Math.abs(d.diff)};
   }).sort((x,y)=>y.priority-x.priority);
 
-  const head = `<div style="grid-column:1/-1;font-size:11.5px;color:var(--muted2);
+  /* v45 — แยกกองที่ขายไม่ได้ออกจากฐานคำนวณ และบอกผู้ใช้ว่าแยกแล้ว
+     ไม่งั้น Provident Fund ที่เป็น ~26% ของทั้งพอร์ต (เป้า 5%) จะขึ้น TRIM
+     ตัวใหญ่ตลอดไป — คำแนะนำที่ทำตามไม่ได้ทำให้คนเลิกเชื่อทั้งหน้า */
+  const illiqNote = (dv.illiquid && dv.illiquid.length) ? `
+    <div style="grid-column:1/-1;font-size:11.5px;color:var(--muted2);
+        background:rgba(255,169,77,.05);border:1px solid rgba(255,169,77,.25);border-radius:8px;padding:9px 12px;margin-bottom:4px">
+      🔒 <strong style="color:var(--text)">แยกออกจากการคำนวณ: ${fmt(dv.illiquidVal)}
+      (${dv.illiquidPct.toFixed(0)}% ของทั้งพอร์ต)</strong> —
+      ${dv.illiquid.map(i=>escHtml(i.label)).join(', ')} ถอนไม่ได้จนออกจากงาน
+      จึง rebalance ไม่ได้ · เป้าของกองนี้ถูกกระจายคืนให้กองที่เหลือแล้ว
+      (เป้าที่เห็นด้านล่างจึงรวมได้ 100% ของเงินที่คุณคุมได้จริง)<br>
+      <span style="font-size:11px">ผลข้างเคียงที่ควรรู้: กองนี้เป็นหุ้น/ตราสารอยู่แล้ว
+      ความเสี่ยงรวมของคุณจึงสูงกว่าที่ตารางด้านล่างบอก — เวลาคิดว่าจะเพิ่มหุ้นอีกไหม ให้นับมันด้วย</span></div>` : '';
+
+  const head = illiqNote + `<div style="grid-column:1/-1;font-size:11.5px;color:var(--muted2);
       background:rgba(0,212,160,.05);border:1px solid rgba(0,212,160,.2);border-radius:8px;padding:9px 12px;margin-bottom:4px">
-    🧮 สร้างจากพอร์ตจริง ${fmt(totalVal)} × regime <strong style="color:var(--text)">${rg?rg.label:'—'}</strong>
+    🧮 สร้างจากเงินที่ปรับได้ ${fmt(totalVal)}${dv.illiquidVal>0?` (จากทั้งพอร์ต ${fmt(dv.grossVal)})`:''}
+    × regime <strong style="color:var(--text)">${rg?rg.label:'—'}</strong>
     ${rg?`(score ${rg.avg>=0?'+':''}${rg.avg.toFixed(2)})`:''} · เกณฑ์เบี่ยงเบน ±${TH}pp ·
     เป้าแก้ได้ที่หน้า Alerts → ⚙ ตั้งเป้า Allocation</div>`;
 
