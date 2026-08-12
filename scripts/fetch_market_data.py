@@ -1,10 +1,22 @@
 #!/usr/bin/env python3
 """
-Finance OS — market data pipeline  (v43)
+Finance OS — market data pipeline  (v44)
 ────────────────────────────────────────────────────────────────────────
 สร้าง market-data.json ให้ dashboard อ่าน
 
-แก้จากรุ่นเดิม 3 เรื่อง:
+v44 — สองเรื่องใหญ่:
+  A. ตัด FRED ออกทั้งหมด (14 series)  ตรวจพบว่า fred_ok = 0/14 ต่อเนื่อง
+     ด้วย TimeoutError 42 ครั้ง ขณะที่ Yahoo ผ่าน 23/23 ในรอบเดียวกัน
+     = FRED บล็อก IP ของ GitHub Actions ไม่ใช่ปัญหาเน็ต และ fail-safe merge
+     ก็ carry ค่าเก่ามาให้เงียบๆ ทำให้หน้า Macro โชว์ตัวเลขตายเหมือนของสด
+     ซึ่งอันตรายกว่าไม่มีข้อมูล → เอา VIX (ตัวเดียวที่ใช้จริง) มาจาก Yahoo ^VIX
+     ที่เหลือ (CPI/PCE/GDP/NFP/yields/credit spread) ตัดทิ้ง
+  B. เพิ่ม block "prices" — ราคารายตัวของสินทรัพย์ที่ถืออยู่จริง
+     เดิม pipeline ป้อนแค่ index/macro ราคาพอร์ตมาจาก Asset_Live_Price_Feed
+     ในชีตทางเดียว พอสูตร IMPORTXML ขึ้น #N/A (หุ้นไทย 6 ตัว + ทอง)
+     dashboard นับสินทรัพย์นั้นเป็น ฿0 เงียบๆ
+
+แก้จากรุ่นก่อนหน้า 3 เรื่อง:
   1. เดิมส่งมาแค่ 12 keys แต่ shared.js คาดหวัง ~35 → regime engine ใช้ได้แค่
      7/11 สัญญาณ  รุ่นนี้เติม US2Y, US_CORE_CPI, US_CORE_PCE, US_UNEMP,
      US_REAL10Y, OIL_WTI, DXY, NDX_RSI, NDX_MA200 + ราคาสินทรัพย์ครบ
@@ -19,6 +31,7 @@ key นั้นจะคงค่าเดิมไว้ ไม่หายไ
 
 รันเอง:  python3 scripts/fetch_market_data.py
 ไม่ต้องใช้ API key และไม่ต้องติดตั้ง dependency ใดๆ (stdlib ล้วน)
+ตอนนี้พึ่ง host เดียว (query1.finance.yahoo.com) — จุดที่พังได้ลดจาก 31 เหลือ 18
 """
 
 import json
@@ -56,12 +69,9 @@ UA_BROWSER = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.3
 UA = UA_BOT                                     # ค่าปลอดภัยเป็นค่าเริ่มต้น
 
 HEADERS_YAHOO = {"User-Agent": UA_BOT}          # ชุดเดิมของ v41 ที่ได้ 17/17 — ห้ามแตะ
-HEADERS_FRED = {                                # browser headers ไว้สู้ tarpit (ยังเป็นสมมติฐาน)
-    "User-Agent": UA_BROWSER,
-    "Accept": "text/csv,text/plain,application/json,*/*;q=0.8",
-    "Accept-Language": "en-US,en;q=0.9",
-}
 REQ_HEADERS = {"User-Agent": UA_BOT}            # default สำหรับ host อื่น
+# v44: HEADERS_FRED ถูกลบพร้อม FRED — UA_BROWSER เก็บไว้เป็นบันทึกว่าอย่าใช้กับ Yahoo
+_ = UA_BROWSER
 
 _host_stat: dict = defaultdict(dict)
 
@@ -83,12 +93,9 @@ def headers_for(url: str) -> dict:
     h = _host(url)
     if "yahoo.com" in h:
         return HEADERS_YAHOO
-    if "stlouisfed.org" in h:
-        return HEADERS_FRED
     return REQ_HEADERS
 
 
-FRED_API_KEY = os.environ.get("FRED_API_KEY", "").strip()
 NOW = datetime.now(timezone.utc)
 FETCHED_AT = NOW.isoformat()
 
@@ -184,161 +191,6 @@ def http_get(url: str, tries: int = 2, timeout: int = 12) -> bytes | None:
             warn(f"{type(e).__name__}: {e} · {url[:80]}")
             return None
     return None
-
-
-# ══════════════════════════════════════════════════════════════════════
-# FRED — ข้อมูลมหภาค (CSV endpoint สาธารณะ ไม่ต้องใช้ API key)
-# ══════════════════════════════════════════════════════════════════════
-# ══════════════════════════════════════════════════════════════════════
-# v42 — FRED endpoint fallback chain
-# ══════════════════════════════════════════════════════════════════════
-# ปัญหาที่เกิดขึ้นจริง (run วันที่ 8 ส.ค. 11:55 UTC):
-#   FRED 14/14 ล้มด้วย "TimeoutError: The read operation timed out"
-#   Yahoo 17/17 สำเร็จในรอบเดียวกัน -> ไม่ใช่ปัญหาเน็ตของ runner
-#   ค่าล่าสุดที่ FRED ให้มาสำเร็จคือ 2026-07-28 = วันที่ข้อมูลเริ่มค้างเป๊ะ
-#   => fredgraph.csv เริ่มบล็อก IP/UA ของ GitHub Actions ราว 28-29 ก.ค.
-#      และนั่นคือ "ต้นตอจริง" ของทั้งเหตุการณ์: 14 x 3 tries x 30s = 21 นาที
-#      > เพดาน job 15 นาที -> job ถูกฆ่า -> commit ไม่รัน -> ข้อมูลค้าง 11 วัน
-#
-# read timeout (ไม่ใช่ connect timeout) = TCP ต่อติด แต่ server ไม่ส่งอะไรกลับ
-# = อาการ tarpit / silent block ไม่ใช่ server ช้า การเพิ่ม timeout จึงไม่ช่วย
-#
-# แก้แบบไม่เดา: ลองหลาย endpoint ต่อกันจนได้ตัวที่ทำงาน แล้วรายงานว่าตัวไหนชนะ
-# ลำดับความน่าเชื่อถือ:
-#   1. official API  — ต้องมี FRED_API_KEY (ฟรี) เป็น endpoint ที่ FRED support จริง
-#   2. fredgraph.csv  — ตัวเดิม (ตอนนี้ถูกบล็อก)
-#   3. /data/{id}.txt — endpoint เก่า คนละ path คนละ handler
-#   4. downloaddata   — path ที่ UI ใช้ตอนกดปุ่ม download
-_fred_endpoint_used: dict[str, str] = {}
-_fred_cache: dict[str, list[tuple[str, float]]] = {}
-
-
-def _parse_fred_csv(raw: bytes) -> list[tuple[str, float]]:
-    out = []
-    for line in raw.decode("utf-8", "replace").splitlines()[1:]:
-        parts = line.replace("\t", ",").split(",")
-        if len(parts) < 2:
-            continue
-        d, v = parts[0].strip().strip('"'), parts[1].strip().strip('"')
-        if not v or v == "." or not d[:4].isdigit():
-            continue
-        try:
-            out.append((d, float(v)))
-        except ValueError:
-            continue
-    return out
-
-
-def _parse_fred_txt(raw: bytes) -> list[tuple[str, float]]:
-    """/data/{id}.txt เป็น fixed-width มี header แล้วคั่นด้วยช่องว่าง"""
-    out = []
-    for line in raw.decode("utf-8", "replace").splitlines():
-        parts = line.split()
-        if len(parts) < 2 or not parts[0][:4].isdigit():
-            continue
-        if parts[1] == ".":
-            continue
-        try:
-            out.append((parts[0], float(parts[1])))
-        except ValueError:
-            continue
-    return out
-
-
-def _parse_fred_api(raw: bytes) -> list[tuple[str, float]]:
-    try:
-        obs = json.loads(raw.decode("utf-8", "replace")).get("observations", [])
-    except (json.JSONDecodeError, AttributeError):
-        return []
-    out = []
-    for o in obs:
-        v = (o.get("value") or "").strip()
-        if not v or v == ".":
-            continue
-        try:
-            out.append((o.get("date", ""), float(v)))
-        except ValueError:
-            continue
-    return out
-
-
-def fred_series(series_id: str) -> list[tuple[str, float]]:
-    """คืน [(date, value)] เรียงเก่า→ใหม่ ข้ามค่า '.' ที่ FRED ใช้แทน N/A
-
-    ลองหลาย endpoint จนได้ตัวที่ทำงาน (ดูคำอธิบายด้านบน)
-    timeout ต่อ endpoint ตั้งสั้น (8s) เพราะตอนนี้ยิงขนานกันแล้ว
-    ต้นทุนของ endpoint ที่ตายจึงถูกลงมาก
-    """
-    if series_id in _fred_cache:
-        return _fred_cache[series_id]
-    chain: list[tuple[str, str, object]] = []
-    if FRED_API_KEY:
-        chain.append((
-            "api",
-            f"https://api.stlouisfed.org/fred/series/observations"
-            f"?series_id={series_id}&api_key={FRED_API_KEY}&file_type=json",
-            _parse_fred_api))
-    chain += [
-        ("fredgraph", f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={series_id}", _parse_fred_csv),
-        ("data-txt",  f"https://fred.stlouisfed.org/data/{series_id}.txt",              _parse_fred_txt),
-        ("download",  f"https://fred.stlouisfed.org/series/{series_id}/downloaddata/{series_id}.csv", _parse_fred_csv),
-    ]
-    for name, url, parse in chain:
-        if out_of_budget():
-            return []
-        raw = http_get(url, tries=1, timeout=8)
-        if not raw:
-            continue
-        out = parse(raw)
-        if out:
-            _fred_endpoint_used[series_id] = name
-            return out
-    warn(f"FRED {series_id}: ทุก endpoint ใช้ไม่ได้ ({len(chain)} ตัว)")
-    return []
-
-
-def _fred_series_legacy_unused(series_id: str) -> list[tuple[str, float]]:
-    raw = http_get(f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={series_id}")
-    if not raw:
-        return []
-    out = []
-    for line in raw.decode("utf-8", "replace").splitlines()[1:]:
-        parts = line.split(",")
-        if len(parts) < 2:
-            continue
-        d, v = parts[0].strip(), parts[1].strip()
-        if not v or v == ".":
-            continue
-        try:
-            out.append((d, float(v)))
-        except ValueError:
-            continue
-    return out
-
-
-def fred_latest(series_id: str):
-    s = fred_series(series_id)
-    return s[-1] if s else None
-
-
-def fred_yoy(series_id: str):
-    """YoY % สำหรับดัชนีระดับราคา (CPI/PCE) — ต้องมีอย่างน้อย 13 จุด"""
-    s = fred_series(series_id)
-    if len(s) < 13:
-        return None
-    (d, cur), (_, prev) = s[-1], s[-13]
-    if prev == 0:
-        return None
-    return d, round((cur / prev - 1) * 100, 2)
-
-
-def fred_mom_diff(series_id: str, scale: float = 1.0):
-    """ผลต่างเดือนต่อเดือน — ใช้กับ PAYEMS เพื่อได้ NFP (พันตำแหน่ง)"""
-    s = fred_series(series_id)
-    if len(s) < 2:
-        return None
-    (d, cur), (_, prev) = s[-1], s[-2]
-    return d, round((cur - prev) * scale, 1)
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -452,85 +304,6 @@ def parallel_charts(specs: list[tuple], workers: int = 6):
     return out
 
 
-def prefetch_fred(series_ids: list[str], workers: int = 5) -> None:
-    """ดึง FRED ทุก series ขนานกันใส่ cache
-
-    เหตุผล: run ล่าสุด FRED 14 ตัวยิงแบบ sequential แล้ว timeout ทุกตัว
-    = 14 x 2 tries x 12s = 336s จาก runtime รวม 352s "เสียเวลาไปเกือบทั้งหมด
-    เพื่อให้ได้ 0 key" ขณะที่ Yahoo (ขนานอยู่แล้ว) ใช้แค่ ~16s ได้ครบ 17 key
-
-    ยิงขนาน 5 ตัว + endpoint chain 3-4 ตัว timeout 8s
-    worst case ~ 14/5 x 4 x 8s ≈ 90s แทน 336s
-    ถ้า FRED กลับมาทำงาน จะเหลือ ~3s
-    """
-    if not series_ids:
-        return
-    uniq = list(dict.fromkeys(series_ids))
-    with ThreadPoolExecutor(max_workers=workers) as ex:
-        futs = {ex.submit(fred_series, sid): sid for sid in uniq}
-        for f, sid in futs.items():
-            try:
-                _fred_cache[sid] = f.result()
-            except Exception as e:  # noqa: BLE001
-                warn(f"{type(e).__name__}: {e} · FRED {sid}")
-                _fred_cache[sid] = []
-
-
-print("── FRED (macro) ─────────────────────────────")
-# ทุก series ที่จะใช้ด้านล่าง — ดึงขนานกันทีเดียวก่อน
-prefetch_fred([
-    "DFEDTARU", "DGS10", "DGS2", "DFII10", "BAMLH0A0HYM2", "VIXCLS",
-    "UNRATE", "A191RL1Q225SBEA", "T10Y2Y",
-    "CPIAUCSL", "CPILFESL", "PCEPI", "PCEPILFE", "PAYEMS",
-])
-_fred_ok = sum(1 for v in _fred_cache.values() if v)
-print(f"  prefetch: {_fred_ok}/{len(_fred_cache)} series · {elapsed():.0f}s")
-if _fred_endpoint_used:
-    from collections import Counter
-    print(f"  endpoint ที่ใช้ได้: {dict(Counter(_fred_endpoint_used.values()))}")
-elif not _fred_ok:
-    print("::warning::FRED ใช้ไม่ได้ทุก endpoint — ตั้ง secret FRED_API_KEY "
-          "แล้วส่งเป็น env FRED_API_KEY จะได้ endpoint ที่ FRED support จริง")
-
-FRED_LEVEL = [
-    ("FED_RATE",      "DFEDTARU",     "FRED: target upper bound",   2),
-    ("US10Y",         "DGS10",        "FRED: DGS10",                2),
-    ("US2Y",          "DGS2",         "FRED: DGS2",                 2),
-    ("US_REAL10Y",    "DFII10",       "FRED: 10Y TIPS real yield",  2),
-    ("CREDIT_SPREAD", "BAMLH0A0HYM2", "FRED: HY OAS",               2),
-    ("VIX",           "VIXCLS",       "FRED: VIXCLS",               2),
-    ("US_UNEMP",      "UNRATE",       "FRED: UNRATE",               1),
-    ("US_GDP",        "A191RL1Q225SBEA", "FRED: real GDP QoQ SAAR", 1),
-]
-for key, sid, note, nd in FRED_LEVEL:
-    r = fred_latest(sid)
-    if r:
-        put(key, round(r[1], nd), r[0], note)
-        print(f"  ✓ {key:<14} {r[1]}")
-
-# yield curve เป็น percentage point ใน FRED แต่ dashboard แสดงเป็น bps
-r = fred_latest("T10Y2Y")
-if r:
-    put("YIELD_CURVE", round(r[1] * 100), r[0], "FRED: 2s10s spread (bps)")
-    print(f"  ✓ {'YIELD_CURVE':<14} {round(r[1]*100)}bps")
-
-for key, sid, note in [
-    ("US_CPI",       "CPIAUCSL", "FRED: CPIAUCSL YoY"),
-    ("US_CORE_CPI",  "CPILFESL", "FRED: core CPI YoY"),
-    ("US_PCE",       "PCEPI",    "FRED: PCEPI YoY"),
-    ("US_CORE_PCE",  "PCEPILFE", "FRED: core PCE YoY"),
-]:
-    r = fred_yoy(sid)
-    if r:
-        put(key, r[1], r[0], note)
-        print(f"  ✓ {key:<14} {r[1]}%")
-
-r = fred_mom_diff("PAYEMS")
-if r:
-    put("NFP", r[1], r[0], "FRED: PAYEMS MoM change (K)")
-    print(f"  ✓ {'NFP':<14} {r[1]}K")
-
-
 print("── Yahoo (prices) ───────────────────────────")
 PRICES = [
     ("SP500",     "^GSPC",     0, "Yahoo ^GSPC"),
@@ -543,6 +316,9 @@ PRICES = [
     ("DXY",       "DX-Y.NYB",  2, "Yahoo DXY"),
     ("BTCUSD",    "BTC-USD",   0, "Yahoo BTC-USD"),
     ("ETHUSD",    "ETH-USD",   0, "Yahoo ETH-USD"),
+    # v44: VIX ย้ายจาก FRED VIXCLS มา Yahoo ^VIX — ค่าเดียวกัน แต่ real-time
+    # และไม่ต้องพึ่ง host ที่บล็อกเราอยู่ (FRED ยังส่ง VIXCLS ช้า 1 วันด้วย)
+    ("VIX",       "^VIX",      2, "Yahoo ^VIX"),
 ]
 # ดึงทุก symbol ขนานกันก่อน แล้วค่อยประมวลผลตามลำดับเดิม
 # (ผลลัพธ์เหมือนเดิมทุกอย่าง เปลี่ยนแค่เวลาที่ใช้)
@@ -625,6 +401,64 @@ for sym, name in SECTORS:
 # เพื่อไม่ให้ symbol ที่ fetch fail รอบนี้หายไปทั้งก้อนตอน merged_hist.update(history)
 
 
+print("── Holding prices (v44) ─────────────────────")
+# ══════════════════════════════════════════════════════════════════════
+# ราคารายตัวของสินทรัพย์ที่ถืออยู่ — ช่องทางใหม่ที่ dashboard ใช้แทนชีต
+# ══════════════════════════════════════════════════════════════════════
+# ทำไมต้องมี: Asset_Live_Price_Feed ในชีตใช้ IMPORTXML/GOOGLEFINANCE ซึ่งขึ้น
+# #N/A เป็นระยะ (พบจริง: BDMS KBANK LH OR TISCO TLI + Gold) แล้ว dashboard
+# นับสินทรัพย์นั้นเป็น ฿0 → พอร์ตต่ำกว่าจริง ~14% และ Value_Log แกว่ง ±14%
+# วันเว้นวันจนคำนวณ TWR/benchmark ไม่ได้เลย
+#
+# "ccy" = สกุลเงินที่ *ชีตบันทึกไว้ใน Current_Price* ไม่ใช่สกุลของตลาด
+#   ไทย  → THB (Current_Price_THB = Current_Price, FX = 1)
+#   US / คริปโต / ทอง → USD (frontend คูณ USDTHB เอง)
+# ทอง: ยืนยันจาก Asset_Tracker แล้วว่าเป็น USD/troy oz
+#      (2026-05-27 price 4429.78 ตรงกับ GC=F 4429.60 ของวันเดียวกัน)
+#
+# ไม่ครอบคลุม 6 ตัวที่ Yahoo ไม่มี → ต้องอยู่ในชีตต่อไป:
+#   PF4103 (provident fund, อัปเดต NAV เอง) และกองทุน K-* / KEURMF / KDLTF-C(L)
+HOLDINGS: dict[str, tuple[str, str]] = {
+    # ── US stocks / ETF (USD) ──
+    **{t: (t, "USD") for t in [
+        "AAPL", "V", "GOOGL", "GOOG", "COKE", "META",
+        "WMT", "TSLA", "VOO", "JEPI",
+    ]},
+    # ── หุ้นไทย (THB) — ตรวจแล้วว่า .BK ให้ราคาปัจจุบัน ──
+    **{t: (f"{t}.BK", "THB") for t in [
+        "AOT", "BDMS", "BEM", "CPALL", "FPT", "IVL", "KBANK", "LH",
+        "MINT", "OR", "TISCO", "TLI", "TPAC", "TTW", "TU",
+    ]},
+    # ── คริปโต + ทอง (USD) ──
+    "BTC":  ("BTC-USD",  "USD"),
+    "BNB":  ("BNB-USD",  "USD"),
+    "USDT": ("USDT-USD", "USD"),
+    "Gold": ("GC=F",     "USD"),
+}
+
+prices: dict = {}
+# range=1mo พอสำหรับหาราคาล่าสุด + เผื่อวันหยุดตลาดยาว (สงกรานต์/ปีใหม่)
+_p_charts = parallel_charts(
+    [(sym, "1mo", "1d") for sym, _ in HOLDINGS.values()], workers=6)
+
+for _tk, (_sym, _ccy) in HOLDINGS.items():
+    _d, _v = _p_charts.get(_sym, ([], []))
+    if not _v:
+        warn(f"holding price: {_tk} ({_sym}) ไม่มีข้อมูล — frontend จะ fallback ไปชีต")
+        continue
+    prices[_tk] = {
+        "price":   round(_v[-1], 6),
+        "ccy":     _ccy,
+        "updated": _d[-1],          # วันของ *ราคา* — frontend ใช้ตัดสิน staleness
+        "src":     f"Yahoo {_sym}",
+    }
+    print(f"  ✓ {_tk:<12} {_v[-1]:>14,.4f} {_ccy}  ({_d[-1]})")
+
+_miss = [t for t in HOLDINGS if t not in prices]
+if _miss:
+    print(f"  ⚠️  ไม่ได้ราคา {len(_miss)}/{len(HOLDINGS)}: {', '.join(_miss)}")
+
+
 # ══════════════════════════════════════════════════════════════════════
 # Merge กับไฟล์เดิม — key ที่ดึงไม่สำเร็จรอบนี้ต้องไม่หายไปจากไฟล์
 # ══════════════════════════════════════════════════════════════════════
@@ -647,26 +481,33 @@ merged_sectors.update(sectors)
 if merged_sectors:
     merged_hist["sectors"] = merged_sectors
 
+# v44: prices merge ราย-ticker ด้วยเหตุผลเดียวกับ sectors — ticker ที่ Yahoo
+# ไม่ตอบรอบนี้ต้องคงราคาเดิมไว้ ไม่หายจากไฟล์ (frontend เช็คอายุจาก "updated"
+# เองอยู่แล้ว จึงไม่มีความเสี่ยงว่าราคาเก่าจะถูกใช้เหมือนราคาสด)
+merged_prices = dict(prev.get("prices", {}))
+merged_prices.update(prices)
+
 payload = {
     "generated_at": FETCHED_AT,
-    "source": "github-actions pipeline v40 (FRED + Yahoo)",
+    "source": "github-actions pipeline v44 (Yahoo only)",
     "stats": {
         "keys_this_run": len(data),
         "keys_total": len(merged_data),
         "sectors": len(sectors),
+        "prices_this_run": len(prices),
+        "prices_total": len(merged_prices),
+        "prices_missing": sorted(t for t in HOLDINGS if t not in prices),
         # runtime/budget telemetry — ให้ debug ได้ว่ารอบไหนหมดเวลา ไม่ใช่ API ล่ม
         "runtime_sec": round(elapsed(), 1),
         "budget_sec": DEADLINE_SEC,
         "budget_exhausted": _budget_skips > 0,
-        "fred_ok": sum(1 for v in _fred_cache.values() if v),
-        "fred_total": len(_fred_cache),
-        "fred_endpoint": (sorted(set(_fred_endpoint_used.values())) or None),
         "host_stats": {h: dict(v) for h, v in _host_stat.items()},
         "skipped_for_budget": _budget_skips,
         "warnings": warnings,
     },
     "data": merged_data,
     "history": merged_hist,
+    "prices": merged_prices,
 }
 
 with open(OUT, "w", encoding="utf-8") as f:
@@ -674,7 +515,8 @@ with open(OUT, "w", encoding="utf-8") as f:
 
 print("─────────────────────────────────────────────")
 print(f"เขียน {OUT}: {len(data)} keys รอบนี้ · {len(merged_data)} keys รวม · "
-      f"{len(sectors)} sectors · {len(warnings)} warnings · {elapsed():.0f}s")
+      f"{len(sectors)} sectors · {len(prices)}/{len(HOLDINGS)} prices · "
+      f"{len(warnings)} warnings · {elapsed():.0f}s")
 
 print("  ผลต่อ host:")
 for _h, _v in sorted(_host_stat.items()):
