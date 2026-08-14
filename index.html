@@ -3258,27 +3258,46 @@ const VLOG_PURGED_KEY = 'finOS_valueLogPurged_v44';
 // อาการที่สองแย่กว่า เพราะไม่มี error ให้เห็น — เห็นแค่ตัวเลขผิด
 //
 // กฎ: ตรวจตอนโหลด ถ้าไม่ตรง บอกให้ชัด + ล้าง cache ให้เลย ไม่ต้องรอผู้ใช้เดา
-const EXPECTED_SHARED_BUILD = 'v45';
+// v46 — แก้ดีไซน์ของ guard เอง
+// ────────────────────────────────────────────────────────────────────
+// รุ่นแรกบล็อกทั้งหน้าเมื่อ SHARED_BUILD !== EXPECTED_SHARED_BUILD ซึ่งพังจริง:
+// พอเพิ่ม classifyHoldings() แล้ว bump APP_BUILD เป็น v46 แต่ลืมแก้ค่านี้
+// ผู้ใช้เจอหน้าแดงทั้งที่ไฟล์ทั้งชุดตรงกันดี — guard ที่ต้อง bump เลข 3 ที่
+// พร้อมกัน คือ guard ที่เพิ่มโอกาสพลาดมากกว่าลด
+//
+// กฎใหม่ แยกความรุนแรงตามผลกระทบจริง:
+//   ฟังก์ชันหาย  → BLOCK  (แอปคำนวณผิดแน่นอน — นี่คือสิ่งที่ guard มีไว้จับ)
+//   เลขไม่ตรง    → WARN   (แค่ลืม bump — log ไว้ ไม่รบกวนผู้ใช้)
+// ฟังก์ชันที่ต้องมีคือสัญญาจริงระหว่างสองไฟล์ ส่วนสตริงเวอร์ชันเป็นแค่ป้าย
+const EXPECTED_SHARED_BUILD = 'v46';
 const REQUIRED_SHARED_FNS = [
   'resolvePrices', 'pipelinePricesTHB', 'parseReconcileRows',
   'computeReconciliation', 'splitBalances', 'debtVsInvest', 'buildDebtPlan',
+  'classifyHoldings', 'loadHoldingTags',
 ];
 function checkSharedVersion(){
   const missing = REQUIRED_SHARED_FNS.filter(f=>typeof window[f] !== 'function');
   const build   = window.SHARED_BUILD || '(ไม่ทราบ)';
-  const mismatch = missing.length || build !== EXPECTED_SHARED_BUILD;
-  if(!mismatch) return true;
 
-  console.error('[v45] shared.js เวอร์ชันไม่ตรง — build:', build,
+  if(!missing.length){
+    if(build !== EXPECTED_SHARED_BUILD){
+      console.warn('[build] เลขเวอร์ชันไม่ตรง (shared.js='+build+
+        ', index.html คาด '+EXPECTED_SHARED_BUILD+') แต่ฟังก์ชันครบทุกตัว '+
+        '— น่าจะลืม bump ค่าใดค่าหนึ่ง ไม่กระทบการทำงาน');
+    }
+    return true;
+  }
+
+  console.error('[build] shared.js ใช้ไม่ได้ — build:', build,
                 'ฟังก์ชันที่หาย:', missing);
 
   const bar = document.createElement('div');
   bar.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:99999;'
     + 'background:#7a1c10;color:#fff;padding:12px 16px;font-size:13px;line-height:1.7;'
     + 'font-family:var(--f-sans),system-ui;box-shadow:0 4px 20px rgba(0,0,0,.5)';
-  bar.innerHTML = `<strong>⚠ ไฟล์ไม่ตรงเวอร์ชัน</strong> — shared.js เป็น <code>${build}</code>
-    แต่ index.html ต้องการ <code>${EXPECTED_SHARED_BUILD}</code>
-    ${missing.length?`(ขาด ${missing.length} ฟังก์ชัน)`:''}<br>
+  bar.innerHTML = `<strong>⚠ shared.js เป็นเวอร์ชันเก่า</strong> —
+    ขาดฟังก์ชัน ${missing.length} ตัว (${escHtml(missing.slice(0,3).join(', '))}${missing.length>3?'…':''})
+    · build <code>${escHtml(build)}</code><br>
     <span style="opacity:.85">ตัวเลขบางส่วนจะผิดและ Sync จะล้ม — กดปุ่มนี้เพื่อล้าง cache แล้วโหลดใหม่</span>
     <button id="v45-fix" style="margin-left:10px;background:#fff;color:#7a1c10;border:0;
       padding:6px 14px;border-radius:6px;font-weight:700;cursor:pointer;font-family:inherit">
