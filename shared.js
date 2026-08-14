@@ -16,7 +16,7 @@ window.LOC = window.LOC || 'th-TH-u-ca-gregory';
 //   • XIRR engine
 // กติกา: ไฟล์นี้ห้ามแตะ DOM ของหน้าใดหน้าหนึ่ง — pure data layer เท่านั้น
 // ═══════════════════════════════════════════════════════════════════
-const APP_BUILD = 'v45';
+const APP_BUILD = 'v46';
 console.log('[Finance OS shared] build', APP_BUILD);
 window.SHARED_BUILD = APP_BUILD;   // v45 — ให้ index.html ตรวจได้ว่าเวอร์ชันตรงกัน
 
@@ -355,6 +355,117 @@ function computeReconciliation(bals, reconMap, tolerance){
     stale: ageDays == null || ageDays > RECON_STALE_DAYS,
     clean: checked.length > 0 && unmatched === 0,
   };
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// v46 — HOLDING LIFECYCLE  (engine ของหน้า Investment Analysis ใหม่)
+// ══════════════════════════════════════════════════════════════════════
+// เป้าหมาย: ตอบ "เงินก้อนไหนไม่มีใครดูแล" แทนที่จะเดาทิศทางตลาด
+//
+// บทเรียนจากการวิเคราะห์รอบแรกที่ผิด — เขียนไว้กันพลาดซ้ำ:
+//  1) Transaction_Type มี 4 ค่า: Buy / Sell / Dividend Payout / Split
+//     ห้ามใช้ `startswith('buy') ? ... : ขาย` เด็ดขาด เพราะปันผล 114 รายการ
+//     จะถูกนับเป็นการขายแล้วหักจำนวนหุ้นทิ้ง (net qty ติดลบ ของหายจากพอร์ต)
+//  2) ความสม่ำเสมอต้องวัดด้วย median + MAD ไม่ใช่ mean + stdev
+//     DCA รายวัน (BTC 168 ครั้ง) มีวันหยุดยาวแทรก → stdev พุ่ง → CV 4.21
+//     ทั้งที่เป็นการซื้อที่มีวินัยที่สุดในพอร์ต  robust CV ให้ 0.00 ถูกต้อง
+const DORMANT_DAYS = 180;      // ไม่ซื้อเกินนี้ = หลุดจากเรดาร์
+const REGULAR_RCV  = 0.6;      // robust CV ต่ำกว่านี้ = ซื้อเป็นจังหวะสม่ำเสมอ
+
+function _median(a){
+  if(!a.length) return 0;
+  const s=[...a].sort((x,y)=>x-y), m=s.length>>1;
+  return s.length%2 ? s[m] : (s[m-1]+s[m])/2;
+}
+// robust CV = MAD / median — ทนต่อช่องว่างผิดปกติ (วันหยุดยาว, เดือนที่ข้าม)
+function cadenceRCV(dates){
+  if(dates.length<2) return {median:0, rcv:9, gaps:0};
+  const d=[...dates].sort();
+  const gaps=[];
+  for(let i=1;i<d.length;i++) gaps.push((d[i]-d[i-1])/864e5);
+  const med=_median(gaps);
+  if(med<=0) return {median:0, rcv:0, gaps:gaps.length};   // ซื้อวันเดียวกันหลายครั้ง
+  const mad=_median(gaps.map(g=>Math.abs(g-med)));
+  return {median:med, rcv:mad/med, gaps:gaps.length};
+}
+
+// ── แท็กที่ผู้ใช้กำหนดเอง: 'core' = ตั้งใจถือ ไม่ต้องเตือน ──
+const HTAG_KEY='finOS_holdingTags';
+function loadHoldingTags(){
+  try{ return JSON.parse(localStorage.getItem(HTAG_KEY)||'{}')||{}; }catch(e){ return {}; }
+}
+function setHoldingTag(ticker, tag){
+  const t=loadHoldingTags();
+  if(tag) t[ticker]={tag, at:new Date().toISOString().slice(0,10)};
+  else delete t[ticker];
+  try{ localStorage.setItem(HTAG_KEY, JSON.stringify(t)); }catch(e){}
+  return t;
+}
+
+// จัดกลุ่มสินทรัพย์ที่ยังถืออยู่ ตามพฤติกรรมการซื้อจริง
+//   trades: [{date:Date, type:'Buy'|'Sell'|'Dividend Payout'|'Split',
+//             ticker, qty, thb}]
+//   assets: [{ticker, qty, val, cost, ...}] จาก dashboard
+// คืน { active:[], dormant:[], intentional:[], stats:{} }
+function classifyHoldings(trades, assets, priceSrc){
+  const byT={};
+  (trades||[]).forEach(t=>{
+    if(!t.ticker || !(t.date instanceof Date) || isNaN(t.date)) return;
+    const k=t.ticker;
+    (byT[k] = byT[k] || {buys:[], sells:0, div:0, cost:0}); 
+    const tt=String(t.type||'').trim();
+    if(tt==='Buy'){ byT[k].buys.push(t.date.getTime()); byT[k].cost += (t.thb||0); }
+    else if(tt==='Sell'){ byT[k].sells++; byT[k].cost -= (t.thb||0); }
+    else if(tt==='Dividend Payout'){ byT[k].div += (t.thb||0); }
+    // Split ไม่กระทบต้นทุนและไม่ใช่สัญญาณความสนใจ → ข้าม
+  });
+
+  const tags=loadHoldingTags();
+  const now=Date.now();
+  const out={active:[], dormant:[], intentional:[], stats:{}};
+
+  (assets||[]).forEach(a=>{
+    if(!(a.qty>1e-8)) return;                     // ขายหมดแล้ว ไม่ต้องพูดถึง
+    const h=byT[a.ticker]||{buys:[],sells:0,div:0,cost:0};
+    const cad=cadenceRCV(h.buys);
+    const lastBuy=h.buys.length?Math.max(...h.buys):null;
+    const ageDays=lastBuy?Math.floor((now-lastBuy)/864e5):null;
+    const cost=h.cost>0?h.cost:(a.cost||0);
+    const val=a.val>0?a.val:null;                  // null = ไม่มีราคา
+    const row={
+      ticker:a.ticker, label:a.label||a.ticker, type:a.assetType||a.type||'',
+      qty:a.qty, cost, val,
+      pl: val!=null ? val-cost : null,
+      plPct: (val!=null && cost>0) ? (val-cost)/cost*100 : null,
+      div:h.div, buys:h.buys.length, sells:h.sells,
+      medianGap:Math.round(cad.median), rcv:cad.rcv,
+      regular: h.buys.length>=4 && cad.rcv<=REGULAR_RCV,
+      ageDays, lastBuy: lastBuy? new Date(lastBuy).toISOString().slice(0,10):null,
+      unpriced: val==null,
+      priceSrc: (priceSrc||{})[a.ticker]||null,
+      tag: tags[a.ticker]?tags[a.ticker].tag:null,
+    };
+    if(row.tag==='core')                      out.intentional.push(row);
+    else if(ageDays!=null && ageDays>DORMANT_DAYS) out.dormant.push(row);
+    else                                      out.active.push(row);
+  });
+
+  const sum=(arr,f)=>arr.reduce((s,r)=>s+(f(r)||0),0);
+  // เทียบ P&L เฉพาะตัวที่มีราคา — ไม่งั้นเอาต้นทุนเต็มไปหารกับมูลค่าบางส่วน
+  const priced=arr=>arr.filter(r=>!r.unpriced);
+  const grp=arr=>({
+    n:arr.length, cost:sum(arr,r=>r.cost), div:sum(arr,r=>r.div),
+    unpricedN: arr.filter(r=>r.unpriced).length,
+    unpricedCost: sum(arr.filter(r=>r.unpriced), r=>r.cost),
+    pricedCost: sum(priced(arr),r=>r.cost), val: sum(priced(arr),r=>r.val),
+    get pl(){ return this.val-this.pricedCost; },
+    get plPct(){ return this.pricedCost>0 ? (this.val-this.pricedCost)/this.pricedCost*100 : null; },
+  });
+  out.stats={ active:grp(out.active), dormant:grp(out.dormant),
+              intentional:grp(out.intentional) };
+  const bySize=(a,b)=>(b.cost||0)-(a.cost||0);
+  out.active.sort(bySize); out.dormant.sort(bySize); out.intentional.sort(bySize);
+  return out;
 }
 
 // ═══ Method 2 — external API layer (alternative.me + CoinGecko) ═══

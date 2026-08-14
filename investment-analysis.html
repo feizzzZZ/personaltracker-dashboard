@@ -380,52 +380,30 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
   <a href="investment-analysis.html" class="top-nav-tab active"><span class="tn-icon">📈</span>Investment Analysis</a>
 </nav>
 
-
 <button class="menu-toggle" id="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
 
 <div class="sidebar" id="sidebar">
   <div class="sb-brand">
     <div class="sb-logo">INVEST OS</div>
-    <div class="sb-sub">Investment Analysis</div>
+    <div class="sb-sub">เงินก้อนไหนต้องตัดสินใจ</div>
     <div class="sb-status"><span class="dot-live"></span><span id="live-date">Loading...</span></div>
   </div>
   <div class="sb-nav">
-    <div class="sb-section">Overview</div>
-    <div class="sb-item active" onclick="switchPage('situation')">
-      <span class="sb-icon">🌐</span>Situation
-      <span class="sb-badge">LIVE</span>
+    <div class="sb-section">ต้องตัดสินใจ</div>
+    <div class="sb-item active" onclick="switchPage('dormant',this)">
+      <span class="sb-icon">🔴</span>เงินที่ไม่มีใครดูแล
+      <span class="sb-badge-hot sb-badge" id="dorm-badge">—</span>
     </div>
-    <div class="sb-item" onclick="switchPage('signals')">
-      <span class="sb-icon">📡</span>Macro Signals
+    <div class="sb-item" onclick="switchPage('cost',this)">
+      <span class="sb-icon">💰</span>ต้นทุนที่มองไม่เห็น
     </div>
-    <div class="sb-item" onclick="switchPage('feargreed')">
-      <span class="sb-icon">🧠</span>Market Mood
-      <span class="sb-badge-warn sb-badge" id="fg-badge">!</span>
+    <div class="sb-section">ลงมือ</div>
+    <div class="sb-item" onclick="switchPage('dca',this)">
+      <span class="sb-icon">🎯</span>DCA เดือนนี้
     </div>
-
-    <div class="sb-section">Strategy</div>
-    <div class="sb-item" onclick="switchPage('strategy')">
-      <span class="sb-icon">🎯</span>Playbook
-    </div>
-    <div class="sb-item" onclick="switchPage('sectors')">
-      <span class="sb-icon">🏭</span>Sectors
-    </div>
-    <div class="sb-item" onclick="switchPage('portfolio')">
-      <span class="sb-icon">⚖️</span>Allocation
-    </div>
-
-    <div class="sb-section">Planning</div>
-    <div class="sb-item" onclick="switchPage('scenario')">
-      <span class="sb-icon">🔮</span>Scenario Planner
-      <span class="sb-badge" style="background:rgba(167,139,250,.2);color:#a78bfa">AI</span>
-    </div>
-    <div class="sb-section">Intelligence</div>
-    <div class="sb-item" onclick="switchPage('alerts')">
-      <span class="sb-icon">🔔</span>Alerts
-      <span class="sb-badge-hot sb-badge" id="alert-badge">3</span>
-    </div>
-    <div class="sb-item" onclick="switchPage('calendar')">
-      <span class="sb-icon">📆</span>Events
+    <div class="sb-section">บริบท</div>
+    <div class="sb-item" onclick="switchPage('market',this)">
+      <span class="sb-icon">📊</span>ตลาดวันนี้
     </div>
   </div>
   <div class="sb-bottom">
@@ -435,382 +413,49 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 
 <div class="main-content">
 
-<!-- ══ SITUATION ══ -->
-<div class="page active" id="page-situation">
+<!-- ══ DORMANT ══ -->
+<div class="page active" id="page-dormant">
   <div class="pg-hdr">
-    <div><div class="pg-title">Market Situation</div><div class="pg-sub">สถานการณ์ตลาดโลกและการอ่านสัญญาณ<span id="sit-updated"></span></div></div>
-
+    <h1 class="pg-title">เงินที่ไม่มีใครดูแล</h1>
+    <p class="pg-sub">สินทรัพย์ที่หยุดซื้อเกิน 180 วัน — เงินจริงที่ยังจมอยู่แต่หลุดจากเรดาร์</p>
   </div>
-
-  <!-- Regime Banner -->
-  <div class="situation-banner sit-neutral" id="regime-banner">
-    <div class="sit-left">
-      <div class="sit-icon" id="regime-icon">⚖️</div>
-      <div>
-        <div class="sit-label" id="regime-asof">Market Regime · computing…</div>
-        <div class="sit-title" id="regime-title" style="color:var(--muted2)">กำลังคำนวณ…</div>
-        <div class="sit-desc" id="regime-desc">วิเคราะห์จากสัญญาณตลาดสด — ไม่มีข้อความเขียนล่วงหน้า</div>
-      </div>
-    </div>
-    <div class="sit-right">
-      <div class="sit-action">
-        <div class="sit-action-lbl">Risk Appetite</div>
-        <div class="sit-action-val" style="color:var(--savings)" id="regime-risk">—</div>
-      </div>
-      <div class="sit-action">
-        <div class="sit-action-lbl">Suggested Posture</div>
-        <div class="sit-action-val" style="color:var(--accent3)" id="regime-posture">—</div>
-      </div>
-      <div class="sit-action">
-        <div class="sit-action-lbl">Cash Reserve</div>
-        <div class="sit-action-val" style="color:var(--gain)" id="regime-cash">—</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Regime Meter -->
-  <div class="regime-meter">
-    <div class="ct" style="margin-bottom:0;padding-bottom:0;border-bottom:none">Market Regime Spectrum<span>Bear ← → Bull</span></div>
-    <div class="meter-track">
-      <div class="meter-thumb" id="regime-thumb" style="left:55%"></div>
-    </div>
-    <div class="meter-labels">
-      <span style="color:var(--loss)">Deep Bear</span>
-      <span>Recession</span>
-      <span style="color:var(--muted2)">Flat</span>
-      <span>Recovery</span>
-      <span style="color:var(--gain)">Bull Run</span>
-    </div>
-  </div>
-
-  <div id="regime-signals"></div>
-
-  <!-- Key metrics -->
-  <div class="sg">
-    <div class="sc" style="--g:rgba(0,212,160,.08)" data-tk="SP500">
-      <div class="sc-lbl">S&P 500 <span class="tk-dot"></span></div>
-      <div class="sc-val gain" id="sp500-val">5,482</div>
-      <div class="sc-sub"><span class="gain">▲ +12.4% YTD</span></div>
-    </div>
-    <div class="sc" style="--g:rgba(76,201,240,.08)" data-tk="SET_INDEX">
-      <div class="sc-lbl">SET Index <span class="tk-dot"></span></div>
-      <div class="sc-val loss" id="set-val">1,198</div>
-      <div class="sc-sub"><span class="loss">▼ -8.3% YTD</span></div>
-    </div>
-    <div class="sc" style="--g:rgba(255,149,0,.08)" data-tk="US10Y">
-      <div class="sc-lbl">US 10Y Yield <span class="tk-dot"></span></div>
-      <div class="sc-val" style="color:var(--debt)">4.28%</div>
-      <div class="sc-sub"><span class="loss">▼ -42bps YTD</span></div>
-    </div>
-    <div class="sc" style="--g:rgba(255,209,102,.08)" data-tk="GOLD_XAU,GOLD_GLD">
-      <div class="sc-lbl">Gold <span class="tk-dot"></span></div>
-      <div class="sc-val gain">$3,312</div>
-      <div class="sc-sub"><span class="gain">▲ +28.1% YTD</span></div>
-    </div>
-    <div class="sc" style="--g:rgba(255,149,0,.08)" data-tk="USDTHB">
-      <div class="sc-lbl">USD/THB <span class="tk-dot"></span></div>
-      <div class="sc-val" style="color:var(--debt)">33.8</div>
-      <div class="sc-sub"><span class="loss">Baht อ่อน YTD</span></div>
-    </div>
-    <div class="sc" style="--g:rgba(247,37,133,.08)" data-tk="BTCUSD">
-      <div class="sc-lbl">Bitcoin <span class="tk-dot"></span></div>
-      <div class="sc-val gain">$98,420</div>
-      <div class="sc-sub"><span class="gain">▲ +48.2% YTD</span></div>
-    </div>
-  </div>
-
-  <!-- Market Narrative -->
-  <div class="sl sl-mt blue">สถานการณ์หลัก 2026</div>
-  <div class="cr2">
-    <div>
-      <div class="advice-box">
-        <div class="advice-header"><div class="advice-icon">🇺🇸</div><div class="advice-title">US: AI Boom เจอเงินเฟ้อร้อน + Fed สาย Hawk</div></div>
-        <div class="advice-body">S&P ใกล้ all-time high (+7.7% YTD) จาก <strong>AI capex boom</strong> แต่โครงสร้างเปราะ: เงินเฟ้อพุ่ง <strong>4.2-4.3%</strong> สูงสุด 3 ปีจากราคาน้ำมัน (สงคราม Iran, Brent เคยแตะ $114) + ภาษีนำเข้า 15%. Fed ยุค <strong>Kevin Warsh</strong> ยึด 2% target เหนียวแน่น — ตลาด price การ<strong>ขึ้นดอกเบี้ย</strong>ภายใน ธ.ค. เกือบ 100%. ต้นก.ค. เริ่มเห็น rotation: SOX ร่วง 12% ใน 2 วัน เงินไหลเข้า value/energy/healthcare. Jobs เริ่มเย็น (NFP +57K ต่ำกว่าคาด) เป็นตัวถ่วงไม่ให้ Fed ขึ้นเร็ว</div>
-      </div>
-      <div class="advice-box">
-        <div class="advice-header"><div class="advice-icon">🇹🇭</div><div class="advice-title">ไทย: ดาวเด่นภูมิภาค — Foreign Inflow แรง</div></div>
-        <div class="advice-body">พลิกเกม: SET <strong>+26% YTD</strong> ทะลุ 1,600 ต่างชาติซื้อสุทธิ ~27,000 ล้านบาท <strong>สวนทาง</strong>เกาหลี/อินเดีย/ไต้หวันที่โดนขาย. ธีมที่นำ: <strong>Domestic + Value + Defensive</strong> (แบงก์, ค้าปลีก). BOT ลดดอกเบี้ยเหลือ <strong>1.00%</strong> หนุนสภาพคล่อง. GDP Q1 +2.8% ดีกว่าคาด. แต่พื้นฐานยังบาง: ทั้งปีคาดโตแค่ 1.5-2.5%, ภาษี US ขึ้นเป็น 19% ส.ค., หนี้ครัวเรือน 86% GDP, เลือกตั้งในปีนี้ = ความเสี่ยงการเมืองยังอยู่</div>
-      </div>
-    </div>
-    <div>
-      <div class="advice-box">
-        <div class="advice-header"><div class="advice-icon">⚠️</div><div class="advice-title">ความเสี่ยงหลัก Q3-Q4 2026</div></div>
-        <div class="advice-body">
-          <strong>1. Rate Hike Risk</strong> — เงินเฟ้อ 4.3% + Fed hawk = การขึ้นดอกเบี้ยถูก price ภายใน ธ.ค. กระทบ valuation growth stocks และต้นทุนหนี้ AI capex ($1.5T ที่กู้มาลงทุน)<br><br>
-          <strong>2. Energy Shock ยืดเยื้อ</strong> — สงคราม Iran ทำ oil supply ตึง ถ้าน้ำมันค้างสูง = เงินเฟ้อไม่ลง<br><br>
-          <strong>3. AI Concentration</strong> — ตลาดขึ้นด้วยหุ้นไม่กี่ตัว SOX เพิ่งร่วง 12% ใน 2 วันเป็นคำเตือน + คลื่น IPO ยักษ์ (OpenAI, SpaceX, Anthropic ~$3T) จะดูดสภาพคล่อง<br><br>
-          <strong>4. ไทย: ภาษี 19% + เลือกตั้ง</strong> — export แข่งยากขึ้นตั้งแต่ ส.ค. และการเมืองคือ wildcard เดิม
-        </div>
-      </div>
-      <div class="advice-box">
-        <div class="advice-header"><div class="advice-icon">💡</div><div class="advice-title">โอกาสที่น่าสนใจ</div></div>
-        <div class="advice-body">
-          <strong>Gold $4,100+</strong> — ทำ all-time high ต่อเนื่อง: เงินเฟ้อสูง + สงคราม + central bank ซื้อ = สามแรงหนุนพร้อมกัน (คุณถือแค่ 1% vs เป้า 13%)<br><br>
-          <strong>Thai Domestic/Value</strong> — ธีมที่ foreign money กำลังไล่ซื้อ: แบงก์, ค้าปลีก, defensive<br><br>
-          <strong>Energy + Healthcare (US)</strong> — ปลายทาง rotation ออกจาก tech, ได้ประโยชน์จากน้ำมันสูง<br><br>
-          <strong>US Quality Tech on dip</strong> — ถ้า correction ลึก 10%+ ค่อยพิจารณา อย่าไล่ตอนนี้<br><br>
-          <strong>⚠️ ระวัง US bond ยาว</strong> — ดอกเบี้ยขาขึ้น = duration risk (ตรงข้าม narrative เดิม)
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Forward-looking scenarios — ข้อ 4: แสดงถาวร ไม่ซ่อนใต้ปุ่มอีก -->
-  <div class="tf-section" data-tf="3m">
-    <div style="background:rgba(124,111,236,.08);border:1px solid rgba(124,111,236,.3);border-radius:14px;padding:20px;margin:0 0 16px">
-      <div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#7c6fec;margin-bottom:12px;font-weight:600">📅 3 เดือนข้างหน้า — คาดการณ์ Q3 2026</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
-        <div style="background:var(--bg3);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--muted);margin-bottom:4px">FED ACTION</div><div style="font-size:14px;font-weight:600;color:var(--text)">Hold → เสี่ยงขึ้น 1x</div><div style="font-size:11px;color:var(--muted2)">Hike ก.ค. ~20% · ธ.ค. ~100% (Bloomberg)</div></div>
-        <div style="background:var(--bg3);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--muted);margin-bottom:4px">S&P 500</div><div style="font-size:14px;font-weight:600;color:var(--income)">5,600–5,900</div><div style="font-size:11px;color:var(--muted2)">AI + rate cut tailwind</div></div>
-        <div style="background:var(--bg3);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--muted);margin-bottom:4px">SET INDEX</div><div style="font-size:14px;font-weight:600;color:var(--debt)">1,200–1,280</div><div style="font-size:11px;color:var(--muted2)">ยังกดดัน Fund outflow</div></div>
-        <div style="background:var(--bg3);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--muted);margin-bottom:4px">CRYPTO</div><div style="font-size:14px;font-weight:600;color:var(--income)">+10–25%</div><div style="font-size:11px;color:var(--muted2)">Post-halving momentum</div></div>
-      </div>
-      <div style="background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:12px">
-        <div style="font-size:11px;color:var(--muted2);margin-bottom:6px;font-weight:500">🎯 แนะนำ Posture Q3 2026</div>
-        <div style="font-size:12px;color:var(--text);line-height:1.7">ยัง <b style="color:var(--income)">Risk-On</b> ได้ — เน้น US Tech + AI, Crypto ถือไว้, ลด Thai Stock<br><span style="color:var(--debt)">Watch:</span> FOMC Jul 29-30 · Q2 Earnings</div>
-      </div>
-      <button onclick="switchPage('scenario')" style="background:rgba(124,111,236,.15);border:1px solid rgba(124,111,236,.4);color:#7c6fec;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;width:100%">🔮 ดู AI Scenario Analysis แบบละเอียด →</button>
-    </div>
-  </div>
-
-  <div class="tf-section" data-tf="6m">
-    <div style="background:rgba(255,149,0,.08);border:1px solid rgba(255,149,0,.3);border-radius:14px;padding:20px;margin:0 0 16px">
-      <div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--debt);margin-bottom:12px;font-weight:600">📅 6 เดือนข้างหน้า — คาดการณ์ Q4 2026</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
-        <div style="background:var(--bg3);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--muted);margin-bottom:4px">FED ACTION</div><div style="font-size:14px;font-weight:600;color:var(--text)">Cut 2–3x รวม</div><div style="font-size:11px;color:var(--muted2)">Rate ~4.75–5.00%</div></div>
-        <div style="background:var(--bg3);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--muted);margin-bottom:4px">S&P 500</div><div style="font-size:14px;font-weight:600;color:var(--income)">5,800–6,200</div><div style="font-size:11px;color:var(--muted2)">Election + rate cut combo</div></div>
-        <div style="background:var(--bg3);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--muted);margin-bottom:4px">SET INDEX</div><div style="font-size:14px;font-weight:600;color:var(--income)">1,280–1,400</div><div style="font-size:11px;color:var(--muted2)">Recovery ถ้า THB แข็ง</div></div>
-        <div style="background:var(--bg3);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--muted);margin-bottom:4px">CRYPTO</div><div style="font-size:14px;font-weight:600;color:var(--income)">+30–60%</div><div style="font-size:11px;color:var(--muted2)">Institutional + ETF flow</div></div>
-      </div>
-      <div style="background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:12px">
-        <div style="font-size:11px;color:var(--muted2);margin-bottom:6px;font-weight:500">🎯 แนะนำ Posture Q4 2026</div>
-        <div style="font-size:12px;color:var(--text);line-height:1.7"><b style="color:var(--income)">Accumulate</b> ในช่วง dip — เพิ่ม Crypto, กลับเข้า SET เมื่อ Trend กลับ<br><span style="color:var(--debt)">Watch:</span> US Election Nov · Fed Dec · China stimulus</div>
-      </div>
-      <button onclick="switchPage('scenario')" style="background:rgba(255,149,0,.15);border:1px solid rgba(255,149,0,.4);color:var(--debt);padding:8px 16px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;width:100%">🔮 ดู AI Scenario Analysis แบบละเอียด →</button>
-    </div>
-  </div>
-
+  <div id="dorm-summary"></div>
+  <div id="dorm-list"></div>
+  <div class="sl sl-mt">ตั้งใจถือ (Core)</div>
+  <div id="dorm-intentional"></div>
+  <div class="sl sl-mt">ยัง Active — ซื้อสม่ำเสมอ</div>
+  <div id="dorm-active"></div>
 </div>
 
-<!-- ══ MACRO SIGNALS ══ -->
-<div class="page" id="page-signals">
+<!-- ══ COST ══ -->
+<div class="page" id="page-cost">
   <div class="pg-hdr">
-    <div><div class="pg-title">Macro Signals</div><div class="pg-sub">ตัวชี้วัดเศรษฐกิจหลักและการอ่านสัญญาณ</div></div>
+    <h1 class="pg-title">ต้นทุนที่มองไม่เห็น</h1>
+    <p class="pg-sub">ค่าธรรมเนียม ภาษี ปันผล และความเสี่ยงค่าเงิน</p>
   </div>
-
-  <div class="sl">Global Economic Indicators</div>
-  <div class="signal-grid" id="macro-signals-global"></div>
-
-  <div class="sl sl-mt blue">Thailand Macro</div>
-  <div class="signal-grid" id="macro-signals-thai"></div>
-
-  <div class="sl sl-mt orange">Technical Signals</div>
-  <div class="signal-grid" id="macro-signals-tech"></div>
-
-  <div class="sl sl-mt purple">Fed Watch & Rate Expectations</div>
-  <div class="cc">
-    <div class="ct">Rate Path Expectation 2026–2027<span>CME FedWatch Implied</span></div>
-    <div style="position:relative;height:220px"><canvas id="fed-chart"></canvas></div>
-  </div>
+  <div id="cost-body"></div>
 </div>
 
-<!-- ══ FEAR & GREED ══ -->
-<div class="page" id="page-feargreed">
+<!-- ══ DCA ══ -->
+<div class="page" id="page-dca">
   <div class="pg-hdr">
-    <div><div class="pg-title">Market Mood</div><div class="pg-sub">Fear & Greed + Sentiment Analysis</div></div>
+    <h1 class="pg-title">DCA เดือนนี้</h1>
+    <p class="pg-sub">เงินก้อนถัดไปควรไปที่ไหน — เฉพาะกองที่ยัง active</p>
   </div>
-
-  <div class="cr2">
-    <div class="cc">
-      <div class="ct">Portfolio Mood<span id="fg-src-label">ถ่วงน้ำหนักตามพอร์ตจริง · คำนวณสด</span></div>
-      <div class="fg-display">
-        <canvas id="fg-gauge" width="200" height="110"></canvas>
-        <div class="fg-number" id="fg-number" style="color:var(--debt)">52</div>
-        <div class="fg-label" id="fg-mood">NEUTRAL</div>
-      </div>
-      <div id="fg-past-row" style="margin-top:14px;display:flex;justify-content:space-between;font-size:11px;color:var(--muted)"></div>
-    </div>
-    <div class="cc">
-      <div class="ct">คอมโพเนนต์ Sentiment<span>ปัจจัยที่ใช้คำนวณ</span></div>
-      <div id="fg-components" style="display:flex;flex-direction:column;gap:8px;padding-top:4px"></div>
-    </div>
-  </div>
-
-  <div class="sl sl-mt orange">Historical Mood</div>
-  <div class="cc">
-    <div class="ct">Crypto Fear & Greed — 90 วัน<span>ที่มา: alternative.me (ดัชนีจริง)</span></div>
-    <div style="position:relative;height:200px"><canvas id="fg-history-chart"></canvas></div>
-  </div>
-
-  <div class="sl sl-mt">การตีความ & Action</div>
-  <div id="fg-interpretation" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px"></div>
+  <div id="dca-body"></div>
 </div>
 
-<!-- ══ STRATEGY ══ -->
-<div class="page" id="page-strategy">
+<!-- ══ MARKET ══ -->
+<div class="page" id="page-market">
   <div class="pg-hdr">
-    <div><div class="pg-title">Investment Playbook</div><div class="pg-sub">กลยุทธ์การลงทุนตามสถานการณ์ปัจจุบัน</div></div>
+    <h1 class="pg-title">ตลาดวันนี้</h1>
+    <p class="pg-sub">ข้อมูลดิบที่สดจริงเท่านั้น — ไม่ให้คะแนน ไม่แนะนำให้ซื้อขาย</p>
   </div>
-
-  <div class="sl">What to BUY / HOLD / AVOID<span id="pb-regime-tag" style="color:var(--muted2);font-weight:400"></span></div>
-  <div class="strat-grid" id="strategy-cards"></div>
-
-  <div class="sl sl-mt purple">DCA Action Plan</div>
-  <div class="cr2">
-    <div class="cc">
-      <div class="ct">แผน DCA รายเดือน<span id="dca-regime-tag"></span></div>
-      <div style="display:flex;flex-direction:column;gap:10px;padding-top:4px" id="dca-plan"></div>
-    </div>
-    <div class="cc">
-      <div class="ct">Portfolio Target Weights<span>เป้าของคุณ (แก้ที่ Alerts)</span></div>
-      <div style="padding-top:4px" id="target-weights"></div>
-    </div>
-  </div>
-
-  <div class="sl sl-mt orange">Scenario Analysis</div>
-  <div id="scenario-grid" style="background:var(--bg3);border:1px solid var(--border2);border-radius:12px;
-    padding:18px 20px;display:flex;gap:16px;align-items:center;flex-wrap:wrap">
-    <div style="flex:1;min-width:220px;font-size:12px;line-height:1.85;color:var(--muted2)">
-      จำลองผลกระทบต่อพอร์ตจริงของคุณเมื่อตลาด/ดอกเบี้ย/ค่าเงินเปลี่ยน
-      <span style="color:var(--muted)">— คำนวณสดจาก holdings ปัจจุบัน</span>
-    </div>
-    <button onclick="switchPage('scenario')" style="background:var(--bg4);color:var(--text);
-      border:1px solid var(--border2);border-radius:9px;padding:9px 16px;font-family:inherit;
-      font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">
-      🔮 เปิด Scenario Planner →</button>
-  </div>
+  <div id="market-body"></div>
 </div>
 
-<!-- ══ SECTORS ══ -->
-<div class="page" id="page-sectors">
-  <div class="pg-hdr">
-    <div><div class="pg-title">Sector Rotation</div><div class="pg-sub">Sector มีชีวิตตาม business cycle — ตอนนี้อยู่ช่วงไหน?</div></div>
-  </div>
+</div><!-- /main-content -->
 
-  <div class="sl">Business Cycle Position</div>
-  <div class="cc" style="margin-bottom:18px">
-    <div class="ct">ตำแหน่งใน Business Cycle<span id="cyc-now">—</span></div>
-    <div id="cycle-track"></div>
-  </div>
-
-  <div class="sl sl-mt blue">Sector Rating — ตลาดโลก (US)</div>
-  <div id="sector-summary" style="margin-bottom:12px"></div>
-  <div class="sector-grid" id="sector-global"></div>
-
-  <div class="sl sl-mt">Sector Rating — ตลาดไทย (SET)</div>
-  <div class="sector-grid" id="sector-thai"></div>
-
-  <div class="sl sl-mt purple">Sector Flow (3M)</div>
-  <div class="cc">
-    <div class="ct">Fund Flow เข้า/ออก Sector<span>3 เดือนล่าสุด</span></div>
-    <div style="position:relative;height:220px"><canvas id="sector-flow-chart"></canvas></div>
-  </div>
-</div>
-
-<!-- ══ ALLOCATION ══ -->
-<div class="page" id="page-portfolio">
-  <div class="pg-hdr">
-    <div><div class="pg-title">Portfolio Allocation</div><div class="pg-sub">จัดสรรพอร์ตตาม Market Regime ปัจจุบัน</div></div>
-  </div>
-
-  <div class="sl">Suggested vs Current Allocation</div>
-  <div class="cr2">
-    <div class="cc">
-      <div class="ct">Target Allocation<span id="alloc-chart-sub">Late-Cycle Neutral</span></div>
-      <div style="height:200px;position:relative"><canvas id="alloc-target-chart"></canvas></div>
-    </div>
-    <div class="cc">
-      <div class="ct">Asset Class Breakdown<span id="alloc-breakdown-sub">แนะนำ vs ตัวอย่างพอร์ต</span></div>
-      <div style="display:flex;flex-direction:column;gap:6px;padding-top:4px" id="alloc-breakdown"></div>
-    </div>
-  </div>
-
-  <div class="sl sl-mt orange">Rebalancing Signals</div>
-  <div class="alert-list" id="rebalance-signals"></div>
-
-  <div class="sl sl-mt purple">Risk-Return Matrix</div>
-  <div class="cc">
-    <div class="ct">Expected Return vs Risk (Volatility)<span>ระยะ 12 เดือน</span></div>
-    <div style="height:220px;position:relative"><canvas id="rr-chart"></canvas></div>
-  </div>
-</div>
-
-<!-- ══ ALERTS ══ -->
-<div class="page" id="page-alerts">
-  <div class="pg-hdr">
-    <div><div class="pg-title">Investment Alerts</div><div class="pg-sub">สัญญาณที่ควรระวังและโอกาสที่น่าสนใจ</div></div>
-  </div>
-
-  <div class="sl red">🔴 Critical — ต้องตัดสินใจ</div>
-  <div class="alert-list" id="alerts-critical"></div>
-
-  <div class="sl sl-mt orange">🟠 Warning — ติดตามใกล้ชิด</div>
-  <div class="alert-list" id="alerts-warning"></div>
-
-  <div class="sl sl-mt">🟢 Opportunity — โอกาส</div>
-  <div class="alert-list" id="alerts-opportunity"></div>
-</div>
-
-<!-- ══ CALENDAR ══ -->
-<div class="page" id="page-calendar">
-  <div class="pg-hdr">
-    <div><div class="pg-title">Economic Calendar</div><div class="pg-sub">เหตุการณ์สำคัญที่จะเกิดขึ้น</div></div>
-  </div>
-
-  <div class="sl">Upcoming Events — Q3 2026</div>
-  <div class="timeline" id="event-timeline"></div>
-</div>
-
-<!-- ══ SCENARIO PLANNER ══ -->
-<div class="page" id="page-scenario">
-  <div class="pg-hdr">
-    <div>
-      <div class="pg-title">🔮 Scenario Planner</div>
-      <div class="pg-sub">AI วิเคราะห์แนวโน้ม + Portfolio Impact · Bull / Base / Bear</div>
-    </div>
-  </div>
-
-  <!-- Portfolio strip -->
-  <div class="sc-pf-strip" id="sc-pf-strip">
-    <div class="sc-pf-item">
-      <div class="sc-pf-lbl">Portfolio Value</div>
-      <div class="sc-pf-val" id="sc-pf-val">—</div>
-    </div>
-    <div class="sc-pf-item">
-      <div class="sc-pf-lbl">Total P&L</div>
-      <div class="sc-pf-val" id="sc-pf-pnl">—</div>
-    </div>
-    <div class="sc-pf-item">
-      <div class="sc-pf-lbl">Top Allocation</div>
-      <div class="sc-pf-val" id="sc-pf-alloc">—</div>
-    </div>
-    <div class="sc-pf-item">
-      <div class="sc-pf-lbl">Data Source</div>
-      <div class="sc-pf-val" id="sc-pf-src" style="font-size:11px;color:var(--muted2)">—</div>
-    </div>
-  </div>
-
-  <!-- API Key notice -->
-  <div id="sc-key-notice" style="display:none;background:rgba(255,149,0,.08);border:1px solid rgba(255,149,0,.3);border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:var(--debt)">
-    ⚠️ ยังไม่มี API Key — <a href="#" onclick="scPromptKey()" style="color:var(--debt);text-decoration:underline">คลิกเพื่อใส่ Anthropic API Key</a> ก่อนกด Generate
-    <span style="float:right;cursor:pointer;opacity:.6" onclick="this.parentElement.style.display='none'">✕</span>
-  </div>
-  <!-- Timeframe tabs -->
-  <div class="sc-tabs">
-    <button class="sc-tab active" onclick="scSetPeriod('now',this)">📍 ตอนนี้</button>
-    <button class="sc-tab" onclick="scSetPeriod('3m',this)">📅 3 เดือน</button>
-    <button class="sc-tab" onclick="scSetPeriod('6m',this)">📅 6 เดือน</button>
-  </div>
-
-  <!-- Scenario grid (3 cards) -->
-  <div class="sc-grid" id="sc-grid">
-    <!-- Generated by JS -->
-  </div>
-</div>
-
-</div><!-- end main-content -->
-
-<script src="shared.js"></script>
 <script>
 // v40: เดิมลงทะเบียน SW เฉพาะ index.html — ถ้าเปิดหน้านี้เป็นหน้าแรก
 // (หรือ add-to-homescreen จากหน้านี้) จะไม่มี SW เลย offline พัง
@@ -821,1559 +466,371 @@ if('serviceWorker' in navigator){
   });
 }
 </script>
+<script src="shared.js"></script>
 <script>
-/* ── #1: single source of truth for the Chart.js font stack ──────────────
-   Latin first, Thai second — matches --f-sans / --f-mono in CSS so canvas
-   text and DOM text render with the exact same fonts. */
-/* #2: LOC is also set by shared.js. Assigning to window (instead of
-   const/var) makes it idempotent, so load order can't cause a
-   'already been declared' SyntaxError that would kill the whole script. */
-/* #6 — there was NO html escaping anywhere, while 92 innerHTML sites
-   interpolate strings straight from the spreadsheet. A merchant/note such as
-   "Fitness & Co <Gym>" made the browser parse <Gym> as a tag and SWALLOW the
-   rest of that row — one of the real causes of rows rendering "wrong".
-   esc() is applied to every sheet-derived string field below. */
-const escHtml=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+/* ══════════════════════════════════════════════════════════════════════
+   Investment Analysis v46 — เขียนใหม่ทั้งหน้า
+   ══════════════════════════════════════════════════════════════════════
+   ทำไมถึงรื้อ: รุ่นเดิม 2,363 บรรทัดสร้างรอบ computeRegime() ซึ่งกิน
+   สัญญาณ 14 ตัว โดย 9 ตัวมาจาก FRED ที่ pipeline ดึงไม่ได้ (fred_ok 0/14,
+   TimeoutError 42 ครั้ง) และหลังตัด FRED ใน v44 มันจะไม่มีวันอัปเดตอีกเลย
+   fail-safe merge carry ค่าเก่ามาให้ครบ หน้าจึงแสดง "สถานการณ์ปัจจุบัน"
+   ที่คำนวณจากข้อมูลเดือนพฤษภาคม — ผิดแบบเงียบ ซึ่งแย่กว่าไม่มีข้อมูล
+
+   หลักการของรุ่นนี้:
+     1. ใช้เฉพาะข้อมูลที่สดและตรวจสอบได้ — พอร์ตตัวเอง + Yahoo (23/23 ผ่าน)
+     2. ทุกหน้าจบด้วยการตัดสินใจที่ทำได้จริง ไม่ใช่ความเห็นเรื่องตลาด
+     3. ไม่ให้คะแนน ไม่ทำนายทิศทาง — แสดงข้อเท็จจริงแล้วให้เจ้าของเงินตัดสิน
+*/
 window.LOC = window.LOC || 'th-TH-u-ca-gregory';
-const CHART_FONT = "'JetBrains Mono','IBM Plex Sans Thai',ui-monospace,monospace";
-// ── Navigation ──
+const escHtml=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const nz=v=>{const n=Number(v);return isFinite(n)?n:0;};
+const fmt=v=>(nz(v)<0?'−':'')+'฿'+Math.abs(nz(v)).toLocaleString(LOC,{maximumFractionDigits:0});
+const fmtSign=v=>(nz(v)>=0?'+฿':'−฿')+Math.abs(nz(v)).toLocaleString(LOC,{maximumFractionDigits:0});
+const pctS=v=>v==null?'—':(v>=0?'+':'')+v.toFixed(1)+'%';
+const GAIN='#00d4a0', LOSS='#ff453a', WARN='#ff9f0a', MUTE='#8080b0';
+
+let PORT=null, CLS=null;
+function loadPort(){
+  try{ PORT=JSON.parse(localStorage.getItem('finOS_portfolio')||'null'); }catch(e){ PORT=null; }
+  return PORT;
+}
+// แปลง payload จาก index.html → รูปแบบที่ classifyHoldings() ต้องการ
+function buildClassification(){
+  if(!PORT || !PORT.holdings || !PORT.tradeLog) return null;
+  const trades=PORT.tradeLog.map(r=>({
+    date:new Date(r.d+'T00:00:00Z'), type:r.t, ticker:r.k, thb:r.thb
+  }));
+  const assets=PORT.holdings.map(h=>({
+    ticker:h.ticker, label:h.label, assetType:h.assetType,
+    qty:h.qty, cost:h.cost, val:h.val
+  }));
+  const psrc={}; PORT.holdings.forEach(h=>{ if(h.priceSrc) psrc[h.ticker]=h.priceSrc; });
+  return classifyHoldings(trades, assets, psrc);
+}
+
+function needData(el, what){
+  document.getElementById(el).innerHTML=`
+    <div style="background:var(--bg3);border:1px dashed var(--border2);border-radius:12px;
+                padding:22px;text-align:center;font-size:13px;color:var(--muted)">
+      ยังไม่มีข้อมูล${what?' — '+escHtml(what):''}<br>
+      <a href="index.html" style="color:var(--savings);font-size:12px">เปิด Finance OS แล้วกด Sync ก่อน →</a>
+    </div>`;
+}
+
+/* ═══ 1. DORMANT ═══════════════════════════════════════════════════════
+   หน้าหลักของรุ่นนี้ เพราะมันคือเงินก้อนใหญ่ที่สุดที่ยังไม่มีใครตัดสินใจ
+   ปุ่ม "ตั้งใจถือ" ย้ายรายการออกจากรายการเตือน — เพื่อให้สิ่งที่เหลือ
+   คือ "ยังไม่ได้ตัดสินใจ" จริงๆ ไม่ใช่ noise ที่ผู้ใช้เรียนรู้ที่จะเมิน */
+function renderDormant(){
+  if(!CLS){ needData('dorm-summary'); return; }
+  const S=CLS.stats, d=S.dormant, a=S.active;
+  const badge=document.getElementById('dorm-badge');
+  if(badge){ badge.textContent=CLS.dormant.length||'0';
+             badge.style.display=CLS.dormant.length?'':'none'; }
+
+  const totalCost=d.cost+a.cost+S.intentional.cost;
+  const share=totalCost>0 ? d.cost/totalCost*100 : 0;
+
+  document.getElementById('dorm-summary').innerHTML=`
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:18px">
+      <div class="sc" style="--g:rgba(255,69,58,.06)">
+        <div class="sc-lbl">เงินที่จมอยู่</div>
+        <div class="sc-val" style="color:${LOSS}">${fmt(d.cost)}</div>
+        <div class="sc-sub">${d.n} รายการ · ${share.toFixed(0)}% ของทุนทั้งหมด</div></div>
+      <div class="sc">
+        <div class="sc-lbl">ผลตอบแทน (เฉพาะที่มีราคา)</div>
+        <div class="sc-val" style="color:${d.plPct>=0?GAIN:LOSS}">${pctS(d.plPct)}</div>
+        <div class="sc-sub">${fmt(d.pricedCost)} → ${fmt(d.val)}</div></div>
+      <div class="sc">
+        <div class="sc-lbl">ปันผลที่ได้รับ</div>
+        <div class="sc-val" style="color:${GAIN}">${fmt(d.div)}</div>
+        <div class="sc-sub">ยังจ่ายอยู่แม้หยุดซื้อ</div></div>
+      <div class="sc" style="--g:rgba(0,212,160,.06)">
+        <div class="sc-lbl">เทียบกับกลุ่ม Active</div>
+        <div class="sc-val" style="color:${a.plPct>=0?GAIN:LOSS}">${pctS(a.plPct)}</div>
+        <div class="sc-sub">${a.n} รายการ · ${fmt(a.cost)}</div></div>
+    </div>
+    ${d.unpricedN?`<div style="background:rgba(255,69,58,.07);border:1px solid rgba(255,69,58,.3);
+      border-radius:10px;padding:12px 15px;font-size:12px;line-height:1.8;margin-bottom:16px">
+      <strong style="color:${LOSS}">${d.unpricedN} รายการไม่มีราคา รวมต้นทุน ${fmt(d.unpricedCost)}</strong> —
+      dashboard นับเป็น ฿0 มาตลอด ทั้งที่ยังจ่ายปันผลจริง<br>
+      <span style="color:var(--muted2)">นี่ไม่ใช่เรื่องบังเอิญ: ของที่เลิกสนใจ คือของที่ไม่มีใครสังเกตว่าราคาหาย</span></div>`:''}
+    <div style="font-size:12px;color:var(--muted2);line-height:1.8;margin-bottom:14px">
+      เกณฑ์: ไม่มีการซื้อเกิน ${typeof DORMANT_DAYS!=='undefined'?DORMANT_DAYS:180} วัน ·
+      กด <strong style="color:var(--text)">ตั้งใจถือ</strong> เพื่อย้ายออกจากรายการนี้ถาวร
+      (เก็บในเครื่อง — อยู่ใน Backup ของ Finance OS)
+    </div>`;
+
+  document.getElementById('dorm-list').innerHTML = CLS.dormant.length
+    ? holdingTable(CLS.dormant, true) : emptyRow('ไม่มีรายการที่หลุดจากเรดาร์ 👍');
+  document.getElementById('dorm-intentional').innerHTML = CLS.intentional.length
+    ? holdingTable(CLS.intentional, false, true) : emptyRow('ยังไม่ได้ทำเครื่องหมายรายการใด');
+  document.getElementById('dorm-active').innerHTML = holdingTable(CLS.active, false);
+}
+
+function emptyRow(t){
+  return `<div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;
+    padding:16px;text-align:center;font-size:12px;color:var(--muted2)">${escHtml(t)}</div>`;
+}
+
+function holdingTable(rows, showTagBtn, isTagged){
+  const body=rows.map(r=>{
+    const plCol = r.pl==null?MUTE:(r.pl>=0?GAIN:LOSS);
+    const ageTxt = r.ageDays==null?'—'
+      : r.ageDays>365?`${(r.ageDays/365).toFixed(1)} ปี`:`${r.ageDays} วัน`;
+    return `<tr style="border-top:1px solid var(--border)">
+      <td style="padding:9px 10px">
+        <div style="font-weight:600;font-size:12.5px">${escHtml(r.ticker)}</div>
+        <div style="font-size:10px;color:var(--muted2)">${escHtml(r.type||'')}</div></td>
+      <td class="nr" style="padding:9px 10px">${fmt(r.cost)}</td>
+      <td class="nr" style="padding:9px 10px">${r.unpriced
+        ? `<span style="color:${LOSS};font-size:11px">ราคาหาไม่เจอ</span>` : fmt(r.val)}</td>
+      <td class="nr" style="padding:9px 10px;color:${plCol};font-weight:600">
+        ${r.pl==null?'—':pctS(r.plPct)}
+        ${r.pl!=null?`<div style="font-size:10px;font-weight:400;opacity:.75">${fmtSign(r.pl)}</div>`:''}</td>
+      <td class="nr" style="padding:9px 10px;color:${r.div>0?GAIN:MUTE}">${r.div>0?fmt(r.div):'—'}</td>
+      <td class="nr" style="padding:9px 10px;font-size:11px">
+        ${r.buys} ครั้ง
+        <div style="font-size:10px;color:var(--muted2)">
+          ${r.medianGap>0?`ทุก ~${r.medianGap}d`:''} ${r.regular?'· สม่ำเสมอ':''}</div></td>
+      <td class="nr" style="padding:9px 10px;font-size:11px;color:${r.ageDays>365?LOSS:r.ageDays>180?WARN:'var(--muted)'}">
+        ${ageTxt}</td>
+      ${showTagBtn||isTagged?`<td class="nr" style="padding:9px 10px">
+        <button onclick="toggleTag('${escHtml(r.ticker)}')"
+          style="background:${isTagged?'rgba(255,159,10,.15)':'var(--bg4)'};
+                 border:1px solid ${isTagged?'rgba(255,159,10,.4)':'var(--border2)'};
+                 color:${isTagged?WARN:'var(--muted)'};border-radius:6px;padding:5px 10px;
+                 font-size:11px;cursor:pointer;font-family:inherit;white-space:nowrap">
+          ${isTagged?'✓ ตั้งใจถือ':'ตั้งใจถือ'}</button></td>`:'<td></td>'}
+    </tr>`;
+  }).join('');
+
+  return `<div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;overflow-x:auto">
+    <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:660px">
+      <thead><tr style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted2)">
+        <th style="text-align:left;padding:9px 10px;font-weight:600">สินทรัพย์</th>
+        <th style="text-align:right;padding:9px 10px;font-weight:600">ต้นทุน</th>
+        <th style="text-align:right;padding:9px 10px;font-weight:600">มูลค่า</th>
+        <th style="text-align:right;padding:9px 10px;font-weight:600">P&amp;L</th>
+        <th style="text-align:right;padding:9px 10px;font-weight:600">ปันผล</th>
+        <th style="text-align:right;padding:9px 10px;font-weight:600">ซื้อ</th>
+        <th style="text-align:right;padding:9px 10px;font-weight:600">หยุดมาแล้ว</th>
+        <th></th>
+      </tr></thead><tbody>${body}</tbody></table></div>`;
+}
+
+function toggleTag(ticker){
+  const tags=loadHoldingTags();
+  setHoldingTag(ticker, tags[ticker] ? null : 'core');
+  CLS=buildClassification();
+  renderDormant();
+}
+</script>
+
+<script>
+/* ═══ 2. HIDDEN COST ═══════════════════════════════════════════════════
+   ค่าคอม/ภาษี เป็นต้นทุนเดียวที่ "แน่นอน 100%" ในการลงทุน — ผลตอบแทนไม่แน่
+   แต่ค่าธรรมเนียมจ่ายแน่ทุกครั้ง จึงควรถูกวัดอย่างจริงจังกว่าการเดาทิศตลาด */
+function renderCost(){
+  if(!CLS || !PORT){ needData('cost-body'); return; }
+  const S=CLS.stats;
+  const totalDiv=S.active.div+S.dormant.div+S.intentional.div;
+  const totalCost=S.active.cost+S.dormant.cost+S.intentional.cost;
+  const totalVal =S.active.val +S.dormant.val +S.intentional.val;
+  const totalPricedCost=S.active.pricedCost+S.dormant.pricedCost+S.intentional.pricedCost;
+  const pl=totalVal-totalPricedCost;
+
+  // ค่าธรรมเนียมสะสม — index.html คำนวณ trueCost ต่อแถวไว้แล้ว
+  let fees=0, feeRows=0;
+  (PORT.tradeLog||[]).forEach(()=>{});   // tradeLog ย่อไม่มี comm → ใช้ค่าจาก PORT ถ้ามี
+  fees = nz(PORT.totalFees);
+
+  // FX exposure — สินทรัพย์ที่ราคาอิง USD
+  const USD_TYPES=/US_Stock|Crypto|Gold/i;
+  let usdVal=0, thbVal=0;
+  [...CLS.active,...CLS.dormant,...CLS.intentional].forEach(r=>{
+    if(r.val==null) return;
+    if(USD_TYPES.test(r.type||'')) usdVal+=r.val; else thbVal+=r.val;
+  });
+  const tot=usdVal+thbVal, usdPct=tot>0?usdVal/tot*100:0;
+  const fx = (typeof mdNum==='function') ? mdNum('USDTHB') : 0;
+
+  document.getElementById('cost-body').innerHTML=`
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:20px">
+      <div class="sc"><div class="sc-lbl">กำไร/ขาดทุนรวม</div>
+        <div class="sc-val" style="color:${pl>=0?GAIN:LOSS}">${fmtSign(pl)}</div>
+        <div class="sc-sub">${fmt(totalPricedCost)} → ${fmt(totalVal)}</div></div>
+      <div class="sc"><div class="sc-lbl">ปันผลสะสม</div>
+        <div class="sc-val" style="color:${GAIN}">${fmt(totalDiv)}</div>
+        <div class="sc-sub">${pl>0?`= ${(totalDiv/pl*100).toFixed(0)}% ของกำไรทั้งหมด`:'รับจริงเป็นเงินสด'}</div></div>
+      ${fees>0?`<div class="sc"><div class="sc-lbl">ค่าธรรมเนียม+ภาษีสะสม</div>
+        <div class="sc-val" style="color:${LOSS}">${fmt(fees)}</div>
+        <div class="sc-sub">${pl>0?`กินกำไรไป ${(fees/(pl+fees)*100).toFixed(0)}%`:'ต้นทุนที่จ่ายแน่นอน'}</div></div>`:''}
+      <div class="sc"><div class="sc-lbl">สัดส่วนอิงดอลลาร์</div>
+        <div class="sc-val" style="color:${usdPct>70?WARN:'var(--white)'}">${usdPct.toFixed(0)}%</div>
+        <div class="sc-sub">${fmt(usdVal)} จาก ${fmt(tot)}</div></div>
+    </div>
+
+    <div class="sl">ความเสี่ยงค่าเงิน</div>
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin-bottom:20px">
+      <div style="display:flex;height:26px;border-radius:7px;overflow:hidden;margin-bottom:12px">
+        <div style="width:${usdPct}%;background:#4cc9f0;display:flex;align-items:center;justify-content:center;
+                    font-size:11px;font-weight:600;color:#04121a">USD ${usdPct.toFixed(0)}%</div>
+        <div style="width:${100-usdPct}%;background:#2a2a45;display:flex;align-items:center;justify-content:center;
+                    font-size:11px;color:var(--muted)">THB ${(100-usdPct).toFixed(0)}%</div>
+      </div>
+      <div style="font-size:12px;color:var(--muted2);line-height:1.85">
+        ${fx>0?`USD/THB ตอนนี้ <strong style="color:var(--text)">${fx.toFixed(2)}</strong> · `:''}
+        ถ้าบาทแข็งขึ้น 5% พอร์ตส่วนดอลลาร์จะลดลงราว
+        <strong style="color:${LOSS}">${fmt(usdVal*0.05)}</strong> โดยที่ราคาสินทรัพย์ไม่ได้เปลี่ยนเลย<br>
+        <span style="font-size:11px">เทียบให้เห็นภาพ: มากกว่าปันผลที่คุณได้รับมาทั้งหมด
+        ${totalDiv>0?`(${fmt(totalDiv)})`:''} — ค่าเงินจึงเป็นตัวแปรที่ใหญ่กว่าที่คนส่วนใหญ่คิด</span>
+      </div>
+    </div>
+
+    <div class="sl">ปันผลรายตัว</div>
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:420px">
+        <thead><tr style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted2)">
+          <th style="text-align:left;padding:9px 10px;font-weight:600">สินทรัพย์</th>
+          <th style="text-align:right;padding:9px 10px;font-weight:600">ปันผลรับ</th>
+          <th style="text-align:right;padding:9px 10px;font-weight:600">ต้นทุน</th>
+          <th style="text-align:right;padding:9px 10px;font-weight:600">yield สะสม</th>
+        </tr></thead><tbody>
+        ${[...CLS.active,...CLS.dormant,...CLS.intentional].filter(r=>r.div>0)
+          .sort((a,b)=>b.div-a.div).map(r=>`
+          <tr style="border-top:1px solid var(--border)">
+            <td style="padding:8px 10px;font-weight:600">${escHtml(r.ticker)}</td>
+            <td class="nr" style="padding:8px 10px;color:${GAIN}">${fmt(r.div)}</td>
+            <td class="nr" style="padding:8px 10px">${fmt(r.cost)}</td>
+            <td class="nr" style="padding:8px 10px">${r.cost>0?(r.div/r.cost*100).toFixed(1)+'%':'—'}</td>
+          </tr>`).join('') || '<tr><td colspan="4" style="padding:14px;text-align:center;color:var(--muted2)">ยังไม่มีปันผล</td></tr>'}
+        </tbody></table></div>`;
+}
+
+/* ═══ 3. DCA ═══════════════════════════════════════════════════════════
+   DCA ของผู้ใช้อยู่บนรางอัตโนมัติแล้ว หน้านี้จึงไม่สั่งให้เปลี่ยนแผน
+   แค่บอกว่า "ถ้าจะเติมเพิ่ม ตรงไหนห่างเป้าที่สุด" และตัดสิ่งที่เติมไม่ได้ออก
+   (PF ถอนไม่ได้ · เขตตายไม่ควรเติม) */
+function renderDCA(){
+  if(!CLS || !PORT){ needData('dca-body'); return; }
+  const dv = (typeof computeDeviations==='function') ? computeDeviations(PORT) : null;
+  const budget = Number(localStorage.getItem('finOS_dcaBudget')||'') || 0;
+
+  const under = dv ? dv.list.filter(x=>x.diff<0).sort((a,b)=>a.diff-b.diff) : [];
+  const sumGap = under.reduce((s,x)=>s+Math.abs(x.diff),0);
+
+  document.getElementById('dca-body').innerHTML=`
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin-bottom:18px">
+      <div style="font-size:12px;color:var(--muted2);margin-bottom:10px">งบ DCA เดือนนี้ (บาท)</div>
+      <input id="dca-budget" type="number" value="${budget||''}" placeholder="เช่น 5000"
+        oninput="localStorage.setItem('finOS_dcaBudget',this.value);renderDCA()"
+        style="background:var(--bg4);border:1px solid var(--border2);color:var(--white);
+               border-radius:8px;padding:10px 14px;font-size:15px;width:180px;font-family:var(--f-sans)">
+      ${dv&&dv.illiquidVal>0?`<div style="font-size:11px;color:var(--muted2);margin-top:10px;line-height:1.7">
+        🔒 ตัด ${escHtml(dv.illiquid.map(i=>i.label).join(', '))} ${fmt(dv.illiquidVal)} ออกจากการคำนวณ —
+        ถอนไม่ได้จนออกจากงาน จึงปรับสัดส่วนไม่ได้</div>`:''}
+    </div>
+    ${!under.length?emptyRow('ทุกกลุ่มอยู่ที่เป้าหรือเกินเป้าแล้ว — เติมตามแผนเดิมได้เลย'):`
+    <div class="sl">กลุ่มที่ต่ำกว่าเป้า</div>
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;overflow:hidden">
+      ${under.map(x=>{
+        const share=sumGap>0?Math.abs(x.diff)/sumGap:0;
+        return `<div style="padding:13px 16px;border-top:1px solid var(--border)">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap">
+            <div><span style="font-weight:600;font-size:13px">${escHtml(x.label)}</span>
+              <span style="font-size:11px;color:var(--muted2);margin-left:8px">
+                ${x.cur.toFixed(1)}% → เป้า ${x.target.toFixed(1)}%</span></div>
+            <div style="text-align:right">
+              ${budget>0?`<div style="font-size:15px;font-weight:700;color:${GAIN}">${fmt(budget*share)}</div>`:''}
+              <div style="font-size:10px;color:var(--muted2)">ห่างเป้า ${fmt(x.amt)}</div></div>
+          </div>
+          <div style="height:5px;background:var(--bg4);border-radius:3px;margin-top:8px;overflow:hidden">
+            <div style="height:5px;width:${Math.min(100,x.cur/x.target*100)}%;background:${x.color};border-radius:3px"></div>
+          </div></div>`;}).join('')}
+    </div>
+    <div style="font-size:11px;color:var(--muted2);line-height:1.8;margin-top:12px">
+      สัดส่วนคำนวณจากระยะห่างเป้าเทียบกัน — ไม่ใช่คำแนะนำการลงทุน
+      คุณ DCA อัตโนมัติอยู่แล้ว ตัวเลขนี้ใช้ตอนมีเงินก้อนพิเศษเท่านั้น
+    </div>`}`;
+}
+
+/* ═══ 4. MARKET ════════════════════════════════════════════════════════
+   แสดงเฉพาะ key ที่ยังสดจริง และ "บอกอายุข้อมูลเสมอ"
+   บทเรียนจากรุ่นเดิม: ตัวเลขที่ไม่บอกอายุ = ตัวเลขที่คนจะเชื่อว่าเป็นวันนี้ */
+const MARKET_KEYS=[
+  {k:'SP500',     t:'S&P 500',   d:2},
+  {k:'SP500_MA200',t:'S&P vs MA200',d:2, str:true},
+  {k:'VIX',       t:'VIX',       d:4},
+  {k:'USDTHB',    t:'USD/THB',   d:4},
+  {k:'GOLD_XAU',  t:'ทอง (USD/oz)',d:4},
+  {k:'BTCUSD',    t:'Bitcoin',   d:2},
+];
+function renderMarket(){
+  const md=(typeof loadMarketData==='function')?loadMarketData():null;
+  if(!md||!md.data){ needData('market-body','ยังไม่มี market-data.json'); return; }
+  const today=Date.now();
+  const cards=MARKET_KEYS.map(m=>{
+    const o=md.data[m.k];
+    if(!o||o.value==null) return '';
+    const age=o.updated?Math.floor((today-Date.parse(o.updated+'T00:00:00Z'))/864e5):null;
+    const stale=age==null||age>m.d;
+    const val=m.str?String(o.value)
+      :Number(o.value).toLocaleString(LOC,{maximumFractionDigits:2});
+    return `<div class="sc" style="opacity:${stale?.55:1}">
+      <div class="sc-lbl">${escHtml(m.t)}</div>
+      <div class="sc-val" style="font-size:20px">${escHtml(val)}</div>
+      <div class="sc-sub" style="color:${stale?WARN:'var(--muted2)'}">
+        ${age==null?'ไม่ทราบวันที่':age===0?'วันนี้':age+' วันก่อน'}${stale?' · เก่า':''}</div></div>`;
+  }).filter(Boolean).join('');
+
+  document.getElementById('market-body').innerHTML=`
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:18px">
+      ${cards}</div>
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;
+                padding:16px 18px;font-size:12px;color:var(--muted2);line-height:1.9">
+      <strong style="color:var(--text)">ทำไมหน้านี้ถึงสั้น</strong><br>
+      รุ่นก่อนมีสัญญาณ 14 ตัวและให้คะแนน regime แต่ 9 ตัวมาจาก FRED ที่ pipeline
+      ดึงไม่ได้เลย (สำเร็จ 0/14 · timeout 42 ครั้ง) และ fail-safe จะ carry ค่าเก่า
+      มาเรื่อยๆ ทำให้หน้าแสดง "สถานการณ์ปัจจุบัน" จากข้อมูลอายุ 3 เดือน<br><br>
+      รุ่นนี้จึงเหลือเฉพาะตัวที่ดึงจาก Yahoo ได้จริง แสดงพร้อมอายุข้อมูลเสมอ
+      และ<strong style="color:var(--text)">ไม่ให้คะแนน ไม่บอกให้ซื้อหรือขาย</strong> —
+      สำหรับพอร์ตที่ DCA อัตโนมัติ การจับจังหวะตลาดมักลดผลตอบแทนมากกว่าเพิ่ม
+    </div>`;
+}
+
+/* ── Navigation & boot ── */
+const rendered={};
 function switchPage(id, el){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
-  const page = document.getElementById('page-'+id);
+  const page=document.getElementById('page-'+id);
   if(page) page.classList.add('active');
-  // el may be passed explicitly from onclick="switchPage('x',this)"
-  // fall back to event.currentTarget for safety
-  const activeEl = el || (typeof event !== 'undefined' && event.currentTarget) || null;
-  if(activeEl && activeEl.classList) activeEl.classList.add('active');
-  // lazy init charts
-  const alwaysFresh = (id==='portfolio'||id==='alerts'||id==='feargreed'||id==='signals'
-                     ||id==='situation'||id==='strategy'||id==='sectors');   // หน้า data-driven ต้อง re-render
-  if(!rendered[id] || alwaysFresh){rendered[id]=true; renderPage(id);}
+  if(el&&el.classList) el.classList.add('active');
+  renderPage(id);
+  const sb=document.getElementById('sidebar'); if(sb) sb.classList.remove('open');
 }
-const rendered={situation:false,signals:false,feargreed:false,strategy:false,sectors:false,portfolio:false,alerts:false,calendar:false};
-
-/* ข้อ 4 — ลบ setTimeframe() ออกแล้ว
-   เดิมมีปุ่ม ตอนนี้/3 เดือน/6 เดือน แต่ไม่มี element data-tf="now" อยู่เลย
-   -> กด "ตอนนี้" = ซ่อนทั้ง 3m+6m = ไม่มีอะไรเปลี่ยน (และเป็น default อยู่แล้ว)
-   -> กด 3m/6m มีเนื้อหาโผล่จริง แต่อยู่ใต้ fold จนผู้ใช้ไม่เห็น = UI ที่ดูเหมือนพัง
-   เนื้อหา forward scenario ทั้งสองชุดมีประโยชน์ จึงแสดงต่อกันไปเลยแทนการซ่อน
-   หลักการ: ปุ่มที่กดแล้วไม่เห็นผลทันที แย่กว่าไม่มีปุ่ม */
-
-// ── Live date ──
-function updateDate(){
-  const now = new Date();
-  const opts = {year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'};
-  // ข้อ 4b — เดิมหัวข้อ Situation เขียน "อัปเดต 6 ก.ค. 2569" hardcode ไว้
-  //   เป็น พ.ศ. (หลุดจากการแก้ #2 เพราะไม่ใช่โค้ดวันที่ แต่เป็น string)
-  //   และไม่เคยเปลี่ยนตามข้อมูลจริง -> ผูกกับ generated_at ของ pipeline
-  try{
-    const _su=document.getElementById('sit-updated');
-    if(_su){
-      const _a=(typeof marketDataAge==='function')?marketDataAge():null;
-      _su.textContent=_a
-        ? ' — อัปเดต '+_a.generatedAt.toLocaleDateString(LOC,{day:'numeric',month:'short',year:'numeric'})
-        : '';
-      if(_a && _a.level!=='fresh'){ _su.style.color='var(--debt)'; _su.textContent+=' ⚠ '+_a.label; }
-    }
-  }catch(e){}
-  const _ld=document.getElementById('live-date');
-  _ld.textContent = now.toLocaleDateString(LOC,opts);
-  // #12 — เดิมโชว์ "วันนี้" ข้างจุดเขียวกระพริบ ทำให้ดูเหมือนราคาสดทุกครั้ง
-  //       ทั้งที่ market-data.json อาจเก่าหลายวัน
-  try{
-    const _age=paintFreshnessDot(document.querySelector('.sb-status .dot-live'),_ld);
-    if(_age && _age.level!=='fresh') _ld.textContent += ` · ⚠ ${_age.label}`;
-  }catch(e){}
-  document.getElementById('last-update').textContent = 'อัปเดต: '+now.toLocaleDateString(LOC,{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'})+' · build '+APP_BUILD;
-}
-updateDate();
-setInterval(updateDate,60000);
-
-// ── Chart defaults ──
-Chart.defaults.color='#6060a0';
-Chart.defaults.font.family=CHART_FONT;
-Chart.defaults.font.size=10;
-
-const gridColor='rgba(30,30,53,.8)';
-const tooltipDefaults={
-  backgroundColor:'#12121a',borderColor:'#1e1e35',borderWidth:1,
-  titleColor:'#e2e2f0',bodyColor:'#9090c0',
-  titleFont:{family:CHART_FONT},bodyFont:{family:CHART_FONT,size:11}
-};
-
-// ── Page renderers ──
-// ═══ DATA FRESHNESS ═══════════════════════════════════════════════
-// ทุกข้อมูล editorial ในหน้านี้ (signals, F&G, sectors, outlook, calendar)
-// ถูกบันทึกไว้ ณ วันที่ด้านล่าง — ไม่ใช่ live data
-const MARKET_DATA_ASOF = '2026-07-06';
-const STALE_AFTER_DAYS = 14;
-function dataAgeDays(){ return Math.floor((Date.now()-new Date(MARKET_DATA_ASOF+'T00:00:00'))/86400e3); }
-function injectFreshnessBanners(){
-  const d = dataAgeDays(), stale = d > STALE_AFTER_DAYS;
-  /* ข้อ 4b — เดิมข้อความนี้เขียน "6 ก.ค. 2569" hardcode ไว้ ซึ่งเป็น พ.ศ.
-     (หลุดจากการแก้ #2 เพราะเป็น string ไม่ใช่โค้ดวันที่) และแย่กว่านั้นคือ
-     มันไม่ผูกกับ MARKET_DATA_ASOF ที่อยู่บรรทัดเดียวกัน — ถ้าแก้ค่านั้น
-     ข้อความก็ยังโชว์วันเดิม กลายเป็นสองแหล่งความจริงที่ขัดกันได้ */
-  const asOfTxt = new Date(MARKET_DATA_ASOF+'T00:00:00')
-    .toLocaleDateString(LOC,{day:'numeric',month:'short',year:'numeric'});
-  const html = `<div class="fresh-banner" style="display:flex;align-items:center;gap:8px;padding:9px 13px;border-radius:8px;margin:0 0 14px;font-size:11.5px;line-height:1.5;
-      background:${stale?'rgba(255,64,96,.08)':'rgba(0,212,160,.06)'};
-      border:1px solid ${stale?'rgba(255,64,96,.4)':'rgba(0,212,160,.25)'};
-      color:${stale?'var(--loss)':'var(--gain)'}">
-    <span style="font-size:14px">${stale?'⛔':'📅'}</span>
-    <span><strong>เฉพาะส่วนบทวิเคราะห์/ความเห็น (editorial)</strong> ในหน้านี้ เขียนไว้ ณ ${asOfTxt} (${d} วันที่แล้ว)${stale?' — เก่าเกินกำหนด <strong>อย่าใช้ส่วน editorial ตัดสินใจซื้อขาย</strong>':''} · การ์ดที่มีจุดเขียว 📡 คือข้อมูลสดจากชีต ใช้ได้ปกติ</span>
-  </div>`;
-  // Situation + Playbook + Market Mood คำนวณสดแล้ว → ไม่ต้องติดแบนเนอร์ editorial
-  ['page-signals','page-calendar'].forEach(pid=>{
-    const pg = document.getElementById(pid);
-    if(!pg || pg.querySelector('.fresh-banner')) return;
-    const head = pg.querySelector('.pg-hdr') || pg.firstElementChild;   // #18 คลาสจริงคือ .pg-hdr
-    if(head) head.insertAdjacentHTML('afterend', html);
-  });
-}
-// ═══ REGIME LIVE — เขียนบทวิเคราะห์จากตัวเลขจริง แทนข้อความ hardcode ═══
-function renderRegimeLive(){
-  const r = computeRegime();
-  const set=(id,v,html)=>{const e=document.getElementById(id); if(e){ if(html) e.innerHTML=v; else e.textContent=v; }};
-  if(!r){
-    set('regime-asof','Market Regime · ยังไม่มีข้อมูลพอ');
-    set('regime-signals','<div style="font-size:11.5px;color:var(--muted2);padding:10px 12px;border:1px dashed rgba(255,255,255,.12);border-radius:8px;margin-bottom:16px">ต้องมีข้อมูลตลาดอย่างน้อย 3 ตัว (เช่น US_CPI, FED_RATE, VIX, YIELD_CURVE, SP500_RSI) — กด Sync ที่หน้า Finance OS หรือรัน pipeline ที่ GitHub Actions</div>', true);
-    return;
-  }
-  const cmap={gain:'var(--gain)',debt:'var(--debt)',loss:'var(--loss)'};
-  const icon = r.avg>=0.7?'🚀' : r.avg>=0.25?'📈' : r.avg>=-0.25?'⚖️' : r.avg>=-0.9?'🛡️' : '🔻';
-  const thDate = r.dataAsOf ? new Date(r.dataAsOf+'T00:00:00').toLocaleDateString(LOC,{day:'numeric',month:'short',year:'2-digit'}) : '—';
-
-  set('regime-asof', `Market Regime · คำนวณสดจาก ${r.signals.length} สัญญาณ · ข้อมูลถึง ${thDate}`);
-  const t=document.getElementById('regime-title');
-  if(t){ t.textContent=r.label; t.style.color=cmap[r.color]; }
-  const ic=document.getElementById('regime-icon'); if(ic) ic.textContent=icon;
-  set('regime-risk', r.risk); set('regime-posture', r.posture); set('regime-cash', r.cashRange);
-  const th=document.getElementById('regime-thumb'); if(th) th.style.left=r.spectrum+'%';
-
-  // คำอธิบาย: ประกอบจากสัญญาณจริง อ้างเลขทุกคำ
-  const neg=r.negatives.slice(0,3).map(s=>`<strong>${escHtml(s.label)} ${s.val}</strong> (${escHtml(s.note)})`).join(' · ');
-  const pos=r.positives.slice(0,3).map(s=>`<strong>${escHtml(s.label)} ${s.val}</strong>`).join(' · ');
-  set('regime-desc',
-    `${escHtml(r.desc)} — คะแนนรวม <strong>${r.avg>=0?'+':''}${r.avg.toFixed(2)}</strong> จาก ${r.signals.length} สัญญาณ<br>`+
-    (pos?`🟢 <span style="color:var(--muted)">หนุน:</span> ${pos}<br>`:'')+
-    (neg?`🔴 <span style="color:var(--muted)">ถ่วง:</span> ${neg}`:'🟢 ไม่มีสัญญาณลบในชุดข้อมูลปัจจุบัน'), true);
-
-  // ตารางสัญญาณ — โปร่งใสว่า regime มาจากอะไร
-  const rows = r.signals.map(s=>{
-    const c = s.score>0?'var(--gain)':s.score<0?'var(--loss)':'var(--muted2)';
-    const dot= s.score>0?'🟢':s.score<0?'🔴':'⚪';
-    const age= s.asOf ? Math.floor((Date.now()-Date.parse(s.asOf))/86400e3) : null;
-    const ageTxt = age==null?'' : age<=1?'วันนี้' : age+' วัน';
-    return `<tr>
-      <td style="padding:6px 8px">${dot} ${escHtml(s.label)}</td>
-      <td style="padding:6px 8px;text-align:right;font-weight:600;color:${c}">${s.val}</td>
-      <td style="padding:6px 8px;text-align:right;color:${c}">${s.score>0?'+':''}${s.score}</td>
-      <td style="padding:6px 8px;color:var(--muted2);font-size:10.5px">${escHtml(s.note)}</td>
-      <td style="padding:6px 8px;text-align:right;color:var(--muted2);font-size:10px">${ageTxt}</td></tr>`;
-  }).join('');
-  set('regime-signals', `<div class="sl" style="color:var(--gain)">🧮 สัญญาณที่ใช้คำนวณ Regime
-      <span style="font-weight:400;color:var(--muted2)">· ทุกตัวเลขมาจากข้อมูลสด ไม่มี hardcode</span></div>
-    <div style="border:1px solid rgba(255,255,255,.07);border-radius:10px;overflow:hidden;margin-bottom:18px">
-    <table style="width:100%;border-collapse:collapse;font-size:11.5px">
-      <thead><tr style="background:rgba(255,255,255,.03);color:var(--muted2);font-size:10px">
-        <th style="padding:7px 8px;text-align:left">สัญญาณ</th><th style="padding:7px 8px;text-align:right">ค่า</th>
-        <th style="padding:7px 8px;text-align:right">score</th><th style="padding:7px 8px;text-align:left">การอ่าน</th>
-        <th style="padding:7px 8px;text-align:right">อายุ</th></tr></thead>
-      <tbody>${rows}</tbody></table></div>`, true);
-}
-
-function renderSituationLive(){
-  try{ renderRegimeLive(); }catch(e){ console.error('[Regime]', e); }
-  const md=loadMarketData();
-  document.querySelectorAll('#page-situation [data-tk]').forEach(card=>{
-    const keys=card.dataset.tk.split(',');
-    const valEl=card.querySelector('.sc-val'), subEl=card.querySelector('.sc-sub'), dot=card.querySelector('.tk-dot');
-    let hit=null, hitKey=null;
-    // ค่าต้องใช้ได้จริง — กัน #N/A / NaN ที่อาจค้างใน cache เดิมโผล่เป็น "$NaN"
-    const usable=v=> v!=null && v!=='' && !(typeof v==='number' && !isFinite(v))
-                  && !(typeof v==='string' && /^#|N\/A/i.test(String(v).trim()));
-    if(md&&md.data) for(const k of keys){ const d=md.data[k]; if(d&&usable(d.value)){hit=d;hitKey=k;break;} }
-    if(hit){
-      const meta=LIVE_META[hitKey];
-      let vTxt; try{ vTxt=meta?meta.fmt(hit.value):String(hit.value);}catch(e){vTxt=String(hit.value);}
-      valEl.textContent=vTxt;
-      valEl.classList.remove('gain','loss'); valEl.style.color='var(--text)';
-      // S&P: ใช้ % เปลี่ยนวันนี้เป็นสีและ sub ถ้ามี
-      const chg = hitKey==='SP500' && md.data.SP500_CHG ? Number(md.data.SP500_CHG.value) : null;
-      const upd = hit.updated ? new Date(hit.updated).toLocaleDateString(LOC,{day:'numeric',month:'short'}) : 'จากชีต';
-      if(chg!=null && !isNaN(chg)){
-        valEl.style.color = chg>=0?'var(--gain)':'var(--loss)';
-        subEl.innerHTML = `<span style="color:${chg>=0?'var(--gain)':'var(--loss)'}">${chg>=0?'▲ +':'▼ '}${chg.toFixed(2)}% วันนี้</span> <span style="color:var(--muted2)">· ${upd}</span>`;
-      } else {
-        subEl.innerHTML = `<span style="color:var(--muted2)">📡 อัปเดต ${upd}${hit.note?' · '+hit.note:''}</span>`;
-      }
-      if(dot) dot.style.cssText='display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--gain);vertical-align:middle;margin-left:3px';
-    } else {
-      // ไม่มีข้อมูล live — ติดป้ายให้รู้ว่าเป็นค่า editorial เก่า
-      if(subEl && !subEl.querySelector('.ed-tag'))
-        subEl.insertAdjacentHTML('beforeend',' <span class="ed-tag" style="font-size:9px;color:var(--muted2);border:1px solid rgba(255,255,255,.12);border-radius:4px;padding:0 4px;vertical-align:middle">EDITORIAL ก.ค. 69</span>');
-      card.style.opacity='.65';
-    }
-  });
-}
-document.addEventListener('DOMContentLoaded', ()=>{
-  injectFreshnessBanners(); renderSituationLive();
-  fetchActionsData().then(()=>{ renderSituationLive();
-    if(document.getElementById('page-signals')?.classList.contains('active')) renderLiveMarket();
-  }); // Method 3: pipeline JSON
-  fetchExternalData().then(()=>{      // Method 2: ดึง API ภายนอกแล้ว refresh ส่วนที่เกี่ยว
-    renderSituationLive();
-    if(document.getElementById('page-signals')?.classList.contains('active')) renderLiveMarket();
-    if(document.getElementById('page-feargreed')?.classList.contains('active')) renderFearGreed();
-  });
-});
-
 function renderPage(id){
-  switch(id){
-    case 'signals':   renderSignals();   break;
-    case 'feargreed': renderFearGreed(); break;
-    case 'strategy':  renderStrategy();  break;
-    case 'sectors':   renderSectors();   break;
-    case 'portfolio': renderPortfolio(); break;
-    case 'scenario':  scInit();          break;
-    case 'alerts':    renderAlerts();    break;
-    case 'calendar':  renderCalendar();  break;
-  }
+  try{
+    if(id==='dormant') renderDormant();
+    else if(id==='cost') renderCost();
+    else if(id==='dca')  renderDCA();
+    else if(id==='market') renderMarket();
+  }catch(e){ console.error('[render '+id+']', e); }
 }
-
-// ── Situation page (rendered on load) ──
-rendered.situation = true;
-
-// ═══ LIVE MARKET DATA (Method 1: Google Sheets pipeline) ═══════════
-
-function timeAgoTH(ts){
-  const m=Math.floor((Date.now()-ts)/60000);
-  if(m<1)return 'เมื่อสักครู่'; if(m<60)return m+' นาทีที่แล้ว';
-  const h=Math.floor(m/60); if(h<24)return h+' ชม.ที่แล้ว';
-  return Math.floor(h/24)+' วันที่แล้ว';
+function boot(){
+  loadPort();
+  CLS=buildClassification();
+  const ld=document.getElementById('live-date');
+  if(ld) ld.textContent = PORT&&PORT.lastUpdated ? 'ข้อมูล '+PORT.lastUpdated : 'ยังไม่มีข้อมูล';
+  const lu=document.getElementById('last-update');
+  const md=(typeof loadMarketData==='function')?loadMarketData():null;
+  if(lu) lu.textContent = md&&md.savedAt
+    ? 'ตลาด: '+new Date(md.savedAt).toLocaleDateString(LOC) : 'อัปเดต: —';
+  ['dormant','cost','dca','market'].forEach(renderPage);
 }
-function renderLiveMarket(){
-  const pg=document.getElementById('page-signals');
-  if(!pg) return;
-  // (CoinGecko override ทำใน loadMarketData ผ่าน mergeExtIntoMarket ด้านล่าง)
-  let host=document.getElementById('live-market-section');
-  if(!host){
-    host=document.createElement('div'); host.id='live-market-section';
-    const banner=pg.querySelector('.fresh-banner');
-    // #18 — คลาสจริงคือ .pg-hdr และต้องมี fallback ไม่งั้น null.insertAdjacentElement() throw
-    const anchor = banner || pg.querySelector('.pg-hdr') || pg.firstElementChild;
-    if(anchor) anchor.insertAdjacentElement('afterend', host);
-    else pg.appendChild(host);
-  }
-  const md=loadMarketData();
-  if(!md || !md.data || !Object.keys(md.data).length){
-    host.innerHTML=`<div class="sl" style="color:var(--gain)">📡 Live Market Data</div>
-      <div style="font-size:11.5px;color:var(--muted2);padding:10px 12px;border:1px dashed rgba(255,255,255,.12);border-radius:8px;margin-bottom:16px">
-        ยังไม่มีข้อมูลจากชีต <strong>Market_Data</strong> — เพิ่มชีตนี้ใน Google Sheets แล้วกด Sync ที่หน้า Finance OS
-        (รูปแบบ: คอลัมน์ Key | Value | Updated | Note)</div>`;
-    return;
-  }
-  const stale = Date.now()-md.savedAt > 24*3600e3;
-  const ok=v=> v!=null && v!=='' && !(typeof v==='number' && !isFinite(v))
-            && !(typeof v==='string' && /^#|N\/A/i.test(String(v).trim()));
-  const knownKeys = Object.keys(LIVE_META).filter(k=>md.data[k]!=null && ok(md.data[k].value));
-  const extraKeys = Object.keys(md.data).filter(k=>!LIVE_META[k] && ok(md.data[k].value));
-  const cards = [...knownKeys, ...extraKeys].map(k=>{
-    // key ที่ไม่รู้จัก → แสดงแบบ generic (เพิ่มแถวในชีตแล้วโผล่ทันที ไม่ต้องแก้โค้ด)
-    const meta=LIVE_META[k]||{label:k.replace(/_/g,' '), fmt:v=>typeof v==='number'?Number(v).toLocaleString(LOC):String(v)};
-    const d=md.data[k];
-    let vTxt; try{ vTxt=meta.fmt(d.value); }catch(e){ vTxt=String(d.value); }
-    if(/NaN|Infinity/.test(vTxt)) vTxt='—';   // เกราะสุดท้าย ห้ามโชว์ NaN บนจอ
-    const color = meta.signed ? (d.value>=0?'var(--gain)':'var(--loss)') : 'var(--text)';
-    const upd = d.updated ? new Date(d.updated).toLocaleDateString(LOC,{day:'numeric',month:'short'}) : null;
-    return `<div class="signal-card" style="border-color:rgba(0,212,160,.25)">
-      <div class="sig-header"><div class="sig-name">${escHtml(meta.label)}</div><div class="sig-dot" style="background:var(--gain)"></div></div>
-      <div class="sig-val" style="color:${color}">${vTxt}</div>
-      <div class="sig-change" style="color:var(--muted2)">${upd?'อัปเดต '+upd:'จาก Google Sheets'}</div>
-      <div class="sig-note">${d.note||''}</div>
-    </div>`;
-  }).join('');
-  host.innerHTML=`<div class="sl" style="color:var(--gain)">📡 Live Market Data
-      <span style="font-weight:400;color:${stale?'var(--loss)':'var(--muted2)'}">· sync ${timeAgoTH(md.savedAt)}${stale?' ⚠ เกิน 24 ชม. — กด Sync ใหม่':''}</span></div>
-    <div class="signal-grid" style="margin-bottom:18px">${cards}</div>
-    <div class="sl sl-mt" style="opacity:.75">📰 ข้อมูล Editorial (ด้านล่างทั้งหมด — ดูวันที่ในแบนเนอร์)</div>`;
-}
-
-// ── SIGNALS ──
-function renderSignals(){
-  renderLiveMarket();
-  const globalSigs=[
-    {name:'US CPI YoY',val:'3.1%',change:'-0.2%',note:'ลดลงช้า, ยังเหนือ target 2%',status:'warn'},
-    {name:'US PCE',val:'2.6%',change:'-0.1%',note:'Fed ดู PCE เป็นหลัก',status:'warn'},
-    {name:'NFP (jobs)',val:'+175K',change:'vs est 180K',note:'Labor market เริ่มเย็นลง',status:'ok'},
-    {name:'US GDP Q1',val:'+2.1%',change:'QoQ ann.',note:'Solid แต่ชะลอ',status:'ok'},
-    {name:'ISM Manuf.',val:'49.2',change:'vs 50=neutral',note:'ยังหดตัว (ต่ำกว่า 50)',status:'bad'},
-    {name:'ISM Services',val:'52.4',change:'ยังขยาย',note:'Services ยังแข็ง',status:'ok'},
-    {name:'Yield Curve',val:'-18bps',change:'2Y-10Y inverted',note:'Recession signal ยังอยู่',status:'bad'},
-    {name:'Credit Spread',val:'1.8%',change:'HY-IG spread',note:'ปกติ, ไม่ตึง',status:'ok'},
-  ];
-  const thaiSigs=[
-    {name:'GDP ไทย Q1',val:'2.8%',change:'YoY',note:'ต่ำกว่า consensus 3.1%',status:'warn'},
-    {name:'CPI ไทย',val:'1.2%',change:'YoY',note:'ต่ำมาก, เงินฝืดแฝง',status:'warn'},
-    {name:'BOT Rate',val:'1.00%',change:'ลด 6 ครั้งตั้งแต่ 2024',note:'OECD คาดลดอีก 1 ครั้งปีนี้',status:'ok'},
-    {name:'นักท่องเที่ยว',val:'3.2M/เดือน',change:'▲+18% YoY',note:'Recovery ชัดเจน',status:'ok'},
-    {name:'FDI ไทย',val:'฿82B',change:'Q1 2026',note:'ลดลง YoY, BOI ยังพยายาม',status:'warn'},
-    {name:'THB vs USD',val:'33.8',change:'อ่อนค่า YTD',note:'ดีสำหรับ Export',status:'ok'},
-  ];
-  const techSigs=[
-    {name:'S&P 500 RSI',val:'58',change:'14-day',note:'ไม่ Overbought, ยังมีแรงขึ้น',status:'ok'},
-    {name:'VIX',val:'18.4',change:'Fear index',note:'ต่ำ = ตลาดไม่กลัว',status:'ok'},
-    {name:'200-Day MA',val:'Above',change:'S&P 500',note:'Bullish trend ยังอยู่',status:'ok'},
-    {name:'PUT/CALL Ratio',val:'0.82',change:'Options market',note:'Slight bullish bias',status:'ok'},
-    {name:'SET RSI',val:'42',change:'14-day',note:'Oversold zone, bounce possible',status:'warn'},
-    {name:'SET vs MA200',val:'Below',change:'ต่ำกว่า',note:'Bearish trend ยังไม่หัก',status:'bad'},
-  ];
-
-  function renderSignalGrid(data,elId){
-    const el=document.getElementById(elId);
-    el.innerHTML = data.map(s=>{
-      const color=s.status==='ok'?'var(--gain)':s.status==='warn'?'var(--debt)':'var(--loss)';
-      const dotColor=color;
-      const changeColor=s.change.startsWith('▲')?'var(--gain)':s.change.startsWith('▼')?'var(--loss)':'var(--muted2)';
-      return `<div class="signal-card">
-        <div class="sig-header"><div class="sig-name">${escHtml(s.name)}</div><div class="sig-dot" style="background:${dotColor}"></div></div>
-        <div class="sig-val" style="color:${color}">${s.val}</div>
-        <div class="sig-change" style="color:${changeColor}">${s.change}</div>
-        <div class="sig-note">${escHtml(s.note)}</div>
-      </div>`;
-    }).join('');
-  }
-  renderSignalGrid(globalSigs,'macro-signals-global');
-  renderSignalGrid(thaiSigs,'macro-signals-thai');
-  renderSignalGrid(techSigs,'macro-signals-tech');
-
-  // Fed chart
-  const fedCtx=document.getElementById('fed-chart').getContext('2d');
-  const prevFed=Chart.getChart(fedCtx.canvas); if(prevFed) prevFed.destroy();
-  new Chart(fedCtx,{
-    type:'line',
-    data:{
-      labels:['Mar 26','Jun 26','Sep 26','Dec 26','Mar 27','Jun 27'],
-      datasets:[
-        {label:'Current Rate',data:[3.75,3.75,3.75,3.75,3.75,3.75],borderColor:'#ff9500',backgroundColor:'rgba(255,149,0,.1)',fill:true,tension:.4,borderWidth:2,pointRadius:4,pointBackgroundColor:'#ff9500'},
-        {label:'Market Implied',data:[3.75,3.75,3.875,4.0,4.0,4.0],borderColor:'#7c6fec',backgroundColor:'rgba(124,111,236,.05)',fill:false,tension:.4,borderWidth:2,borderDash:[5,3],pointRadius:3},
-        {label:'Neutral Rate (r*)',data:[2.5,2.5,2.5,2.5,2.5,2.5],borderColor:'rgba(255,255,255,.2)',fill:false,tension:0,borderWidth:1,borderDash:[3,3],pointRadius:0},
-      ]
-    },
-    options:{
-      responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{labels:{color:'#9090c0',boxWidth:12,padding:12}},tooltip:tooltipDefaults},
-      scales:{
-        x:{grid:{color:gridColor,lineWidth:.5},ticks:{color:'#6060a0'}},
-        y:{grid:{color:gridColor,lineWidth:.5},ticks:{color:'#6060a0',callback:v=>v+'%'},
-          min:2,max:5.5,title:{display:true,text:'Rate %',color:'#5a5a8a',font:{size:10}}}
-      }
-    }
-  });
-}
-
-// ── FEAR & GREED ──
-// ═══ METHOD 2: EXTERNAL LIVE APIs (เรียกตรงจาก browser, cache 10 นาที) ═══
-// - alternative.me : Crypto Fear & Greed (ดัชนีจริง + ประวัติ) — แสดงที่มาตามเงื่อนไขผู้ให้ข้อมูล
-// - CoinGecko      : ราคา BTC/ETH สดระดับนาที (public keyless, ~1 call/โหลด)
-
-
-// ── คะแนน sentiment ต่อ asset class (สูตรโปร่งใส เขียนไว้ตรงนี้ทั้งหมด) ──
-const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-function assetSentiments(){
-  const md = loadMarketData(), ext = loadExt();
-  const g = k => md?.data?.[k]?.value;
-  const out = [];
-  // CRYPTO — ดัชนีจริง
-  if(ext?.fng?.value!=null)
-    out.push({key:'Crypto', score:ext.fng.value, cls:ext.fng.cls,
-      src:'alternative.me (ดัชนีจริง)', parts:[{n:'Crypto F&G Index',v:ext.fng.value,note:ext.fng.cls}]});
-  // US STOCKS — composite จากองค์ประกอบ live ในชีต (แนวเดียวกับสูตร CNN 4/7 ตัว)
-  const usParts=[];
-  if(g('VIX')!=null)        usParts.push({n:'Volatility (VIX)', v:Math.round(clamp((35-g('VIX'))/25*100,0,100)), note:'VIX '+g('VIX')});
-  if(g('SP500_RSI')!=null)  usParts.push({n:'Momentum (RSI)',   v:Math.round(clamp(g('SP500_RSI'),0,100)),      note:'RSI '+g('SP500_RSI')});
-  if(g('SP500_MA200')!=null)usParts.push({n:'Trend vs MA200',   v:/above/i.test(g('SP500_MA200'))?70:30,        note:String(g('SP500_MA200'))});
-  if(g('PUT_CALL')!=null)   usParts.push({n:'Put/Call Ratio',   v:Math.round(clamp((1.2-g('PUT_CALL'))/0.5*100,0,100)), note:'P/C '+g('PUT_CALL')});
-  if(usParts.length)
-    out.push({key:'US Stock', score:Math.round(usParts.reduce((s,p)=>s+p.v,0)/usParts.length),
-      src:`คำนวณจาก ${usParts.length} องค์ประกอบในชีต`, parts:usParts});
-  // THAI STOCKS
-  const thParts=[];
-  if(g('SET_RSI')!=null)   thParts.push({n:'Momentum (SET RSI)', v:Math.round(clamp(g('SET_RSI'),0,100)), note:'RSI '+g('SET_RSI')});
-  if(g('SET_MA200')!=null) thParts.push({n:'Trend vs MA200',     v:/above/i.test(g('SET_MA200'))?70:30,   note:String(g('SET_MA200'))});
-  if(thParts.length)
-    out.push({key:'Thai Stock', score:Math.round(thParts.reduce((s,p)=>s+p.v,0)/thParts.length),
-      src:`คำนวณจาก ${thParts.length} องค์ประกอบในชีต`, parts:thParts});
-  return out;
-}
-
-function renderFearGreed(){
-  const sents = assetSentiments();
-  const ext = loadExt();
-
-  // ── Portfolio-weighted score จากสัดส่วนพอร์ตจริง ──
-  let real=null; try{ real=JSON.parse(localStorage.getItem('finOS_portfolio')||'null'); }catch(e){}
-  let score=null, coverage=0, weightNote='เฉลี่ยเท่ากัน (ยังไม่เชื่อมพอร์ต)';
-  if(sents.length){
-    if(real && real.allocation && real.totalValue>0){
-      let wSum=0, sSum=0;
-      sents.forEach(s=>{ const w=(real.allocation[s.key]?.value||0)/real.totalValue;
-                         wSum+=w; sSum+=w*s.score; });
-      if(wSum>0){ score=Math.round(sSum/wSum); coverage=Math.round(wSum*100);
-                  weightNote=`ถ่วงน้ำหนักตามพอร์ตจริง · ครอบคลุม ${coverage}% ของพอร์ต`; }
-    }
-    if(score===null) score=Math.round(sents.reduce((s,x)=>s+x.score,0)/sents.length);
-  }
-  const srcEl=document.getElementById('fg-src-label'); if(srcEl) srcEl.textContent=weightNote;
-
-  // ── Gauge ──
-  const canvas=document.getElementById('fg-gauge');
-  const ctx=canvas.getContext('2d');
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  const cx=100,cy=95,r=75;
-  ctx.beginPath();ctx.arc(cx,cy,r,Math.PI,0);
-  ctx.strokeStyle='#1a1a30';ctx.lineWidth=18;ctx.stroke();
-  if(score!==null){
-    const gradient=ctx.createLinearGradient(cx-r,cy,cx+r,cy);
-    gradient.addColorStop(0,'#ff4060');gradient.addColorStop(0.25,'#ff9500');
-    gradient.addColorStop(0.5,'#ffd166');gradient.addColorStop(0.75,'#00d4a0');
-    gradient.addColorStop(1,'#4cc9f0');
-    const angle=Math.PI+(score/100)*Math.PI;
-    ctx.beginPath();ctx.arc(cx,cy,r,Math.PI,angle);
-    ctx.strokeStyle=gradient;ctx.lineWidth=18;ctx.lineCap='round';ctx.stroke();
-    const nx=cx+r*0.7*Math.cos(angle), ny=cy+r*0.7*Math.sin(angle);
-    ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(nx,ny);
-    ctx.strokeStyle='#ffffff';ctx.lineWidth=2.5;ctx.lineCap='round';ctx.stroke();
-    ctx.beginPath();ctx.arc(cx,cy,5,0,Math.PI*2);ctx.fillStyle='#ffffff';ctx.fill();
-  }
-  const moodColor=score===null?'var(--muted2)':score<25?'var(--loss)':score<45?'var(--expense)':score<55?'var(--debt)':score<75?'var(--gain)':'#4cc9f0';
-  const moodText=score===null?'ไม่มีข้อมูล':score<25?'EXTREME FEAR':score<45?'FEAR':score<55?'NEUTRAL':score<75?'GREED':'EXTREME GREED';
-  document.getElementById('fg-number').textContent=score===null?'—':score;
-  document.getElementById('fg-number').style.color=moodColor;
-  document.getElementById('fg-mood').textContent=moodText;
-
-  // ── ค่าย้อนหลัง (จากประวัติจริงของ Crypto F&G) ──
-  const pastEl=document.getElementById('fg-past-row');
-  if(pastEl){
-    if(ext?.fng?.history?.length>90){
-      const h=ext.fng.history, last=h[h.length-1];
-      const ago=n=>h[Math.max(0,h.length-1-n)]?.v;
-      const cell=(lbl,v)=>`<span>${lbl}: <strong style="color:${v<45?'var(--loss)':v<55?'var(--debt)':'var(--gain)'}">${v??'—'}</strong></span>`;
-      pastEl.innerHTML=cell('Crypto วันนี้',last.v)+cell('1 เดือนก่อน',ago(30))+cell('3 เดือนก่อน',ago(90))+cell('1 ปีก่อน',ago(364));
-    } else pastEl.innerHTML='<span style="color:var(--muted2)">กำลังดึงประวัติจาก alternative.me...</span>';
-  }
-
-  // ── Components: แยกตาม asset class ที่ถือจริง ──
-  const compEl=document.getElementById('fg-components');
-  if(!sents.length){
-    compEl.innerHTML='<div style="font-size:11.5px;color:var(--muted2)">ยังไม่มีข้อมูล — เพิ่ม VIX, SP500_RSI, SP500_MA200, PUT_CALL, SET_RSI, SET_MA200 ในชีต Market_Data แล้ว Sync</div>';
-  } else {
-    compEl.innerHTML=sents.map(s=>{
-      const sc=s.score<40?'var(--loss)':s.score<55?'var(--debt)':s.score<70?'var(--gain)':'#4cc9f0';
-      const label=ALLOC_META[s.key]?.label||s.key;
-      return `<div style="border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:9px 11px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-          <span style="font-size:12px;font-weight:600">${label}</span>
-          <span style="font-size:15px;font-weight:700;color:${sc}">${s.score}</span>
-        </div>
-        ${s.parts.map(p=>{
-          const pc=p.v<40?'var(--loss)':p.v<55?'var(--debt)':p.v<70?'var(--gain)':'#4cc9f0';
-          return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
-            <div style="min-width:130px;font-size:10.5px;color:var(--muted2)">${p.n}</div>
-            <div style="flex:1;height:4px;background:var(--bg4);border-radius:3px;overflow:hidden"><div style="width:${p.v}%;height:4px;background:${pc}"></div></div>
-            <div style="min-width:24px;font-size:10.5px;font-weight:600;color:${pc}">${p.v}</div>
-            <div style="min-width:70px;font-size:9.5px;color:var(--muted2);text-align:right">${escHtml(p.note)}</div>
-          </div>`;}).join('')}
-        <div style="font-size:9.5px;color:var(--muted2);margin-top:4px">ที่มา: ${s.src}</div>
-      </div>`;}).join('');
-  }
-
-  // ── History chart: Crypto F&G จริง 90 วัน ──
-  const histCanvas=document.getElementById('fg-history-chart');
-  const prevH=Chart.getChart(histCanvas); if(prevH) prevH.destroy();
-  if(ext?.fng?.history?.length){
-    const h=ext.fng.history.slice(-90);
-    new Chart(histCanvas.getContext('2d'),{type:'line',
-      data:{labels:h.map(p=>new Date(p.t).toLocaleDateString(LOC,{day:'numeric',month:'short'})),
-        datasets:[{data:h.map(p=>p.v),borderColor:'#7c6fec',backgroundColor:'rgba(124,111,236,.08)',fill:true,tension:.35,pointRadius:0,borderWidth:2}]},
-      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
-        scales:{y:{min:0,max:100,ticks:{color:'#8080a0',font:{size:10}},grid:{color:'rgba(255,255,255,.04)'}},
-                x:{ticks:{color:'#8080a0',font:{size:9},maxTicksLimit:10},grid:{display:false}}}}});
-  }
-
-  // ── การตีความ ──
-  const interpEl=document.getElementById('fg-interpretation');
-  if(interpEl){
-    interpEl.innerHTML=sents.map(s=>{
-      const label=ALLOC_META[s.key]?.label||s.key;
-      const advice=s.score<30?'ตลาดกลัวจัด — โซนที่คน DCA ชอบ แต่เช็ค thesis ก่อนเติม':
-                   s.score<45?'เอียงไปทางกลัว — DCA ตามแผนปกติ':
-                   s.score<60?'กลางๆ — ไม่มีสัญญาณพิเศษ ทำตามแผน':
-                   s.score<75?'เริ่มโลภ — ระวังไล่ราคา, ถือตามแผน':'โลภจัด — โซนพิจารณา trim ถ้าเกินเป้า allocation';
-      return `<div style="background:var(--bg3);border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:10px 12px">
-        <div style="font-size:11px;font-weight:600;margin-bottom:4px">${label} · ${s.score}</div>
-        <div style="font-size:10.5px;color:var(--muted2);line-height:1.5">${advice}</div></div>`;}).join('')
-      +`<div style="background:var(--bg3);border:1px solid rgba(124,111,236,.25);border-radius:8px;padding:10px 12px">
-        <div style="font-size:11px;font-weight:600;margin-bottom:4px">⚠️ ข้อจำกัด</div>
-        <div style="font-size:10.5px;color:var(--muted2);line-height:1.5">US/Thai คำนวณจากองค์ประกอบบางส่วน (ไม่ใช่ดัชนี CNN เต็ม) · Gold/MF/PVD ไม่มีดัชนี sentiment มาตรฐาน · sentiment ใช้ประกอบ ไม่ใช่สัญญาณซื้อขายเดี่ยวๆ</div></div>`;
-  }
-}
-
-// ── STRATEGY ──
-// ═══ DCA ACTION PLAN — จัดสรรเงินลงทุนรอบหน้าตามช่องว่างจริง ═══════
-// เงินก้อนถัดไปควรเข้าหมวดไหนก่อน = หมวดที่ต่ำกว่าเป้ามากสุด (ไล่ปิด gap)
-function getDcaBudget(){
-  const v = parseFloat(localStorage.getItem('finOS_dcaBudget')||'');
-  return isFinite(v) && v>0 ? v : 10000;      // default ฿10,000/เดือน
-}
-function setDcaBudget(){
-  const cur=getDcaBudget();
-  const v=prompt('เงินลงทุนต่อเดือน (บาท)\nใช้จัดสรร DCA รอบถัดไป', cur);
-  if(v===null) return;
-  const n=parseFloat(v);
-  if(isFinite(n) && n>0){ localStorage.setItem('finOS_dcaBudget', String(n)); renderStrategy(); }
-}
-function renderDcaPlan(list, totalVal, rg){
-  const el=document.getElementById('dca-plan'); if(!el) return;
-  const budget=getDcaBudget();
-  const under=list.filter(d=>d.diff<0 && d.target>0).sort((a,b)=>a.diff-b.diff);
-  const head=`<div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--muted2)">
-      <span>งบ DCA <strong style="color:var(--text)">${fmt(budget)}</strong>/เดือน</span>
-      <button onclick="setDcaBudget()" style="background:rgba(124,111,236,.12);border:1px solid rgba(124,111,236,.4);
-        color:var(--savings);padding:3px 9px;border-radius:6px;font-size:10px;cursor:pointer;font-family:inherit">⚙ แก้งบ</button></div>`;
-  if(!under.length){
-    el.innerHTML=head+`<div style="font-size:11.5px;color:var(--gain);padding:6px 0">
-      🎉 ทุกหมวดอยู่ในกรอบเป้าแล้ว — กระจายงบตามสัดส่วนเป้าเดิม หรือเก็บเป็นเงินสดรอจังหวะ</div>`;
-    return;
-  }
-  const gapSum=under.reduce((s,d)=>s+Math.abs(d.diff),0);
-  el.innerHTML=head+under.slice(0,5).map(d=>{
-    const share=Math.abs(d.diff)/gapSum, amt=budget*share;
-    const months=amt>0?Math.ceil(d.amt/amt):0;
-    return `<div style="display:flex;align-items:center;gap:8px;font-size:11.5px">
-      <div style="min-width:104px">${escHtml(d.label)}</div>
-      <div style="flex:1;height:6px;background:var(--bg4);border-radius:4px;overflow:hidden">
-        <div style="width:${(share*100).toFixed(0)}%;height:6px;background:${d.color}"></div></div>
-      <div style="min-width:74px;text-align:right;font-weight:600;color:var(--gain)">${fmt(amt)}</div>
-      <div style="min-width:96px;text-align:right;color:var(--muted2);font-size:10px">ปิด gap ~${months} เดือน</div>
-    </div>`;
-  }).join('')+`<div style="font-size:10px;color:var(--muted2);margin-top:4px">
-    จัดสรรตามสัดส่วนช่องว่าง (หมวดที่ขาดมากได้เงินมาก)${rg?` · regime ${escHtml(rg.label)}`:''}</div>`;
-}
-// ═══ PORTFOLIO TARGET WEIGHTS — เป้าคุณ vs ถืออยู่จริง ═══
-function renderTargetWeights(list){
-  const el=document.getElementById('target-weights'); if(!el) return;
-  el.innerHTML=list.filter(d=>d.target>0||d.cur>0)
-    .sort((a,b)=>b.target-a.target).map(d=>{
-    const ok=Math.abs(d.diff)<5;
-    return `<div style="margin-bottom:9px">
-      <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px">
-        <span>${escHtml(d.label)}</span>
-        <span><span style="color:var(--muted2)">เป้า ${d.target}%</span> ·
-          <strong style="color:${ok?'var(--gain)':'var(--debt)'}">${d.cur.toFixed(1)}%</strong>
-          ${ok?'✓':(d.diff>0?'▲':'▼')}</span></div>
-      <div style="position:relative;height:6px;background:var(--bg4);border-radius:4px">
-        <div style="width:${Math.min(100,d.cur)}%;height:6px;background:${d.color};border-radius:4px"></div>
-        <div style="position:absolute;left:${Math.min(100,d.target)}%;top:-2px;width:2px;height:10px;background:var(--white);opacity:.7"></div>
-      </div></div>`;
-  }).join('')+`<div style="font-size:10px;color:var(--muted2);margin-top:2px">แถบ = ถืออยู่จริง · เส้นขาว = เป้าของคุณ</div>`;
-}
-
-// helper แสดงเงิน — หน้านี้เดิมไม่มี (ต้นเหตุ renderStrategy พังทั้งหน้า)
-function fmt(v){ return '฿'+Math.round(Math.abs(Number(v)||0)).toLocaleString('en-US'); }
-
-function renderStrategy(){
-  // ═══ PLAYBOOK ที่สร้างจากข้อมูลจริง: พอร์ตคุณ × regime สด ═══
-  // เดิมเป็นการ์ด hardcode 8 ใบที่ไม่รู้ว่าคุณถืออะไร — ตอนนี้สร้างจาก
-  // ส่วนเบี่ยงเบนพอร์ตจริง (computeDeviations) + สัญญาณตลาดสด (computeRegime)
-  const el=document.getElementById('strategy-cards'); if(!el) return;
-  let real=null; try{ real=JSON.parse(localStorage.getItem('finOS_portfolio')||'null'); }catch(e){}
-  const rg=computeRegime();
-
-  if(!real || !real.allocation || !Object.keys(real.allocation).length){
-    const msg=`<div style="font-size:12px;color:var(--muted2);padding:14px;
-      border:1px dashed rgba(255,255,255,.12);border-radius:10px">
-      🔌 ยังไม่มีข้อมูลพอร์ต — เปิดหน้า Finance OS ให้โหลดข้อมูลก่อน แล้ว Playbook
-      จะสร้างคำแนะนำจากพอร์ตจริงของคุณเทียบกับสภาวะตลาดสดโดยอัตโนมัติ</div>`;
-    el.innerHTML=`<div style="grid-column:1/-1">${msg}</div>`;
-    ['dca-plan','target-weights'].forEach(id=>{const e=document.getElementById(id); if(e) e.innerHTML=msg;});
-    return;
-  }
-
-  const dv = computeDeviations(real);
-  const {list, totalVal} = dv;
-  const TH=5;
-  // ปรับ bias ตาม regime: ตลาดแย่ → เอียงไป defensive/cash มากขึ้น
-  const defensive = rg ? rg.avg < -0.25 : false;
-  const riskOn    = rg ? rg.avg >= 0.7  : false;
-
-  const cards = list.filter(d=>d.target>0 || d.cur>0).map(d=>{
-    let type,label,color,action;
-    if(d.diff >= TH){ type='trim'; label='TRIM'; color='var(--loss)';
-      action=`ลดสัดส่วนลง ~${fmt(d.amt)} เพื่อกลับเข้ากรอบ`; }
-    else if(d.diff <= -TH){ type='add'; label='ADD'; color='var(--gain)';
-      action=`ทยอยเพิ่ม ~${fmt(d.amt)} — จัด DCA รอบถัดไปเข้าหมวดนี้ก่อน`; }
-    else { type='hold'; label='HOLD'; color='var(--savings)';
-      action='อยู่ในกรอบเป้า — คง DCA ตามแผน ไม่ต้องแตะ'; }
-
-    // เหตุผลประกอบจากข้อมูลจริง
-    const reasons=[];
-    // v45: target ถูก scale แล้ว (กระจายเป้าของกอง illiquid คืนมา) จึงมีทศนิยม
-    reasons.push(`ปัจจุบัน ${d.cur.toFixed(1)}% vs เป้าคุณ ${d.target.toFixed(1)}% (${d.diff>=0?'+':''}${d.diff.toFixed(1)}pp)`);
-    reasons.push(`คิดเป็นเงิน ${fmt(d.amt)} จากพอร์ตที่ปรับได้ ${fmt(totalVal)}`);
-    const pnl = real.allocation[d.key];
-    if(pnl && pnl.pnlPct!=null) reasons.push(`P&L หมวดนี้ ${pnl.pnlPct>=0?'+':''}${pnl.pnlPct}%`);
-    // เชื่อมกับ regime
-    if(rg){
-      if(d.key==='Gold' && rg.avg<0.25) reasons.push('regime ปัจจุบันหนุน real assets (ทอง/สินทรัพย์จริง)');
-      if(d.key==='Crypto' && rg.avg<0) reasons.push('สินทรัพย์เสี่ยงสูง — regime ยังไม่เอื้อ');
-      if(d.key==='Cash' && defensive) reasons.push('regime เอียงลบ — เงินสดคือ optionality');
-      if(d.key==='US Stock' && riskOn) reasons.push('regime risk-on — หุ้นคุณภาพได้ประโยชน์');
-      const trend = d.key==='Thai Stock' ? rg.signals.find(s=>s.key==='th')
-                  : d.key==='US Stock'  ? rg.signals.find(s=>s.key==='trend') : null;
-      if(trend) reasons.push(`เทรนด์: ${escHtml(trend.label)} = ${trend.val}`);
-    }
-    return {type,label,color,title:d.label,sub:`เป้า ${d.target.toFixed(1)}% · ถืออยู่ ${d.cur.toFixed(1)}%`,
-            reasons,alloc:d.target.toFixed(1)+'%',action,priority:Math.abs(d.diff)};
-  }).sort((x,y)=>y.priority-x.priority);
-
-  /* v45 — แยกกองที่ขายไม่ได้ออกจากฐานคำนวณ และบอกผู้ใช้ว่าแยกแล้ว
-     ไม่งั้น Provident Fund ที่เป็น ~26% ของทั้งพอร์ต (เป้า 5%) จะขึ้น TRIM
-     ตัวใหญ่ตลอดไป — คำแนะนำที่ทำตามไม่ได้ทำให้คนเลิกเชื่อทั้งหน้า */
-  const illiqNote = (dv.illiquid && dv.illiquid.length) ? `
-    <div style="grid-column:1/-1;font-size:11.5px;color:var(--muted2);
-        background:rgba(255,169,77,.05);border:1px solid rgba(255,169,77,.25);border-radius:8px;padding:9px 12px;margin-bottom:4px">
-      🔒 <strong style="color:var(--text)">แยกออกจากการคำนวณ: ${fmt(dv.illiquidVal)}
-      (${dv.illiquidPct.toFixed(0)}% ของทั้งพอร์ต)</strong> —
-      ${dv.illiquid.map(i=>escHtml(i.label)).join(', ')} ถอนไม่ได้จนออกจากงาน
-      จึง rebalance ไม่ได้ · เป้าของกองนี้ถูกกระจายคืนให้กองที่เหลือแล้ว
-      (เป้าที่เห็นด้านล่างจึงรวมได้ 100% ของเงินที่คุณคุมได้จริง)<br>
-      <span style="font-size:11px">ผลข้างเคียงที่ควรรู้: กองนี้เป็นหุ้น/ตราสารอยู่แล้ว
-      ความเสี่ยงรวมของคุณจึงสูงกว่าที่ตารางด้านล่างบอก — เวลาคิดว่าจะเพิ่มหุ้นอีกไหม ให้นับมันด้วย</span></div>` : '';
-
-  const head = illiqNote + `<div style="grid-column:1/-1;font-size:11.5px;color:var(--muted2);
-      background:rgba(0,212,160,.05);border:1px solid rgba(0,212,160,.2);border-radius:8px;padding:9px 12px;margin-bottom:4px">
-    🧮 สร้างจากเงินที่ปรับได้ ${fmt(totalVal)}${dv.illiquidVal>0?` (จากทั้งพอร์ต ${fmt(dv.grossVal)})`:''}
-    × regime <strong style="color:var(--text)">${rg?rg.label:'—'}</strong>
-    ${rg?`(score ${rg.avg>=0?'+':''}${rg.avg.toFixed(2)})`:''} · เกณฑ์เบี่ยงเบน ±${TH}pp ·
-    เป้าแก้ได้ที่หน้า Alerts → ⚙ ตั้งเป้า Allocation</div>`;
-
-  // หัวข้อบอก regime สด แทน "มิ.ย. 2026" ที่ hardcode
-  const tag=document.getElementById('pb-regime-tag');
-  if(tag) tag.textContent = rg ? ' — regime: '+rg.label+' (score '+(rg.avg>=0?'+':'')+rg.avg.toFixed(2)+')' : '';
-  const dtag=document.getElementById('dca-regime-tag');
-  if(dtag) dtag.textContent = rg ? 'ตาม regime '+rg.label : '';
-  renderDcaPlan(list, totalVal, rg);
-  renderTargetWeights(list);
-  el.innerHTML = head + cards.map(c=>`
-    <div class="strat-card strat-${escHtml(c.type)}" style="border-top:2px solid ${c.color}">
-      <div class="strat-head">
-        <span class="strat-badge" style="background:rgba(255,255,255,.05);border:1px solid ${c.color};color:${c.color}">${escHtml(c.label)}</span>
-      </div>
-      <div class="strat-title">${escHtml(c.title)}</div>
-      <div class="strat-sub">${c.sub}</div>
-      <div style="font-size:11.5px;color:${c.color};margin:6px 0 8px;font-weight:600">${c.action}</div>
-      <ul class="strat-reasons">${c.reasons.map(r=>`<li>${r}</li>`).join('')}</ul>
-      <div class="strat-alloc"><span>เป้าสัดส่วน</span><strong style="color:${c.color}">${c.alloc}</strong></div>
-    </div>`).join('');
-}
-
-
-// ═══ BUSINESS CYCLE — คำนวณจาก macro จริง ไม่ใช่ hardcode ═════════════
-// เดิมการ์ดนี้เขียน "Late Expansion" ตายตัวไว้ใน HTML และ canvas ไม่มีโค้ดวาดเลย
-// รอบนี้ให้คะแนนจากสัญญาณ macro 5 ตัว แล้วเทียบกับสิ่งที่ "เงินไหลจริง" บอก
-// จุดที่มีค่าที่สุดคือตอนสองฝั่งไม่ตรงกัน — ตลาดมักรู้ก่อน macro 3-6 เดือน
-const CYCLE_PHASES=[
-  {key:'early',  th:'Early Expansion', en:'ฟื้นตัว',      c:'#00d4a0', bg:'rgba(0,212,160,.09)',
-   lead:'Cons. Disc. · Financials · Industrials · Real Estate'},
-  {key:'mid',    th:'Mid Expansion',   en:'เติบโตเต็มที่', c:'#4cc9f0', bg:'rgba(76,201,240,.09)',
-   lead:'Technology · Industrials · Communication'},
-  {key:'late',   th:'Late Expansion',  en:'ปลายวัฏจักร',  c:'#ff9500', bg:'rgba(255,149,0,.09)',
-   lead:'Energy · Materials · Healthcare · Staples'},
-  {key:'recess', th:'Contraction',     en:'ชะลอ/ถดถอย',   c:'#ff4060', bg:'rgba(255,64,96,.09)',
-   lead:'Cons. Staples · Utilities · Healthcare'},
-];
-// กลุ่ม cyclical นำ = เศรษฐกิจยังเร่ง · defensive นำ = เงินเริ่มหลบ
-const CYC_GROUPS={
-  cyclical:  ['XLY','XLF','XLI','XLK','XLB'],
-  defensive: ['XLP','XLU','XLV'],
-  lateplay:  ['XLE','XLB'],
-};
-
-function computeCyclePhase(){
-  const sig=[];
-  let score=0;      // 0 = ต้นวัฏจักร → 10 = ถดถอย
-
-  // 1) ความชันเส้นผลตอบแทน 2s10s — ชันมาก = ต้นรอบ, แบน/กลับหัว = ปลายรอบ
-  const yc=mdNum('YIELD_CURVE');
-  if(yc!=null){
-    const s = yc>120?0 : yc>70?1 : yc>25?2 : yc>0?3 : 4;
-    score+=s;
-    sig.push({k:'Yield curve 2s10s', v:yc.toFixed(0)+'bps',
-      t: yc>120?'ชันมาก — ต้นรอบ': yc>70?'ชัน — กำลังขยายตัว': yc>25?'เริ่มแบน — กลางถึงปลายรอบ':
-         yc>0?'แบนมาก — ปลายรอบ':'กลับหัว — เตือนถดถอย'});
-  }
-  // 2) ส่วนต่างเครดิต HY — ตลาดตราสารหนี้มักส่งสัญญาณก่อนหุ้น
-  const cs=mdNum('CREDIT_SPREAD');
-  if(cs!=null){
-    const s = cs<3?0 : cs<4?1 : cs<5.5?3 : 4;
-    score+=s;
-    sig.push({k:'Credit spread (HY)', v:cs.toFixed(2)+'%',
-      t: cs<3?'แคบ — นักลงทุนยังกล้าเสี่ยง': cs<4?'ปกติ': cs<5.5?'เริ่มกว้าง — ระวัง':'กว้างมาก — ความเครียดสูง'});
-  }
-  // 3) อัตราว่างงาน — ต่ำมาก = ตลาดแรงงานตึง = ปลายรอบ
-  const un=mdNum('US_UNEMP');
-  if(un!=null){
-    const s = un<4?3 : un<4.6?2 : un<5.5?1 : 3;
-    score+=s;
-    sig.push({k:'Unemployment', v:un.toFixed(1)+'%',
-      t: un<4?'ตึงมาก — ปลายรอบ': un<4.6?'ตึง — ยังขยายตัว': un<5.5?'คลายตัว':'สูง — ถดถอย'});
-  }
-  // 4) เงินเฟ้อพื้นฐานเทียบเป้า 2%
-  const ci=mdNum('US_CORE_CPI');
-  if(ci!=null){
-    const s = ci>3.5?3 : ci>2.5?2 : ci>2?1 : 0;
-    score+=s;
-    sig.push({k:'Core CPI', v:ci.toFixed(1)+'%',
-      t: ci>3.5?'สูงกว่าเป้ามาก — บีบให้ Fed ตึง': ci>2.5?'ยังเหนือเป้า 2%': ci>2?'ใกล้เป้า':'ต่ำกว่าเป้า'});
-  }
-  // 5) นโยบายการเงินตึงแค่ไหน — real 10Y เทียบ r* ราว 1%
-  const rr=mdNum('US_REAL10Y');
-  if(rr!=null){
-    const s = rr>2.2?3 : rr>1.4?2 : rr>0.5?1 : 0;
-    score+=s;
-    sig.push({k:'Real 10Y yield', v:rr.toFixed(2)+'%',
-      t: rr>2.2?'ตึงมากเทียบ r*~1%': rr>1.4?'ตึง': rr>0.5?'เป็นกลาง':'ผ่อนคลาย'});
-  }
-
-  const max = sig.length*4;
-  const pct = max>0 ? score/max : 0;
-  const idx = pct<0.25?0 : pct<0.48?1 : pct<0.78?2 : 3;
-  return {idx, phase:CYCLE_PHASES[idx], sig, pct, n:sig.length};
-}
-
-// เงินไหลจริงบอกอะไร — เทียบ relative strength เฉลี่ยของ cyclical vs defensive
-function cycleFromFlow(secs){
-  if(!secs || !secs.length) return null;
-  const avg = syms => {
-    const v = secs.filter(s=>syms.includes(s.sym) && s.rs3m!=null).map(s=>s.rs3m);
-    return v.length ? v.reduce((a,b)=>a+b,0)/v.length : null;
-  };
-  const cyc=avg(CYC_GROUPS.cyclical), def=avg(CYC_GROUPS.defensive), late=avg(CYC_GROUPS.lateplay);
-  if(cyc==null||def==null) return null;
-  const tilt = cyc-def;   // >0 = cyclical นำ
-  const idx = tilt>4?0 : tilt>0?1 : tilt>-4?2 : 3;
-  return {idx, tilt, cyc, def, late, phase:CYCLE_PHASES[idx]};
-}
-
-function renderCyclePosition(secs){
-  const box=document.getElementById('cycle-track'); if(!box) return;
-  const macro=computeCyclePhase();
-  const nowEl=document.getElementById('cyc-now');
-
-  if(!macro.n){
-    box.innerHTML=`<div style="font-size:11.5px;color:var(--muted2);padding:14px">
-      ⏳ ยังไม่มีข้อมูล macro พอจะระบุช่วงวัฏจักร — รอ pipeline รอบถัดไป</div>`;
-    if(nowEl) nowEl.textContent='—';
-    return;
-  }
-  const flow=cycleFromFlow(secs);
-  if(nowEl){
-    nowEl.textContent='ปัจจุบัน: '+macro.phase.th;
-    nowEl.style.color=macro.phase.c;
-  }
-
-  // แถบ 4 ช่วง — ช่วงที่ตรงกับ macro ถูกไฮไลต์
-  const track=CYCLE_PHASES.map((p,i)=>`
-    <div class="cyc-seg ${i===macro.idx?'on':''}" style="--accent-c:${p.c};--accent-bg:${p.bg}">
-      ${i===macro.idx?'<div class="cyc-dot"></div>':''}
-      <div class="cyc-ph" style="color:${i===macro.idx?p.c:'var(--muted2)'}">${p.th}</div>
-      <div class="cyc-sub">${p.en}</div>
-      <div class="cyc-lead">${p.lead}</div>
-    </div>`).join('');
-
-  // สัญญาณที่ใช้ตัดสิน — อ้างตัวเลขจริงทุกตัว ไม่มีคำลอยๆ
-  const chips=macro.sig.map(x=>`<span class="cyc-chip">${x.k} <strong
-    style="color:var(--white)">${x.v}</strong> · ${x.t}</span>`).join('');
-
-  // จุดสำคัญ: macro กับเงินไหลตรงกันไหม
-  let verdict='';
-  if(flow){
-    const same=flow.idx===macro.idx;
-    const near=Math.abs(flow.idx-macro.idx)===1;
-    const tone=same?'#00d4a0':near?'#ff9500':'#ff4060';
-    verdict=`<div style="margin-top:14px;padding:13px 15px;border-radius:10px;
-      background:${same?'rgba(0,212,160,.06)':near?'rgba(255,149,0,.06)':'rgba(255,64,96,.07)'};
-      border:1px solid ${tone}44">
-      <div style="font-size:12px;font-weight:600;color:${tone};margin-bottom:7px">
-        ${same?'✓ Macro กับเงินไหลตรงกัน':near?'⚠ เยื้องกัน 1 ช่วง':'⚠ ขัดแย้งกันชัดเจน'}</div>
-      <div style="font-size:11.5px;line-height:1.95;color:var(--text)">
-        <strong>Macro บอก:</strong> ${macro.phase.th} (${macro.n} สัญญาณ)<br>
-        <strong>เงินไหลบอก:</strong> ${flow.phase.th} —
-        cyclical ${flow.cyc>=0?'+':''}${flow.cyc.toFixed(1)}pp vs
-        defensive ${flow.def>=0?'+':''}${flow.def.toFixed(1)}pp
-        (ห่างกัน ${flow.tilt>=0?'+':''}${flow.tilt.toFixed(1)}pp)<br>
-        <span style="color:var(--muted2)">${
-          same ? 'สองฝั่งยืนยันกัน — น้ำหนักตาม playbook ของช่วงนี้ได้เต็มที่'
-        : flow.idx<macro.idx
-          ? 'เงินยังไหลเข้ากลุ่ม cyclical ทั้งที่ macro เริ่มตึง — ตลาดมองข้ามช็อต หรือยังไม่ price in ความเสี่ยง'
-          : 'เงินหลบเข้ากลุ่ม defensive เร็วกว่าที่ macro บอก — ตลาดมักนำหน้าข้อมูลจริง 3-6 เดือน ควรให้น้ำหนักฝั่งนี้'}</span>
-      </div></div>`;
-  }
-
-  box.innerHTML=`<div class="cyc-track">${track}</div>
-    <div class="cyc-row">${chips}</div>${verdict}`;
-}
-
-// ═══ SECTOR FLOW — กราฟแท่งแนวนอนจาก relative strength จริง ═══════════
-// canvas นี้เดิมไม่มีโค้ดวาดเลย เป็นกล่องว่างมาตลอด
-let _secFlowChart=null;
-function renderSectorFlow(secs){
-  const cv=document.getElementById('sector-flow-chart');
-  if(!cv || typeof Chart==='undefined') return;
-  if(!secs || !secs.length) return;
-  const rows=secs.filter(s=>s.rs3m!=null).sort((a,b)=>b.rs3m-a.rs3m);
-  if(!rows.length) return;
-  if(_secFlowChart){ _secFlowChart.destroy(); _secFlowChart=null; }
-  _secFlowChart=new Chart(cv.getContext('2d'),{
-    type:'bar',
-    data:{
-      labels:rows.map(s=>`${escHtml(s.name)} (${s.sym})`),
-      datasets:[{
-        label:'ผลตอบแทนส่วนเกิน 3 เดือน เทียบ SPY (pp)',
-        data:rows.map(s=>s.rs3m),
-        backgroundColor:rows.map(s=>s.rs3m>=0?'rgba(0,212,160,.55)':'rgba(255,64,96,.55)'),
-        borderColor:rows.map(s=>s.rs3m>=0?'#00d4a0':'#ff4060'),
-        borderWidth:1, borderRadius:4, barPercentage:.78,
-      }]
-    },
-    options:{
-      indexAxis:'y', responsive:true, maintainAspectRatio:false,
-      plugins:{
-        legend:{labels:{color:'#9090c0',boxWidth:12,padding:10,font:{size:10}}},
-        tooltip:{callbacks:{label:c=>{
-          const s=rows[c.dataIndex];
-          return ` ${c.parsed.x>=0?'+':''}${c.parsed.x.toFixed(1)}pp vs SPY · 3M ${s.chg3m>=0?'+':''}${s.chg3m.toFixed(1)}% · RSI ${s.rsi}`;
-        }}}
-      },
-      scales:{
-        x:{grid:{color:'rgba(255,255,255,.05)',lineWidth:.5},
-           ticks:{color:'#6060a0',font:{size:10},callback:v=>(v>0?'+':'')+v+'pp'},
-           title:{display:true,text:'← เงินไหลออก   ผลตอบแทนส่วนเกินเทียบ SPY   เงินไหลเข้า →',
-                  color:'#5a5a8a',font:{size:10}}},
-        y:{grid:{display:false},ticks:{color:'#9090c0',font:{size:10}}}
-      }
-    }
-  });
-}
-
-function renderSectors(){
-  // ═══ SECTOR ROTATION จากข้อมูลจริง (sector ETF ผ่าน pipeline) ═══
-  // เดิม rating เป็น hardcode 10 ใบ — ตอนนี้คำนวณจาก relative strength vs SPY,
-  // เทรนด์เทียบ MA200 และ RSI ของ ETF แต่ละกลุ่มจริง
-  const ICON={Technology:'🤖',Healthcare:'💊',Financials:'🏦','Cons. Disc.':'🎮',
-    'Cons. Staples':'🛒',Industrials:'🏗',Energy:'🛢',Utilities:'⚡','Real Estate':'🏠',Materials:'🧪'};
-  const el=document.getElementById('sector-global');
-  const secs=loadSectors();
-
-  renderCyclePosition(secs);      // ทำงานได้แม้ยังไม่มี sector (ใช้ macro ล้วน)
-  renderSectorFlow(secs);
-
-  if(!secs){
-    if(el) el.innerHTML=`<div style="grid-column:1/-1;font-size:11.5px;color:var(--muted2);
-      padding:12px 14px;border:1px dashed rgba(255,255,255,.12);border-radius:10px">
-      ⏳ ยังไม่มีข้อมูล sector — pipeline รอบถัดไป (06:30) จะดึง sector ETF (XLK, XLV, XLF …) มาให้
-      หรือกด <strong>Run workflow</strong> ที่ GitHub Actions เพื่อดึงทันที</div>`;
-    return;
-  }
-
-  const cmap={gain:'var(--gain)',debt:'var(--debt)',loss:'var(--loss)'};
-  if(el) el.innerHTML = secs.map(s=>{
-    const r=sectorRating(s), c=cmap[r.color];
-    const rs = s.rs3m!=null ? (s.rs3m>=0?'+':'')+s.rs3m.toFixed(1)+'pp vs SPY' : '';
-    const trend = s.vsMA200==null?'' : (s.vsMA200>0?'เหนือ MA200':'ใต้ MA200');
-    return `<div class="sector-card">
-      <div class="sec-icon">${ICON[s.name]||'📊'}</div>
-      <div class="sec-name">${escHtml(s.name)} <span style="color:var(--muted2);font-size:9px">${s.sym}</span></div>
-      <div class="sec-rating" style="color:${c}">${escHtml(r.label)}</div>
-      <div class="sec-bar"><div class="sec-bar-fill" style="width:${Math.max(4,Math.min(100,50+(s.rs3m??0)*4))}%;background:${c}"></div></div>
-      <div class="sec-note" style="line-height:1.6">
-        <span style="color:${s.chg3m>=0?'var(--gain)':'var(--loss)'}">3M ${s.chg3m>=0?'+':''}${s.chg3m.toFixed(1)}%</span>
-        · <span style="color:${s.chg1m>=0?'var(--gain)':'var(--loss)'}">1M ${s.chg1m>=0?'+':''}${s.chg1m.toFixed(1)}%</span><br>
-        <span style="color:var(--muted2)">${rs}${trend?' · '+trend:''} · RSI ${s.rsi}</span></div>
-    </div>`;
-  }).join('');
-
-  // หัวข้อบอกที่มา + สรุปการหมุนเวียน
-  const head=document.querySelector('#page-sectors .ct');
-  const lead=secs.slice(0,3).map(s=>s.name).join(', ');
-  const lag =secs.slice(-3).map(s=>s.name).reverse().join(', ');
-  const sumEl=document.getElementById('sector-summary');
-  if(sumEl) sumEl.innerHTML=`<div style="font-size:11.5px;line-height:1.9;
-      background:rgba(0,212,160,.05);border:1px solid rgba(0,212,160,.2);border-radius:8px;padding:10px 13px">
-    🔄 <strong>เงินไหลเข้า:</strong> ${lead}<br>
-    📉 <strong>เงินไหลออก:</strong> ${lag}<br>
-    <span style="color:var(--muted2)">จัดอันดับด้วย relative strength 3 เดือนเทียบ SPY · ข้อมูลจาก sector ETF จริง (${secs.length} กลุ่ม)</span></div>`;
-
-  // ไทย: ยังไม่มี sector ETF ให้ดึง — บอกตรงๆ
-  const th=document.getElementById('sector-thai');
-  if(th) th.innerHTML=`<div style="grid-column:1/-1;font-size:11px;color:var(--muted2);
-    padding:10px 12px;border:1px dashed rgba(255,255,255,.1);border-radius:8px">
-    ℹ️ กลุ่มอุตสาหกรรมไทยยังไม่มี ETF ให้ดึงอัตโนมัติ — ใช้ SET RSI / SET vs MA200
-    ในหน้า Situation เป็นภาพรวมแทน</div>`;
-}
-
-function editTargets(){
-  const t = getTargets();
-  const order = [...Object.keys(ALLOC_META), 'Cash'];
-  for(const k of order){
-    const label = ALLOC_META[k]?.label || k;
-    const v = prompt(`เป้าสัดส่วน ${label} (%)\nปัจจุบัน: ${t[k]}%\n(เว้นว่าง = คงเดิม)`, t[k]);
-    if(v===null) break;                       // กด Cancel = หยุดทั้งชุด
-    const n = parseFloat(v);
-    if(!isNaN(n) && n>=0 && n<=100) t[k]=n;
-  }
-  const sum = Object.values(t).reduce((s,v)=>s+v,0);
-  if(Math.round(sum)!==100 && !confirm(`ผลรวมเป้า = ${sum}% (ไม่ใช่ 100%)\nบันทึกต่อไหม?`)) return;
-  localStorage.setItem('finOS_targets', JSON.stringify(t));
-  renderAlerts();
-  alert('บันทึกเป้า Allocation แล้ว ✓');
-}
-
-// ═══ SHARED: ส่วนเบี่ยงเบนพอร์ตจริง vs เป้าของผู้ใช้ ═══════════════
-// single source of truth — หน้า Alerts และ Allocation ใช้ตัวเดียวกัน
-
-
-function renderPortfolio(){
-  // Load real portfolio data from localStorage (saved by Finance OS)
-  let realAlloc = null;
-  try {
-    const raw = localStorage.getItem('finOS_portfolio');
-    if(raw) realAlloc = JSON.parse(raw);
-  } catch(e) {}
-
-  // Build allocation arrays — prefer real data, fall back to static
-  let labels, values, colors, breakdown;
-  if(realAlloc && realAlloc.allocation && Object.keys(realAlloc.allocation).length) {
-    const alloc    = realAlloc.allocation;
-    const cashBal  = realAlloc.cashBalance || 0;
-    const totalVal = (realAlloc.totalValue || 0) + cashBal;
-    const cashPct  = totalVal > 0 ? Math.round(cashBal / totalVal * 100) : 0;
-
-    // Build per-class entries
-    const entries = Object.entries(alloc)
-      .filter(([,v]) => v.value > 0)
-      .sort((a,b) => b[1].value - a[1].value);
-
-    labels = [...entries.map(([k]) => ALLOC_META[k]?.label || k), 'Cash'];
-    values = [...entries.map(([,v]) => v.pct), cashPct];
-    colors = [...entries.map(([k]) => ALLOC_META[k]?.color || '#8080b0'), '#5a5a8a'];
-
-    breakdown = [
-      ...entries.map(([k,v]) => ({
-        label:   ALLOC_META[k]?.label || k,
-        target:  getTargets()[k] ?? (ALLOC_META[k]?.target || 0),
-        current: v.pct,
-        color:   ALLOC_META[k]?.color || '#8080b0',
-      })),
-      {label:'Cash', target: getTargets()['Cash'] ?? CASH_TARGET, current: cashPct, color:'#8080b0'},
-    ];
-  } else {
-    // Static fallback (shown before Finance OS is connected)
-    labels    = ['US Stocks','Mutual Fund','Gold','Thai Stocks','Crypto','EM/Other','Cash'];
-    values    = [28,15,13,10,12,5,17];
-    colors    = ['#00d4a0','#7c6fec','#ffd166','#4cc9f0','#ff9500','#f72585','#5a5a8a'];
-    breakdown = [
-      {label:'US Stocks',   target:25, current:28, color:'#00d4a0'},
-      {label:'Mutual Fund', target:15, current:15, color:'#7c6fec'},
-      {label:'Gold',        target:13, current:12, color:'#ffd166'},
-      {label:'Thai Stocks', target:10, current:18, color:'#4cc9f0'},
-      {label:'Crypto',      target:5,  current:7,  color:'#ff9500'},
-      {label:'Cash',        target:22, current:20, color:'#8080b0'},
-    ];
-  }
-  // Dynamic headers — บอกชัดว่ากำลังดูพอร์ตจริงหรือตัวอย่าง
-  const isReal = !!(realAlloc && realAlloc.allocation && Object.keys(realAlloc.allocation).length);
-  const subC=document.getElementById('alloc-chart-sub');
-  const subB=document.getElementById('alloc-breakdown-sub');
-  if(subC) subC.textContent = isReal ? '📡 พอร์ตจริงของคุณ' : 'ตัวอย่าง — ยังไม่เชื่อมข้อมูล';
-  if(subB) subB.textContent = isReal ? 'เป้าของฉัน vs พอร์ตจริง' : 'แนะนำ vs ตัวอย่างพอร์ต';
-
-  const allocCanvas=document.getElementById('alloc-target-chart');
-  const prev=Chart.getChart(allocCanvas); if(prev) prev.destroy();  // กัน canvas ชนตอน re-render
-  const allocCtx=allocCanvas.getContext('2d');
-  new Chart(allocCtx,{
-    type:'doughnut',
-    data:{labels,datasets:[{data:values,backgroundColor:colors.map(c=>c+'bb'),borderColor:colors,borderWidth:1.5,hoverOffset:4}]},
-    options:{
-      responsive:true,maintainAspectRatio:false,cutout:'65%',
-      plugins:{legend:{position:'right',labels:{color:'#9090c0',boxWidth:10,font:{size:10},padding:8}},tooltip:tooltipDefaults}
-    }
-  });
-
-  document.getElementById('alloc-breakdown').innerHTML=breakdown.map(b=>{
-    const diff=b.current-b.target;
-    const status=Math.abs(diff)<=2?'✓':'⚠';
-    const sc=Math.abs(diff)<=2?'var(--muted)':diff>0?'var(--loss)':'var(--gain)';
-    return `<div style="display:flex;align-items:center;gap:8px">
-      <div style="width:8px;height:8px;border-radius:2px;background:${b.color};flex-shrink:0"></div>
-      <div style="flex:1;font-size:11px;color:var(--text)">${escHtml(b.label)}</div>
-      <div style="font-size:11px;color:var(--muted)">Target: ${b.target}%</div>
-      <div style="font-size:11px;font-weight:600;color:${b.color}">${b.current}%</div>
-      <div style="font-size:12px;color:${sc};min-width:14px">${status}</div>
-    </div>`;
-  }).join('');
-
-  // Rebalancing Signals — จากพอร์ตจริง (fallback = ตัวอย่าง พร้อมป้ายชัดเจน)
-  let sigItems;
-  if(isReal){
-    const {list,totalVal}=computeDeviations(realAlloc);
-    const TH=5;
-    sigItems = list.filter(d=>Math.abs(d.diff)>=TH).map(d=> d.diff>0
-      ? {icon:'⚠️',title:`${escHtml(d.label)} Overweight (+${d.diff.toFixed(1)}pp)`,
-         desc:`ปัจจุบัน ${d.cur.toFixed(1)}% เกินเป้า ${d.target}% ≈ ฿${d.amt.toLocaleString(LOC)} — พิจารณา trim หรือหยุด DCA หมวดนี้ชั่วคราว`,
-         tag:'REBALANCE',tagColor:'var(--debt)'}
-      : {icon:'📉',title:`${escHtml(d.label)} Underweight (${d.diff.toFixed(1)}pp)`,
-         desc:`ปัจจุบัน ${d.cur.toFixed(1)}% ต่ำกว่าเป้า ${d.target}% ≈ ฿${d.amt.toLocaleString(LOC)} — จัด DCA รอบถัดไปเข้าหมวดนี้ก่อน`,
-         tag:'ADD',tagColor:'var(--gain)'});
-    if(!sigItems.length) sigItems=[{icon:'🎉',title:'พอร์ตอยู่ในกรอบเป้าทุกหมวด (±5pp)',
-      desc:'ไม่มีหมวดที่ต้อง rebalance ตอนนี้ — คง DCA ตามแผนเดิม',tag:'ON TRACK',tagColor:'var(--gain)'}];
-    sigItems.unshift({icon:'📡',title:`คำนวณจากพอร์ตจริง ฿${Math.round(totalVal).toLocaleString(LOC)}`,
-      desc:`เป้า allocation แก้ได้ที่หน้า Alerts → ⚙ ตั้งเป้า Allocation ของฉัน`,tag:'LIVE',tagColor:'var(--savings)'});
-  } else {
-    sigItems=[{icon:'🔌',title:'ยังไม่เชื่อมข้อมูลพอร์ตจริง',
-      desc:'เปิดหน้า Finance OS ให้โหลดข้อมูลก่อน แล้วกลับมาหน้านี้ สัญญาณ rebalance จะคำนวณจากพอร์ตจริงอัตโนมัติ',
-      tag:'SAMPLE',tagColor:'var(--muted2)'}];
-  }
-  document.getElementById('rebalance-signals').innerHTML=sigItems.map(a=>`<div class="alert-item">
-    <div class="alert-icon">${a.icon}</div>
-    <div><div class="alert-title">${escHtml(a.title)}</div><div class="alert-desc">${escHtml(a.desc)}</div>
-    <div><span class="alert-tag" style="background:rgba(255,255,255,.05);border:1px solid ${a.tagColor};color:${a.tagColor}">${a.tag}</span></div></div>
-  </div>`).join('');
-
-  // Risk-Return chart
-  const rrCtx=document.getElementById('rr-chart').getContext('2d');
-  const prevRr=Chart.getChart(rrCtx.canvas); if(prevRr) prevRr.destroy();
-  new Chart(rrCtx,{
-    type:'scatter',
-    data:{datasets:[
-      {label:'US Quality Tech',data:[{x:18,y:15}],backgroundColor:'#00d4a0',pointRadius:8,pointStyle:'circle'},
-      {label:'S&P 500 ETF',data:[{x:12,y:10}],backgroundColor:'#4cc9f0',pointRadius:8},
-      {label:'Gold',data:[{x:16,y:11}],backgroundColor:'#ffd166',pointRadius:8},
-      {label:'Thai Stocks',data:[{x:22,y:5}],backgroundColor:'#7c6fec',pointRadius:8},
-      {label:'Crypto',data:[{x:55,y:25}],backgroundColor:'#ff9500',pointRadius:8},
-      {label:'Cash/Bond',data:[{x:3,y:4.5}],backgroundColor:'#8080b0',pointRadius:8},
-      {label:'Mutual Fund',data:[{x:10,y:8}],backgroundColor:'#f72585',pointRadius:8},
-    ]},
-    options:{
-      responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{labels:{color:'#9090c0',boxWidth:10,font:{size:10},padding:8}},tooltip:{...tooltipDefaults,callbacks:{label:c=>` ${escHtml(c.dataset.label)}: Risk ${c.raw.x}% | Return ${c.raw.y}%`}}},
-      scales:{
-        x:{grid:{color:gridColor,lineWidth:.5},title:{display:true,text:'Risk (Volatility %)',color:'#5a5a8a'},ticks:{callback:v=>v+'%'}},
-        y:{grid:{color:gridColor,lineWidth:.5},title:{display:true,text:'Expected Return %',color:'#5a5a8a'},ticks:{callback:v=>v+'%'}}
-      }
-    }
-  });
-}
-
-// ── ALERTS ──
-function renderAlerts(){
-  // ── โหลดพอร์ตจริงจาก Finance OS ──
-  let real=null;
-  try{ real = JSON.parse(localStorage.getItem('finOS_portfolio')||'null'); }catch(e){}
-
-  const critEl=document.getElementById('alerts-critical');
-  const warnEl=document.getElementById('alerts-warning');
-  const oppEl =document.getElementById('alerts-opportunity');
-  const item=a=>`<div class="alert-item"><div class="alert-icon">${a.icon}</div><div><div class="alert-title">${escHtml(a.title)}</div><div class="alert-desc">${escHtml(a.desc)}</div></div></div>`;
-
-  // ปุ่มตั้งเป้า — แสดงเสมอด้านบนคอลัมน์แรก
-  const editBtn = `<div style="margin-bottom:10px"><button onclick="editTargets()" style="background:rgba(124,111,236,.12);border:1px solid rgba(124,111,236,.4);color:var(--savings);padding:6px 12px;border-radius:6px;font-size:11px;cursor:pointer;font-family:inherit">⚙ ตั้งเป้า Allocation ของฉัน</button></div>`;
-
-  if(!real || !real.allocation || !Object.keys(real.allocation).length){
-    critEl.innerHTML = editBtn + item({icon:'🔌',title:'ยังไม่ได้เชื่อมข้อมูลพอร์ตจริง',
-      desc:'เปิดหน้า Finance OS ให้โหลดข้อมูลก่อน แล้วกลับมาหน้านี้ — Alerts จะคำนวณจากพอร์ตจริงของคุณโดยอัตโนมัติ'});
-    warnEl.innerHTML=''; oppEl.innerHTML='';
-    return;
-  }
-
-  // ── ใช้ตัวคำนวณกลางร่วมกับหน้า Allocation (single source of truth) ──
-  const {list:devs, totalVal} = computeDeviations(real);
-  const TH = 5; // เกณฑ์เบี่ยงเบน ±5 percentage points
-  const crit=[], warn=[], opp=[];
-  devs.forEach(d=>{
-    if(d.diff >= TH)
-      crit.push({icon:'🚨',title:`${escHtml(d.label)} Overweight ${d.cur.toFixed(1)}% (เป้า ${d.target}%)`,
-        desc:`เกินเป้า ${d.diff.toFixed(1)}pp ≈ ฿${d.amt.toLocaleString(LOC)} — พิจารณา trim หรือหยุด DCA ชั่วคราวเพื่อ rebalance`});
-    else if(d.diff <= -TH && d.target>0)
-      warn.push({icon:'📉',title:`${escHtml(d.label)} Underweight ${d.cur.toFixed(1)}% (เป้า ${d.target}%)`,
-        desc:`ต่ำกว่าเป้า ${(-d.diff).toFixed(1)}pp ≈ ฿${d.amt.toLocaleString(LOC)} — เป็นหมวดที่ควรจัดสรร DCA รอบถัดไปเข้าก่อน`});
-    else
-      opp.push({icon:'✅',title:`${escHtml(d.label)} ${d.cur.toFixed(1)}% ใกล้เป้า (${d.target}%)`,
-        desc:`เบี่ยงเบน ${d.diff>=0?'+':''}${d.diff.toFixed(1)}pp อยู่ในกรอบ ±${TH}pp — คงสัดส่วนไว้`});
-  });
-
-  // P&L flag จากข้อมูลจริง
-  Object.entries(real.allocation).forEach(([k,v])=>{
-    if(v.pnlPct<=-20) crit.push({icon:'🩸',title:`${ALLOC_META[k]?.label||k} ขาดทุน ${v.pnlPct}%`,
-      desc:`Unrealized loss ฿${Math.abs(v.pnl).toLocaleString(LOC)} — ทบทวน thesis: ถ้าเหตุผลที่ซื้อยังอยู่ = ถือ/DCA, ถ้าเปลี่ยนไปแล้ว = ตัดขาดทุนอย่างมีวินัย`});
-  });
-
-  // เตือนถ้ามีสินทรัพย์ที่หาราคาไม่เจอ — สัดส่วนที่คำนวณจะเพี้ยน
-  const _unp = (real.unpriced||[]);
-  const unpWarn = _unp.length ? `<div style="background:rgba(255,149,0,.08);border:1px solid rgba(255,149,0,.35);
-      border-radius:8px;padding:8px 11px;margin-bottom:10px;font-size:11px;line-height:1.7;color:var(--debt)">
-      ⚠ ${_unp.length} สินทรัพย์หาราคาไม่เจอ (${_unp.map(u=>u.ticker).join(', ')}) — ถูกนับเป็น ฿0
-      <span style="color:var(--muted2)">สัดส่วนด้านล่างจึงคลาดเคลื่อน · แก้ที่ชีต Asset_Live_Price_Feed</span></div>` : '';
-  const asOfNote = unpWarn + `<div style="font-size:10px;color:var(--muted2);margin-bottom:10px">คำนวณจากพอร์ตจริง · มูลค่ารวม ฿${Math.round(totalVal).toLocaleString(LOC)} · เกณฑ์ ±${TH}pp</div>`;
-  critEl.innerHTML = editBtn + asOfNote + (crit.length?crit.map(item).join(''):item({icon:'🎉',title:'ไม่มีหมวดที่เกินเป้าเกินเกณฑ์',desc:'พอร์ตอยู่ในกรอบนโยบายที่ตั้งไว้'}));
-  warnEl.innerHTML = warn.length?warn.map(item).join(''):item({icon:'—',title:'ไม่มีหมวด Underweight',desc:''});
-  oppEl.innerHTML  = opp.map(item).join('');
-}
-
-// ── CALENDAR ──
-function renderCalendar(){
-  // iso = ใช้เทียบกับวันนี้ เพื่อซ่อน/หรี่อีเวนต์ที่ผ่านไปแล้วอัตโนมัติ
-  const events=[
-    {date:'9 ก.ค. 2026',iso:'2026-07-09',title:'เริ่ม Earnings Season Q2 (PEP นำ)',desc:'บริษัทแรกๆ เริ่มรายงาน — แบงก์ใหญ่ US ตามกลางเดือน กำไรจะบอกว่า AI story ยังไปต่อไหมท่ามกลางต้นทุนดอกเบี้ยสูง',type:'earnings',color:'var(--savings)',impact:'Medium'},
-    {date:'~15 ก.ค. 2026',iso:'2026-07-15',title:'US CPI มิ.ย.',desc:'จุดชี้ขาด hike odds — เดือนก่อน 4.2-4.3% สูงสุด 3 ปี ถ้ายังไม่ลง = โอกาสขึ้นดอกเบี้ย ก.ค./ก.ย. เพิ่ม กระทบ growth stocks',type:'economic',color:'var(--loss)',impact:'Critical'},
-    {date:'28–29 ก.ค. 2026',iso:'2026-07-29',title:'FOMC — ประชุมแรกที่ hike อยู่บนโต๊ะ',desc:'ตลาดให้โอกาสขึ้นดอกเบี้ย ~20% รอบนี้ และ ~100% ภายใน ธ.ค. จับตา tone ของประธาน Warsh มากกว่าผลโหวต',type:'economic',color:'var(--loss)',impact:'Critical'},
-    {date:'ต้น ส.ค. 2026',iso:'2026-08-07',title:'US NFP ก.ค.',desc:'เดือนก่อน +57K ต่ำกว่าคาดมาก ถ้าอ่อนต่อเนื่อง = Fed มีข้ออ้างไม่ขึ้นดอกเบี้ย (ดีต่อหุ้น) ถ้าเด้งแรง = hike เร็วขึ้น',type:'economic',color:'var(--debt)',impact:'High'},
-    {date:'ส.ค. 2026',iso:'2026-08-15',title:'กนง. (BOT) รอบถัดไป',desc:'ดอกเบี้ยไทย 1.00% ต่ำสุดเป็นประวัติการณ์ OECD คาดลดได้อีก 1 ครั้งปีนี้ — ดีต่อ Thai bond/property/SET',type:'thai',color:'#4cc9f0',impact:'Medium'},
-    {date:'ส.ค. 2026',iso:'2026-08-21',title:'ภาษีนำเข้า US → ไทย ขึ้นเป็น 19%',desc:'จาก 10% เป็น 19% — แรงกดดันตรงต่อหุ้น export ไทย จับตากลุ่มอิเล็กทรอนิกส์/ชิ้นส่วน',type:'thai',color:'var(--loss)',impact:'High'},
-    {date:'ปลาย ส.ค. 2026',iso:'2026-08-28',title:'Jackson Hole Symposium',desc:'เวทีแรกที่ Warsh อาจส่งสัญญาณกรอบนโยบายใหม่ชัดๆ — ปีที่เงินเฟ้อร้อนแบบนี้ทุกคำจะถูกตีความแรง',type:'economic',color:'var(--loss)',impact:'High'},
-    {date:'ก.ย. 2026',iso:'2026-09-01',title:'Thai GDP Q2',desc:'Q1 +2.8% ดีกว่าคาด — ถ้า Q2 ยืนเหนือ 2% ต่อ = ยืนยันโมเมนตัม SET rally ถ้าหลุด = เตือนว่า rally นำหน้าพื้นฐาน',type:'thai',color:'#4cc9f0',impact:'Medium'},
-  ];
-  const today = new Date(); today.setHours(0,0,0,0);
-  const upcoming = events.filter(e=>new Date(e.iso+'T23:59:59')>=today);
-  const past     = events.filter(e=>new Date(e.iso+'T23:59:59')< today);
-  const ordered  = [...upcoming, ...past];
-  document.getElementById('event-timeline').innerHTML=ordered.map(e=>{
-    const isPast = new Date(e.iso+'T23:59:59') < today;
-    const impactBg=e.impact==='Critical'?'rgba(255,64,96,.15)':e.impact==='High'?'rgba(255,149,0,.1)':'rgba(124,111,236,.1)';
-    const impactColor=e.impact==='Critical'?'var(--loss)':e.impact==='High'?'var(--debt)':'var(--savings)';
-    return `<div class="tl-item" style="${isPast?'opacity:.35;filter:grayscale(.6)':''}">
-      <div class="tl-dot-wrap"><div class="tl-dot" style="border-color:${e.color};background:${e.color}44"></div></div>
-      <div class="tl-content">
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:4px">
-          <div class="tl-date">${e.date}${isPast?' · <span style="color:var(--muted2)">ผ่านไปแล้ว</span>':''}</div>
-          <span style="font-size:9px;padding:2px 7px;border-radius:3px;background:${impactBg};color:${impactColor};border:1px solid ${impactColor}44">${e.impact.toUpperCase()}</span>
-        </div>
-        <div class="tl-title">${escHtml(e.title)}</div>
-        <div class="tl-desc">${escHtml(e.desc)}</div>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-// ── Initial render done ──
-
-
-// ══ SCENARIO PLANNER ══════════════════════════════════════════════
-let scPeriod = 'now';
-// NOTE (personal use): key เก็บใน localStorage เครื่องนี้ — โอเคสำหรับใช้คนเดียวแบบไม่ public
-// ⚠️ ถ้าวันไหนจะ deploy ให้คนอื่นเข้าถึงได้ ให้สลับไปใช้ proxy ใน cloudflare-worker/ ก่อน
-function scGetKey(){ return localStorage.getItem('finOS_claude_key')||''; }
-function scSaveKey(k){ if(k) localStorage.setItem('finOS_claude_key',k.trim()); }
-let scPortfolio = null;
-let scCache = {}; // cache generated scenarios
-
-function scInit(){
-  // Load portfolio from localStorage (saved by Finance OS)
-  try {
-    const raw = localStorage.getItem('finOS_portfolio');
-    if(raw) {
-      scPortfolio = JSON.parse(raw);
-      document.getElementById('sc-pf-val').textContent =
-        '฿' + Number(scPortfolio.totalValue||0).toLocaleString(LOC,{maximumFractionDigits:0});
-      const pnl = scPortfolio.pnl||0;
-      const pnlEl = document.getElementById('sc-pf-pnl');
-      pnlEl.textContent = (pnl>=0?'+':'')+'฿'+Math.abs(pnl).toLocaleString(LOC,{maximumFractionDigits:0});
-      pnlEl.style.color = pnl>=0?'var(--income)':'var(--expense)';
-      const alloc = scPortfolio.allocation||{};
-      const top = Object.entries(alloc).sort((a,b)=>b[1].pct-a[1].pct)[0];
-      document.getElementById('sc-pf-alloc').textContent =
-        top ? top[0]+' '+top[1].pct+'%' : '—';
-      document.getElementById('sc-pf-src').textContent =
-        'Finance OS · '+(scPortfolio.lastUpdated||'—');
-    } else {
-      document.getElementById('sc-pf-src').textContent = 'ไม่มีข้อมูล — เปิด Finance OS แล้ว sync ก่อน';
-    }
-  } catch(e){ console.warn('scInit error:', e); }
-  scRenderGrid();
-  // Show API key notice if not set
-  const noticeEl = document.getElementById('sc-key-notice');
-  if(noticeEl) noticeEl.style.display = scGetKey() ? 'none' : 'block';
-}
-
-function scPromptKey(){
-  const k = prompt('ใส่ Anthropic API Key:\nhttps://console.anthropic.com/settings/keys\n\n(เก็บใน localStorage เครื่องนี้เท่านั้น — สำหรับใช้ส่วนตัว ไม่ควร host public)');
-  if(k){ scSaveKey(k); const n=document.getElementById('sc-key-notice'); if(n) n.style.display='none'; }
-}
-
-function scSetPeriod(period, btn){
-  scPeriod = period;
-  document.querySelectorAll('.sc-tab').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  scRenderGrid();
-}
-
-function scRenderGrid(){
-  const grid = document.getElementById('sc-grid');
-  if(scPeriod === 'now'){
-    // Current portfolio analysis — no AI needed
-    grid.innerHTML = scNowHTML();
-    return;
-  }
-  // 3m / 6m — check cache first
-  const cacheKey = scPeriod;
-  if(scCache[cacheKey]){
-    grid.innerHTML = scScenariosHTML(scCache[cacheKey], scPeriod);
-    return;
-  }
-  // Show generate buttons
-  grid.innerHTML = ['bull','base','bear'].map(s=>scEmptyCardHTML(s, scPeriod)).join('');
-}
-
-function scEmptyCardHTML(scenario, period){
-  const meta = {
-    bull:{emoji:'🐂',label:'Bull Case',color:'#00d4a0',cls:'bull'},
-    base:{emoji:'📊',label:'Base Case',color:'#7c6fec',cls:'base'},
-    bear:{emoji:'🐻',label:'Bear Case',color:'#ff4060',cls:'bear'},
-  }[scenario];
-  const periodLabel = period==='3m'?'3 เดือนข้างหน้า':'6 เดือนข้างหน้า';
-  return `<div class="sc-card ${meta.cls}">
-    <div class="sc-card-head">
-      <div class="sc-card-title" style="color:${meta.color}">${meta.emoji} ${escHtml(meta.label)}</div>
-    </div>
-    <div class="sc-card-body">
-      <div class="sc-loading">
-        <div style="font-size:28px;margin-bottom:8px">${meta.emoji}</div>
-        <div style="margin-bottom:12px;color:var(--muted2)">วิเคราะห์ ${escHtml(meta.label)}<br>${periodLabel}</div>
-        <button class="sc-ai-btn gen" onclick="scGenerate('${period}','${scenario}',this)">
-          ✨ Generate with AI
-        </button>
-      </div>
-    </div>
-  </div>`;
-}
-
-function scBuildPrompt(period, scenario, portfolioStr){
-  const periodLabel = period==='3m'?'3 months':'6 months';
-  const scenarioDesc = {
-    bull:'optimistic — strong growth, risk-on, possible Fed cut, markets rally',
-    base:'neutral — moderate growth, Fed holds, mixed signals, slight upside',
-    bear:'pessimistic — slowdown, risk-off, recession fears, markets decline'
-  }[scenario];
-  return `You are a portfolio scenario analyst. Analyze for a Thai retail investor.
-
-${portfolioStr}
-Timeframe: ${periodLabel}
-Scenario: ${scenario.toUpperCase()} — ${scenarioDesc}
-
-Return ONLY valid JSON (no markdown, no backticks):
-{"scenario":"${scenario}","period":"${period}","title":"short catchy name TH/EN mix max 6 words","probability":<0-100>,"macro":{"fed":"string","sp500":"string","set":"string","crypto":"string","thb_usd":"string","key_risk":"string"},"portfolio_impact":{"estimated_return_pct":<number>,"estimated_value_thb":<number>,"risk_level":"Low|Medium|High","winners":["asset1"],"losers":["asset1"]},"recommendations":[{"action":"Add|Reduce|Hold","asset":"name","reason":"short reason","pct_change":"e.g. +5%"}],"key_catalyst":"string"}`;
-}
-
-function scShowCopyModal(prompt, period, scenario, btn){
-  // Remove existing modal
-  const ex = document.getElementById('sc-copy-modal');
-  if(ex) ex.remove();
-  const m = document.createElement('div');
-  m.id = 'sc-copy-modal';
-  m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:999;display:flex;align-items:center;justify-content:center;padding:20px';
-  m.innerHTML = `<div style="background:#0d0d1a;border:1px solid #2a2a45;border-radius:16px;padding:24px;max-width:600px;width:100%;max-height:80vh;overflow-y:auto">
-    <div style="font-size:14px;font-weight:600;color:#fff;margin-bottom:8px">📋 Copy Prompt → Paste in Claude.ai → Copy JSON back</div>
-    <div style="font-size:11px;color:#6060a0;margin-bottom:12px">API ถูก block โดย browser security — ใช้วิธีนี้แทนครับ</div>
-    <textarea id="sc-prompt-box" style="width:100%;height:200px;background:#09090f;border:1px solid #1e1e35;color:#9090c0;padding:10px;border-radius:8px;font-family:monospace;font-size:11px;resize:vertical">${prompt}</textarea>
-    <div style="display:flex;gap:8px;margin-top:10px">
-      <button onclick="navigator.clipboard.writeText(document.getElementById('sc-prompt-box').value).then(()=>this.textContent='✓ Copied!')" style="flex:1;padding:9px;background:rgba(167,139,250,.15);border:1px solid rgba(167,139,250,.4);color:#a78bfa;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600">
-        📋 Copy Prompt
-      </button>
-      <button onclick="window.open('https://claude.ai/new','_blank')" style="flex:1;padding:9px;background:rgba(0,212,160,.1);border:1px solid rgba(0,212,160,.3);color:#00d4a0;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600">
-        🔗 Open Claude.ai
-      </button>
-    </div>
-    <div style="margin-top:14px;font-size:12px;color:#9090c0;font-weight:500">วาง JSON ที่ได้จาก Claude กลับมาที่นี้:</div>
-    <textarea id="sc-result-box" placeholder='วาง JSON response จาก Claude ที่นี่...' style="width:100%;height:100px;background:#09090f;border:1px solid #1e1e35;color:#e2e2f0;padding:10px;border-radius:8px;font-family:monospace;font-size:11px;resize:vertical;margin-top:6px"></textarea>
-    <div style="display:flex;gap:8px;margin-top:10px">
-      <button onclick="scApplyPastedResult('${period}','${scenario}')" style="flex:2;padding:9px;background:#00d4a0;border:none;color:#000;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700">
-        ✓ Apply Result
-      </button>
-      <button onclick="document.getElementById('sc-copy-modal').remove()" style="flex:1;padding:9px;background:transparent;border:1px solid #1e1e35;color:#6060a0;border-radius:8px;cursor:pointer;font-size:12px">
-        Cancel
-      </button>
-    </div>
-  </div>`;
-  document.body.appendChild(m);
-  if(btn){ btn.disabled=false; btn.textContent='✨ Generate with AI'; }
-}
-
-function scExtractJSON(text){
-  // Try direct parse first
-  const clean = text.replace(/```json|```/g,'').trim();
-  try { return JSON.parse(clean); } catch(e){}
-  // Find { ... } block
-  const start = clean.indexOf('{');
-  const end   = clean.lastIndexOf('}');
-  if(start>=0 && end>start){
-    try { return JSON.parse(clean.slice(start, end+1)); } catch(e){}
-  }
-  throw new Error('ไม่พบ JSON ในข้อความ — ให้ copy เฉพาะ JSON block { ... } จาก Claude');
-}
-
-function scApplyPastedResult(period, scenario){
-  const raw = document.getElementById('sc-result-box').value.trim();
-  if(!raw){ alert('กรุณาวาง JSON จาก Claude ก่อนครับ'); return; }
-  try {
-    const result = scExtractJSON(raw);
-    if(!result.scenario) result.scenario = scenario;
-    if(!result.period)   result.period   = period;
-    if(!scCache[period]) scCache[period]={};
-    scCache[period][scenario] = result;
-    document.getElementById('sc-copy-modal').remove();
-    scRenderGrid();
-  } catch(e){
-    alert('❌ ' + e.message + '\n\nวิธีแก้: ใน Claude.ai ให้ copy เฉพาะข้อความที่เริ่มด้วย { และจบด้วย }');
-  }
-}
-
-async function scGenerate(period, scenario, btn){
-
-  btn.disabled = true;
-  btn.textContent = '⏳ Connecting...';
-
-  const periodLabel = period==='3m'?'3 months':'6 months';
-  const portfolioStr = scPortfolio
-    ? `Portfolio: Total ฿${Number(scPortfolio.totalValue||0).toLocaleString(LOC)}, P&L ฿${Number(scPortfolio.pnl||0).toLocaleString(LOC)} (${scPortfolio.pnlPct||0}%), Allocation: ${JSON.stringify(scPortfolio.allocation||{})}, Top holdings: ${JSON.stringify((scPortfolio.topHoldings||[]).slice(0,5))}`
-    : 'Portfolio data not available';
-
-  const scenarioDesc = {
-    bull:'optimistic — strong growth, risk-on sentiment, possible Fed cut, markets rally',
-    base:'neutral — moderate growth, Fed holds, mixed signals, sideways to slight upside',
-    bear:'pessimistic — slowdown, risk-off, possible rate hike or recession fears, markets decline'
-  }[scenario];
-
-  const prompt = `You are a portfolio scenario analyst. Analyze for a Thai retail investor.
-
-${portfolioStr}
-Timeframe: ${periodLabel}
-Scenario: ${scenario.toUpperCase()} — ${scenarioDesc}
-
-Return ONLY valid JSON (no markdown, no backticks) in this exact structure:
-{
-  "scenario": "${scenario}",
-  "period": "${period}",
-  "title": "short catchy scenario name in Thai/English mix (max 6 words)",
-  "probability": <number 0-100>,
-  "macro": {
-    "fed": "outlook string",
-    "sp500": "range/% string",
-    "set": "range/% string",
-    "crypto": "outlook string",
-    "thb_usd": "range string",
-    "key_risk": "1 sentence"
-  },
-  "portfolio_impact": {
-    "estimated_return_pct": <number, e.g. 12.5>,
-    "estimated_value_thb": <number>,
-    "risk_level": "Low|Medium|High",
-    "winners": ["asset1","asset2"],
-    "losers": ["asset1","asset2"]
-  },
-  "recommendations": [
-    {"action":"Add|Reduce|Hold","asset":"asset name","reason":"short reason","pct_change":"e.g. +5%"},
-    {"action":"Add|Reduce|Hold","asset":"asset name","reason":"short reason","pct_change":"e.g. -10%"},
-    {"action":"Add|Reduce|Hold","asset":"asset name","reason":"short reason","pct_change":"e.g. 0%"}
-  ],
-  "key_catalyst": "main event/factor to watch"
-}`;
-
-  try {
-    const apiKey = scGetKey();
-    if(!apiKey) throw new Error('NO_KEY');
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method:'POST',
-      headers:{
-        'Content-Type':'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-allow-browser': 'true',
-      },
-      body: JSON.stringify({
-        model:'claude-sonnet-4-6',
-        max_tokens:1000,
-        messages:[{role:'user', content:prompt}]
-      })
-    });
-    if(!resp.ok) throw new Error('HTTP_'+resp.status);
-    const data = await resp.json();
-    const raw  = data.content?.[0]?.text||'';
-    const result = JSON.parse(raw.replace(/\`\`\`json|\`\`\`/g,'').trim());
-    if(!scCache[period]) scCache[period]={};
-    scCache[period][scenario] = result;
-    const cards = document.querySelectorAll('#sc-grid .sc-card');
-    const idx = ['bull','base','bear'].indexOf(scenario);
-    if(cards[idx]) cards[idx].outerHTML = scOneCardHTML(result);
-  } catch(e){
-    console.warn('[SC] Direct API failed, showing copy-paste mode:', e.message);
-    scShowCopyModal(prompt, period, scenario, btn);
-  }
-}
-
-function scScenariosHTML(cacheObj, period){
-  return ['bull','base','bear'].map(s =>
-    cacheObj[s] ? scOneCardHTML(cacheObj[s]) : scEmptyCardHTML(s, period)
-  ).join('');
-}
-
-function scOneCardHTML(r){
-  const meta={
-    bull:{emoji:'🐂',color:'#00d4a0',cls:'bull'},
-    base:{emoji:'📊',color:'#7c6fec',cls:'base'},
-    bear:{emoji:'🐻',color:'#ff4060',cls:'bear'},
-  }[r.scenario]||{emoji:'📊',color:'#7c6fec',cls:'base'};
-
-  const impact = r.portfolio_impact||{};
-  const est = impact.estimated_return_pct||0;
-  const barW = Math.min(Math.abs(est)*2, 100);
-  const barColor = est>=0?'var(--income)':'var(--expense)';
-  const recs = (r.recommendations||[]).map(rec=>`
-    <div class="sc-rec-item">
-      <span class="sc-rec-action ${(rec.action||'hold').toLowerCase()}">${rec.action||'Hold'}</span>
-      <span class="sc-rec-text">${rec.asset||''} — ${rec.reason||''}</span>
-      <span class="sc-rec-pct">${rec.pct_change||''}</span>
-    </div>`).join('');
-
-  const macro = r.macro||{};
-  const macroItems = [
-    {k:'Fed',v:macro.fed||'—'},{k:'S&P500',v:macro.sp500||'—'},
-    {k:'SET',v:macro.set||'—'},{k:'Crypto',v:macro.crypto||'—'},
-    {k:'THB/USD',v:macro.thb_usd||'—'},{k:'Key Risk',v:macro.key_risk||'—'}
-  ].map(m=>`<div class="sc-macro-item">
-    <div class="sc-macro-key">${m.k}</div>
-    <div class="sc-macro-val">${m.v}</div>
-  </div>`).join('');
-
-  return `<div class="sc-card ${meta.cls}" id="sc-card-${r.scenario}">
-    <div class="sc-card-head">
-      <div class="sc-card-title" style="color:${meta.color}">${meta.emoji} ${r.title||r.scenario}</div>
-      <span class="sc-prob ${meta.cls}">${r.probability||'—'}%</span>
-    </div>
-    <div class="sc-card-body">
-      <div class="sc-section-lbl">Macro Scenario</div>
-      <div class="sc-macro-grid">${macroItems}</div>
-
-      <div class="sc-section-lbl">Portfolio Impact</div>
-      <div class="sc-impact-bar">
-        <div class="sc-impact-label">
-          <span>Estimated Return</span>
-          <span style="color:${barColor};font-weight:600">${est>=0?'+':''}${est}%</span>
-        </div>
-        <div class="sc-bar"><div class="sc-bar-fill" style="width:${barW}%;background:${barColor}"></div></div>
-      </div>
-      <div style="font-size:11px;color:var(--muted2);margin-bottom:4px">
-        Risk: <b style="color:var(--text)">${impact.risk_level||'—'}</b> &nbsp;·&nbsp;
-        Winners: <b style="color:var(--income)">${(impact.winners||[]).join(', ')||'—'}</b>
-      </div>
-
-      <div class="sc-section-lbl">Recommendations</div>
-      <div class="sc-rec-list">${recs}</div>
-
-      <div style="font-size:10px;color:var(--muted);margin-top:10px">
-        🔑 Watch: ${r.key_catalyst||'—'}
-      </div>
-
-      <button class="sc-ai-btn gen" onclick="scRegenerate('${r.period}','${r.scenario}',this)">
-        🔄 Regenerate
-      </button>
-      <button class="sc-ai-btn edit" onclick="scToggleEdit('${r.scenario}')">
-        ✏️ Edit Assumptions
-      </button>
-      <div class="sc-edit-panel" id="sc-edit-${r.scenario}">
-        <div class="sc-section-lbl" style="margin-top:0">แก้ Macro Assumptions</div>
-        <div class="sc-edit-grid">
-          <div class="sc-edit-item"><label>Fed Rate Action</label>
-            <input id="sc-e-fed-${r.scenario}" value="${macro.fed||''}" placeholder="e.g. Cut 1x"></div>
-          <div class="sc-edit-item"><label>S&P 500</label>
-            <input id="sc-e-sp-${r.scenario}" value="${macro.sp500||''}" placeholder="e.g. +10-15%"></div>
-          <div class="sc-edit-item"><label>SET Index</label>
-            <input id="sc-e-set-${r.scenario}" value="${macro.set||''}" placeholder="e.g. +5-8%"></div>
-          <div class="sc-edit-item"><label>Crypto</label>
-            <input id="sc-e-crypto-${r.scenario}" value="${macro.crypto||''}" placeholder="e.g. +20%"></div>
-        </div>
-        <button class="sc-ai-btn gen" onclick="scRegenWithEdits('${r.period}','${r.scenario}',this)" style="margin-top:4px">
-          ✨ Re-analyze with my assumptions
-        </button>
-      </div>
-    </div>
-  </div>`;
-}
-
-async function scRegenerate(period, scenario, btn){
-  // Clear cache and regenerate
-  if(scCache[period]) delete scCache[period][scenario];
-  const card = document.getElementById('sc-card-'+scenario);
-  if(card) card.outerHTML = scEmptyCardHTML(scenario, period);
-  // Find the new generate button
-  const newBtn = document.querySelector(`#sc-grid .sc-card.${scenario} .sc-ai-btn.gen`);
-  if(newBtn) scGenerate(period, scenario, newBtn);
-}
-
-async function scRegenWithEdits(period, scenario, btn){
-  const fed    = document.getElementById('sc-e-fed-'+scenario)?.value||'';
-  const sp     = document.getElementById('sc-e-sp-'+scenario)?.value||'';
-  const set_   = document.getElementById('sc-e-set-'+scenario)?.value||'';
-  const crypto = document.getElementById('sc-e-crypto-'+scenario)?.value||'';
-  // Store custom assumptions and regenerate
-  if(!scCache[period]) scCache[period]={};
-  if(!scCache[period][scenario]) scCache[period][scenario]={};
-  scCache[period][scenario]._userMacro = {fed,sp500:sp,set:set_,crypto};
-  // Clear and regen
-  if(scCache[period]) delete scCache[period][scenario];
-  await scRegenerate(period, scenario, btn);
-}
-
-function scToggleEdit(scenario){
-  const panel = document.getElementById('sc-edit-'+scenario);
-  if(panel) panel.classList.toggle('show');
-}
-
-function scNowHTML(){
-  if(!scPortfolio) return `<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted)">
-    ยังไม่มีข้อมูล Portfolio<br><small>เปิด Finance OS → Sync Google Sheets → กลับมาที่นี้</small>
-  </div>`;
-
-  const alloc = scPortfolio.allocation||{};
-  const holdings = scPortfolio.topHoldings||[];
-  const sorted = Object.entries(alloc).sort((a,b)=>b[1].pct-a[1].pct);
-
-  const allocCards = sorted.map(([name,data])=>{
-    const pct  = data.pct||0;
-    const pnl  = data.pnl||0;
-    const pnlC = pnl>=0?'var(--income)':'var(--expense)';
-    return `<div class="sc-card base" style="border-top-color:var(--income)">
-      <div class="sc-card-head">
-        <div class="sc-card-title">${name}</div>
-        <span style="font-size:16px;font-weight:700;color:var(--income)">${pct}%</span>
-      </div>
-      <div class="sc-card-body">
-        <div style="margin-bottom:6px">
-          <div class="sc-bar"><div class="sc-bar-fill" style="width:${pct}%;background:var(--income)"></div></div>
-        </div>
-        <div style="font-size:12px;color:var(--muted2)">
-          Value: <b style="color:var(--text)">฿${Number(data.value||0).toLocaleString(LOC,{maximumFractionDigits:0})}</b><br>
-          P&L: <b style="color:${pnlC}">${pnl>=0?'+':''}฿${Math.abs(pnl).toLocaleString(LOC,{maximumFractionDigits:0})}</b>
-        </div>
-      </div>
-    </div>`;
-  }).join('');
-
-  return allocCards || `<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted)">ไม่มีข้อมูล Allocation</div>`;
-}
-
+window.addEventListener('DOMContentLoaded', boot);
 </script>
 
 </body>

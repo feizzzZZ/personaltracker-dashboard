@@ -4987,7 +4987,24 @@ function savePortfolioToStorage(){
     // แนบรายการที่หาราคาไม่เจอไปด้วย เพื่อให้หน้า Analysis เตือนได้เหมือนกัน
     const unpriced=assets.filter(a=>a.qty>1e-8 && (!a.val||a.val<=0))
       .map(a=>({ticker:a.ticker,group:a.group,cost:Math.round(a.cost||0),qty:a.qty}));
+    // v46 — ส่งข้อมูลระดับ ticker + ประวัติการซื้อไปให้หน้า Investment Analysis
+    // เดิมส่งแค่ยอดรวมรายกลุ่ม + top 8 ทำให้หน้านั้นวิเคราะห์ระดับตัวไม่ได้เลย
+    // (ต้องรู้ "ซื้อครั้งสุดท้ายเมื่อไหร่" ถึงจะบอกได้ว่าก้อนไหนหลุดจากเรดาร์)
+    const holdings=assets.filter(a=>a.qty>1e-8).map(a=>({
+      ticker:a.ticker, label:a.label||a.ticker, assetType:a.group||a.assetType||'',
+      qty:a.qty, cost:Math.round(a.cost||0),
+      val:(a.val>0?Math.round(a.val):0), priceSrc:(window.priceSrc||{})[a.ticker]||null
+    }));
+    // ประวัติซื้อ/ขาย/ปันผล แบบย่อ — ส่งเฉพาะฟิลด์ที่ classifyHoldings ใช้
+    // NOTE: type ต้องเป็นค่าดิบจากชีต (Buy/Sell/Dividend Payout/Split)
+    // ห้ามย่อเป็น buy/sell เพราะปันผลจะถูกนับผิดเป็นการขาย
+    const tradeLog=(tracker||[]).filter(t=>t.ticker && t.date).map(t=>({
+      d:(t.date instanceof Date)?t.date.toISOString().slice(0,10):String(t.date).slice(0,10),
+      t:t.txType||'', k:t.ticker, thb:Math.round(t.amtTHB||0)
+    }));
+
     const summary={
+      holdings, tradeLog,
       unpriced,
       totalValue:Math.round(totalVal),totalCost:Math.round(totalCost),
       pnl:Math.round(totalPnl),pnlPct:totalCost>0?Math.round(totalPnl/totalCost*100):0,
