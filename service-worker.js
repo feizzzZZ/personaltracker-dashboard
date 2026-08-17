@@ -17,7 +17,7 @@
 //   2. ย้าย shared.js ไป network-first เหมือน HTML (แก้ถาวร)
 //      เหตุผล: shared.js คือ data layer ที่ index.html เรียกใช้โดยตรง
 //      สองไฟล์นี้ต้องมาจาก deploy เดียวกันเสมอ ไม่มีข้อยกเว้น
-const CACHE_NAME = 'finance-os-v46';  // bump version so old cache is cleared on deploy
+const CACHE_NAME = 'finance-os-v47';  // bump version so old cache is cleared on deploy
 const BASE = '/personaltracker-dashboard';
 
 // App shell — files to pre-cache on install

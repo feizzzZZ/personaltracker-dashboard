@@ -3036,13 +3036,22 @@ function renderAccounts(){
 // ── Asset Location (by platform grouped by asset type) ─────────────────
 function renderLocationGrid(){
   // Group assets by: asset class → platforms with values
+  // v47 — แบ่งมูลค่าตามสัดส่วนหน่วยที่ถือจริงในแต่ละ platform
+  // เดิมใช้ a.platform (ค่าเดียวจาก platMap = platform ของการซื้อครั้งล่าสุด)
+  // ทำให้ ticker ที่ซื้อหลายที่ถูกกองไว้ที่เดียว และ platform อื่นหายทั้งอัน
+  // เคสจริง: BNB ซื้อทั้ง Binance_Global_Spot และ Binance_TH_Spot
+  //          → ฿81,158 ไปกองที่ TH ทั้งก้อน · Global หายจากหน้าจอ
   const locMap = {};
-  assets.forEach(a => {
-    if(!locMap[a.group]) locMap[a.group] = {};
-    const plat = a.platform || 'Unknown';
-    if(!locMap[a.group][plat]) locMap[a.group][plat] = {val:0, tickers:[]};
-    locMap[a.group][plat].val += a.val;
-    if(a.val > 0 || a.qty > 0) locMap[a.group][plat].tickers.push(a.ticker);
+  const slices = allocateByPlatform(tracker, assets);
+  slices.forEach(sl => {
+    if(!locMap[sl.group]) locMap[sl.group] = {};
+    const plat = sl.platform || 'Unknown';
+    if(!locMap[sl.group][plat]) locMap[sl.group][plat] = {val:0, tickers:[], partial:false};
+    locMap[sl.group][plat].val += sl.val;
+    // แสดง ticker ที่ยังถืออยู่ที่นี่จริง — ไม่ซ้ำ
+    if((sl.val > 0 || sl.qty > 0) && !locMap[sl.group][plat].tickers.includes(sl.ticker))
+      locMap[sl.group][plat].tickers.push(sl.ticker);
+    if(!sl.exact) locMap[sl.group][plat].partial = true;
   });
 
   // Also pull tracker for crypto wallets (transfer destinations)
@@ -3269,11 +3278,12 @@ const VLOG_PURGED_KEY = 'finOS_valueLogPurged_v44';
 //   ฟังก์ชันหาย  → BLOCK  (แอปคำนวณผิดแน่นอน — นี่คือสิ่งที่ guard มีไว้จับ)
 //   เลขไม่ตรง    → WARN   (แค่ลืม bump — log ไว้ ไม่รบกวนผู้ใช้)
 // ฟังก์ชันที่ต้องมีคือสัญญาจริงระหว่างสองไฟล์ ส่วนสตริงเวอร์ชันเป็นแค่ป้าย
-const EXPECTED_SHARED_BUILD = 'v46';
+const EXPECTED_SHARED_BUILD = 'v47';
 const REQUIRED_SHARED_FNS = [
   'resolvePrices', 'pipelinePricesTHB', 'parseReconcileRows',
   'computeReconciliation', 'splitBalances', 'debtVsInvest', 'buildDebtPlan',
   'classifyHoldings', 'loadHoldingTags',
+  'allocateByPlatform', 'qtyByPlatform',
 ];
 function checkSharedVersion(){
   const missing = REQUIRED_SHARED_FNS.filter(f=>typeof window[f] !== 'function');

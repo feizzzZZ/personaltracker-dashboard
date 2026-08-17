@@ -16,7 +16,7 @@ window.LOC = window.LOC || 'th-TH-u-ca-gregory';
 //   • XIRR engine
 // กติกา: ไฟล์นี้ห้ามแตะ DOM ของหน้าใดหน้าหนึ่ง — pure data layer เท่านั้น
 // ═══════════════════════════════════════════════════════════════════
-const APP_BUILD = 'v46';
+const APP_BUILD = 'v47';
 console.log('[Finance OS shared] build', APP_BUILD);
 window.SHARED_BUILD = APP_BUILD;   // v45 — ให้ index.html ตรวจได้ว่าเวอร์ชันตรงกัน
 
@@ -466,6 +466,83 @@ function classifyHoldings(trades, assets, priceSrc){
   const bySize=(a,b)=>(b.cost||0)-(a.cost||0);
   out.active.sort(bySize); out.dormant.sort(bySize); out.intentional.sort(bySize);
   return out;
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// v47 — PLATFORM ALLOCATION: กระจายมูลค่าตาม platform ที่ถือจริง
+// ══════════════════════════════════════════════════════════════════════
+// บั๊กเดิม: platMap เป็น { ticker: platform } ค่าเดียว สร้างด้วย
+//   sort(by date).forEach(r => platMap[r.ticker] = r.platform)
+// = platform ของการซื้อครั้งล่าสุดเขียนทับทุกครั้งก่อนหน้า
+//
+// ผลจริงที่ผู้ใช้เจอ: BNB ซื้อที่ Binance_Global_Spot (2023) แล้วซื้อที่
+// Binance_TH_Spot ทีหลัง → มูลค่า BNB ทั้งก้อนไปกองที่ Binance_TH_Spot
+// และ Binance_Global_Spot หายไปจากหน้า Asset Location ทั้ง platform
+// (ไม่ใช่หายบางส่วน — หายหมด เพราะไม่มี ticker ไหนเหลือค่านั้นเป็นค่าสุดท้าย)
+//
+// ทำไมเรื่องนี้สำคัญกว่าความสวยงาม: ตัวเลข exposure ต่อ exchange ใช้ประเมิน
+// counterparty risk ถ้า exchange ล่ม/ถูกระงับ ต้องรู้ว่ามีเงินอยู่ที่นั่นเท่าไหร่
+// การรวมสอง exchange เป็นที่เดียวทำให้ประเมินความเสี่ยงผิดโดยสิ้นเชิง
+//
+// วิธีใหม่: นับจำนวนหน่วยคงเหลือแยกตาม (ticker, platform) แล้วแบ่งมูลค่า
+// ปัจจุบันตามสัดส่วนหน่วย — ถูกต้องเพราะหน่วยเดียวกันมีราคาเดียวกัน
+// ไม่ว่าถืออยู่ที่ไหน
+
+// คืน { ticker: { platform: qty } } — เฉพาะที่คงเหลือ > 0
+function qtyByPlatform(tracker){
+  const acc = {};
+  (tracker||[]).forEach(r=>{
+    if(!r || !r.ticker) return;
+    const tt = String(r.txType||'').trim();
+    const plat = r.platform || 'Unknown';
+    const q = Number(r.qty)||0;
+    if(!q) return;
+    (acc[r.ticker] = acc[r.ticker] || {});
+    // Buy/Split เพิ่มหน่วย · Sell ลด · Dividend Payout ไม่กระทบหน่วย
+    if(tt==='Buy' || tt==='Split')      acc[r.ticker][plat] = (acc[r.ticker][plat]||0) + q;
+    else if(tt==='Sell')                acc[r.ticker][plat] = (acc[r.ticker][plat]||0) - q;
+  });
+
+  // ปัดเศษลบเป็น 0 — เกิดได้เมื่อขายจากที่หนึ่งแต่บันทึก platform เป็นอีกที่
+  // (เช่นโอนเหรียญข้าม exchange แล้วขาย) กรณีนี้ไม่พยายามเดา แต่ไม่ให้ติดลบ
+  Object.keys(acc).forEach(t=>{
+    Object.keys(acc[t]).forEach(p=>{
+      if(acc[t][p] < 1e-9) delete acc[t][p];
+    });
+  });
+  return acc;
+}
+
+// แบ่งมูลค่าปัจจุบันของแต่ละ asset ตามสัดส่วนหน่วยที่ถือในแต่ละ platform
+// คืน [{group, platform, val, cost, tickers:[]}] พร้อมใช้กับ UI
+function allocateByPlatform(tracker, assets){
+  const qbp = qtyByPlatform(tracker);
+  const out = [];
+  (assets||[]).forEach(a=>{
+    const per = qbp[a.ticker] || {};
+    const tot = Object.values(per).reduce((s,q)=>s+q, 0);
+    if(tot <= 0){
+      // ไม่มีข้อมูลรายที่ → ใช้ค่าเดิมจาก platMap เพื่อไม่ให้ข้อมูลหาย
+      out.push({group:a.group, platform:a.platform||'Unknown',
+                ticker:a.ticker, val:a.val||0, cost:a.cost||0, share:1, exact:false});
+      return;
+    }
+    Object.entries(per).forEach(([plat,q])=>{
+      const share = q/tot;
+      out.push({group:a.group, platform:plat, ticker:a.ticker,
+                val:(a.val||0)*share, cost:(a.cost||0)*share,
+                qty:q, share, exact:true});
+    });
+  });
+  return out;
+}
+
+// platform ที่ถือมากที่สุดของ ticker — ใช้แทน platMap เดิมในที่ที่ต้องการค่าเดียว
+function dominantPlatform(tracker, ticker){
+  const per = (qtyByPlatform(tracker)[ticker])||{};
+  let best=null, bq=-1;
+  Object.entries(per).forEach(([p,q])=>{ if(q>bq){ bq=q; best=p; } });
+  return best;
 }
 
 // ═══ Method 2 — external API layer (alternative.me + CoinGecko) ═══
