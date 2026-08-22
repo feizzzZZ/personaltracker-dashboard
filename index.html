@@ -602,7 +602,7 @@ select.month-display{text-align-last:center;outline:none}
 .gs-btn:hover{background:rgba(66,133,244,.22)}
 .gs-btn.connected{background:rgba(0,212,160,.08);border-color:rgba(0,212,160,.3);color:var(--income)}
 .gs-btn.syncing{opacity:.7;cursor:wait}
-.gs-dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+.gs-dot{display:inline-block;flex:0 0 auto;width:6px;height:6px;border-radius:50%;background:currentColor}
 .gs-dot.pulse{animation:pulse 1.2s infinite}
 .gs-sync-time{font-size:10px;color:var(--muted);margin-left:4px}
 /* Upload screen Google option */
@@ -771,6 +771,24 @@ select.month-display{text-align-last:center;outline:none}
 
     </div>
     <div class="sb-bottom">
+      <!-- BUGFIX v48 #4 — ปุ่ม Sync/Settings หายไปจาก app shell ทั้งอัน
+           gsUpdateSyncBtn() / gsInit() อ้าง #gs-sync-btn #gs-dot #gs-btn-text
+           แต่ไม่มี element เหล่านี้อยู่จริง → ทุกครั้งที่เรียกจะ return ทันที
+           ผลจริง: หลังโหลดข้อมูลแล้ว ไม่มีทางกด Sync หรือแก้ Spreadsheet ID
+           ได้เลย นอกจากรอ toast ตอนข้อมูลเก่า ซึ่งโผล่เฉพาะบางเงื่อนไข -->
+      <div style="display:flex;gap:6px;margin-bottom:6px">
+        <button id="gs-sync-btn" onclick="gsSyncOrConnect()" title="ดึงข้อมูลล่าสุดจาก Google Sheets"
+          style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;
+                 background:rgba(0,212,160,.10);border:1px solid rgba(0,212,160,.32);
+                 color:var(--gain);padding:8px 0;border-radius:8px;font-size:11px;
+                 cursor:pointer;font-family:inherit;font-weight:600">
+          <span class="gs-dot" id="gs-dot" style="background:var(--muted)"></span>
+          <span id="gs-btn-text">Connect Sheets</span>
+        </button>
+        <button onclick="gsOpenModal()" title="ตั้งค่า Client ID / Spreadsheet ID"
+          style="background:var(--bg4);border:1px solid var(--border2);color:var(--muted2);
+                 padding:8px 10px;border-radius:8px;font-size:12px;cursor:pointer;font-family:inherit">⚙</button>
+      </div>
       <button class="btn-pdf" onclick="generateMonthlyPDF()" style="width:100%;margin-bottom:6px;justify-content:center">
         ⬇ Export PDF
       </button>
@@ -1682,19 +1700,32 @@ const chartOpts = (unit='baht') => ({
     y:{grid:{color:'rgba(30,30,53,.8)',lineWidth:.5},ticks:{color:'#6060a0',font:{family:CHART_FONT,size:9},callback:(UNIT[unit]||UNIT.baht).axis}}
   }
 });
+/* BUGFIX v48 #11 — ทั้งสามตัวเรียก getElementById(id).getContext('2d') ตรงๆ
+   ถ้า canvas ตัวนั้นไม่มี (พิมพ์ id ผิด / markup ถูกย้าย / Chart.js โหลดไม่ทัน)
+   จะได้ TypeError กลางฟังก์ชัน render แล้วทุกอย่างที่เขียนต่อจากบรรทัดนั้น
+   ในหน้าเดียวกันหยุดหมด — เห็นเป็นการ์ดว่างเปล่า ไม่มี error บนจอ */
+function _ctx(id){
+  const el=document.getElementById(id);
+  if(!el || typeof el.getContext!=='function'){ console.warn('[chart] ไม่พบ canvas #'+id); return null; }
+  if(typeof Chart==='undefined'){ console.warn('[chart] Chart.js ยังไม่โหลด — ข้าม #'+id); return null; }
+  return el.getContext('2d');
+}
 function mkBarChart(id,labels,datasets,stacked=false,unit='baht'){
+  const ctx=_ctx(id); if(!ctx) return;
   const opts=chartOpts(unit);
   if(stacked){opts.scales.x.stacked=true;opts.scales.y.stacked=true;}
   if(charts[id])charts[id].destroy();
-  charts[id]=new Chart(document.getElementById(id).getContext('2d'),{type:'bar',data:{labels,datasets},options:opts});
+  charts[id]=new Chart(ctx,{type:'bar',data:{labels,datasets},options:opts});
 }
 function mkLineChart(id,labels,datasets,unit='baht'){
+  const ctx=_ctx(id); if(!ctx) return;
   if(charts[id])charts[id].destroy();
-  charts[id]=new Chart(document.getElementById(id).getContext('2d'),{type:'line',data:{labels,datasets},options:chartOpts(unit)});
+  charts[id]=new Chart(ctx,{type:'line',data:{labels,datasets},options:chartOpts(unit)});
 }
 function mkDonut(id,labels,values,colors){
+  const ctx=_ctx(id); if(!ctx) return;
   if(charts[id])charts[id].destroy();
-  charts[id]=new Chart(document.getElementById(id).getContext('2d'),{
+  charts[id]=new Chart(ctx,{
     type:'doughnut',data:{labels,datasets:[{data:values,backgroundColor:colors,borderWidth:0,hoverOffset:4}]},
     options:{cutout:'70%',responsive:true,maintainAspectRatio:true,
       plugins:{legend:{display:false},tooltip:{backgroundColor:'#12121a',borderColor:'#1e1e35',borderWidth:1,
@@ -1866,9 +1897,27 @@ function parseFile(file){
         for(const[t,v]of Object.entries(waccAcc))
           waccMap[t]=v.qty>0?v.cost/v.qty:0;
         totalFee=trackerRows2.filter(r=>IS_COST_TX.has(r.txType)).reduce((s,r)=>s+r.commTHB,0);
+        /* BUGFIX v48 #14 — platMap ยังเป็นบั๊กตัวเดิมที่ v47 บอกว่าแก้แล้ว
+           shared.js เพิ่ม qtyByPlatform()/dominantPlatform() ไว้จริง และหน้า
+           Asset Location ย้ายไปใช้ allocateByPlatform() แล้ว
+           แต่ "ตัวเขียน platMap" ในสองเส้นทาง parse ยังเป็นการเขียนทับตัวเดิม
+             sort(by date).forEach(r => platMap[r.ticker] = r.platform)
+           = ได้ platform ของการซื้อครั้งล่าสุดเสมอ
+           ค่านี้ยังถูกใช้เป็น a.platform ในตาราง Holdings และถูก cache ลง
+           finOS_dataCache/finOS_portfolio → หน้าอื่นรับค่าที่ผิดต่อไป
+           แก้: ใช้ platform ที่ "ถือหน่วยมากที่สุดจริง" (dominantPlatform)
+           ซึ่งคำนวณจากยอดคงเหลือ Buy−Sell แยกตามที่เก็บ ไม่ใช่ลำดับเวลา */
         platMap={};
-        trackerRows2.filter(r=>IS_COST_TX.has(r.txType)).sort((a,b)=>a.date-b.date)
-          .forEach(r=>{platMap[r.ticker]=r.platform;});
+        {
+          const _qbp = qtyByPlatform(trackerRows2);
+          [...new Set(trackerRows2.map(r=>r.ticker))].forEach(tk=>{
+            const per=_qbp[tk]||{}; let best=null,bq=-1;
+            Object.entries(per).forEach(([pl,q])=>{ if(q>bq){bq=q;best=pl;} });
+            if(!best){ const last=trackerRows2.filter(r=>r.ticker===tk).sort((a,b)=>a.date-b.date).pop();
+                       best=last?last.platform:'Unknown'; }
+            platMap[tk]=best;
+          });
+        }
 
         // Realized P&L (Sell transactions) — running-WACC ต่อ ticker (กัน look-ahead bias)
         realized=computeRunningWaccRealized(trackerRows2, IS_COST_TX, TX_SELL);
@@ -2187,7 +2236,9 @@ function computeGoalProjection(annualRetPct){
   const noteEl=document.getElementById('ov-3m-compound-note');
 
   if(st.remain<=0){
-    projEl.innerHTML=`🎉 <span style="color:var(--gain);font-weight:600">ถึงเป้า ฿3M แล้ว!</span>`;
+    // BUGFIX v48 #10 — hardcode '฿3M' ทั้งที่เป้ามาจาก getGoalCfg().final
+    // ผู้ใช้ที่ตั้งเป้า ฿1M จะเห็น "ถึงเป้า ฿3M แล้ว" ตอนแตะ ฿1M
+    projEl.innerHTML=`🎉 <span style="color:var(--gain);font-weight:600">ถึงเป้า ${fmtC(st.GOAL)} แล้ว!</span>`;
     monEl.textContent=''; if(noteEl) noteEl.textContent=''; return;
   }
   if(st.monthlyContrib<=0){
@@ -2336,9 +2387,14 @@ function _renderOverviewRest(){
 
   // health
   const healthItems=[];
-  const topGrp=Object.entries(gm).sort((a,b)=>b[1]-a[1])[0];
-  const topPct=tv>0?(topGrp[1]/tv*100):0;
-  if(topPct>50)healthItems.push({s:'r',title:`Concentration: ${topGrp[0]} ${topPct.toFixed(0)}%`,desc:'เกิน 50% ควรกระจายเพิ่ม'});
+  /* BUGFIX v48 #7 — ผู้ใช้ที่ยังไม่มีสินทรัพย์ (หรือ sync ได้แต่ธุรกรรมเงินสด)
+     ทำให้ gm = {} → topGrp = undefined → topGrp[1] โยน TypeError
+     ตรงกลาง _renderOverviewRest() ผลคือ health / group bars / allocation
+     หยุดวาดทั้งบล็อกโดยไม่มีอะไรบอก — หน้า Overview ดูเหมือนโหลดไม่เสร็จ */
+  const topGrp=Object.entries(gm).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1])[0];
+  const topPct=(topGrp && tv>0)?(topGrp[1]/tv*100):0;
+  if(!topGrp) healthItems.push({s:'y',title:'ยังไม่มีสินทรัพย์ในพอร์ต',desc:'เพิ่มรายการในชีต Asset_Tracker แล้ว sync ใหม่'});
+  else if(topPct>50)healthItems.push({s:'r',title:`Concentration: ${topGrp[0]} ${topPct.toFixed(0)}%`,desc:'เกิน 50% ควรกระจายเพิ่ม'});
   else if(topPct>35)healthItems.push({s:'y',title:`Concentration: ${topGrp[0]} ${topPct.toFixed(0)}%`,desc:'ระดับปานกลาง ควรติดตาม'});
   else healthItems.push({s:'g',title:'Diversification: Good',desc:'ไม่มี class ไหนเกิน 35%'});
   const stale=assets.filter(a=>!a.hasPrice&&a.val===0);
@@ -2580,7 +2636,69 @@ function renderActionNeeded(ef){
       go:'accounts'});
   }catch(e){}
 
-  // ⑤ อายุข้อมูล pipeline
+  /* ── ขาดหาย v48 ─────────────────────────────────────────────────────
+     "ต้องลงมือ" เดิมตรวจ 5 เรื่อง แต่ทั้ง 3 เรื่องด้านล่างมีข้อมูลอยู่ในแอป
+     ครบแล้วและมีเดดไลน์จริง — ปล่อยให้ผู้ใช้ต้องเดินไปเปิดหน้าอื่นเองทุกวัน
+       ⑥ งบที่เกินแล้ว   — เห็นเฉพาะตอนเข้าหน้า Budget (badge บอกแค่จำนวน)
+       ⑦ เบี้ยประกันใกล้ครบกำหนด — ไม่มีที่ไหนเตือนเลย พลาด = กรมธรรม์ขาดอายุ
+       ⑧ FX exposure     — สัดส่วนพอร์ตที่อิงดอลลาร์ ไม่เคยถูกแสดงเป็นตัวเลข   */
+
+  // ⑥ งบรายหมวดที่เกินแล้วในเดือนนี้
+  try{
+    const mk = availableMonths[curMonthIdx];
+    const budgets = bgtLoad();
+    const expMap = {};
+    txRows.filter(r=>r.month===mk && (r.type==='Expense'||r.type==='Bills'))
+      .forEach(r=>{ const c=r.category||'Other'; expMap[c]=(expMap[c]||0)+Math.abs(r.amount); });
+    const over = [];
+    Object.keys(expMap).forEach(cat=>{
+      const lim = parseFloat(budgets['exp_'+cat]) || BGT_DEFAULTS[cat] || 0;
+      if(lim>0 && expMap[cat] > lim) over.push({cat, spent:expMap[cat], lim});
+    });
+    if(over.length){
+      over.sort((a,b)=>(b.spent-b.lim)-(a.spent-a.lim));
+      const totOver = over.reduce((t,o)=>t+(o.spent-o.lim), 0);
+      items.push({lv:'warn',
+        t:`งบเกิน ${over.length} หมวด · รวมเกิน ${fmt(totOver)}`,
+        d: over.slice(0,4).map(o=>`${o.cat} ${fmt(o.spent)}/${fmt(o.lim)}`).join(' · '),
+        go:'budget'});
+    }
+  }catch(e){}
+
+  // ⑦ เบี้ยประกันที่ครบกำหนดภายใน 30 วัน
+  try{
+    const now = new Date(); now.setHours(0,0,0,0);
+    const soon = (insPolicies||[]).map(pl=>{
+      const d = pl.renewal instanceof Date ? pl.renewal : null;
+      if(!d || isNaN(d)) return null;
+      // ใช้ปีปัจจุบันเป็นรอบต่ออายุถัดไป (กรมธรรม์ต่ออายุรายปี)
+      const nx = new Date(now.getFullYear(), d.getMonth(), d.getDate());
+      if(nx < now) nx.setFullYear(nx.getFullYear()+1);
+      const days = Math.round((nx-now)/864e5);
+      return days<=30 ? {name: pl.planName||pl.policyId, days, premium: pl.premium||0} : null;
+    }).filter(Boolean).sort((a,b)=>a.days-b.days);
+    if(soon.length){
+      const tot = soon.reduce((t,x)=>t+x.premium, 0);
+      items.push({lv: soon[0].days<=7 ? 'alert' : 'warn',
+        t:`เบี้ยประกันครบกำหนด ${soon.length} ฉบับใน 30 วัน · ${fmt(tot)}`,
+        d: soon.slice(0,3).map(x=>`${x.name} อีก ${x.days} วัน (${fmt(x.premium)})`).join(' · '),
+        go:'insurance'});
+    }
+  }catch(e){}
+
+  // ⑧ สัดส่วนพอร์ตที่อิง USD — ความเสี่ยงค่าเงินที่ไม่เคยถูกแสดงเป็นตัวเลข
+  try{
+    const held = (assets||[]).filter(a=>a.val>0);
+    const tot  = held.reduce((s,a)=>s+a.val, 0);
+    const usd  = held.filter(a=>a.currency==='USD').reduce((s,a)=>s+a.val, 0);
+    const share = tot>0 ? usd/tot*100 : 0;
+    if(share >= 55) items.push({lv:'warn',
+      t:`พอร์ต ${share.toFixed(0)}% อิงค่าเงินดอลลาร์ (${fmt(usd)})`,
+      d:`รายจ่ายคุณเป็นบาททั้งหมด — USD/THB เคลื่อน 1 บาท ≈ ${fmt(usd/ (mdNum('USDTHB')||34))} ในมูลค่าพอร์ต`,
+      go:'portfolio'});
+  }catch(e){}
+
+  // ⑨ อายุข้อมูล pipeline
   try{
     const a = marketDataAge();
     if(a && a.level!=='fresh') items.push({lv: a.level==='dead'?'alert':'warn',
@@ -2700,7 +2818,7 @@ function renderTxTable(rows){
       return `<tr><td style="color:var(--muted);font-size:11px">${fmtTxDate(r.dateStr)}</td>
         <td><span class="tp pill-${escHtml(r.type)}">${escHtml(r.type)}</span></td>
         <td style="font-size:11px;color:var(--muted2)">${escHtml(r.category)}</td>
-        <td style="color:var(--text);max-width:160px;overflow:hidden;text-overflow:ellipsis" title="${r.details}">${r.details||'—'}</td>
+        <td style="color:var(--text);max-width:160px;overflow:hidden;text-overflow:ellipsis" title="${escHtml(r.details)}">${escHtml(r.details)||'—'}</td>
         <td class="${ac}" style="text-align:right">${at}</td></tr>`;
     }).join('');
   document.getElementById('cf-tx-count').textContent=`${total} transactions`;
@@ -2807,6 +2925,18 @@ function renderReconciliation(){
 
   const r = computeReconciliation(bankBals, reconMap);
 
+  /* BUGFIX v48 #15 — ถ้าผู้ใช้กรอกชีต Reconcile แล้วแต่สะกดชื่อบัญชีไม่ตรงกับ
+     หัวคอลัมน์ในชีต Transaction ระบบจะทิ้งแถวนั้นเงียบ แล้วยังขึ้นข้อความ
+     "ยังไม่ได้ตั้งค่า Reconciliation" เหมือนเดิม — ผู้ใช้กรอกซ้ำทุกสัปดาห์
+     โดยไม่มีทางรู้ว่าผิดตรงไหน ต้องบอกชื่อที่จับคู่ไม่ได้ให้เห็น */
+  const orphanNote = (r.orphans && r.orphans.length)
+    ? `<div style="margin-top:10px;padding:9px 12px;background:rgba(255,149,0,.08);
+         border:1px solid rgba(255,149,0,.3);border-radius:8px;font-size:11px;color:var(--debt);line-height:1.7">
+         ⚠ มี ${r.orphans.length} ชื่อในชีต Reconcile ที่จับคู่กับบัญชีไม่ได้:
+         <strong>${escHtml(r.orphans.join(' · '))}</strong><br>
+         <span style="color:var(--muted2)">สะกดให้ตรงกับชื่อบัญชีในแถวที่ 2 ของชีต Transaction (ตัวพิมพ์และเว้นวรรคต้องตรง)</span></div>`
+    : '';
+
   // ยังไม่มีชีต Reconcile เลย → สอนวิธีตั้ง ไม่ใช่ปล่อยว่าง
   if(!r.checkedCount){
     el.innerHTML = `<div style="background:var(--bg3);border:1px dashed var(--border2);border-radius:12px;padding:16px 18px;font-size:12px;line-height:1.9;color:var(--muted)">
@@ -2818,6 +2948,7 @@ function renderReconciliation(){
         <code style="background:var(--bg4);padding:2px 6px;border-radius:4px;color:var(--savings)">Date · Account · Actual_Balance · Note</code><br>
         แล้วสัปดาห์ละครั้ง เปิดแอปธนาคารจดยอดจริงลงไปหนึ่งแถวต่อบัญชี
         (ชื่อใน <em>Account</em> ต้องตรงกับหัวคอลัมน์บัญชีในชีต Transaction)</div>
+      ${orphanNote}
     </div>`;
     return r;
   }
@@ -2869,6 +3000,7 @@ function renderReconciliation(){
         <strong style="color:var(--text)">เป็นลบ</strong> = เงินจริงน้อยกว่า (ลืมกรอกรายจ่าย ค่าธรรมเนียม หรือดอกเบี้ยที่ธนาคารหักเอง)<br>
         แก้โดยเพิ่มธุรกรรมที่ตกหล่นในชีต Transaction — ไม่ใช่แก้ยอดในชีต Reconcile
         เพราะ Reconcile คือบันทึกความจริงจากธนาคาร ไม่ใช่ตัวปรับให้เลขสวย</div>`:''}
+      ${orphanNote?`<div style="padding:0 18px 14px">${orphanNote}</div>`:''}
     </div>`;
   return r;
 }
@@ -3131,12 +3263,26 @@ function renderLocationGrid(){
 // ═══ SETTINGS BACKUP / RESTORE ══════════════════════════════════════
 // สำรองเฉพาะของที่ผู้ใช้สร้างเอง (ตั้งค่า + ประวัติ TWR) — ข้อมูลตลาด/พอร์ต
 // ไม่ต้องสำรองเพราะ sync ใหม่ได้เสมอ
+/* BUGFIX v48 #6 — ปุ่ม "💾 Backup" ให้ความมั่นใจปลอม
+   รายการเดิมสำรองแค่ 5 key และหนึ่งในนั้น (finOS_claude_key) ไม่มีโค้ดไหน
+   เขียนลงเลย ขณะที่ของที่ "กรอกมือแล้วหายไม่ได้" ตกหล่นทั้งหมด:
+     finOS_debtCfg       ดอกเบี้ย + ยอดปลอดดอกรายบัญชี (กรอกทีละใบ)
+     finance_os_goals_v1 เป้าหมายการเงินที่สร้างเอง
+     finOS_budget_v1     งบรายหมวดที่ตั้งเอง
+     finOS_goalCfg       เป้า Net Worth + expected return
+     finOS_holdingTags   แท็ก core ที่กดเองในหน้า Analysis
+   ล้างเบราว์เซอร์ครั้งเดียว = หายหมด ทั้งที่เพิ่งกด Backup ไป */
 const BACKUP_KEYS = [
-  'gs_client_id',     // Google OAuth client
-  'gs_sheet_id',      // Spreadsheet ID
-  'finOS_targets',    // เป้า allocation ที่ตั้งเอง
-  'finOS_valueLog',   // ★ ประวัติมูลค่าพอร์ตรายวัน (TWR) — แทนไม่ได้ถ้าหาย
-  'finOS_claude_key', // ⚠ API key — ไฟล์ backup ต้องเก็บให้ดี
+  'gs_client_id',        // Google OAuth client
+  'gs_sheet_id',         // Spreadsheet ID
+  'finOS_targets',       // เป้า allocation ที่ตั้งเอง
+  'finOS_valueLog',      // ★ ประวัติมูลค่าพอร์ตรายวัน (TWR) — แทนไม่ได้ถ้าหาย
+  'finOS_debtCfg',       // ★ APR + ยอดปลอดดอกรายบัญชี — กรอกมือล้วน
+  'finance_os_goals_v1', // ★ เป้าหมายการเงิน
+  'finOS_budget_v1',     // ★ งบรายหมวด
+  'finOS_goalCfg',       // เป้า Net Worth / expected return
+  'finOS_holdingTags',   // แท็ก core รายสินทรัพย์
+  'finOS_lastPrice',     // ราคาล่าสุดที่จำไว้ (กันพอร์ตกระตุกหลัง restore)
 ];
 function exportSettings(){
   const data = {};
@@ -3158,7 +3304,9 @@ function exportSettings(){
       console.warn('[backup] finOS_valueLog เสียหาย อ่านจำนวนวันไม่ได้:', e.message);
     }
   }
-  alert(`💾 สำรองแล้ว ${n} รายการ${logN?` (รวมประวัติ TWR ${logN} วัน)`:''}\n⚠ ไฟล์นี้มี API key — เก็บในที่ปลอดภัย อย่าแชร์`);
+  alert(`💾 สำรองแล้ว ${n} รายการ${logN?` (รวมประวัติ TWR ${logN} วัน)`:''}\n`
+      + `รวม: ดอกเบี้ยหนี้ · งบรายหมวด · เป้าหมาย · แท็ก core\n`
+      + `⚠ ไฟล์นี้มี Client ID / Spreadsheet ID — เก็บในที่ปลอดภัย`);
 }
 function importSettings(input){
   const file = input.files && input.files[0];
@@ -3278,7 +3426,7 @@ const VLOG_PURGED_KEY = 'finOS_valueLogPurged_v44';
 //   ฟังก์ชันหาย  → BLOCK  (แอปคำนวณผิดแน่นอน — นี่คือสิ่งที่ guard มีไว้จับ)
 //   เลขไม่ตรง    → WARN   (แค่ลืม bump — log ไว้ ไม่รบกวนผู้ใช้)
 // ฟังก์ชันที่ต้องมีคือสัญญาจริงระหว่างสองไฟล์ ส่วนสตริงเวอร์ชันเป็นแค่ป้าย
-const EXPECTED_SHARED_BUILD = 'v47';
+const EXPECTED_SHARED_BUILD = 'v48';
 const REQUIRED_SHARED_FNS = [
   'resolvePrices', 'pipelinePricesTHB', 'parseReconcileRows',
   'computeReconciliation', 'splitBalances', 'debtVsInvest', 'buildDebtPlan',
@@ -3375,7 +3523,20 @@ function computeTWR(log, flows){
 
 function renderPerformance(totalVal){
   const {flows, byTk} = buildPerfFlows();
-  if(!flows.length) return;
+  /* BUGFIX v48 #16 — เดิม return เฉยๆ ทำให้ทุกช่องในการ์ด Performance
+     ค้างค่าจากการ render ครั้งก่อน (หรือค้าง placeholder ของ HTML)
+     ผู้ใช้ที่ sync ไฟล์ใหม่ที่ไม่มีธุรกรรมลงทุน จะเห็น XIRR ของไฟล์เก่า */
+  if(!flows.length){
+    [['perf-xirr','—'],['perf-twr','—']].forEach(([id,v])=>{
+      const e=document.getElementById(id); if(e){ e.textContent=v; e.style.color='var(--muted2)'; }
+    });
+    [['perf-money','ยังไม่มีธุรกรรมซื้อ/ขายในชีต Asset_Tracker'],
+     ['perf-period',''],['perf-top','—'],['perf-bottom','—'],
+     ['perf-bench','—'],['perf-bench-sub',''],
+     ['perf-twr-sub','TWR ต้องมีธุรกรรมลงทุนอย่างน้อย 1 รายการ']
+    ].forEach(([id,v])=>{ const e=document.getElementById(id); if(e){ e.textContent=v; e.style.color=''; } });
+    return;
+  }
   const nowT = Date.now();
   const r = xirrJS([...flows, {t:nowT, v:totalVal}]);
   const xEl=document.getElementById('perf-xirr');
@@ -3398,8 +3559,16 @@ function renderPerformance(totalVal){
   }).filter(x=>x.r!==null).sort((a,b)=>b.r-a.r);
   const row = x => `<div style="display:flex;justify-content:space-between"><span>${escHtml(x.ticker)} <span style="color:var(--muted2);font-size:10px">${fmt(x.val)}</span></span><strong style="color:${x.r>=0?'var(--gain)':'var(--loss)'}">${(x.r>=0?'+':'')+(x.r*100).toFixed(1)}%/ปี</strong></div>`;
   const topEl=document.getElementById('perf-top'), botEl=document.getElementById('perf-bottom');
-  if(topEl) topEl.innerHTML = perAsset.slice(0,5).map(row).join('') || '—';
-  if(botEl) botEl.innerHTML = perAsset.slice(-3).reverse().map(row).join('') || '—';
+  /* BUGFIX v48 #12 — เดิม top = slice(0,5), bottom = slice(-3)
+     ถ้ามีสินทรัพย์ที่คำนวณ XIRR ได้ ≤ 5 ตัว สองกล่องจะโชว์ตัวเดียวกัน
+     ผู้ใช้เห็น "ตัวที่ดีที่สุด" กับ "ตัวที่แย่ที่สุด" เป็นรายการเดียวกัน */
+  const _nTop = Math.min(5, Math.max(1, Math.ceil(perAsset.length/2)));
+  const _top  = perAsset.slice(0, _nTop);
+  const _bot  = perAsset.slice(_nTop).slice(-3).reverse();
+  if(topEl) topEl.innerHTML = _top.map(row).join('') || '—';
+  if(botEl) botEl.innerHTML = _bot.length
+    ? _bot.map(row).join('')
+    : '<span style="color:var(--muted2);font-size:11px">ยังมีสินทรัพย์ไม่พอจะแยกกลุ่มบน/ล่าง</span>';
 
   // TWR — เริ่มเก็บประวัติมูลค่าวันนี้
   // ⚔️ Benchmark: จำลอง cashflow เดิมเข้า S&P 500
@@ -4115,10 +4284,23 @@ async function gsSync(){
       }catch(e){console.log('[GS] Optional error:',s,e.message);}
     }
 
-    gsProcessData(map);
+    /* ══ BUGFIX v48 #5 — ลำดับผิด (บั๊กเงียบที่กระทบ 4 หน้าพร้อมกัน) ══
+       เดิม: gsProcessData(map) ถูกเรียกก่อน แล้วค่อย saveMarketData /
+       mergeValueLogFromSheet / reconMap
+       แต่ gsProcessData() จบด้วย savePortfolioToStorage() + switchPage('overview')
+       ซึ่ง render Overview ทันที → renderActionNeeded() อ่าน reconMap ของ
+       รอบก่อน (ครั้งแรก = {} ว่าง) และ renderPerformance() อ่าน valueLog
+       ที่ยังไม่ merge
+       อาการที่ผู้ใช้เห็น:
+         • "ยอดบัญชียังไม่เคย verify" ค้างอยู่ทุกครั้งที่ sync ทั้งที่ชีต Reconcile มีข้อมูล
+         • TWR ขึ้น "⏳ สะสมข้อมูล" ทั้งที่ Value_Log ในชีตมีเป็นร้อยวัน
+         • ราคาจากชีต Market_Data ยังไม่เข้า → resolvePrices() ตกไปใช้ cached
+       แก้: merge ทุกอย่างให้ครบก่อน แล้วค่อย process + render */
     saveMarketData(map['Market_Data']);
+    if(typeof invalidateMarketCache==='function') invalidateMarketCache();
     mergeValueLogFromSheet(map['Value_Log']);   // ประวัติมูลค่าพอร์ตรายวัน → TWR ไม่มีวันโหว่
     reconMap = parseReconcileRows(map['Reconcile']);   // v44 — ยอดจริงจากแอปธนาคาร
+    gsProcessData(map);
     gsLastSync=new Date();
     gsConnected=true;
     gsSetStatus('✓ Sync '+gsLastSync.toLocaleTimeString(LOC),'ok');
@@ -4327,7 +4509,18 @@ function gsParseAssetTracker(rows){
   tracker=trackerRows2;
   fxMap={};for(const[t,v]of Object.entries(fxAcc))fxMap[t]=parseFloat((v.reduce((s,x)=>s+x,0)/v.length).toFixed(2));
   waccMap={};for(const[t,v]of Object.entries(waccAcc2))waccMap[t]=v.qty>0?v.cost/v.qty:0;
-  platMap={};trackerRows2.filter(r=>['Buy','Split'].includes(r.txType)).sort((a,b)=>a.date-b.date).forEach(r=>{platMap[r.ticker]=r.platform;});
+  // BUGFIX v48 #14 — ดูคำอธิบายในเส้นทาง Excel ด้านบน (ต้องแก้ทั้งสองที่)
+  platMap={};
+  {
+    const _qbp = qtyByPlatform(trackerRows2);
+    [...new Set(trackerRows2.map(r=>r.ticker))].forEach(tk=>{
+      const per=_qbp[tk]||{}; let best=null,bq=-1;
+      Object.entries(per).forEach(([pl,q])=>{ if(q>bq){bq=q;best=pl;} });
+      if(!best){ const last=trackerRows2.filter(r=>r.ticker===tk).sort((a,b)=>a.date-b.date).pop();
+                 best=last?last.platform:'Unknown'; }
+      platMap[tk]=best;
+    });
+  }
   totalFee=trackerRows2.filter(r=>['Buy','Split'].includes(r.txType)).reduce((s,r)=>s+r.commTHB,0);
   // Realized P&L — running-WACC ต่อ ticker (กัน look-ahead bias) — ดู shared.js
   realized=computeRunningWaccRealized(trackerRows2, IS_COST, TX_SELL);
@@ -4747,15 +4940,19 @@ function bgtSave(data){
   try{localStorage.setItem(BGT_KEY,JSON.stringify(data));}catch{}
 }
 
+/* BUGFIX v48 #13 — pct เป็น float (spent/limit*100) การเทียบ === 100 แบบ
+   ตรงตัวแทบไม่มีวันเป็นจริง สถานะ "ใช้เท่ากับเป้าหมาย" จึงเป็น dead code
+   และยอดที่เกินไป 0.4 บาทถูกจัดเป็น "เกินแล้ว!" ทั้งที่ปัดแล้วพอดี */
+const _bgtAt100=pct=>Math.abs(pct-100)<0.5;
 function bgtColor(pct){
+  if(_bgtAt100(pct)) return 'var(--muted2)';
   if(pct>100)   return 'var(--expense)';
-  if(pct===100) return 'var(--muted2)';
   if(pct>=80)   return 'var(--debt)';
   return 'var(--income)';
 }
 function bgtStatus(pct){
+  if(_bgtAt100(pct)) return {label:'ใช้เท่ากับเป้าหมาย',cls:'exact'};
   if(pct>100)   return {label:'เกินแล้ว!',cls:'over'};
-  if(pct===100) return {label:'ใช้เท่ากับเป้าหมาย',cls:'exact'};
   if(pct>=80)   return {label:'ใกล้เกิน',cls:'warn'};
   return {label:'ปกติ',cls:'ok'};
 }
@@ -5137,6 +5334,10 @@ function renderDebt(){
   document.getElementById('dbt-int').textContent=anyApr?fmt(Math.round(di.monthlyInterest)):'—';
   document.getElementById('dbt-int-s').textContent=anyApr?`${fmt(Math.round(di.yearlyInterest))}/ปี`:'ใส่ดอกเบี้ยด้านล่างก่อน';
   const mEl=document.getElementById('dbt-months');
+  // BUGFIX v48 #8 — สาขา else ตั้ง style.color เป็น --loss แต่ไม่มีใครล้าง
+  // พอผู้ใช้ใส่ "จ่ายเพิ่ม/เดือน" จนแผนกลับมาจบได้ ตัวเลขเดือนยังแดงค้าง
+  // (บั๊กคลาสเดียวกับที่ perf-bench แก้ไปแล้ว — ที่นี่ยังไม่ได้แก้)
+  mEl.style.color='';
   if(plan && isFinite(plan.months)){
     mEl.textContent=plan.months+' เดือน';
     const d=new Date(); d.setMonth(d.getMonth()+plan.months);
@@ -5157,21 +5358,26 @@ function renderDebt(){
       แล้วระบบจะคำนวณให้ว่าควรเอาเงินไปจ่ายหนี้หรือลงทุน<br>
       <span style="color:var(--muted2)">บัตรเครดิตไทยส่วนใหญ่อยู่ที่ 16% · สินเชื่อส่วนบุคคล 20–25% · ผ่อน 0% ใส่ 0</span></div>`;
   }else{
-    const win=di.rows.filter(r=>r.apr>di.expectedReturn).sort((a,b)=>b.apr-a.apr);
-    const topApr=Math.max(...di.rows.map(r=>r.apr));
+    /* BUGFIX v48 #9 — บทสรุปใช้ apr ดิบ แต่ debtVsInvest() ตัดสินด้วย effApr
+       (= apr × intBal ÷ bal คือดอกเบี้ยที่มีผลจริงกับทั้งใบ หลังหักยอดปลอดดอก)
+       เคสจริง: บัตร 16% ที่ยอดทั้งใบเป็นยอดผ่อน 0% → effApr = 0
+       แต่หน้าจอยังขึ้น "💡 จ่ายหนี้ก่อน — ชนะการลงทุนชัดเจน 16%/ปี"
+       = แนะนำให้เอาเงินไปโปะหนี้ที่ไม่เสียดอกเบี้ยเลย ซึ่งเสียโอกาสจริง */
+    const win=di.rows.filter(r=>r.effApr>di.expectedReturn).sort((a,b)=>b.effApr-a.effApr);
+    const topApr=Math.max(0,...di.rows.map(r=>r.effApr));
     const winAmt=win.reduce((s,r)=>s+r.bal,0);
     vEl.innerHTML=`<div style="background:linear-gradient(135deg,rgba(255,64,96,.08),rgba(255,149,0,.05));border:1px solid rgba(255,64,96,.28);border-radius:12px;padding:16px 20px">
       <div style="font-family:var(--f-sans);font-size:14px;font-weight:600;color:var(--white);margin-bottom:8px">
         ${win.length?'💡 จ่ายหนี้ก่อน — ชนะการลงทุนชัดเจน':'✅ ดอกเบี้ยต่ำกว่าผลตอบแทนคาดหวัง — ลงทุนก่อนได้'}</div>
       <div style="font-size:12px;line-height:1.95;color:var(--text)">
         ${win.length?`หนี้ ${fmt(winAmt)} ที่ดอกเบี้ยสูงสุด <strong style="color:var(--loss)">${topApr}%/ปี</strong>
-        ให้ผลตอบแทน <strong>รับประกัน ${topApr}% ปลอดภาษี ปลอดความผันผวน</strong>
+        ให้ผลตอบแทน <strong>รับประกัน ${topApr.toFixed(1)}% ปลอดภาษี ปลอดความผันผวน</strong>
         ขณะที่พอร์ตคุณตั้งเป้าไว้ที่ ${di.expectedReturn}%/ปี <em>ก่อน</em>ภาษีและความเสี่ยง<br>
         → ส่วนต่าง <strong style="color:var(--gain)">+${(topApr-di.expectedReturn).toFixed(1)} จุด</strong>
         ต่อทุกบาทที่โยนไปจ่ายหนี้แทนการลงทุน
         · ตอนนี้ดอกเบี้ยกินเงินคุณ <strong style="color:var(--loss)">${fmt(Math.round(di.monthlyInterest))}/เดือน</strong>
         = ${fmt(Math.round(di.yearlyInterest))}/ปี ที่หายไปเปล่าๆ`
-        :`ดอกเบี้ยสูงสุดของคุณ ${topApr}% ต่ำกว่าผลตอบแทนคาดหวัง ${di.expectedReturn}% —
+        :`ดอกเบี้ยที่มีผลจริงสูงสุดของคุณ ${topApr.toFixed(1)}% ต่ำกว่าผลตอบแทนคาดหวัง ${di.expectedReturn}% —
         ทางคณิตศาสตร์ควรจ่ายขั้นต่ำแล้วเอาเงินที่เหลือไปลงทุน (แต่ต้องมั่นใจว่าจ่ายตรงเวลาทุกงวด)`}
       </div></div>`;
   }
@@ -5224,7 +5430,7 @@ function renderDebt(){
     }
     noteEl.innerHTML=`งบจ่ายหนี้รวม <strong style="color:var(--white)">${fmt(Math.round(plan.budget))}/เดือน</strong>
       (ขั้นต่ำ ${fmt(Math.round(plan.baseMin))} + เพิ่ม ${fmt(cfg.extraPerMonth||0)})
-      · ลำดับโจมตี: ${plan.order.filter(o=>o.bal>0).map(o=>o.name.split(' ')[0]).join(' → ')}${cmp}`;
+      · ลำดับโจมตี: ${plan.order.filter(o=>o.bal>0).map(o=>escHtml(o.name)).join(' → ')}${cmp}`;
   }
   if(plan && plan.timeline.length){
     mkLineChart('dbt-chart',plan.timeline.map(p=>'เดือน '+p.m),[
@@ -5753,7 +5959,7 @@ function renderInsurance(){
       </div>`;
     }
 
-    return `<div class="ins-cov-card ${selected}" onclick="insSelectCov('${ct}')">
+    return `<div class="ins-cov-card ${selected}" onclick="insSelectCov(&quot;${escAttr(String(ct).replace(/"/g,''))}&quot;)">
       <div class="ins-cov-name">${meta.icon} ${escHtml(meta.label)}</div>
       ${ringHTML}
       <div class="ins-cov-amount">${data.amount.toLocaleString(LOC)}</div>

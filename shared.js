@@ -16,7 +16,7 @@ window.LOC = window.LOC || 'th-TH-u-ca-gregory';
 //   • XIRR engine
 // กติกา: ไฟล์นี้ห้ามแตะ DOM ของหน้าใดหน้าหนึ่ง — pure data layer เท่านั้น
 // ═══════════════════════════════════════════════════════════════════
-const APP_BUILD = 'v47';
+const APP_BUILD = 'v48';
 console.log('[Finance OS shared] build', APP_BUILD);
 window.SHARED_BUILD = APP_BUILD;   // v45 — ให้ index.html ตรวจได้ว่าเวอร์ชันตรงกัน
 
@@ -195,7 +195,11 @@ function pipelinePricesTHB(staleDays){
     // ไม่มี FX = แปลง USD ไม่ได้ → ข้ามเฉพาะตัว USD ตัว THB ยังใช้ได้
     if(ccy === 'USD' && !(fx > 0)) return;
 
-    const t = o.updated ? Date.parse(o.updated + 'T00:00:00Z') : NaN;
+    // BUGFIX v48 #2 — เดิมต่อ 'T00:00:00Z' ตายตัว ถ้า pipeline ส่ง ISO เต็ม
+    // ('2026-08-21T13:05:00Z') จะได้ '…T13:05:00ZT00:00:00Z' = Invalid Date
+    // แล้ว `if(!isFinite(t)) return;` จะทิ้งราคานั้นทั้งตัวโดยไม่มีสัญญาณเตือน
+    const _u = o.updated ? String(o.updated).trim() : '';
+    const t = _u ? Date.parse(/^\d{4}-\d{2}-\d{2}$/.test(_u) ? _u+'T00:00:00Z' : _u) : NaN;
     if(!isFinite(t)) return;                       // ไม่รู้วัน = ไม่กล้าใช้
     const ageDays = (today - t) / 864e5;
     if(ageDays > PRICE_MAX_DAYS) return;           // เก่าเกินไป ทิ้ง
@@ -339,6 +343,12 @@ function computeReconciliation(bals, reconMap, tolerance){
                    diff, ok, checked:true, date:rec.date, note:rec.note});
   });
 
+  // BUGFIX v48 #3 — ชื่อบัญชีในชีต Reconcile ที่สะกดไม่ตรงกับหัวคอลัมน์ใน
+  // Transaction จะถูกทิ้งเงียบ ผู้ใช้กรอกยอดจริงทุกสัปดาห์แล้วสงสัยว่าทำไม
+  // หน้าจอยังบอก "ยังไม่เคย verify" — ต้องบอกให้เห็นว่าชื่อไหนจับคู่ไม่ได้
+  const known = new Set((bals||[]).map(b=>b.name));
+  const orphans = Object.keys(map).filter(n=>!known.has(n));
+
   const checked = accounts.filter(a=>a.checked);
   // อายุ = วันที่ reconcile "เก่าสุด" ในบรรดาบัญชีที่เคยเช็ค — ไม่ใช่ล่าสุด
   // เพราะเช็คแค่บัญชีเดียวเมื่อวานไม่ได้แปลว่าทั้งพอร์ตถูก verify แล้ว
@@ -350,7 +360,7 @@ function computeReconciliation(bals, reconMap, tolerance){
     checkedCount: checked.length,
     totalCount: accounts.length,
     neverChecked: accounts.filter(a=>!a.checked).map(a=>a.name),
-    unmatched, totalDrift,
+    unmatched, totalDrift, orphans,
     oldestDate: worstDate, ageDays,
     stale: ageDays == null || ageDays > RECON_STALE_DAYS,
     clean: checked.length > 0 && unmatched === 0,
@@ -1083,10 +1093,23 @@ function saveDebtCfg(cfg){
 // คืน null ถ้าไม่มีหนี้ · คืน {months:Infinity} ถ้าจ่ายไม่พอดอกเบี้ย (หนี้โต)
 function buildDebtPlan(liabAccounts, cfg){
   cfg = cfg || getDebtCfg();
+  // ── BUGFIX v48 #1 ────────────────────────────────────────────────────
+  // เดิมฟังก์ชันนี้คิดดอกเบี้ยจาก d.bal ทั้งก้อน โดยไม่เคยอ่าน cfg.free เลย
+  // ขณะที่ debtVsInvest() คิดจาก intBal = bal − free
+  // ผลคือหน้า Debt แสดงตัวเลขที่ขัดกันเองบนจอเดียวกัน:
+  //   การ์ด "ดอกเบี้ย/เดือน"   = ถูก (หัก free)
+  //   การ์ด "ดอกเบี้ยรวมจนหมด" = เกินจริง (ไม่หัก free)
+  //   การ์ด "หมดใน X เดือน"    = นานเกินจริง
+  // แก้: เก็บ free ต่อใบ แล้วคิดดอกจาก max(0, bal − free) เท่านั้น
+  // เมื่อจ่ายไปเรื่อยๆ ยอดค้างลดลงจนต่ำกว่า free → free ถูก clamp ตาม (min)
+  // ซึ่งตรงกับความจริง: เงินที่จ่ายเข้าไปตัดยอดที่คิดดอกก่อนเสมอ
   let debts = (liabAccounts||[])
-    .map(b=>({ name:b.name,
-               bal: Math.abs(Math.min(0, b.balance)),
-               apr: Number(cfg.apr[b.name] ?? 0) }))
+    .map(b=>{
+      const bal = Math.abs(Math.min(0, b.balance));
+      return { name:b.name, bal,
+               free: Math.max(0, Math.min(Number(cfg.free?.[b.name] ?? 0), bal)),
+               apr: Number(cfg.apr[b.name] ?? 0) };
+    })
     .filter(d=>d.bal > 0.5);
   if(!debts.length) return null;
 
@@ -1110,7 +1133,8 @@ function buildDebtPlan(liabAccounts, cfg){
     // 1) ดอกเบี้ยเดินก่อน (ทบต้นรายเดือน)
     debts.forEach(d=>{
       if(d.bal<=0) return;
-      const int = d.bal * (d.apr/100) / 12;
+      const intBase = Math.max(0, d.bal - (d.free||0));   // #1 — ยอดที่คิดดอกจริง
+      const int = intBase * (d.apr/100) / 12;
       d.bal += int; totalInterest += int;
     });
     // 2) จ่ายขั้นต่ำทุกใบ
@@ -1127,7 +1151,9 @@ function buildDebtPlan(liabAccounts, cfg){
       const pay = Math.min(d.bal, pool);
       d.bal -= pay; pool -= pay;
     }
-    debts.forEach(d=>{ if(d.bal<=0.5 && !payoffMonth[d.name]){ payoffMonth[d.name]=month; d.bal=0; } });
+    // #1 — free ห้ามเกินยอดค้างที่เหลือ ไม่งั้น intBase ติดลบแล้วดอกหายไปทั้งใบ
+    debts.forEach(d=>{ if(d.free > d.bal) d.free = Math.max(0, d.bal); });
+    debts.forEach(d=>{ if(d.bal<=0.5 && !payoffMonth[d.name]){ payoffMonth[d.name]=month; d.bal=0; d.free=0; } });
     timeline.push({ m:month, total: debts.reduce((s,d)=>s+d.bal,0) });
   }
 
@@ -1137,7 +1163,7 @@ function buildDebtPlan(liabAccounts, cfg){
     totalStart, totalInterest, budget, baseMin,
     strategy: cfg.strategy,
     payoffMonth, timeline,
-    order: order.map(d=>({name:d.name, apr:d.apr,
+    order: order.map(d=>({name:d.name, apr:d.apr, free:d.free||0,
                           bal: totalStartOf(liabAccounts, d.name)})),
     // #27 — เดิมมี field `freeMonth` ที่ค่าเท่ากับ `months` ทุกกรณี พร้อมคอมเมนต์อ้างว่า
     // "เทียบกับการจ่ายขั้นต่ำอย่างเดียว" ซึ่งโค้ดไม่เคยทำ และไม่มีผู้เรียกรายไหนอ่านมัน
