@@ -1029,6 +1029,98 @@ function splitBalances(bals){
   return { cashAccounts, liabAccounts, cash, liabilities, net: cash-liabilities };
 }
 
+// ══════════════════════════════════════════════════════════════════════
+// v48 — DEBT COMPOSITION & RECONCILED BALANCES
+// ══════════════════════════════════════════════════════════════════════
+// ปัญหาที่แก้: ยอดในคอลัมน์บัตรเครดิต (เช่น −35,387.60) เป็น "ยอดสุทธิสะสม
+// ของทุกอย่างที่เคยโพสต์เข้าคอลัมน์นั้น" — ยอดรูด, ยอดชำระ, โอนเข้า,
+// เงินคืน ปนกันเป็นก้อนเดียว แล้วถูกเรียกว่า "หนี้" ทั้งก้อน
+//
+// สองอย่างที่ต้องแยกให้ออก และเดิมแยกไม่ได้เลย:
+//   1) หนี้ *ประกอบด้วยอะไร* — รูดไปเท่าไร ชำระคืนไปเท่าไร เดือนนี้โตหรือลด
+//   2) หนี้ *จริง* คือเท่าไร — ยอดคำนวณจากธุรกรรมที่กรอกมือ ≠ ยอดที่ธนาคารบอก
+//      ชีต Reconcile มีคำตอบข้อ 2 อยู่แล้ว แต่ไม่เคยถูกใช้กับตัวเลขหนี้เลย
+//      (ใช้แค่โชว์ตารางเทียบในหน้า Accounts)
+
+const RECON_TRUST_DAYS = 45;   // ยอดจริงเก่าเกินนี้ = ไม่กล้าใช้แทนยอดคำนวณแล้ว
+
+// ── applyReconciliation ──────────────────────────────────────────────
+// คืนชุดยอดบัญชีที่ "ใช้ยอดจริงจากธนาคารเมื่อมี และยังไม่เก่าเกินไป"
+// คืน { bals, source:{name:'bank'|'computed'|'stale'}, nBank, nStale, asOf }
+// หมายเหตุ: ไม่แก้ bals ต้นฉบับ — คืนชุดใหม่เสมอ
+function applyReconciliation(bals, reconMap, maxAgeDays){
+  const maxAge = maxAgeDays == null ? RECON_TRUST_DAYS : maxAgeDays;
+  const map = reconMap || {};
+  const source = {};
+  let nBank = 0, nStale = 0, newest = null;
+
+  const out = (bals||[]).map(b=>{
+    const rec = map[b.name];
+    if(!rec || !isFinite(rec.actual)){ source[b.name]='computed'; return {...b}; }
+    const age = rec.date
+      ? Math.floor((Date.now() - Date.parse(rec.date+'T00:00:00Z'))/864e5) : null;
+    if(age != null && age > maxAge){ source[b.name]='stale'; nStale++; return {...b}; }
+    if(rec.date && (!newest || rec.date > newest)) newest = rec.date;
+    source[b.name]='bank'; nBank++;
+    return {...b, balance: rec.actual, computedBalance: b.balance,
+            reconDate: rec.date||null, reconDiff: rec.actual - b.balance};
+  });
+
+  return { bals: out, source, nBank, nStale,
+           nTotal: out.length, asOf: newest,
+           // ผลต่างรวมที่ถูก "ยอมรับ" เข้าไปในตัวเลข — ต้องโชว์ให้เห็น
+           adopted: out.reduce((s,b)=>s+(b.reconDiff||0), 0) };
+}
+
+// ── debtComposition ──────────────────────────────────────────────────
+// แตกยอดคงเหลือของแต่ละบัญชีหนี้ออกตาม "ประเภทธุรกรรม" ที่ทำให้เกิดยอดนั้น
+// ต้องการ txRows ที่มี r.acct = {ชื่อบัญชี: จำนวน} (เพิ่มใน v48)
+//
+// นิยามที่ใช้ (มุมมองบัตรเครดิต ยอดติดลบ = เป็นหนี้):
+//   charged  = ยอดที่ทำให้หนี้เพิ่ม  (Expense/Bills/Savings/Debt ที่เป็นลบ)
+//   repaid   = ยอดที่ทำให้หนี้ลด     (Transfer/Income หรือรายการบวกใดๆ)
+//   ห้ามใช้ประเภทธุรกรรมตัดสินทิศทางอย่างเดียว เพราะ Transfer ใช้ทั้งจ่ายบัตร
+//   และรูดบัตรโอนออก — ต้องดูเครื่องหมายของยอดในคอลัมน์บัญชีนั้นจริงๆ
+function debtComposition(txRows, accountNames, monthKey){
+  const want = new Set(accountNames||[]);
+  const out = {};
+  want.forEach(n=>{ out[n] = { name:n, byType:{}, charged:0, repaid:0, net:0,
+                               mCharged:0, mRepaid:0, mNet:0, n:0, mN:0,
+                               firstDate:null, lastDate:null, hasDetail:false }; });
+
+  (txRows||[]).forEach(r=>{
+    if(!r || !r.acct) return;
+    Object.entries(r.acct).forEach(([name, amt])=>{
+      const o = out[name];
+      if(!o || !isFinite(amt) || amt === 0) return;
+      o.hasDetail = true;
+      const t = r.type || 'Other';
+      if(!o.byType[t]) o.byType[t] = { in:0, out:0, n:0 };
+      if(amt < 0){ o.byType[t].out += -amt; o.charged += -amt; }
+      else       { o.byType[t].in  +=  amt; o.repaid  +=  amt; }
+      o.byType[t].n++; o.n++; o.net += amt;
+      if(monthKey && r.month === monthKey){
+        if(amt < 0) o.mCharged += -amt; else o.mRepaid += amt;
+        o.mNet += amt; o.mN++;
+      }
+      if(r.dateStr){
+        if(!o.firstDate || r.dateStr < o.firstDate) o.firstDate = r.dateStr;
+        if(!o.lastDate  || r.dateStr > o.lastDate)  o.lastDate  = r.dateStr;
+      }
+    });
+  });
+
+  // จัดอันดับประเภทที่สร้างหนี้มากที่สุด — คือคำตอบของ "หนี้ก้อนนี้มาจากอะไร"
+  Object.values(out).forEach(o=>{
+    o.topCharge = Object.entries(o.byType)
+      .map(([t,v])=>({type:t, amt:v.out, n:v.n}))
+      .filter(x=>x.amt>0).sort((a,b)=>b.amt-a.amt);
+    o.repayRate = o.charged>0 ? o.repaid/o.charged : null;   // <1 = หนี้กำลังโต
+    o.mTrend = o.mNet > 0 ? 'down' : o.mNet < 0 ? 'up' : 'flat';
+  });
+  return out;
+}
+
 // ═══ Realized P&L — running-WACC ═══
 // waccMap (เฉลี่ยจากยอดซื้อทั้งหมด) ใช้ประเมิน cost basis ของ "หุ้นที่ถืออยู่ตอนนี้" ได้ถูกต้อง
 // (เพราะ WACC เฉลี่ยไม่เปลี่ยนตอนขาย) แต่ใช้ค่าเดียวนี้ย้อนไปคำนวณ P&L ของการขายในอดีต "ผิด"

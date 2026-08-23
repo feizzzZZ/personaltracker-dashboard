@@ -1366,6 +1366,8 @@ select.month-display{text-align-last:center;outline:none}
       </div>
 
       <div id="debt-main">
+        <!-- v48 — ยอดนี้มาจากไหน: ยอดจริงจากธนาคาร vs ยอดคำนวณจากธุรกรรม -->
+        <div id="dbt-source" style="margin-bottom:14px"></div>
         <div class="sg" style="margin-bottom:16px">
           <div class="sc" style="--g:rgba(255,64,96,.08)">
             <div class="sc-lbl">ยอดหนี้รวม</div>
@@ -1398,6 +1400,10 @@ select.month-display{text-align-last:center;outline:none}
           <th>บัญชี</th><th class="r">ยอดค้าง</th><th class="r">ปลอดดอกเบี้ย</th><th class="r">คิดดอกจริง</th><th class="r">ดอกเบี้ย %/ปี</th>
           <th class="r">ดอกเบี้ย/เดือน</th><th class="r">ขั้นต่ำ/เดือน</th><th>ปลดหนี้เดือนที่</th>
         </tr></thead><tbody id="dbt-body"></tbody></table></div>
+
+        <!-- v48 — หนี้ก้อนนี้ประกอบด้วยอะไร -->
+        <div class="sl" style="margin-bottom:10px">หนี้ก้อนนี้มาจากอะไร · แยกตามประเภทธุรกรรมที่โพสต์เข้าบัญชีนั้นจริง</div>
+        <div id="dbt-composition" style="margin-bottom:18px"></div>
 
         <!-- แผนจ่าย -->
         <div class="sl" style="margin-bottom:10px">แผนปลดหนี้</div>
@@ -1620,6 +1626,16 @@ const EXP_COLORS=['#ff4060','#ff6b35','#ffd166','#06d6a0','#118ab2','#7b61ff','#
 // ── State ────────────────────────────────────────────────────────────
 let txRows=[],assets=[],tracker=[],bankBals=[],fxMap={},waccMap={},platMap={},realized=[];
 let reconMap={};   // v44 — ชีต Reconcile: { ชื่อบัญชี: {date, actual, note} }
+/* v48 — จุดเดียวที่ทั้งแอปใช้อ่านยอดบัญชี
+   เดิมทุกหน้าเรียก splitBalances(bankBals) ตรงๆ = ใช้ยอดที่คำนวณจากธุรกรรม
+   ที่กรอกมือล้วน ทั้งที่ชีต Reconcile มียอดจริงจากธนาคารอยู่แล้ว
+   ถ้าปล่อยให้หน้า Debt ใช้ยอดจริงแต่หน้าอื่นใช้ยอดคำนวณ ตัวเลขจะขัดกันเอง
+   ระหว่างหน้า — ซึ่งแย่กว่าผิดพร้อมกันทั้งแอป จึงต้องรวมมาที่นี่ที่เดียว */
+function effectiveBals(){
+  try{ return applyReconciliation(bankBals, reconMap).bals; }
+  catch(e){ return bankBals; }
+}
+function effectiveSplit(){ return splitBalances(effectiveBals()); }
 let insPolicies=[],insCoverage=[];
 let totalFee=0,availableMonths=[],curMonthIdx=0,cfFilter='all',cfPage=0,pfFilter='all';
 let charts={},flowPeriod='monthly';
@@ -1772,10 +1788,29 @@ function parseFile(file){
           const r=txRaw[i];if(!r||!r[ti('Transactions')])continue;
           const type=String(r[ti('Transactions')]).trim();if(!VALID.has(type))continue;
           const d=parseDate(r[ti('Date')]);if(!d||isNaN(d.getTime()))continue;
-          let amt=0;bankCols.forEach(ci=>{const v=parseFloat(r[ci]);if(!isNaN(v))amt+=v;});
+          /* ══ ขาดหาย v48 #A — ROOT CAUSE ของ "หนี้ที่แสดงไม่ใช่มูลค่าจริง" ══
+             เดิมทุกแถวถูกยุบเหลือตัวเลขเดียว: amt = ผลรวมของ *ทุกคอลัมน์บัญชี*
+             ข้อมูลว่า "เงินก้อนนี้เข้า-ออกบัญชีไหน" ถูกทิ้งตั้งแต่ตอน parse
+             ผลที่ตามมา:
+               • ค่ากาแฟที่รูดบัตรเครดิต กับที่จ่ายจาก K-Bank แยกไม่ออกเลย
+               • Transfer SCB → Krungsri หักลบกันเป็น 0 (ถูกในแง่ยอดรวม
+                 แต่ทำให้ movement รายบัญชีหายไปทั้งคู่)
+               • ยอด −35,387 ในคอลัมน์บัตรเครดิตจึงเป็นก้อนเดียวที่
+                 "แยกประเภทไม่ได้" — ประกอบด้วยยอดรูด ยอดชำระ โอนเข้า
+                 ปนกันหมด แล้วถูกเรียกว่า "หนี้" ทั้งก้อน
+             แก้: เก็บ movement รายบัญชีไว้ใน r.acct = {ชื่อบัญชี: จำนวน}
+             (เก็บเฉพาะช่องที่ไม่เป็นศูนย์ — ขนาดไฟล์ cache แทบไม่เพิ่ม)
+             จากนี้ debtComposition() ใน shared.js จะแตกยอดหนี้ตามประเภทได้ */
+          let amt=0; const acct={};
+          bankCols.forEach(ci=>{
+            const v=parseFloat(r[ci]); if(isNaN(v)||v===0) return;
+            amt+=v;
+            const an = txRaw[1]?.[ci]!=null ? String(txRaw[1][ci]).trim() : (txH[ci]||('col'+ci));
+            if(an) acct[an]=(acct[an]||0)+v;
+          });
           if(amt===0&&type!=='Transfer')continue;
           const ds=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-          rows.push({date:d,dateStr:ds,month:monthKey(d),year:d.getFullYear(),type,
+          rows.push({date:d,dateStr:ds,month:monthKey(d),year:d.getFullYear(),type,acct,
             category:r[ti('Type')]?String(r[ti('Type')]).trim():'Other',
             details:r[ti('Details')]?String(r[ti('Details')]).trim():'',
             amount:Math.round(amt*100)/100});
@@ -2080,7 +2115,7 @@ function parseFile(file){
 // ── Overview ─────────────────────────────────────────────────────────
 function renderOverview(){
   // v40: แยกเงินสดออกจากหนี้ — allCash เดิมเป็นยอด "สุทธิ" ที่หักบัตรเครดิตไปแล้ว
-  const _sb=splitBalances(bankBals);
+  const _sb=effectiveSplit();   // v48 — ยอดจริงจากธนาคารเมื่อมี
   const cashAssets=_sb.cash, liabTotal=_sb.liabilities;
   const allCash=_sb.net;      // = ค่าเดิมทุกประการ (ใช้ต่อในสูตรที่เหลือ)
   const portVal=assets.reduce((s,a)=>s+a.val,0);
@@ -2528,7 +2563,7 @@ function computeEmergencyFund(nMonths){
   const burn = totalNeed / months.length;
   if(!(burn > 0)) return null;
 
-  const cash = splitBalances(bankBals).cash;
+  const cash = effectiveSplit().cash;   // v48
   const monthsCovered = cash / burn;
   const level = monthsCovered >= 6 ? 'ok' : monthsCovered >= 3 ? 'warn' : 'risk';
   return { burn, cash, monthsCovered, level, basisMonths: months.length,
@@ -2611,7 +2646,7 @@ function renderActionNeeded(ef){
   // ③ ดอกเบี้ยหนี้ที่ยังไม่กรอก → แผนปลดหนี้เป็นแค่การเดา
   try{
     const cfg = getDebtCfg();
-    const liab = splitBalances(bankBals).liabAccounts.filter(b=>b.balance<0);
+    const liab = effectiveSplit().liabAccounts.filter(b=>b.balance<0);
     const noApr = liab.filter(b=>!(cfg.apr && cfg.apr[b.name]>0));
     if(noApr.length) items.push({lv:'warn',
       t:`ยังไม่ได้ใส่ดอกเบี้ย ${noApr.length} บัญชี`,
@@ -3006,7 +3041,8 @@ function renderReconciliation(){
 }
 
 function renderAccounts(){
-  const total=bankBals.reduce((s,b)=>s+b.balance,0);
+  // v48 — ยอดรวมต้องเป็นชุดเดียวกับที่ Overview/Debt ใช้ ไม่งั้นสองหน้าไม่ตรงกัน
+  const total=effectiveBals().reduce((s,b)=>s+b.balance,0);
   document.getElementById('acc-total').textContent=fmt(total);
   try{ renderReconciliation(); }catch(e){ console.warn('[v44] recon:', e.message); }
   const active=bankBals.filter(b=>b.balance!==0);
@@ -3392,6 +3428,19 @@ function logValueSnapshot(totalVal){
     const log = JSON.parse(localStorage.getItem('finOS_valueLog')||'[]');
     const today = new Date().toISOString().slice(0,10);
     const entry = {d:today, v:totalVal};
+    /* ขาดหาย v48 #D — valueLog เก็บแค่มูลค่าพอร์ต ไม่เก็บ net worth
+       ผลคือกราฟ "ความมั่งคั่งย้อนหลัง" วาดไม่ได้เลย ทั้งที่เป็นตัวเลขที่
+       เป้า ฿1M/฿3M อ้างอิงอยู่ เก็บเพิ่มอีกฟิลด์ตั้งแต่วันนี้ (ย้อนหลังไม่ได้
+       แต่ยิ่งเริ่มช้ายิ่งเสียเวลา) — ฟิลด์ v เดิมคงความหมายเดิมทุกประการ
+       เพื่อไม่ให้ computeTWR / benchmark ที่อ่านอยู่แล้วเปลี่ยนพฤติกรรม */
+    try{
+      const _s = effectiveSplit();
+      const _insCV = (insPolicies||[]).reduce((s,pl)=>s+(pl.surrender||0), 0);
+      const _nw = _s.cash - _s.liabilities + totalVal + _insCV;
+      if(isFinite(_nw)){ entry.nw = Math.round(_nw);
+                         entry.cash = Math.round(_s.cash);
+                         entry.liab = Math.round(_s.liabilities); }
+    }catch(e){}
     if(degraded.length){ entry.partial = true; entry.degraded = degraded.length; }
 
     const i = log.findIndex(e=>e.d===today);
@@ -3432,6 +3481,7 @@ const REQUIRED_SHARED_FNS = [
   'computeReconciliation', 'splitBalances', 'debtVsInvest', 'buildDebtPlan',
   'classifyHoldings', 'loadHoldingTags',
   'allocateByPlatform', 'qtyByPlatform',
+  'applyReconciliation', 'debtComposition',   // v48 — หน้า Debt พังทั้งหน้าถ้าไม่มี
 ];
 function checkSharedVersion(){
   const missing = REQUIRED_SHARED_FNS.filter(f=>typeof window[f] !== 'function');
@@ -3547,7 +3597,34 @@ function renderPerformance(totalVal){
   const inSum = -flows.filter(f=>f.v<0).reduce((s,f)=>s+f.v,0);
   const outSum =  flows.filter(f=>f.v>0).reduce((s,f)=>s+f.v,0);
   const mEl=document.getElementById('perf-money');
-  if(mEl) mEl.innerHTML = `ลงไป <strong>${fmt(inSum)}</strong><br>ได้คืน <strong style="color:var(--gain)">${fmt(outSum)}</strong> · เหลือ <strong>${fmt(totalVal)}</strong>`;
+  if(mEl){
+    /* ══ ขาดหาย v48 #C — สองตัวเลขที่นักลงทุนต้องรู้ แต่แดชบอร์ดไม่เคยบอก ══
+       1) พอร์ตโตเพราะ "เติมเงินเข้าไป" หรือเพราะ "ตลาดขึ้น"?
+          ตัวเลข ฿X ที่โตขึ้นปีนี้ ถ้ามาจากการเติมเงินล้วน = ผลตอบแทน 0
+          แต่หน้าจอเดิมโชว์แค่ยอดรวม ทำให้เข้าใจผิดว่าลงทุนได้ผลดี
+          กำไรจากตลาด = มูลค่าปัจจุบัน + เงินที่ได้คืน − เงินที่ใส่เข้าไป
+       2) ผลตอบแทนจริงหลังเงินเฟ้อ (real return)
+          XIRR ที่โชว์อยู่เป็น nominal ล้วน เงินเฟ้อไทยกินไปเท่าไรไม่มีใครบอก
+          TH_CPI อยู่ใน market data อยู่แล้ว — หักออกได้ตรงๆ */
+    const netIn   = inSum - outSum;              // เงินที่ยังจมอยู่ในพอร์ต
+    const mktGain = totalVal + outSum - inSum;   // ส่วนที่ตลาดสร้างให้
+    const gainPct = inSum>0 ? mktGain/inSum*100 : null;
+    const gc = mktGain>=0 ? 'var(--gain)' : 'var(--loss)';
+    let html = `ลงไป <strong>${fmt(inSum)}</strong><br>`
+             + `ได้คืน <strong style="color:var(--gain)">${fmt(outSum)}</strong> · เหลือ <strong>${fmt(totalVal)}</strong>`
+             + `<br><span style="color:var(--muted2)">เงินตัวเองสุทธิ ${fmt(netIn)} · `
+             + `ตลาดสร้างให้ <strong style="color:${gc}">${fmtSign(mktGain)}</strong>`
+             + (gainPct!=null?` (${gainPct>=0?'+':'−'}${Math.abs(gainPct).toFixed(1)}%)`:'')
+             + `</span>`;
+    const cpi = (typeof mdNum==='function') ? mdNum('TH_CPI') : null;
+    if(r!==null && cpi!=null && isFinite(cpi)){
+      const real = ((1+r)/(1+cpi/100) - 1) * 100;   // Fisher — ไม่ใช่แค่ลบกันตรงๆ
+      html += `<br><span style="color:var(--muted2)">หลังเงินเฟ้อไทย ${cpi.toFixed(1)}% → `
+            + `<strong style="color:${real>=0?'var(--gain)':'var(--loss)'}">${real>=0?'+':'−'}${Math.abs(real).toFixed(2)}%/ปี</strong> `
+            + `<span style="color:var(--muted)">(real return — กำลังซื้อที่เพิ่มขึ้นจริง)</span></span>`;
+    }
+    mEl.innerHTML = html;
+  }
   const t0=new Date(Math.min(...flows.map(f=>f.t)));
   const yrs=((nowT-t0.getTime())/(365*86400e3)).toFixed(1);
   const pEl=document.getElementById('perf-period');
@@ -4382,10 +4459,16 @@ function gsProcessData(map){
         if(!['Expense','Income','Transfer','Savings','Bills','Debt'].includes(txType))continue;
         const rawDate=r[ti('Date')];
         const d=parseDate(rawDate);if(!d||isNaN(d.getTime()))continue;
-        let amt=0;
-        for(const ci of bankCols){const v=parseFloat(r[ci]||0);if(!isNaN(v))amt+=v;}
+        // ขาดหาย v48 #A — ต้องเก็บ movement รายบัญชี (ดูคำอธิบายในเส้นทาง Excel)
+        let amt=0; const acct={};
+        for(const ci of bankCols){
+          const v=parseFloat(r[ci]||0); if(isNaN(v)||v===0) continue;
+          amt+=v;
+          const an = bankNameRow[ci]!=null ? String(bankNameRow[ci]).trim() : (hArr[ci]||('col'+ci));
+          if(an) acct[an]=(acct[an]||0)+v;
+        }
         if(amt===0&&txType!=='Transfer')continue;
-        rows.push({date:d,
+        rows.push({date:d,acct,
           dateStr:`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`,
           month:monthKey(d),year:d.getFullYear(),type:txType,
           category:r[ti('Type')]?String(r[ti('Type')]).trim():'Other',
@@ -5145,8 +5228,10 @@ function saveDataCache(){
   if(_restoringFromCache) return;
   try{
     _syncedAt = Date.now();     // ข้อมูลชุดนี้มาจากชีตจริง ณ เวลานี้
+    // ขาดหาย v48 #B — reconMap ไม่เคยถูก cache ผู้ใช้ที่เปิดแอปโดยไม่ sync
+    // (เช่นออฟไลน์ หรือ token ยังไม่ต่ออายุ) จะเห็น "ยังไม่เคย verify" ทุกครั้ง
     const payload={ savedAt:Date.now(), syncedAt:_syncedAt, txRows, tracker, assets, bankBals, realized,
-                    waccMap, fxMap, platMap,
+                    reconMap, waccMap, fxMap, platMap,
                     insPolicies, insCoverage, totalFee };   // ★ ชื่อตัวแปรจริง (เดิมเขียนผิดเป็น insurance/coverage → ข้อมูลประกันหาย)
     localStorage.setItem(CACHE_KEY, JSON.stringify(payload));
     console.log('[Cache] saved', (JSON.stringify(payload).length/1048576).toFixed(2)+' MB');
@@ -5170,6 +5255,7 @@ function restoreDataCache(){
     txRows   = (p.txRows||[]).map(r=>({...r, date:_d(r.date)}));
     tracker  = (p.tracker||[]).map(r=>({...r, date: r.date? new Date(r.date):null}));
     assets   = p.assets;  bankBals = p.bankBals||[];  realized = p.realized||[];
+    if(p.reconMap && typeof p.reconMap==='object') reconMap = p.reconMap;
     waccMap  = p.waccMap||{}; fxMap = p.fxMap||{}; platMap = p.platMap||{};
     // ★ ต้องแปลง Date กลับเหมือนที่ทำกับ tracker — JSON เก็บ Date เป็น string
     //   ถ้าไม่แปลง p.renewal.getMonth() จะ throw และหน้า Insurance ว่างทั้งหน้า
@@ -5235,7 +5321,7 @@ function savePortfolioToStorage(){
       totalValue:Math.round(totalVal),totalCost:Math.round(totalCost),
       pnl:Math.round(totalPnl),pnlPct:totalCost>0?Math.round(totalPnl/totalCost*100):0,
       allocation:groupMap,topHoldings,
-      cashBalance:splitBalances(bankBals).cash,
+      cashBalance:effectiveSplit().cash,
       lastUpdated:new Date().toISOString().slice(0,10)
     };
     localStorage.setItem('finOS_portfolio',JSON.stringify(summary));
@@ -5274,7 +5360,7 @@ function dbtSetApr(name, val){
    clamp ไม่ให้เกินยอดค้างจริง ไม่งั้น intBal ติดลบแล้วดอกเบี้ยกลายเป็นบวกให้ */
 function dbtSetFree(name, val){
   const v=parseFloat(val);
-  const acct=(splitBalances(bankBals).liabAccounts||[]).find(b=>b.name===name);
+  const acct=(effectiveSplit().liabAccounts||[]).find(b=>b.name===name);
   const cap=acct?Math.abs(Math.min(0,acct.balance)):Infinity;
   saveDebtCfg({ free: { [name]: isFinite(v)&&v>0 ? Math.min(v,cap) : 0 } });
   renderDebt(); renderOverview(); updateDebtBadge();
@@ -5303,7 +5389,7 @@ function dbtBindInputs(){
 }
 function updateDebtBadge(){
   const el=document.getElementById('debt-badge'); if(!el) return;
-  const sb=splitBalances(bankBals);
+  const sb=effectiveSplit();   // v48 — badge ต้องตรงกับหน้า Debt
   if(sb.liabilities<=0){ el.style.display='none'; return; }
   const cfg=getDebtCfg();
   const missing=sb.liabAccounts.filter(b=>b.balance<0 && !(cfg.apr[b.name]>0)).length;
@@ -5311,8 +5397,85 @@ function updateDebtBadge(){
   if(missing){ el.className='bgt-badge warn'; el.textContent='!'; el.title='ยังไม่ได้ใส่ดอกเบี้ย '+missing+' บัญชี'; }
   else { el.className='bgt-badge'; el.textContent=Math.round(sb.liabilities/1000)+'k'; el.title='ยอดหนี้คงเหลือ'; }
 }
+/* ══ v48 — "หนี้ที่แสดงไม่ใช่มูลค่าจริง เพราะแยกประเภทไม่ได้" ══════════
+   ยอด −35,387 ในคอลัมน์บัตรเครดิตคือ *ผลลัพธ์* ไม่ใช่ *สาเหตุ*
+   มันประกอบด้วยยอดรูด ยอดชำระคืน โอนเข้า เงินคืน — ปนกันมาหลายปี
+   ตารางนี้แตกยอดออกตามประเภทธุรกรรมที่โพสต์เข้าบัญชีนั้นจริง (r.acct)
+   คำถามที่ตอบได้จากตารางนี้ และเดิมตอบไม่ได้เลย:
+     • หนี้ก้อนนี้เกิดจากรูดค่าอะไรมากที่สุด
+     • ชำระคืนไปแล้วกี่ % ของยอดที่รูด (repayRate < 1 = หนี้กำลังโต)
+     • เดือนนี้หนี้โตขึ้นหรือลดลง และโตเพราะรูดหรือเพราะไม่ได้จ่าย   */
+function renderDebtComposition(liabAccounts){
+  const el=document.getElementById('dbt-composition'); if(!el) return;
+  const names=(liabAccounts||[]).map(b=>b.name);
+  if(!names.length){ el.innerHTML=''; return; }
+
+  const mk=availableMonths[curMonthIdx];
+  const comp=debtComposition(txRows, names, mk);
+  const usable=names.map(n=>comp[n]).filter(o=>o && o.hasDetail);
+
+  if(!usable.length){
+    el.innerHTML=`<div style="background:var(--bg3);border:1px dashed var(--border2);border-radius:12px;padding:16px 18px;font-size:12px;line-height:1.9;color:var(--muted)">
+      ยังแตกยอดหนี้ตามประเภทไม่ได้ — ข้อมูลชุดนี้มาจาก cache รุ่นก่อน v48<br>
+      <span style="color:var(--muted2);font-size:11px">กด Sync อีกครั้งเพื่อให้ระบบเก็บรายการแยกตามบัญชี แล้วตารางนี้จะขึ้นเอง</span></div>`;
+    return;
+  }
+
+  const TL={Expense:'ค่าใช้จ่าย',Bills:'บิล/ค่างวด',Transfer:'โอน/ชำระ',
+            Savings:'เงินออม',Debt:'ชำระหนี้',Income:'รายรับ/เงินคืน'};
+  const TC={Expense:'var(--expense)',Bills:'#ff9f0a',Transfer:'var(--savings)',
+            Savings:'#4cc9f0',Debt:'var(--debt)',Income:'var(--gain)'};
+
+  el.innerHTML=usable.map(o=>{
+    const acc=(liabAccounts||[]).find(b=>b.name===o.name)||{};
+    const bal=Math.abs(Math.min(0,acc.balance||0));
+    const maxC=Math.max(1,...o.topCharge.map(x=>x.amt));
+    const rows=o.topCharge.slice(0,6).map(x=>`
+      <div style="display:flex;align-items:center;gap:10px;padding:5px 0">
+        <span style="font-size:11px;color:var(--muted2);width:86px;flex-shrink:0">${escHtml(TL[x.type]||x.type)}</span>
+        <div style="flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden">
+          <div style="height:5px;width:${clampPct(x.amt/maxC*100)}%;background:${TC[x.type]||'#5a5a8a'};border-radius:3px"></div></div>
+        <span style="font-size:11px;color:var(--text);width:82px;text-align:right">${fmt(x.amt)}</span>
+        <span style="font-size:10px;color:var(--muted);width:44px;text-align:right">${x.n} รก.</span>
+      </div>`).join('');
+
+    const rr=o.repayRate;
+    const rrTxt = rr==null ? 'ยังไม่มียอดรูด'
+      : `ชำระคืนแล้ว <strong style="color:${rr>=1?'var(--gain)':rr>=.9?'var(--debt)':'var(--loss)'}">${(rr*100).toFixed(0)}%</strong> ของยอดที่รูดทั้งหมด`;
+    const mTxt = o.mNet===0 ? 'เดือนนี้ยังไม่มีรายการ'
+      : o.mNet>0 ? `<strong style="color:var(--gain)">เดือนนี้หนี้ลดลง ${fmt(o.mNet)}</strong> (รูด ${fmt(o.mCharged)} · จ่าย ${fmt(o.mRepaid)})`
+                 : `<strong style="color:var(--loss)">เดือนนี้หนี้เพิ่ม ${fmt(Math.abs(o.mNet))}</strong> (รูด ${fmt(o.mCharged)} · จ่าย ${fmt(o.mRepaid)})`;
+
+    return `<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:14px 18px;margin-bottom:10px">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px">
+        <div style="font-size:13px;font-weight:600;color:var(--white);font-family:var(--f-sans)">${escHtml(o.name)}</div>
+        <div style="font-size:11px;color:var(--muted2)">ยอดค้าง <strong style="color:var(--loss)">${fmt(bal)}</strong>
+          · ${o.n.toLocaleString(LOC)} รายการ${o.firstDate?` ตั้งแต่ ${o.firstDate}`:''}</div>
+      </div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:11px;color:var(--muted2);margin-bottom:10px;line-height:1.8">
+        <span>รูดสะสม <strong style="color:var(--expense)">${fmt(o.charged)}</strong></span>
+        <span>ชำระคืนสะสม <strong style="color:var(--gain)">${fmt(o.repaid)}</strong></span>
+        <span>${rrTxt}</span>
+      </div>
+      ${rows}
+      <div style="margin-top:10px;padding-top:9px;border-top:1px solid var(--border);font-size:11px;color:var(--muted2);line-height:1.8">
+        ${mTxt}
+        <br><span style="color:var(--muted)">แถบด้านบน = ยอดที่ทำให้หนี้ "เพิ่ม" แยกตามประเภท — ยอดชำระคืนไม่นับรวมในแถบ
+        เพื่อให้เห็นว่าหนี้เกิดจากอะไรจริงๆ ไม่ใช่ยอดสุทธิที่หักกลบกันจนดูเล็กลง</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
 function renderDebt(){
-  const sb=splitBalances(bankBals);
+  /* ══ v48 — ยอดหนี้ต้องเป็น "ยอดจริง" ไม่ใช่ยอดที่คำนวณจากธุรกรรมกรอกมือ ══
+     ยอดในคอลัมน์บัตรเครดิตคือผลรวมสะสมของทุกอย่างที่โพสต์เข้าคอลัมน์นั้น
+     ตั้งแต่วันแรก ลืมกรอกครั้งเดียว/กรอกซ้ำครั้งเดียว = ยอดเพี้ยนถาวร
+     ชีต Reconcile มียอดจริงจากแอปธนาคารอยู่แล้ว แต่ไม่เคยถูกใช้กับตัวเลขหนี้
+     ตอนนี้: มียอดจริงและไม่เก่าเกิน 45 วัน → ใช้ยอดจริง · ไม่มี → ใช้ยอดคำนวณ
+     และบอกบนจอเสมอว่าตัวเลขที่เห็นมาจากทางไหน */
+  const _rc = applyReconciliation(bankBals, reconMap);
+  const sb=splitBalances(_rc.bals);
   const hasDebt=sb.liabilities>0;
   document.getElementById('debt-empty').style.display=hasDebt?'none':'block';
   document.getElementById('debt-main').style.display=hasDebt?'block':'none';
@@ -5323,6 +5486,32 @@ function renderDebt(){
   const di=debtVsInvest(sb.liabAccounts,cfg);
   const plan=buildDebtPlan(sb.liabAccounts,cfg);
   const anyApr=di.rows.some(r=>r.apr>0);
+
+  // ── แถบที่มาของยอด ──────────────────────────────────────────────────
+  const srcEl=document.getElementById('dbt-source');
+  if(srcEl){
+    const liabNames=sb.liabAccounts.map(b=>b.name);
+    const nBank=liabNames.filter(n=>_rc.source[n]==='bank').length;
+    const nStale=liabNames.filter(n=>_rc.source[n]==='stale').length;
+    const nComp=liabNames.length-nBank-nStale;
+    const verified=nComp===0&&nStale===0;
+    const C=verified?{b:'rgba(0,212,160,.32)',g:'rgba(0,212,160,.06)',c:'var(--gain)'}
+                    :{b:'rgba(255,149,0,.32)',g:'rgba(255,149,0,.06)',c:'var(--debt)'};
+    const parts=[];
+    if(nBank)  parts.push(`<strong style="color:var(--gain)">${nBank} บัญชี</strong> ใช้ยอดจริงจากธนาคาร${_rc.asOf?' (ล่าสุด '+_rc.asOf+')':''}`);
+    if(nStale) parts.push(`<strong style="color:var(--debt)">${nStale} บัญชี</strong> มียอดจริงแต่เก่ากว่า 45 วัน — ใช้ยอดคำนวณแทน`);
+    if(nComp)  parts.push(`<strong style="color:var(--debt)">${nComp} บัญชี</strong> ใช้ยอดคำนวณจากธุรกรรมที่กรอกมือ`);
+    srcEl.innerHTML=`<div style="background:${C.g};border:1px solid ${C.b};border-radius:10px;padding:11px 15px;font-size:11.5px;line-height:1.8;color:var(--muted2)">
+      <span style="color:${C.c};font-weight:700">${verified?'✓ ยอดหนี้ตรวจสอบแล้ว':'⚠ ยอดหนี้บางส่วนยังไม่ถูกตรวจสอบ'}</span>
+      · ${parts.join(' · ')}
+      ${nComp||nStale?`<br><span style="color:var(--muted)">ยอดคำนวณคือผลรวมสะสมของทุกรายการที่โพสต์เข้าคอลัมน์นั้นตั้งแต่วันแรก — ลืมกรอกครั้งเดียวก็เพี้ยนถาวร กรอกยอดจริงในชีต <strong>Reconcile</strong> เพื่อล็อกตัวเลขนี้</span>`:''}
+      ${Math.abs(_rc.adopted)>1?`<br><span style="color:var(--muted)">ผลต่างที่ยอมรับเข้ามาจากการ reconcile: ${fmtSign(_rc.adopted)}</span>`:''}
+    </div>`;
+  }
+
+  // ── หนี้ก้อนนี้มาจากอะไร ────────────────────────────────────────────
+  try{ renderDebtComposition(sb.liabAccounts); }
+  catch(e){ console.warn('[v48] debt composition:', e.message); }
 
   // ควบคุมฟอร์ม
   const stEl=document.getElementById('dbt-strategy'); if(stEl) stEl.value=cfg.strategy;
