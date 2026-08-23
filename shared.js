@@ -69,11 +69,21 @@ const LIVE_META = {
 function loadActions(){ try{ return JSON.parse(localStorage.getItem('finOS_actions')||'null'); }catch(e){ return null; } }
 async function fetchActionsData(){
   try{
-    const r = await fetch('market-data.json?t='+new Date().toISOString().slice(0,10)); // cache-bust รายวัน
-    if(!r.ok) return null;
+    /* BUGFIX v48 #20 — cache-bust เดิมใช้ "วันที่" อย่างเดียว
+       แต่ pipeline รัน 2 ครั้ง/วัน (06:30 และ 18:30) รอบบ่ายจึงถูก
+       HTTP cache ของเบราว์เซอร์/CDN กลืนหายทั้งรอบ เพราะ URL ไม่เปลี่ยน
+       เปลี่ยนเป็นถังละ 1 ชม. + cache:'no-store' ให้ชัดเจนไปเลย */
+    const bucket = Math.floor(Date.now()/36e5);        // เปลี่ยนทุกชั่วโมง
+    const r = await fetch('market-data.json?t='+bucket, {cache:'no-store'});
+    if(!r.ok){ console.warn('[Actions] market-data.json HTTP '+r.status); return null; }
     const j = await r.json();
-    if(j && j.data){ localStorage.setItem('finOS_actions', JSON.stringify(j)); return j; }
-  }catch(e){ console.log('[Actions] ยังไม่มี market-data.json (pipeline ยังไม่รัน) — ข้าม'); }
+    if(j && j.error){ console.warn('[Actions] offline — ไม่มีข้อมูลใน cache'); return null; }
+    if(j && j.data){
+      localStorage.setItem('finOS_actions', JSON.stringify(j));
+      return j;
+    }
+    console.warn('[Actions] market-data.json ไม่มีคีย์ data — รูปแบบไฟล์เปลี่ยน?');
+  }catch(e){ console.warn('[Actions] ดึง market-data.json ไม่สำเร็จ:', e.message); }
   return null;
 }
 function mergeActionsIntoMarket(md){
@@ -116,6 +126,23 @@ function loadMarketData(){
 }
 // เรียกเมื่อเขียนทับ localStorage โดยตรง (เช่น restore backup) เพื่อบังคับให้อ่านใหม่
 function invalidateMarketCache(){ _mdCacheKey = null; _mdCacheVal = null; }
+
+// ── v48 #21: ตัวไหนที่ pipeline มีราคาให้ แต่ยังไปไม่ถึงจอ ────────────
+// ใช้ debug อาการ "ราคา X ไม่มา" ได้ในบรรทัดเดียวจาก console:
+//   pipelinePriceReport()
+// เดิมต้องไล่เดาว่าปัญหาอยู่ที่ pipeline / localStorage / resolvePrices
+function pipelinePriceReport(){
+  const act = loadActions();
+  if(!act){ console.warn('finOS_actions ว่าง — fetchActionsData() ไม่เคยรันสำเร็จ'); return null; }
+  const px = act.prices || {};
+  const age = marketDataAge();
+  const out = { generated_at: act.generated_at, ageLabel: age && age.label,
+                nPrices: Object.keys(px).length, missing: (act.stats||{}).prices_missing || [],
+                sample: {} };
+  Object.entries(px).slice(0,50).forEach(([k,v])=>{ out.sample[k] = `${v.price} ${v.ccy} @ ${v.updated}`; });
+  console.table(out.sample); console.log(out);
+  return out;
+}
 
 // ═══ #12 — pipeline freshness ═════════════════════════════════════════
 // เหตุผลที่ต้องมี: UI มีจุดเขียว .dot-live กระพริบ `animation:pulse 2s infinite`

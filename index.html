@@ -4339,6 +4339,9 @@ async function gsSync(){
          • TWR ขึ้น "⏳ สะสมข้อมูล" ทั้งที่ Value_Log ในชีตมีเป็นร้อยวัน
          • ราคาจากชีต Market_Data ยังไม่เข้า → resolvePrices() ตกไปใช้ cached
        แก้: merge ทุกอย่างให้ครบก่อน แล้วค่อย process + render */
+    // #19 — ดึง market-data.json ใหม่ทุกครั้งที่ sync ไม่งั้นราคา pipeline
+    // (Gold, หุ้นไทยที่ IMPORTXML พัง) จะค้างที่ค่าเดิมตลอดไป
+    await refreshMarketFeeds('sync');
     saveMarketData(map['Market_Data']);
     if(typeof invalidateMarketCache==='function') invalidateMarketCache();
     mergeValueLogFromSheet(map['Value_Log']);   // ประวัติมูลค่าพอร์ตรายวัน → TWR ไม่มีวันโหว่
@@ -4697,10 +4700,62 @@ function gsScheduleAutoSync(){
 }
 
 // Initialize on load
+/* ══ BUGFIX v48 #19 — "ราคา Gold ไม่มา" + "ข้อมูลตลาดไม่อัพเดต" ═════════
+   ต้นเหตุเดียวกันทั้งสองอาการ และมันร้ายแรงกว่าที่คิด:
+
+     shared.js นิยาม fetchActionsData()   → ดึง market-data.json  → เขียน finOS_actions
+     shared.js นิยาม fetchExternalData()  → ดึง CoinGecko / F&G   → เขียน finOS_ext
+
+     **ไม่มีไฟล์ไหนในโปรเจกต์เรียกสองฟังก์ชันนี้เลยแม้แต่ครั้งเดียว**
+     (grep ทั้ง repo: เจอแค่บรรทัดที่ประกาศฟังก์ชัน ไม่มี call site)
+
+   ผลคือ localStorage['finOS_actions'] ค้างอยู่ที่ค่าที่เคยถูกเขียนไว้
+   ตั้งแต่เวอร์ชันเก่า แล้วไม่เคยถูกเขียนทับอีกเลย ทุกอย่างที่อ่านมันจึงเก่าตาม:
+
+     marketDataAge()    อ่าน finOS_actions.generated_at → "ข้อมูล 9 วันก่อน"
+                        ทั้งที่ GitHub Actions รันสำเร็จเมื่อ 10 ชม.ที่แล้ว
+                        (workflow ไม่ผิด — แอปไม่เคยไปหยิบไฟล์ที่มันสร้าง)
+
+     pipelinePricesTHB() อ่าน loadActions().prices → ราคาเก่า/ไม่มี
+                        Gold อยู่ใน pipeline เท่านั้น (Yahoo GC=F) เพราะ
+                        IMPORTXML ในชีตให้ #N/A มาตลอด → resolvePrices()
+                        ตกไปชั้น sheet (พัง) แล้วตกไป last-known-price
+                        = "ราคา Gold ไม่มา"
+
+   แก้: เรียกทั้งสองตัวจริงๆ ทั้งตอน boot และก่อน sync ทุกครั้ง
+   แล้ว invalidate cache ของ loadMarketData() เพื่อให้ merge chain อ่านใหม่ */
+async function refreshMarketFeeds(reason){
+  const [act, ext] = await Promise.all([
+    fetchActionsData().catch(e=>{ console.warn('[feeds] market-data.json:', e.message); return null; }),
+    fetchExternalData().catch(e=>{ console.warn('[feeds] external:', e.message); return null; })
+  ]);
+  invalidateMarketCache();
+  if(act && act.generated_at){
+    const nP = act.prices ? Object.keys(act.prices).length : 0;
+    console.log(`[feeds] market-data.json ${reason||''} — generated ${act.generated_at} · ${nP} prices`);
+  } else {
+    console.warn('[feeds] ไม่ได้ market-data.json — ราคาจาก pipeline (รวม Gold) จะไม่อัพเดต');
+  }
+  return act;
+}
+
 window.addEventListener('DOMContentLoaded',()=>{
   // v45 — ตรวจเวอร์ชันก่อนทำอย่างอื่น ถ้าไม่ตรงก็ไม่ต้องเสียเวลา sync (มันจะล้มอยู่ดี)
   if(!checkSharedVersion()) return;
-  setTimeout(gsInit,800);
+  // #19 — ต้องดึง feed ก่อน gsInit เสมอ ไม่งั้นหน้าแรกวาดด้วยราคาเก่า
+  refreshMarketFeeds('boot').finally(()=>{
+    // ถ้าหน้าถูกวาดไปแล้วจาก cache ให้วาดซ้ำด้วยราคาใหม่
+    try{
+      if(assets && assets.length){
+        // ไม่มีตัวแปร currentPage ในแอป — อ่านจาก DOM ตรงๆ
+        const act=document.querySelector('.page.active');
+        const cur=act ? act.id.replace(/^page-/,'') : 'overview';
+        renderedPages.clear();
+        switchPage(cur);
+      }
+    }catch(e){ console.warn('[feeds] re-render:', e.message); }
+    setTimeout(gsInit,800);
+  });
 });
 
 // GIS standard callback — fires when library fully loaded
