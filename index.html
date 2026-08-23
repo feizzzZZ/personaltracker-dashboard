@@ -1126,13 +1126,9 @@ select.month-display{text-align-last:center;outline:none}
         <div class="sc"><div class="sc-lbl">🚀 เครื่องยนต์ของพอร์ต (XIRR สูงสุด)</div><div id="perf-top" style="font-size:12px;line-height:2;margin-top:6px">—</div></div>
         <div class="sc"><div class="sc-lbl">⚓ ตัวถ่วง (XIRR ต่ำสุด)</div><div id="perf-bottom" style="font-size:12px;line-height:2;margin-top:6px">—</div></div>
       </div>
-      <div class="sg" style="grid-template-columns:1fr">
-        <div class="sc" style="--g:rgba(124,111,236,.1)">
-          <div class="sc-lbl">⚔️ คุณ vs ตลาด — ถ้า cashflow เดียวกัน DCA เข้า S&P 500 (คิดเป็นบาท รวมผล FX)</div>
-          <div class="sc-val" id="perf-bench" style="font-size:16px;line-height:1.8">—</div>
-          <div class="sc-sub" id="perf-bench-sub"></div>
-        </div>
-      </div>
+      <!-- v48 — เอาการ์ด "คุณ vs ตลาด" (benchmark S&P 500) ออกตามที่ผู้ใช้ขอ
+           benchmarkXIRR() ยังอยู่ใน shared.js เผื่อจะเรียกกลับมาใช้ภายหลัง
+           แต่ไม่มีอะไรใน UI เรียกแล้ว — ตัดทั้ง markup และ render block -->
 
       <div class="sl sl-mt">Where are your assets</div>
       <div class="plat-grid" id="pf-plat-grid" style="margin-bottom:18px"></div>
@@ -1808,7 +1804,21 @@ function parseFile(file){
             const an = txRaw[1]?.[ci]!=null ? String(txRaw[1][ci]).trim() : (txH[ci]||('col'+ci));
             if(an) acct[an]=(acct[an]||0)+v;
           });
-          if(amt===0&&type!=='Transfer')continue;
+          /* ══ BUGFIX v48 #18 — บั๊กที่ทำให้ "ชำระคืนสะสม ฿0" ══════════════
+             `if(amt===0 && type!=='Transfer') continue;`
+             amt คือผลรวมข้ามทุกคอลัมน์ ดังนั้นรายการ *สองขา* ที่หักกันพอดี
+             จะได้ amt = 0 แล้วถูกทิ้งทั้งแถว เว้นแต่ type จะเป็น 'Transfer'
+             บนชีตนี้ รายการจ่ายบัตร "Clear Debt SCB Up2ME" ถูกบันทึกเป็น
+             type = **Debt** (ไม่ใช่ Transfer) และมีสองขา:
+               SCB Up2ME +7,661.47   /   SCB-Bank −7,661.47   → amt = 0
+             ⇒ ยอดชำระบัตรทุกครั้งตลอด 3 ปี (34 แถว ~฿217k) หายไปจาก txRows
+               ทั้งหมด ไม่เคยถูกนับที่ไหนเลยในแอป
+             อาการที่เห็น: บล็อกองค์ประกอบหนี้ขึ้น "ชำระคืนสะสม ฿0 · 0%"
+             ทั้งที่จ่ายบัตรมาตลอด และหน้า Transactions ก็ไม่มีรายการจ่ายบัตร
+             แก้: ทิ้งแถวก็ต่อเมื่อ *ไม่มีการเคลื่อนไหวในบัญชีใดเลยจริงๆ*
+             (แถวสองขาให้ amt = 0 เหมือนเดิม จึงไม่กระทบยอดรวมหน้าไหน
+              แต่ r.acct จะมีข้อมูลรายบัญชีครบ) */
+          if(Object.keys(acct).length===0 && type!=='Transfer') continue;
           const ds=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
           rows.push({date:d,dateStr:ds,month:monthKey(d),year:d.getFullYear(),type,acct,
             category:r[ti('Type')]?String(r[ti('Type')]).trim():'Other',
@@ -3481,7 +3491,7 @@ const REQUIRED_SHARED_FNS = [
   'computeReconciliation', 'splitBalances', 'debtVsInvest', 'buildDebtPlan',
   'classifyHoldings', 'loadHoldingTags',
   'allocateByPlatform', 'qtyByPlatform',
-  'applyReconciliation', 'debtComposition',   // v48 — หน้า Debt พังทั้งหน้าถ้าไม่มี
+  'applyReconciliation', 'debtComposition', 'isCreditAccount',   // v48 — หน้า Debt พังทั้งหน้าถ้าไม่มี
 ];
 function checkSharedVersion(){
   const missing = REQUIRED_SHARED_FNS.filter(f=>typeof window[f] !== 'function');
@@ -3582,7 +3592,6 @@ function renderPerformance(totalVal){
     });
     [['perf-money','ยังไม่มีธุรกรรมซื้อ/ขายในชีต Asset_Tracker'],
      ['perf-period',''],['perf-top','—'],['perf-bottom','—'],
-     ['perf-bench','—'],['perf-bench-sub',''],
      ['perf-twr-sub','TWR ต้องมีธุรกรรมลงทุนอย่างน้อย 1 รายการ']
     ].forEach(([id,v])=>{ const e=document.getElementById(id); if(e){ e.textContent=v; e.style.color=''; } });
     return;
@@ -3648,49 +3657,6 @@ function renderPerformance(totalVal){
     : '<span style="color:var(--muted2);font-size:11px">ยังมีสินทรัพย์ไม่พอจะแยกกลุ่มบน/ล่าง</span>';
 
   // TWR — เริ่มเก็บประวัติมูลค่าวันนี้
-  // ⚔️ Benchmark: จำลอง cashflow เดิมเข้า S&P 500
-  const bEl=document.getElementById('perf-bench'), bsEl=document.getElementById('perf-bench-sub');
-  if(bEl && bsEl){
-    const bm = benchmarkXIRR(flows);
-    // ★ รีเซ็ตสีทุกครั้งก่อนเขียนใหม่ — สาขา error ตั้ง style.color เป็น --debt ไว้
-    //   ถ้าไม่ล้าง พอ render รอบถัดไปสำเร็จ ข้อความจะยังเป็นสีส้มค้างจากรอบก่อน
-    bEl.style.color='';
-    if(bm && !bm.error && r!==null){
-      const diff=(r-bm.rate)*100;
-      const verdict = diff>=0
-        ? `<strong style="color:var(--gain)">🏆 ชนะตลาด +${diff.toFixed(2)}pp</strong>`
-        : `<strong style="color:var(--loss)">📉 แพ้ตลาด ${diff.toFixed(2)}pp</strong>`;
-      bEl.innerHTML = `พอร์ตคุณ <strong style="color:${r>=0?'var(--gain)':'var(--loss)'}">${(r*100).toFixed(2)}%/ปี</strong>`+
-        ` &nbsp;vs&nbsp; S&P 500 <strong style="color:var(--savings)">${(bm.rate*100).toFixed(2)}%/ปี</strong> &nbsp;→&nbsp; ${verdict}`;
-      bsEl.textContent = `จำลอง ${flows.length} cashflows เข้า ^GSPC ราคารายสัปดาห์ × USD/THB · `+
-        `มูลค่าปลายทางจำลอง ${fmt(bm.terminal)} vs จริง ${fmt(totalVal)} · ราคาถึง ${bm.asOf}`;
-    } else {
-      // #24 — บอกเหตุผลจริงที่เทียบไม่ได้ แทนข้อความเดียวที่ใช้ครอบทุกกรณี
-      const e = bm && bm.error;
-      if(e==='out_of_range'){
-        bEl.textContent='⚠️ เทียบไม่ได้ — ธุรกรรมเก่ากว่าช่วงข้อมูลราคา';
-        bEl.style.color='var(--debt)';
-        bsEl.textContent=`ธุรกรรม ${bm.nOutside}/${bm.nTotal} รายการเกิดก่อน ${bm.coverageFrom} `+
-          `(เก่าสุด ${bm.earliestFlow}) ซึ่งอยู่นอกช่วงราคาย้อนหลัง 5 ปีที่ pipeline ส่งมา — `+
-          `จำลองต่อจะได้ตัวเลขที่ผิด จึงไม่แสดง`;
-      } else if(e==='gap'){
-        bEl.textContent='⚠️ เทียบไม่ได้ — ข้อมูลราคาขาดช่วง';
-        bEl.style.color='var(--debt)';
-        bsEl.textContent=`ไม่มีราคา S&P 500 หรือ USD/THB ณ ${bm.at} — รอ pipeline เติมข้อมูลรอบถัดไป`;
-      } else if(e==='xirr_no_solution'){
-        bEl.textContent='⚠️ คำนวณ XIRR ไม่ลู่เข้า';
-        bEl.style.color='var(--debt)';
-        bsEl.textContent='รูปแบบ cashflow ไม่มีคำตอบเดียวที่ชัดเจน (มักเกิดเมื่อเงินเข้า-ออกสลับกันถี่มาก)';
-      } else if(r===null){
-        bEl.textContent='⏳ ยังคำนวณ XIRR พอร์ตไม่ได้';
-        bsEl.textContent='ต้องมีธุรกรรมซื้อ/ขายอย่างน้อย 2 รายการต่างวันกัน จึงจะเทียบกับตลาดได้';
-      } else {
-        bEl.textContent='⏳ รอข้อมูลราคาย้อนหลังจาก pipeline';
-        bsEl.textContent='pipeline รอบถัดไป (06:30 พรุ่งเช้า) จะส่ง S&P history มาให้ — หรือกด Run workflow เองที่ GitHub Actions ได้เลย';
-      }
-    }
-  }
-
   purgeCorruptValueLog();          // v44: ล้างประวัติเสียก่อน (ทำครั้งเดียว)
   const log = logValueSnapshot(totalVal);
   const twr = computeTWR(log, flows);
@@ -4467,7 +4433,8 @@ function gsProcessData(map){
           const an = bankNameRow[ci]!=null ? String(bankNameRow[ci]).trim() : (hArr[ci]||('col'+ci));
           if(an) acct[an]=(acct[an]||0)+v;
         }
-        if(amt===0&&txType!=='Transfer')continue;
+        // BUGFIX v48 #18 — ดูคำอธิบายในเส้นทาง Excel (ต้องแก้ทั้งสองที่)
+        if(Object.keys(acct).length===0 && txType!=='Transfer') continue;
         rows.push({date:d,acct,
           dateStr:`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`,
           month:monthKey(d),year:d.getFullYear(),type:txType,
@@ -5407,7 +5374,12 @@ function updateDebtBadge(){
      • เดือนนี้หนี้โตขึ้นหรือลดลง และโตเพราะรูดหรือเพราะไม่ได้จ่าย   */
 function renderDebtComposition(liabAccounts){
   const el=document.getElementById('dbt-composition'); if(!el) return;
-  const names=(liabAccounts||[]).map(b=>b.name);
+  /* v48 rev2 — เดิมแสดงทุกอย่างที่ splitBalances จัดเป็น liability
+     ทำให้บัญชีออมทรัพย์ที่ยอด ฿0 (เศษทศนิยมติดลบ) โผล่ปนมากับบัตรเครดิต
+     ที่นี่กรองอีกชั้น: ต้องเป็นบัตรเครดิตจริง หรือมีหนี้ค้างเกิน 1 บาท */
+  const shown=(liabAccounts||[]).filter(b=>
+    isCreditAccount(b) || Math.abs(Math.min(0, Number(b.balance)||0)) > 1);
+  const names=shown.map(b=>b.name);
   if(!names.length){ el.innerHTML=''; return; }
 
   const mk=availableMonths[curMonthIdx];
@@ -5421,23 +5393,30 @@ function renderDebtComposition(liabAccounts){
     return;
   }
 
-  const TL={Expense:'ค่าใช้จ่าย',Bills:'บิล/ค่างวด',Transfer:'โอน/ชำระ',
-            Savings:'เงินออม',Debt:'ชำระหนี้',Income:'รายรับ/เงินคืน'};
-  const TC={Expense:'var(--expense)',Bills:'#ff9f0a',Transfer:'var(--savings)',
-            Savings:'#4cc9f0',Debt:'var(--debt)',Income:'var(--gain)'};
+  const PAL=['#ff453a','#ff9f0a','#7c6fec','#4cc9f0','#00d4a0','#f472b6','#a78bfa','#5a5a8a'];
 
   el.innerHTML=usable.map(o=>{
     const acc=(liabAccounts||[]).find(b=>b.name===o.name)||{};
     const bal=Math.abs(Math.min(0,acc.balance||0));
-    const maxC=Math.max(1,...o.topCharge.map(x=>x.amt));
-    const rows=o.topCharge.slice(0,6).map(x=>`
-      <div style="display:flex;align-items:center;gap:10px;padding:5px 0">
-        <span style="font-size:11px;color:var(--muted2);width:86px;flex-shrink:0">${escHtml(TL[x.type]||x.type)}</span>
-        <div style="flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden">
-          <div style="height:5px;width:${clampPct(x.amt/maxC*100)}%;background:${TC[x.type]||'#5a5a8a'};border-radius:3px"></div></div>
-        <span style="font-size:11px;color:var(--text);width:82px;text-align:right">${fmt(x.amt)}</span>
-        <span style="font-size:10px;color:var(--muted);width:44px;text-align:right">${x.n} รก.</span>
-      </div>`).join('');
+    /* แกนหลักคือ "ร้านค้า/บริการ" ไม่ใช่ประเภทธุรกรรม
+       เพราะบนชีตนี้ทุกแถวของบัตรเป็น type=Debt เหมือนกันหมด แท่งเดียวเต็มจอ
+       ไม่ได้ตอบคำถาม "หนี้มาจากอะไร" เลย */
+    const TOPN=8;
+    const top=(o.topMerchant||[]).slice(0,TOPN);
+    const restAmt=(o.merchantTotal||0)-top.reduce((s,x)=>s+x.amt,0);
+    const restN=(o.topMerchant||[]).length-top.length;
+    const maxC=Math.max(1,...top.map(x=>x.amt));
+    const bar=(label,amt,n,color,sub)=>`
+      <div style="display:flex;align-items:center;gap:10px;padding:4px 0">
+        <span style="font-size:11px;color:var(--muted2);width:150px;flex-shrink:0;overflow:hidden;
+          text-overflow:ellipsis;white-space:nowrap" title="${escHtml(label)}">${escHtml(label)}</span>
+        <div style="flex:1;min-width:40px;height:5px;background:var(--border);border-radius:3px;overflow:hidden">
+          <div style="height:5px;width:${clampPct(amt/maxC*100)}%;background:${color};border-radius:3px"></div></div>
+        <span style="font-size:11px;color:var(--text);width:84px;text-align:right">${fmt(amt)}</span>
+        <span style="font-size:10px;color:var(--muted);width:80px;text-align:right">${n} รก.${sub?' · '+sub:''}</span>
+      </div>`;
+    const rows=top.map((x,i)=>bar(x.name,x.amt,x.n,PAL[i%PAL.length],''))
+      .join('') + (restAmt>1?bar(`อื่นๆ (${restN} รายการ)`,restAmt,restN,'#3a3a5a',''):'');
 
     const rr=o.repayRate;
     const rrTxt = rr==null ? 'ยังไม่มียอดรูด'
@@ -5460,8 +5439,9 @@ function renderDebtComposition(liabAccounts){
       ${rows}
       <div style="margin-top:10px;padding-top:9px;border-top:1px solid var(--border);font-size:11px;color:var(--muted2);line-height:1.8">
         ${mTxt}
-        <br><span style="color:var(--muted)">แถบด้านบน = ยอดที่ทำให้หนี้ "เพิ่ม" แยกตามประเภท — ยอดชำระคืนไม่นับรวมในแถบ
-        เพื่อให้เห็นว่าหนี้เกิดจากอะไรจริงๆ ไม่ใช่ยอดสุทธิที่หักกลบกันจนดูเล็กลง</span>
+        <br><span style="color:var(--muted)">แถบด้านบน = ยอดที่ <strong>ทำให้หนี้เพิ่ม</strong> แยกตามร้านค้า/บริการ —
+        ยอดชำระคืนไม่นับรวมในแถบ เพื่อให้เห็นว่าหนี้เกิดจากอะไรจริงๆ ไม่ใช่ยอดสุทธิที่หักกลบกันจนดูเล็กลง
+        · <strong>รูดสะสม ≠ ยอดค้าง</strong> — รูดสะสมคือทุกครั้งที่เคยรูดตั้งแต่วันแรก ส่วนยอดค้างคือรูดสะสม − ชำระคืนสะสม</span>
       </div>
     </div>`;
   }).join('');
@@ -5525,7 +5505,7 @@ function renderDebt(){
   const mEl=document.getElementById('dbt-months');
   // BUGFIX v48 #8 — สาขา else ตั้ง style.color เป็น --loss แต่ไม่มีใครล้าง
   // พอผู้ใช้ใส่ "จ่ายเพิ่ม/เดือน" จนแผนกลับมาจบได้ ตัวเลขเดือนยังแดงค้าง
-  // (บั๊กคลาสเดียวกับที่ perf-bench แก้ไปแล้ว — ที่นี่ยังไม่ได้แก้)
+  // (บั๊กคลาสเดียวกับที่การ์ด benchmark เคยแก้ไว้)
   mEl.style.color='';
   if(plan && isFinite(plan.months)){
     mEl.textContent=plan.months+' เดือน';

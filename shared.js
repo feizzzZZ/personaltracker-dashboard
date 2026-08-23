@@ -1004,10 +1004,20 @@ function xirrJS(cfs){
 // จำแนกบัญชี → 'cash' | 'liability'
 // เกณฑ์: type มีคำว่า Credit = หนี้เสมอ (แม้ยอด 0 หรือบวกจากการจ่ายเกิน)
 //        บัญชีอื่นถ้ายอดติดลบ = เบิกเกินบัญชี ถือเป็นหนี้
+/* BUGFIX v48 #17 — บัญชีออมทรัพย์โผล่ในหน้า Debt
+   เดิมตัดสินด้วย `b.balance < 0` ตรงๆ ยอดที่เป็นผลรวมของทศนิยมหลายร้อยแถว
+   มักลงเอยที่ −0.0000000001 (floating point) แทนที่จะเป็น 0 พอดี
+   ผลคือบัญชีที่ยอดเป็นศูนย์จริงๆ ถูกจัดเป็น "หนี้" แล้วโผล่ทั้งในหน้า Debt
+   และในบล็อกองค์ประกอบหนี้ ทั้งที่ ยอดค้าง แสดงเป็น ฿0
+   แก้: ใช้ threshold 1 สตางค์ + แยก flag ว่าเป็นบัญชีเครดิตจริงหรือไม่ */
+const BAL_EPS = 0.005;   // ต่ำกว่า 1 สตางค์ = ถือว่าศูนย์
+function isCreditAccount(b){
+  return /credit|บัตรเครดิต/i.test(String(b && b.type || ''))
+      || /credit card|บัตรเครดิต/i.test(String(b && b.name || ''));
+}
 function classifyAccount(b){
-  const t = String(b.type||'');
-  if(/credit/i.test(t) || /credit/i.test(String(b.name||''))) return 'liability';
-  return (b.balance < 0) ? 'liability' : 'cash';
+  if(isCreditAccount(b)) return 'liability';
+  return (Number(b.balance) < -BAL_EPS) ? 'liability' : 'cash';
 }
 
 // แยก bankBals เป็นสองฝั่ง + ยอดรวม
@@ -1025,7 +1035,10 @@ function splitBalances(bals){
   // ไม่งั้นยอดบวกนั้นหายไปทั้งจาก cash และ liabilities (liabilities ใช้ min(0,balance) จึงเป็น 0)
   const cash = cashAccounts.reduce((s,b)=>s+b.balance, 0)
              + liabAccounts.reduce((s,b)=>s+Math.max(0,b.balance), 0);
-  const liabilities = liabAccounts.reduce((s,b)=>s+Math.abs(Math.min(0,b.balance)), 0);
+  const liabilities = liabAccounts.reduce((s,b)=>{
+    const v = Math.abs(Math.min(0, Number(b.balance)||0));
+    return s + (v > BAL_EPS ? v : 0);          // #17 — ไม่สะสมเศษทศนิยม
+  }, 0);
   return { cashAccounts, liabAccounts, cash, liabilities, net: cash-liabilities };
 }
 
@@ -1081,10 +1094,26 @@ function applyReconciliation(bals, reconMap, maxAgeDays){
 //   repaid   = ยอดที่ทำให้หนี้ลด     (Transfer/Income หรือรายการบวกใดๆ)
 //   ห้ามใช้ประเภทธุรกรรมตัดสินทิศทางอย่างเดียว เพราะ Transfer ใช้ทั้งจ่ายบัตร
 //   และรูดบัตรโอนออก — ต้องดูเครื่องหมายของยอดในคอลัมน์บัญชีนั้นจริงๆ
+// รวมรายการที่เป็นร้านเดียวกันแต่พิมพ์ต่างกันเล็กน้อยเข้าด้วยกัน
+// (ตัดเลขท้าย/วงเล็บ/ช่องว่างซ้ำ แล้วเทียบแบบไม่สนตัวพิมพ์ แต่คืนรูปแบบเดิมที่พบบ่อยสุด)
+const _MERCH_CACHE = new Map();
+function normMerchant(raw){
+  const s0 = String(raw==null?'':raw).trim();
+  if(!s0) return '';
+  if(_MERCH_CACHE.has(s0)) return _MERCH_CACHE.get(s0);
+  const key = s0.toLowerCase()
+    .replace(/[（(].*?[)）]/g,' ')
+    .replace(/[#\-–—]?\s*\d{1,4}\s*$/,' ')
+    .replace(/\s+/g,' ').trim();
+  const out = key ? s0.replace(/\s+/g,' ').trim() : s0;
+  _MERCH_CACHE.set(s0, out);
+  return out;
+}
+
 function debtComposition(txRows, accountNames, monthKey){
   const want = new Set(accountNames||[]);
   const out = {};
-  want.forEach(n=>{ out[n] = { name:n, byType:{}, charged:0, repaid:0, net:0,
+  want.forEach(n=>{ out[n] = { name:n, byType:{}, byMerchant:{}, charged:0, repaid:0, net:0,
                                mCharged:0, mRepaid:0, mNet:0, n:0, mN:0,
                                firstDate:null, lastDate:null, hasDetail:false }; });
 
@@ -1094,11 +1123,26 @@ function debtComposition(txRows, accountNames, monthKey){
       const o = out[name];
       if(!o || !isFinite(amt) || amt === 0) return;
       o.hasDetail = true;
+      /* v48 rev2 — เดิมแตกตาม r.type ซึ่งบนชีตนี้ทุกแถวของบัตรเครดิตเป็น
+         'Debt' เหมือนกันหมด (225/225 แถว) แถบจึงมีแท่งเดียวชื่อ "ชำระหนี้"
+         ที่ยาวเต็มความกว้าง = ไม่ได้บอกอะไรเลย
+         มิติที่บอกจริงว่า "หนี้มาจากอะไร" คือ Details (ร้านค้า/บริการ)
+         — Canva, Claude AI, Google Storage, Lotus, Grab, ดอกเบี้ยบัตรเครดิต
+         จึงใช้ Details เป็นแกนหลัก และเก็บ type ไว้เป็นข้อมูลรอง */
       const t = r.type || 'Other';
       if(!o.byType[t]) o.byType[t] = { in:0, out:0, n:0 };
       if(amt < 0){ o.byType[t].out += -amt; o.charged += -amt; }
       else       { o.byType[t].in  +=  amt; o.repaid  +=  amt; }
       o.byType[t].n++; o.n++; o.net += amt;
+
+      // แกนหลัก: ร้านค้า/รายละเอียด (เฉพาะฝั่งที่ทำให้หนี้เพิ่ม)
+      if(amt < 0){
+        const m = normMerchant(r.details) || (r.category || 'ไม่ระบุ');
+        if(!o.byMerchant[m]) o.byMerchant[m] = { amt:0, n:0, last:null };
+        o.byMerchant[m].amt += -amt; o.byMerchant[m].n++;
+        if(r.dateStr && (!o.byMerchant[m].last || r.dateStr > o.byMerchant[m].last))
+          o.byMerchant[m].last = r.dateStr;
+      }
       if(monthKey && r.month === monthKey){
         if(amt < 0) o.mCharged += -amt; else o.mRepaid += amt;
         o.mNet += amt; o.mN++;
@@ -1115,6 +1159,11 @@ function debtComposition(txRows, accountNames, monthKey){
     o.topCharge = Object.entries(o.byType)
       .map(([t,v])=>({type:t, amt:v.out, n:v.n}))
       .filter(x=>x.amt>0).sort((a,b)=>b.amt-a.amt);
+    o.topMerchant = Object.entries(o.byMerchant)
+      .map(([m,v])=>({name:m, amt:v.amt, n:v.n, last:v.last}))
+      .sort((a,b)=>b.amt-a.amt);
+    // ส่วนที่ไม่ติด top N — รวมเป็น "อื่นๆ" แทนที่จะซ่อนหายไปเฉยๆ
+    o.merchantTotal = o.topMerchant.reduce((s,x)=>s+x.amt, 0);
     o.repayRate = o.charged>0 ? o.repaid/o.charged : null;   // <1 = หนี้กำลังโต
     o.mTrend = o.mNet > 0 ? 'down' : o.mNet < 0 ? 'up' : 'flat';
   });
