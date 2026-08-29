@@ -16,7 +16,7 @@ window.LOC = window.LOC || 'th-TH-u-ca-gregory';
 //   • XIRR engine
 // กติกา: ไฟล์นี้ห้ามแตะ DOM ของหน้าใดหน้าหนึ่ง — pure data layer เท่านั้น
 // ═══════════════════════════════════════════════════════════════════
-const APP_BUILD = 'v48';
+const APP_BUILD = 'v49';
 console.log('[Finance OS shared] build', APP_BUILD);
 window.SHARED_BUILD = APP_BUILD;   // v45 — ให้ index.html ตรวจได้ว่าเวอร์ชันตรงกัน
 
@@ -1376,4 +1376,292 @@ function debtVsInvest(liabAccounts, cfg){
   const intTotal  = rows.reduce((s,d)=>s + d.intBal, 0);
   return { rows, expectedReturn: exp, yearlyInterest,
            monthlyInterest: yearlyInterest/12, freeTotal, intTotal };
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// v49 — ANALYST DESK
+// ══════════════════════════════════════════════════════════════════════
+// ทีมนักวิเคราะห์ 5 คน อ่านข้อมูลชุดเดียวกันแต่ตอบคนละคำถาม
+//
+// ทำไมเป็น rule-based ไม่ใช่เรียก LLM:
+//   1. repo เป็น public — เก็บ API key ไว้ในเครื่องผู้ใช้แล้วยิงจาก browser
+//      แปลว่า key โผล่ใน network tab และติดไปกับไฟล์ backup
+//   2. แอปเป็น PWA ที่ต้องทำงานออฟไลน์ได้ นักวิเคราะห์ที่เงียบตอนไม่มีเน็ต
+//      คือนักวิเคราะห์ที่เชื่อถือไม่ได้
+//   3. ตัวเลขการเงินห้ามมั่ว rule-based ให้คำตอบเดิมเสมอกับ input เดิม
+//      และตรวจสอบย้อนกลับได้ทุกบรรทัด — ต่อยอดเป็น hybrid ทีหลังได้
+//      โดยส่ง findings ชุดนี้ให้ LLM เรียบเรียง ไม่ต้องรื้อโครง
+//
+// สัญญาของฟังก์ชัน: pure — รับ ctx ก้อนเดียว คืน array ไม่แตะ DOM/globals
+// ระดับความสำคัญ: 'r' = ต้องแก้, 'y' = เฝ้าดู, 'g' = ผ่าน
+const ANALYST_SEV = { r:3, y:2, g:1 };
+
+/* LOC ถูกประกาศใน index.html ไม่ใช่ที่นี่ — engine ต้องไม่พึ่งตัวแปรของฝั่ง UI
+   ไม่งั้นทดสอบนอกเบราว์เซอร์ไม่ได้ และถ้าลำดับโหลดเปลี่ยนก็พังทั้งชุด
+   (จับได้จาก try/catch รายคน ตอนรันจริงกับข้อมูลในชีต) */
+const _AL = (typeof LOC!=='undefined' && LOC) ? LOC : 'th-TH';
+const _n  = v => Math.round(Number(v)||0).toLocaleString(_AL);
+
+function _pick(findings){
+  // headline = ประเด็นที่หนักสุด ถ้าไม่มีอะไรหนักเลยค่อยชมได้
+  const sorted = [...findings].sort((a,b)=>ANALYST_SEV[b.s]-ANALYST_SEV[a.s]);
+  return sorted[0] || null;
+}
+function _mk(id, name, role, icon, findings, actions){
+  const f = findings.filter(Boolean);
+  const top = _pick(f);
+  const nR = f.filter(x=>x.s==='r').length, nY = f.filter(x=>x.s==='y').length;
+  return { id, name, role, icon,
+           level: nR ? 'r' : nY ? 'y' : 'g',
+           headline: top ? top.t : 'ยังไม่มีข้อมูลพอจะให้ความเห็น',
+           findings: f, actions: (actions||[]).filter(Boolean),
+           counts: { r:nR, y:nY, g:f.length-nR-nY } };
+}
+const _pc = v => (v>=0?'+':'−') + Math.abs(v).toFixed(1) + '%';
+
+// ── 1. Portfolio Analyst ─────────────────────────────────────────────
+function analystPortfolio(c){
+  const F=[], A=[];
+  const held = (c.assets||[]).filter(a=>a.val>0);
+  const tot  = held.reduce((s,a)=>s+a.val,0);
+
+  if(!held.length) return _mk('portfolio','Portfolio Analyst','คุณภาพผลตอบแทน','📊',
+    [{s:'y',t:'ยังไม่มีสินทรัพย์ในพอร์ต',d:'เพิ่มรายการในชีต Asset_Tracker แล้ว sync'}],[]);
+
+  // (1) โตเพราะฝีมือ หรือเพราะเติมเงิน — คำถามแรกที่ต้องตอบเสมอ
+  if(c.moneyIn>0){
+    const gain = c.totalVal + (c.moneyOut||0) - c.moneyIn;
+    const gp   = gain/c.moneyIn*100;
+    F.push({ s: gp<0?'r':gp<10?'y':'g',
+      t:`ตลาดสร้างให้ ${gain>=0?'+':'−'}${_n(Math.abs(gain))} บาท (${_pc(gp)})`,
+      d:`เงินตัวเองสุทธิ ${_n(c.moneyIn-(c.moneyOut||0))} บาท`
+        + ` — ส่วนที่เกินมานี้คือผลงานของพอร์ตจริงๆ ไม่ใช่ผลของการเติมเงิน`});
+  }
+  // (2) XIRR เทียบกับสิ่งที่ทำได้แบบไม่ต้องคิด
+  if(c.xirr!=null){
+    const x=c.xirr*100, hurdle=c.expectedReturn||7;
+    F.push({ s: x<0?'r':x<hurdle?'y':'g',
+      t:`XIRR ${_pc(x)}/ปี เทียบเป้า ${hurdle}%`,
+      d: x<hurdle
+        ? `ต่ำกว่าเป้า ${(hurdle-x).toFixed(1)}pp — ถ้าต่ำกว่าติดต่อกันหลายปี การถือกองดัชนีทั้งก้อนอาจให้ผลดีกว่าเลือกรายตัว`
+        : `เหนือเป้า ${(x-hurdle).toFixed(1)}pp` });
+  }
+  // (3) ตัวถ่วงที่ "ใหญ่พอจะสำคัญ" — ขาดทุน 50% ใน ฿500 ไม่ใช่ปัญหา
+  const drag=(c.perAsset||[]).filter(a=>a.xirr!=null&&a.xirr<-0.10&&a.val>tot*0.03)
+    .sort((a,b)=>a.xirr-b.xirr);
+  if(drag.length){
+    const d0=drag[0];
+    F.push({ s:'y', t:`${drag.length} ตัวถ่วงที่ใหญ่พอจะสำคัญ · หนักสุด ${d0.tk} ${_pc(d0.xirr*100)}/ปี`,
+      d:`${drag.map(d=>d.tk).join(', ')} — รวม ${Math.round(drag.reduce((s,d)=>s+d.val,0)).toLocaleString(_AL)} บาท`
+        + ` (${(drag.reduce((s,d)=>s+d.val,0)/tot*100).toFixed(0)}% ของพอร์ต) ตัวที่ถือเพราะ "รอให้เท่าทุน" คือต้นทุนค่าเสียโอกาส` });
+    A.push(`ทบทวน ${d0.tk}: เหตุผลที่ซื้อตอนแรกยังจริงอยู่ไหม ถ้าไม่ ขาดทุนที่ผ่านมาไม่ใช่เหตุผลให้ถือต่อ`);
+  }
+  // (4) ต้นทุนที่จ่ายไปโดยไม่รู้ตัว
+  if(c.totalFee>0 && c.moneyIn>0){
+    const fp=c.totalFee/c.moneyIn*100;
+    F.push({ s: fp>1?'y':'g', t:`ค่าธรรมเนียมสะสม ${_n(c.totalFee)} บาท (${fp.toFixed(2)}% ของเงินที่ลงไป)`,
+      d: fp>1?'สูงกว่า 1% — ค่าธรรมเนียมกินผลตอบแทนแบบทบต้นเหมือนกัน':'อยู่ในระดับที่ยอมรับได้' });
+  }
+  if(c.xirr!=null && c.twrPct!=null && c.twrDays>=30){
+    const diff=c.twrPct-c.xirr*100;
+    if(Math.abs(diff)>5) F.push({ s:'y', t:`จังหวะเข้าซื้อทำให้ผลต่างจาก TWR ${diff>0?'':'+'}${(-diff).toFixed(1)}pp`,
+      d: diff>0 ? 'พอร์ตทำได้ดีกว่าที่คุณได้รับจริง — แปลว่ามักเติมเงินหลังราคาขึ้นไปแล้ว'
+                : 'คุณได้รับมากกว่าที่พอร์ตทำได้ — จังหวะเติมเงินของคุณดี' });
+  }
+  return _mk('portfolio','Portfolio Analyst','คุณภาพผลตอบแทน','📊',F,A);
+}
+
+// ── 2. Risk Analyst ──────────────────────────────────────────────────
+function analystRisk(c){
+  const F=[], A=[];
+  const held=(c.assets||[]).filter(a=>a.val>0);
+  const tot=held.reduce((s,a)=>s+a.val,0);
+  if(!tot) return _mk('risk','Risk Analyst','จุดที่จะเจ็บถ้าตลาดพัง','🛡',
+    [{s:'y',t:'ยังไม่มีพอร์ตให้ประเมินความเสี่ยง',d:''}],[]);
+
+  // (1) กระจุกตัวรายตัว — อันตรายกว่ากระจุกราย asset class
+  const bySym=[...held].sort((a,b)=>b.val-a.val);
+  const t1=bySym[0], p1=t1.val/tot*100;
+  const _p1sev = ALLOC_META[t1.group]?.illiquid ? (p1>25?'y':'g') : (p1>25?'r':p1>15?'y':'g');
+  F.push({ s:_p1sev, t:`ตัวใหญ่สุด ${t1.ticker} ${p1.toFixed(0)}% ของพอร์ต`,
+    d: p1>15 ? `ถ้า ${t1.ticker} ลง 50% พอร์ตหายทันที ${(p1/2).toFixed(0)}% (${_n(t1.val*0.5)} บาท)`
+             : 'ไม่มีตัวไหนใหญ่พอจะทำพอร์ตพังคนเดียว' });
+  const top3=bySym.slice(0,3).reduce((s,a)=>s+a.val,0)/tot*100;
+  if(top3>50) F.push({s:'y',t:`3 ตัวแรกรวมกัน ${top3.toFixed(0)}% ของพอร์ต`,
+    d:`${bySym.slice(0,3).map(a=>a.ticker).join(' · ')} — จำนวนตัวเยอะไม่ได้แปลว่ากระจายความเสี่ยงแล้ว`});
+
+  // (2) ค่าเงิน — รายจ่ายเป็นบาท 100% แต่สินทรัพย์ไม่ใช่
+  const usd=held.filter(a=>a.currency==='USD').reduce((s,a)=>s+a.val,0);
+  const up=usd/tot*100;
+  if(up>0) F.push({ s:up>60?'y':'g', t:`อิงค่าเงินดอลลาร์ ${up.toFixed(0)}% (${_n(usd)} บาท)`,
+    d:`USD/THB แข็ง/อ่อน 1 บาท ≈ ${_n(usd/(c.usdthb||34))} บาทในมูลค่าพอร์ต`
+      + (up>60?' — รายจ่ายคุณเป็นบาททั้งหมด ความเสี่ยงนี้ไม่มีอะไรหักล้าง':'') });
+
+  // (3) สภาพคล่อง — เงินที่แตะไม่ได้ตอนต้องใช้ คือเงินที่ไม่มี
+  if(c.illiquidPct>0) F.push({ s:c.illiquidPct>35?'y':'g',
+    t:`สินทรัพย์ที่ขายไม่ได้ ${c.illiquidPct.toFixed(0)}% ของความมั่งคั่ง`,
+    d:'กองทุนสำรองเลี้ยงชีพถอนไม่ได้จนกว่าจะออกจากงาน — ตัวเลข Net Worth ที่เห็นจึงใช้จริงได้ไม่หมด' });
+
+  // (4) เงินสำรองฉุกเฉิน — ด่านแรกที่กันไม่ให้ต้องขายพอร์ตตอนตลาดแดง
+  if(c.efMonths!=null) F.push({ s:c.efMonths<3?'r':c.efMonths<6?'y':'g',
+    t:`เงินสำรองฉุกเฉินครอบคลุม ${c.efMonths.toFixed(1)} เดือน`,
+    d: c.efMonths<3
+      ? `ต่ำกว่า 3 เดือน — ถ้ารายได้สะดุดตอนตลาดลง จะถูกบังคับขายพอร์ตที่จุดต่ำสุด ซึ่งเปลี่ยนขาดทุนชั่วคราวให้เป็นขาดทุนถาวร`
+      : 'พอรับแรงกระแทกได้โดยไม่ต้องแตะพอร์ต' });
+
+  // (5) บริบทตลาด — ไม่ทำนาย แค่บอกว่ายืนอยู่ตรงไหน
+  if(c.vix!=null) F.push({ s:c.vix>28?'y':'g', t:`VIX ${c.vix.toFixed(1)} — ${c.vix>28?'ตลาดกำลังกลัว':c.vix<15?'ตลาดนิ่งผิดปกติ':'ปกติ'}`,
+    d: c.vix>28?'ช่วงผันผวนสูงคือช่วงที่ DCA ได้เปรียบที่สุด และเป็นช่วงที่คนหยุด DCA มากที่สุด'
+              :'ความสงบไม่ใช่สัญญาณให้เพิ่มความเสี่ยง' });
+  if(c.efMonths!=null && c.efMonths<6) A.push('เติมเงินสำรองให้ครบ 6 เดือนก่อนเพิ่มเงินลงทุนก้อนใหม่');
+  /* กองที่ขายไม่ได้ (กองทุนสำรองเลี้ยงชีพ) ห้ามแนะนำให้ "ลดน้ำหนัก"
+     — ขายไม่ได้จนกว่าจะออกจากงาน และการหยุดสมทบมักเสียเงินสมทบนายจ้าง
+     ซึ่งเป็นผลตอบแทนทันที 100% คำแนะนำที่ทำตามไม่ได้คือคำแนะนำที่ผิด */
+  const t1Illiquid = ALLOC_META[t1.group]?.illiquid;
+  if(p1>25 && !t1Illiquid)
+    A.push(`ลดน้ำหนัก ${t1.ticker} หรือหยุดเติมเข้าตัวนี้จนสัดส่วนกลับมาต่ำกว่า 25%`);
+  else if(p1>25 && t1Illiquid)
+    A.push(`${t1.ticker} ขายไม่ได้จึงลดน้ำหนักตรงๆ ไม่ได้ — ให้เจือจางด้วยการเติมเงินใหม่เข้ากองอื่นแทน`);
+  return _mk('risk','Risk Analyst','จุดที่จะเจ็บถ้าตลาดพัง','🛡',F,A);
+}
+
+// ── 3. Cashflow Analyst ──────────────────────────────────────────────
+function analystCashflow(c){
+  const F=[], A=[];
+  const m=c.months||[];
+  if(m.length<2) return _mk('cashflow','Cashflow Analyst','เก็บได้จริงเท่าไร รั่วตรงไหน','💧',
+    [{s:'y',t:'ข้อมูลยังไม่พอ ต้องมีอย่างน้อย 2 เดือน',d:''}],[]);
+
+  const recent=m.slice(-6);
+  const avgInc=recent.reduce((s,x)=>s+x.income,0)/recent.length;
+  const avgSav=recent.reduce((s,x)=>s+Math.abs(x.savings),0)/recent.length;
+  const sr=avgInc>0?avgSav/avgInc*100:0;
+  F.push({ s:sr<10?'r':sr<20?'y':'g', t:`Saving rate เฉลี่ย ${sr.toFixed(0)}% (${recent.length} เดือนล่าสุด)`,
+    d:`เก็บได้เดือนละ ${_n(avgSav)} จากรายได้ ${_n(avgInc)} บาท`
+      + (sr<20?' — ทุก 1% ที่เพิ่มได้ มีผลต่อวันเกษียณมากกว่าการหาผลตอบแทนเพิ่ม 1%':'') });
+
+  // เดือนที่ติดลบ = เดือนที่กินเงินเก็บ
+  const neg=recent.filter(x=>x.net<0);
+  if(neg.length) F.push({ s:neg.length>=3?'r':'y', t:`${neg.length} ใน ${recent.length} เดือนล่าสุดใช้เกินรายได้`,
+    d:`${neg.map(x=>x.mk).join(' · ')} — เดือนที่ติดลบคือเดือนที่กินเงินเก็บหรือก่อหนี้เพิ่ม` });
+
+  // ความผันผวนของรายจ่าย — วางแผนไม่ได้ถ้าเดือนต่อเดือนเหวี่ยง
+  const exps=recent.map(x=>Math.abs(x.expense));
+  const avgE=exps.reduce((a,b)=>a+b,0)/exps.length;
+  const sd=Math.sqrt(exps.reduce((s,v)=>s+(v-avgE)**2,0)/exps.length);
+  const cv=avgE>0?sd/avgE*100:0;
+  F.push({ s:cv>40?'y':'g', t:`รายจ่ายเหวี่ยง ±${cv.toFixed(0)}% ระหว่างเดือน`,
+    d: cv>40?'ผันผวนสูงแปลว่ามีรายจ่ายก้อนใหญ่ที่ไม่ได้ตั้งงบไว้ — ควรกันเป็นก้อนแยกล่วงหน้า'
+            :'ค่อนข้างคงที่ วางแผนงบได้แม่น' });
+
+  // เก็บได้แต่ไม่ได้ลงทุน — เงินนอนอยู่เฉยๆ คือขาดทุนจากเงินเฟ้อ
+  if(c.investGap>1000) F.push({ s:'y', t:`เก็บได้แต่ยังไม่ลงทุน ${_n(c.investGap)} บาท/เดือน`,
+    d:'เงินสดส่วนเกินจากเงินสำรองที่จำเป็น แพ้เงินเฟ้อทุกเดือนที่ปล่อยไว้เฉยๆ' });
+
+  if(c.overBudget && c.overBudget.length){
+    const o=c.overBudget;
+    F.push({ s:'y', t:`เดือนนี้งบเกิน ${o.length} หมวด รวม ${Math.round(o.reduce((s,x)=>s+(x.spent-x.lim),0)).toLocaleString(_AL)} บาท`,
+      d:o.slice(0,4).map(x=>`${x.cat} ${_n(x.spent)}/${_n(x.lim)}`).join(' · ') });
+    A.push(`หมวด ${o[0].cat} เกินงบมากที่สุด — ตั้งงบใหม่ให้สมจริง หรือหาว่าอะไรทำให้เกิน`);
+  }
+  if(sr<20) A.push(`ดัน saving rate จาก ${sr.toFixed(0)}% ไป 20% = เก็บเพิ่มเดือนละ ${_n(avgInc*0.2-avgSav)} บาท`);
+  return _mk('cashflow','Cashflow Analyst','เก็บได้จริงเท่าไร รั่วตรงไหน','💧',F,A);
+}
+
+// ── 4. Debt Analyst ──────────────────────────────────────────────────
+function analystDebt(c){
+  const F=[], A=[];
+  if(!c.liabilities || c.liabilities<=0)
+    return _mk('debt','Debt Analyst','หนี้โตหรือลด · โปะหรือลงทุน','⚖️',
+      [{s:'g',t:'ไม่มีหนี้คงค้าง',d:'สถานะที่ดีที่สุด — เงินทุกบาทที่เก็บได้ไปทำงานให้คุณเต็มจำนวน'}],[]);
+
+  F.push({ s:'y', t:`หนี้คงค้างรวม ${_n(c.liabilities)} บาท`,
+    d: c.reconVerified ? 'ยอดนี้ตรวจสอบกับยอดจริงจากธนาคารแล้ว'
+                       : '⚠ ยอดนี้คำนวณจากธุรกรรมที่กรอกมือ ยังไม่ได้ verify กับแอปธนาคาร' });
+
+  if(c.monthlyInterest>0){
+    const yr=c.monthlyInterest*12;
+    F.push({ s: c.monthlyInterest>2000?'r':'y', t:`ดอกเบี้ย ${_n(c.monthlyInterest)} บาท/เดือน (${_n(yr)}/ปี)`,
+      d:`เท่ากับต้องหาผลตอบแทน ${_n(yr)} บาทจากพอร์ตทุกปีแค่เพื่อเสมอตัว` });
+  }
+  // โปะ vs ลงทุน — ตัดสินด้วย effApr ไม่ใช่ apr ดิบ
+  if(c.topEffApr!=null){
+    const hurdle=c.expectedReturn||7, win=c.topEffApr>hurdle;
+    F.push({ s: win?'r':'g', t:`ดอกเบี้ยที่มีผลจริงสูงสุด ${c.topEffApr.toFixed(1)}% vs ผลตอบแทนคาดหวัง ${hurdle}%`,
+      d: win ? `โปะหนี้ให้ผล ${c.topEffApr.toFixed(1)}% แบบรับประกัน ปลอดภาษี ปลอดความผันผวน — ชนะการลงทุน ${(c.topEffApr-hurdle).toFixed(1)}pp`
+             : 'ดอกเบี้ยต่ำกว่าผลตอบแทนคาดหวัง — จ่ายขั้นต่ำแล้วเอาเงินไปลงทุนได้เปรียบกว่า' });
+    if(win) A.push('เงินก้อนถัดไปที่เก็บได้ ให้ไปโปะหนี้ก่อนซื้อสินทรัพย์เพิ่ม');
+  }
+  // ทิศทาง — หนี้โตหรือลด สำคัญกว่ายอดคงค้าง ณ วันนี้
+  (c.debtAccounts||[]).forEach(d=>{
+    if(d.repayRate!=null && d.repayRate<0.95 && d.charged>10000)
+      F.push({ s: d.repayRate<0.8?'r':'y', t:`${d.name} ชำระคืนแล้วแค่ ${(d.repayRate*100).toFixed(0)}% ของยอดที่รูด`,
+        d:`รูดสะสม ${_n(d.charged)} · ชำระคืน ${_n(d.repaid)} บาท — ต่ำกว่า 100% แปลว่ายอดกำลังโตสะสม` });
+    if(d.mNet<0) F.push({ s:'y', t:`${d.name} เดือนนี้หนี้เพิ่ม ${_n(Math.abs(d.mNet))} บาท`,
+      d:`รูด ${_n(d.mCharged)} · จ่าย ${_n(d.mRepaid)} บาท`
+        + (d.topMerchant&&d.topMerchant[0]?` · ก้อนใหญ่สุดตลอดมา: ${d.topMerchant[0].name}`:'') });
+  });
+  if(c.payoffMonths!=null && isFinite(c.payoffMonths))
+    F.push({ s:'g', t:`ปลดหนี้หมดใน ${c.payoffMonths} เดือน ถ้าจ่ายเท่าเดิม`,
+      d:`ดอกเบี้ยรวมตลอดแผน ${_n(c.payoffInterest||0)} บาท` });
+  else if(c.payoffMonths!=null)
+    F.push({ s:'r', t:'ด้วยยอดจ่ายปัจจุบัน หนี้ก้อนนี้ไม่มีวันหมด',
+      d:'ยอดที่จ่ายไม่พอกลบดอกเบี้ยที่เกิดใหม่ — ต้องเพิ่มยอดจ่ายต่อเดือน' });
+  return _mk('debt','Debt Analyst','หนี้โตหรือลด · โปะหรือลงทุน','⚖️',F,A);
+}
+
+// ── 5. FIRE Analyst ──────────────────────────────────────────────────
+function analystFire(c){
+  const F=[], A=[];
+  const nw=c.netWorth||0, goal=c.goal||0;
+  if(goal>0) F.push({ s:'g', t:`ความมั่งคั่งสุทธิ ${_n(nw)} — ${(nw/goal*100).toFixed(1)}% ของเป้า`,
+    d:`เหลืออีก ${_n(Math.max(0,goal-nw))} บาท` });
+
+  // ผลตอบแทนที่แท้จริง — เงินเฟ้อคือคู่แข่งที่ไม่เคยหยุดพัก
+  if(c.xirr!=null && c.cpi!=null){
+    const real=((1+c.xirr)/(1+c.cpi/100)-1)*100;
+    /* v49 — CPI ไทยมาจาก World Bank ซึ่งเป็นค่า *รายปี* และช้า 6-12 เดือน
+       ต้องบอกปีของข้อมูลเสมอ ไม่งั้นตัวเลขเก่า 2 ปีจะดูเหมือนของสด
+       และคนอ่านจะเอาไปวางแผนเกษียณโดยไม่รู้ว่าฐานที่ใช้ไม่ตรงกับปัจจุบัน */
+    const asOf = c.cpiYear ? ` (ข้อมูลปี ${c.cpiYear})` : '';
+    const oldData = c.cpiYear && (new Date().getFullYear() - Number(c.cpiYear)) >= 2;
+    F.push({ s: real<0?'r':real<3?'y':'g', t:`ผลตอบแทนหลังเงินเฟ้อ ${_pc(real)}/ปี`,
+      d: (real<0 ? `เงินเฟ้อไทย ${c.cpi.toFixed(1)}%${asOf} กินผลตอบแทนหมด — กำลังซื้อลดลงแม้ตัวเลขในพอร์ตจะโต`
+                 : `เงินเฟ้อ ${c.cpi.toFixed(1)}%${asOf} — นี่คือตัวเลขจริงที่ควรใช้วางแผนเกษียณ ไม่ใช่ตัวเลข nominal`)
+         + (oldData ? ' · ⚠ ข้อมูลเงินเฟ้อเก่ากว่า 2 ปี ใช้เป็นค่าประมาณเท่านั้น' : '') });
+  }
+  // ปีที่ต้องใช้ + ตัวแปรไหนขยับแล้วได้ผลสุด
+  if(c.monthlyContrib>0 && goal>nw){
+    const r=(c.expectedReturn||7)/100/12;
+    const yrs = v => {
+      let b=nw, m=0;
+      while(b<goal && m<1200){ b=b*(1+r)+v; m++; }
+      return m>=1200?null:m/12;
+    };
+    const base=yrs(c.monthlyContrib);
+    if(base!=null){
+      F.push({ s: base>20?'y':'g', t:`ถึงเป้าใน ${base.toFixed(1)} ปี ถ้าไม่เปลี่ยนอะไรเลย`,
+        d:`เติมเดือนละ ${_n(c.monthlyContrib)} บาท ผลตอบแทน ${c.expectedReturn||7}%/ปี` });
+      const plus=yrs(c.monthlyContrib*1.2);
+      if(plus!=null && base-plus>0.3)
+        F.push({ s:'g', t:`เติมเพิ่ม 20% (${_n(c.monthlyContrib*0.2)} บาท/เดือน) → เร็วขึ้น ${(base-plus).toFixed(1)} ปี`,
+          d:'ในระยะนี้ การเพิ่มเงินที่เติมมีผลมากกว่าการไล่หาผลตอบแทนที่สูงขึ้น เพราะฐานพอร์ตยังเล็ก' });
+    } else F.push({ s:'r', t:'ด้วยอัตราปัจจุบัน ยังไปไม่ถึงเป้าใน 100 ปี',
+      d:'ต้องเพิ่มเงินที่เก็บต่อเดือน หรือทบทวนเป้าให้สมจริง' });
+  } else if(goal>nw)
+    F.push({ s:'r', t:'ยังไม่มีเงินเข้าพอร์ตสม่ำเสมอ', d:'ไม่มีอัตราการเติมเงิน = คำนวณเวลาถึงเป้าไม่ได้' });
+
+  if(c.safeWithdraw>0) F.push({ s:'g', t:`ตอนนี้ถอนได้ ${_n(c.safeWithdraw)} บาท/เดือน ตามกฎ 4%`,
+    d: c.burn>0 ? `รายจ่ายจริงของคุณ ${_n(c.burn)} บาท/เดือน — ครอบคลุม ${(c.safeWithdraw/c.burn*100).toFixed(0)}%`
+                : 'คำนวณจากความมั่งคั่งสุทธิปัจจุบัน' });
+  return _mk('fire','FIRE Analyst','อีกกี่ปีถึงอิสรภาพ','🔥',F,A);
+}
+
+function analystDesk(ctx){
+  const runners=[analystPortfolio,analystRisk,analystCashflow,analystDebt,analystFire];
+  return runners.map(fn=>{
+    try{ return fn(ctx||{}); }
+    catch(e){ console.warn('[analyst]',fn.name,e.message);
+      return _mk(fn.name,'—','เกิดข้อผิดพลาด','⚠',[{s:'y',t:'วิเคราะห์ไม่สำเร็จ',d:e.message}],[]); }
+  });
 }
