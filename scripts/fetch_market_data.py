@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Finance OS — market data pipeline  (v44)
+Finance OS — market data pipeline  (v49)
 ────────────────────────────────────────────────────────────────────────
 สร้าง market-data.json ให้ dashboard อ่าน
 
@@ -31,7 +31,14 @@ key นั้นจะคงค่าเดิมไว้ ไม่หายไ
 
 รันเอง:  python3 scripts/fetch_market_data.py
 ไม่ต้องใช้ API key และไม่ต้องติดตั้ง dependency ใดๆ (stdlib ล้วน)
-ตอนนี้พึ่ง host เดียว (query1.finance.yahoo.com) — จุดที่พังได้ลดจาก 31 เหลือ 18
+v49 — เพิ่ม TH_CPI (เงินเฟ้อไทย) จาก World Bank
+     shared.js มี MACRO_META['TH_CPI'] รออยู่แล้ว แต่ไม่เคยมีใครส่งค่ามา
+     dashboard จึงคำนวณ real return (ผลตอบแทนหลังเงินเฟ้อ) ไม่ได้เลย
+     เลือก World Bank เพราะไม่ต้องใช้ API key และไม่บล็อก CI แบบ FRED
+     แลกกับความถี่รายปีและ lag 6-12 เดือน (บันทึก observation date จริงไว้)
+
+ตอนนี้พึ่ง 2 host (query1.finance.yahoo.com + api.worldbank.org)
+World Bank เป็น optional — ล้มแล้ว pipeline ยังทำงานครบเหมือนเดิม
 """
 
 import json
@@ -93,6 +100,7 @@ def headers_for(url: str) -> dict:
     h = _host(url)
     if "yahoo.com" in h:
         return HEADERS_YAHOO
+    # api.worldbank.org (v49) ใช้ REQ_HEADERS/UA_BOT ตามค่าเริ่มต้น — ไม่กันบอท
     return REQ_HEADERS
 
 
@@ -353,6 +361,84 @@ for key_rsi, key_ma, sym, label in [
         print(f"  ✓ {key_ma:<14} {'Above' if v[-1] > ma else 'Below'}")
 
 
+# ══════════════════════════════════════════════════════════════════════
+# v49 — TH_CPI  เงินเฟ้อไทย
+# ══════════════════════════════════════════════════════════════════════
+# ทำไมต้องมี: dashboard คำนวณ real return (ผลตอบแทนหลังเงินเฟ้อ) ด้วยสูตร
+#   Fisher  (1+nominal)/(1+inflation) − 1
+# ซึ่งเป็นตัวเลขเดียวที่บอกว่า "กำลังซื้อ" โตจริงหรือไม่  ที่ผ่านมา shared.js
+# มี MACRO_META['TH_CPI'] รออยู่แล้ว แต่ pipeline ไม่เคยส่งค่ามาให้ →
+# บรรทัดนั้นถูกข้ามเงียบๆ ตลอด (โค้ดฝั่ง UI เช็ค null อยู่แล้ว จึงไม่พัง)
+#
+# ทำไมเลือก World Bank ไม่ใช่ FRED:
+#   FRED มี THACPIALLMINMEI (รายเดือน สดกว่า) แต่ v44 ตัด FRED ออกทั้งหมด
+#   เพราะบล็อก IP ของ GitHub Actions (fred_ok = 0/14 · TimeoutError 42 ครั้ง)
+#   การเอา host ที่รู้อยู่แล้วว่าบล็อกเรากลับเข้ามา = เพิ่มจุดที่พังได้
+#   โดยแทบไม่มีโอกาสได้ข้อมูล  World Bank ไม่ต้องใช้ API key เหมือนกัน
+#   ตอบเร็ว และไม่เคยบล็อก CI
+#
+# ข้อแลกเปลี่ยนที่ต้องยอมรับและต้องบอกให้ชัด:
+#   World Bank ให้เงินเฟ้อ **รายปี** และช้าราว 6-12 เดือน
+#   ค่าที่ได้จึงเป็นของปีล่าสุดที่มีข้อมูล ไม่ใช่ 12 เดือนย้อนหลังแบบ rolling
+#   จึงส่ง observation date เป็น 31 ธ.ค. ของปีนั้น ไม่ใช่วันที่ดึง
+#   เพื่อให้ frontend รู้อายุจริงของตัวเลข และไม่เอาไปโชว์เหมือนของสด
+#   (ธปท. มีรายเดือนแต่ต้องขอ API key ซึ่งขัดกับหลัก "ไม่ต้องใช้ key" ของ pipeline)
+print("── Thailand CPI ─────────────────────────────")
+
+
+def th_cpi_worldbank():
+    """คืน (inflation_pct, year) ของปีล่าสุดที่ World Bank มีข้อมูล
+
+    FP.CPI.TOTL.ZG = Inflation, consumer prices (annual %)
+    รูปแบบตอบกลับ: [meta, [{date:"2024", value:0.4}, ...]] เรียงจากใหม่ไปเก่า
+    ปีล่าสุดมัก value=null (ยังไม่ประกาศ) จึงต้องไล่หาตัวแรกที่ไม่ null
+    """
+    url = ("https://api.worldbank.org/v2/country/THA/indicator/FP.CPI.TOTL.ZG"
+           "?format=json&per_page=8&mrnev=8")
+    raw = http_get(url, tries=2, timeout=10)
+    if not raw:
+        return None, None
+    try:
+        j = json.loads(raw)
+    except json.JSONDecodeError:
+        warn("World Bank: อ่าน JSON ไม่ได้")
+        return None, None
+    # โครงสร้างเป็น list 2 ชั้นเสมอ ถ้าไม่ใช่แปลว่า API เปลี่ยนรูปแบบ
+    if not isinstance(j, list) or len(j) < 2 or not isinstance(j[1], list):
+        warn("World Bank: รูปแบบข้อมูลไม่ตรงที่คาด")
+        return None, None
+    for row in j[1]:
+        if not isinstance(row, dict):
+            continue
+        v = row.get("value")
+        if v is None:
+            continue
+        try:
+            return round(float(v), 2), str(row.get("date") or "")[:4]
+        except (TypeError, ValueError):
+            continue
+    warn("World Bank: ไม่มีปีไหนที่มีค่า CPI")
+    return None, None
+
+
+_cpi, _cpi_year = th_cpi_worldbank()
+if _cpi is not None and _cpi_year:
+    # observation date = สิ้นปีของข้อมูล ไม่ใช่วันนี้
+    # ถ้าใส่วันนี้ frontend จะคิดว่าเป็นตัวเลขสด ทั้งที่อาจเก่าเป็นปี
+    put("TH_CPI", _cpi, f"{_cpi_year}-12-31",
+        f"World Bank FP.CPI.TOTL.ZG · เงินเฟ้อเฉลี่ยทั้งปี {_cpi_year}")
+    _age_yr = NOW.year - int(_cpi_year)
+    print(f"  ✓ {'TH_CPI':<14} {_cpi}%  (ปี {_cpi_year}"
+          + (f" · เก่ากว่าปัจจุบัน {_age_yr} ปี" if _age_yr > 0 else "") + ")")
+    if _age_yr >= 2:
+        warn(f"TH_CPI เป็นข้อมูลปี {_cpi_year} — เก่ากว่า 2 ปี "
+             f"ใช้คำนวณ real return ได้แต่ควรระวังการตีความ")
+else:
+    # ไม่ใส่ค่าอะไรเลยดีกว่าใส่ค่าเดา — merge จะคงค่ารอบก่อนไว้ให้เอง
+    # และถ้าไม่เคยมีเลย ฝั่ง UI ข้ามบรรทัด real return อยู่แล้ว
+    print("  – TH_CPI       ไม่ได้ค่ารอบนี้ (คงค่าเดิมจาก merge ถ้ามี)")
+
+
 print("── History (benchmark) ──────────────────────")
 _hist_charts = parallel_charts([("^GSPC", "5y", "1d"), ("THB=X", "5y", "1d")], workers=2)
 for hkey, sym in [("SP500", "^GSPC"), ("USDTHB", "THB=X")]:
@@ -489,7 +575,7 @@ merged_prices.update(prices)
 
 payload = {
     "generated_at": FETCHED_AT,
-    "source": "github-actions pipeline v44 (Yahoo only)",
+    "source": "github-actions pipeline v49 (Yahoo + World Bank TH_CPI)",
     "stats": {
         "keys_this_run": len(data),
         "keys_total": len(merged_data),
