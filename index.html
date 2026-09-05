@@ -4357,7 +4357,7 @@ async function gsSync(){
     console.log('[GS] Required:', Object.keys(map));
 
     // Optional sheets (skip if missing)
-    const OPT = ['Asset_Dashboard','Insurance_Policies','Insurance_Coverage','Market_Data','Value_Log','Reconcile'];
+    const OPT = [,'Insurance_Policies','Insurance_Coverage','Market_Data','Value_Log','Reconcile'];
     for(const s of OPT){
       try{
         // Value_Log เป็น time series วันละแถว — 500 แถว = ~1.4 ปีเท่านั้น
