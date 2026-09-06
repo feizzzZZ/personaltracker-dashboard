@@ -6660,20 +6660,27 @@ function txColLetter(n){
 // อ่านช่วงสั้นๆ ใต้รายการสุดท้าย แล้วคืนเลขแถวว่างแถวแรก
 // (กันเคสที่มีแถวเตรียมไว้พร้อม dropdown อยู่ข้างล่าง หรือ sync ค้างมานาน)
 async function txFindEmptyRow(){
-  const start = txSheetMeta.lastRow + 1;
-  const span  = 80;
-  const rng   = `Transaction!A${start}:Z${start + span}`;
-  const res = await fetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${GS_CONFIG.spreadsheetId}`
-    + `/values/${encodeURIComponent(rng)}`,
-    {headers:{'Authorization':'Bearer '+gsAccessToken}});
-  if(!res.ok) throw new Error('อ่านชีตไม่ได้ (HTTP '+res.status+') — กด Sync แล้วลองใหม่');
-  const vals = (await res.json()).values || [];
-  for(let i = 0; i <= span; i++){
-    const r = vals[i] || [];
-    if(!r.some(c => String(c == null ? '' : c).trim() !== '')) return start + i;
+  // อ่านสดจากชีตทุกครั้งก่อนเขียน — ไม่ได้จำแถวไว้ตายตัว
+  // ถ้าคุณไปพิมพ์เพิ่มในชีตเองระหว่างวัน ตัวนี้จะเห็นและเลื่อนลงไปแถวว่างถัดไปเสมอ
+  const CHUNK = 200, MAX_CHUNKS = 12;      // ไล่ได้ไกลสุด 2,400 แถวถัดไป
+  let start = (txSheetMeta.lastRow || 1) + 1;
+
+  for(let c = 0; c < MAX_CHUNKS; c++){
+    const rng = `Transaction!A${start}:Z${start + CHUNK - 1}`;
+    const res = await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${GS_CONFIG.spreadsheetId}`
+      + `/values/${encodeURIComponent(rng)}`,
+      {headers:{'Authorization':'Bearer '+gsAccessToken}});
+    if(!res.ok) throw new Error('อ่านชีตไม่ได้ (HTTP '+res.status+') — กด Sync แล้วลองใหม่');
+    const vals = (await res.json()).values || [];
+
+    for(let i = 0; i < CHUNK; i++){
+      const r = vals[i] || [];
+      if(!r.some(cell => String(cell == null ? '' : cell).trim() !== '')) return start + i;
+    }
+    start += CHUNK;                        // ก้อนนี้เต็ม → ไล่ก้อนถัดไปต่อ
   }
-  throw new Error('ไม่พบแถวว่างใต้แถว '+txSheetMeta.lastRow+' — ตรวจชีต Transaction ก่อน');
+  throw new Error('ไล่หาแถวว่างไปไกลกว่า '+(CHUNK*MAX_CHUNKS)+' แถวแล้วยังไม่เจอ — ตรวจชีต Transaction');
 }
 
 // ── ฟอร์มเพิ่มรายการ ────────────────────────────────────────────────
