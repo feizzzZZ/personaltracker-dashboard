@@ -745,6 +745,28 @@ select.month-display{text-align-last:center;outline:none}
   #stale-toast{bottom:calc(80px + env(safe-area-inset-bottom,0px))!important}
 }
 @media(prefers-reduced-motion:reduce){.bnav-item{transition:none}}
+
+/* ══ v49 — เตือนเมื่อเปิดจากเบราว์เซอร์ในแอปอื่น ══════════════════
+   Google บล็อก OAuth ใน embedded webview (LINE / Messenger / IG …)
+   ด้วยนโยบาย disallowed_useragent — แก้ที่โค้ดไม่ได้
+   สิ่งที่ทำได้คือบอกทางออกก่อนผู้ใช้ไปเจอหน้า error ของ Google */
+.wv-warn{position:fixed;top:0;left:0;right:0;z-index:400;display:flex;align-items:flex-start;gap:12px;
+  padding:12px 14px;background:#2a1c05;border-bottom:1px solid rgba(255,149,0,.5);
+  font-size:12.5px;line-height:1.55;color:#f0e2c8}
+.wv-warn b{color:#ffb340;font-weight:600}
+.wv-warn-txt{flex:1 1 auto;min-width:0}
+.wv-warn-btn{flex:0 0 auto;background:rgba(255,149,0,.16);border:1px solid rgba(255,149,0,.55);
+  color:#ffb340;border-radius:7px;padding:7px 12px;font-family:var(--f-mono);font-size:11.5px;
+  cursor:pointer;white-space:nowrap}
+.wv-warn-btn:active{background:rgba(255,149,0,.3)}
+.wv-warn-x{flex:0 0 auto;background:transparent;border:none;color:#c9b48c;font-size:15px;
+  cursor:pointer;padding:4px 2px;line-height:1}
+@media(max-width:560px){
+  .wv-warn{flex-wrap:wrap;font-size:12px;padding:10px 12px}
+  .wv-warn-txt{flex:1 1 100%;order:1}
+  .wv-warn-btn{order:2}
+  .wv-warn-x{order:3;margin-left:auto}
+}
 </style>
 </head>
 <body>
@@ -4354,6 +4376,16 @@ function gsTokenCallback(resp){
 
 // ── Main connect/sync ──
 function gsConnect(){
+  // เบราว์เซอร์ในแอปอื่น = Google ปฏิเสธแน่นอน — บอกทางออกแทนที่จะปล่อยไปเจอ
+  // หน้า "Access blocked" ที่ไม่ได้บอกว่าต้องทำอะไรต่อ
+  if(isInAppBrowser()){
+    const w = document.getElementById('wv-warn');
+    if(w){ w.hidden = false; window.scrollTo(0,0); }
+    alert('เปิดอยู่ในเบราว์เซอร์ของแอปอื่น (LINE / Messenger / IG)\n\n'
+        + 'Google ไม่อนุญาตให้ล็อกอินจากตรงนี้ด้วยเหตุผลด้านความปลอดภัย\n\n'
+        + 'กดปุ่ม ⋯ หรือ ⋮ มุมขวาบน แล้วเลือก "เปิดในเบราว์เซอร์"');
+    return;
+  }
   console.log('[GS] gsConnect called, gsTokenClient:', !!gsTokenClient, 
     'google:', typeof google, 'google.accounts:', typeof google !== 'undefined' && !!google.accounts);
   try {
@@ -6838,6 +6870,43 @@ document.addEventListener('change', e => {
   if(e.target.id === 'tx-f-type') txOnTypeChange();
   else if(e.target.id.indexOf('tx-f-') === 0) txUpdatePreview();
 });
+
+// ══ v49 — ตรวจว่ากำลังเปิดในเบราว์เซอร์ที่ฝังอยู่ในแอปอื่นหรือไม่ ═════
+// Google บล็อก OAuth ใน embedded webview ทุกตัว (นโยบาย disallowed_useragent)
+// ไม่มีทางแก้ในโค้ด — ทำได้แค่ตรวจแล้วบอกผู้ใช้ให้เปิดในเบราว์เซอร์จริง
+function isInAppBrowser(){
+  const ua = navigator.userAgent || '';
+  // แอปที่ฝัง webview ไว้เอง
+  if(/\bLine\/|FBAN|FBAV|FB_IAB|FBIOS|Instagram|Messenger|MicroMessenger|Twitter|TikTok|Snapchat|KAKAOTALK|GSA\//i.test(ua)) return true;
+  // Android WebView มาตรฐาน
+  if(/Android/i.test(ua) && /\bwv\b/i.test(ua)) return true;
+  // iOS: เบราว์เซอร์จริงจะมี Safari อยู่ใน UA เสมอ · standalone (ไอคอนหน้าจอ) ไม่นับ
+  if(/iPhone|iPad|iPod/i.test(ua) && !/Safari/i.test(ua) && !navigator.standalone) return true;
+  return false;
+}
+
+function wvCopyLink(btn){
+  const url  = location.href;
+  const done = () => { btn.textContent = 'คัดลอกแล้ว'; setTimeout(() => btn.textContent = 'คัดลอกลิงก์', 1800); };
+  const fallback = () => {
+    const t = document.createElement('textarea');
+    t.value = url; t.style.cssText = 'position:fixed;opacity:0';
+    document.body.appendChild(t); t.select();
+    try{ document.execCommand('copy'); done(); }
+    catch(e){ prompt('คัดลอกลิงก์นี้แล้วเปิดใน Chrome / Safari:', url); }
+    t.remove();
+  };
+  if(navigator.clipboard && navigator.clipboard.writeText)
+    navigator.clipboard.writeText(url).then(done).catch(fallback);
+  else fallback();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  if(!isInAppBrowser()) return;
+  const w = document.getElementById('wv-warn');
+  if(w) w.hidden = false;
+  console.log('[GS] เปิดในเบราว์เซอร์ของแอปอื่น — OAuth จะถูก Google ปฏิเสธ');
+});
 </script>
 <!-- ⚙ Google Sheets Settings Modal (restored — CSS/JS อ้างถึงแต่ markup หายไป) -->
 <div id="gs-modal" class="gs-modal-overlay">
@@ -6861,6 +6930,15 @@ document.addEventListener('change', e => {
     </div>
   </div>
 </div>
+<!-- v49 — เตือนเบราว์เซอร์ในแอป -->
+<div id="wv-warn" class="wv-warn" hidden>
+  <div class="wv-warn-txt"><b>เปิดอยู่ในเบราว์เซอร์ของแอปอื่น</b> —
+    Google ไม่ยอมให้ล็อกอินจากตรงนี้ กดปุ่ม ⋯ หรือ ⋮ มุมขวาบน
+    แล้วเลือก <b>“เปิดในเบราว์เซอร์”</b> (Chrome หรือ Safari)</div>
+  <button class="wv-warn-btn" onclick="wvCopyLink(this)">คัดลอกลิงก์</button>
+  <button class="wv-warn-x" onclick="this.parentElement.hidden=true" aria-label="ปิด">✕</button>
+</div>
+
 <!-- v49 — ปุ่มเพิ่มรายการ -->
 <button id="tx-fab" class="tx-fab" onclick="txOpenForm()" title="เพิ่มรายการ" aria-label="เพิ่มรายการ">+</button>
 
