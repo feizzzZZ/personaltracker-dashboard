@@ -4494,7 +4494,7 @@ function gsProcessData(map){
         const accT = bankTypeRow[col]!=null?String(bankTypeRow[col]).trim():'Account #';
         if(name && !isNaN(bal)) bankBals.push({name, balance:Math.round(bal*100)/100, type:accT});
       }
-      const rows=[];
+      const rows=[]; let lastTxRow=hRow;   // v49 — แถวสุดท้ายที่เป็นรายการจริง
       for(let i=hRow+1;i<txRaw.length;i++){
         const r=txRaw[i]||[];
         const txType=r[ti('Transactions')]?String(r[ti('Transactions')]).trim():'';
@@ -4517,6 +4517,7 @@ function gsProcessData(map){
           category:r[ti('Type')]?String(r[ti('Type')]).trim():'Other',
           details:r[ti('Details')]?String(r[ti('Details')]).trim():'',
           amount:Math.round(amt*100)/100});
+        lastTxRow=i;
       }
       txRows=rows;
       // ── v49 — เก็บ layout จริงของชีตไว้ให้ฟอร์มบันทึกใช้ ────────────
@@ -4527,6 +4528,7 @@ function gsProcessData(map){
         colType:   ti('Type'),
         colDetail: ti('Details'),
         width:     hArr.length,
+        lastRow:   lastTxRow + 1,        // เลขแถวจริงในชีต (1-based)
         banks: bankCols.map(ci => ({
           col:  ci,
           name: bankNameRow[ci] != null ? String(bankNameRow[ci]).trim()
@@ -6621,12 +6623,18 @@ async function txAppendRow({date, txType, category, details, bankCol, amount, ba
     row[bankCol2] = mag;
   }
 
+  // ── หาแถวว่างแถวแรกถัดจากรายการสุดท้าย ──────────────────────────
+  // ห้ามใช้ :append — Google จะเดา "ตาราง" เองจากช่วงที่ส่งไป และชีตนี้มี
+  // บล็อกยอดคงเหลืออยู่แถว 1–12 ก่อน header แถว 25 มันจึงเดาผิดแล้วเขียน
+  // ลงบล็อกบน แทนที่จะต่อท้ายรายการ → ระบุแถวเองแล้ว update ตรงๆ
+  const rowNum = await txFindEmptyRow();
+  const A1 = `Transaction!A${rowNum}:${txColLetter(end - 1)}${rowNum}`;
+
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${GS_CONFIG.spreadsheetId}`
-            + `/values/${encodeURIComponent('Transaction!A:Z')}:append`
-            + `?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
+            + `/values/${encodeURIComponent(A1)}?valueInputOption=USER_ENTERED`;
 
   const res = await fetch(url, {
-    method:  'POST',
+    method:  'PUT',
     headers: {'Authorization':'Bearer '+gsAccessToken, 'Content-Type':'application/json'},
     body:    JSON.stringify({values:[row]})
   });
@@ -6638,7 +6646,34 @@ async function txAppendRow({date, txType, category, details, bankCol, amount, ba
     }
     throw new Error('HTTP '+res.status+' · '+body.slice(0,140));
   }
-  return (await res.json()).updates;
+  console.log('[TX] เขียนลง', A1);
+  return {row: rowNum, range: A1};
+}
+
+// index คอลัมน์ (0-based) → ตัวอักษรแบบ A1  เช่น 0→A, 6→G, 26→AA
+function txColLetter(n){
+  let s = '', k = n + 1;
+  while(k > 0){ const m = (k - 1) % 26; s = String.fromCharCode(65 + m) + s; k = Math.floor((k - 1) / 26); }
+  return s;
+}
+
+// อ่านช่วงสั้นๆ ใต้รายการสุดท้าย แล้วคืนเลขแถวว่างแถวแรก
+// (กันเคสที่มีแถวเตรียมไว้พร้อม dropdown อยู่ข้างล่าง หรือ sync ค้างมานาน)
+async function txFindEmptyRow(){
+  const start = txSheetMeta.lastRow + 1;
+  const span  = 80;
+  const rng   = `Transaction!A${start}:Z${start + span}`;
+  const res = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${GS_CONFIG.spreadsheetId}`
+    + `/values/${encodeURIComponent(rng)}`,
+    {headers:{'Authorization':'Bearer '+gsAccessToken}});
+  if(!res.ok) throw new Error('อ่านชีตไม่ได้ (HTTP '+res.status+') — กด Sync แล้วลองใหม่');
+  const vals = (await res.json()).values || [];
+  for(let i = 0; i <= span; i++){
+    const r = vals[i] || [];
+    if(!r.some(c => String(c == null ? '' : c).trim() !== '')) return start + i;
+  }
+  throw new Error('ไม่พบแถวว่างใต้แถว '+txSheetMeta.lastRow+' — ตรวจชีต Transaction ก่อน');
 }
 
 // ── ฟอร์มเพิ่มรายการ ────────────────────────────────────────────────
@@ -6718,8 +6753,8 @@ async function txSubmitForm(){
   btn.disabled = true;
   say('กำลังบันทึก…');
   try{
-    await txAppendRow({date, txType, category, details, bankCol, amount, bankCol2});
-    say('บันทึกแล้ว — กำลังดึงข้อมูลใหม่', 'var(--income)');
+    const wrote = await txAppendRow({date, txType, category, details, bankCol, amount, bankCol2});
+    say('บันทึกลง Transaction แถว '+wrote.row+' — กำลังดึงข้อมูลใหม่', 'var(--income)');
     await gsSync();
     txCloseForm();
   }catch(e){
