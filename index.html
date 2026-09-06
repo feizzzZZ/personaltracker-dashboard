@@ -6607,36 +6607,35 @@ async function txAppendRow({date, txType, category, details, bankCol, amount, ba
   if(!txSheetMeta)    throw new Error('ยังไม่รู้โครงสร้างชีต — กด Sync ก่อน 1 ครั้ง');
   if(!gsTokenValid()) throw new Error('Session หมดอายุ — กด Sync เพื่อเข้าสู่ระบบใหม่');
 
-  const M   = txSheetMeta;
-  const end = Math.max(M.width, ...M.banks.map(b => b.col + 1));
-  const row = new Array(end).fill('');
+  const M      = txSheetMeta;
+  const rowNum = await txFindEmptyRow();
+  const mag    = Math.abs(Number(amount) || 0);
 
-  row[M.colDate]   = date;              // ISO — USER_ENTERED ให้ Sheets แปลงเป็นวันที่เอง
-  row[M.colTx]     = txType;
-  row[M.colType]   = category;
-  row[M.colDetail] = details || '';
-
-  const mag = Math.abs(Number(amount) || 0);
-  row[bankCol] = mag * (TX_SIGN[txType] ?? -1);
+  // ── เขียนทีละช่อง ไม่เขียนทับทั้งแถว ────────────────────────────
+  // ชีตนี้มีคอลัมน์สูตรซ่อนอยู่ (B, C และอาจมีอีกหลังคอลัมน์ธนาคาร)
+  // ถ้า update เป็นช่วง A:P รวดเดียว ค่าว่างในอาเรย์จะไปลบสูตรพวกนั้นทิ้ง
+  const cells = [
+    [M.colDate,   date],                        // ISO — USER_ENTERED ให้ Sheets แปลงเป็นวันที่เอง
+    [M.colTx,     txType],
+    [M.colType,   category],
+    [M.colDetail, details || ''],
+    [bankCol,     mag * (TX_SIGN[txType] ?? -1)]
+  ];
   // Transfer: ออกจากบัญชีหนึ่ง เข้าอีกบัญชี → ยอดรวมของแถวเป็น 0
   if(txType === 'Transfer' && bankCol2 != null && !isNaN(bankCol2) && bankCol2 !== bankCol){
-    row[bankCol2] = mag;
+    cells.push([bankCol2, mag]);
   }
 
-  // ── หาแถวว่างแถวแรกถัดจากรายการสุดท้าย ──────────────────────────
-  // ห้ามใช้ :append — Google จะเดา "ตาราง" เองจากช่วงที่ส่งไป และชีตนี้มี
-  // บล็อกยอดคงเหลืออยู่แถว 1–12 ก่อน header แถว 25 มันจึงเดาผิดแล้วเขียน
-  // ลงบล็อกบน แทนที่จะต่อท้ายรายการ → ระบุแถวเองแล้ว update ตรงๆ
-  const rowNum = await txFindEmptyRow();
-  const A1 = `Transaction!A${rowNum}:${txColLetter(end - 1)}${rowNum}`;
+  const data = cells
+    .filter(([c]) => c != null && c >= 0)
+    .map(([c, v]) => ({range: `Transaction!${txColLetter(c)}${rowNum}`, values: [[v]]}));
 
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${GS_CONFIG.spreadsheetId}`
-            + `/values/${encodeURIComponent(A1)}?valueInputOption=USER_ENTERED`;
-
+            + `/values:batchUpdate`;
   const res = await fetch(url, {
-    method:  'PUT',
+    method:  'POST',
     headers: {'Authorization':'Bearer '+gsAccessToken, 'Content-Type':'application/json'},
-    body:    JSON.stringify({values:[row]})
+    body:    JSON.stringify({valueInputOption:'USER_ENTERED', data})
   });
 
   if(!res.ok){
@@ -6646,8 +6645,8 @@ async function txAppendRow({date, txType, category, details, bankCol, amount, ba
     }
     throw new Error('HTTP '+res.status+' · '+body.slice(0,140));
   }
-  console.log('[TX] เขียนลง', A1);
-  return {row: rowNum, range: A1};
+  console.log('[TX] เขียนแถว', rowNum, '·', data.map(d => d.range.split('!')[1]).join(' '));
+  return {row: rowNum, cells: data.length};
 }
 
 // index คอลัมน์ (0-based) → ตัวอักษรแบบ A1  เช่น 0→A, 6→G, 26→AA
@@ -6657,16 +6656,24 @@ function txColLetter(n){
   return s;
 }
 
-// อ่านช่วงสั้นๆ ใต้รายการสุดท้าย แล้วคืนเลขแถวว่างแถวแรก
-// (กันเคสที่มีแถวเตรียมไว้พร้อม dropdown อยู่ข้างล่าง หรือ sync ค้างมานาน)
+// หาแถวว่างแถวแรกถัดจากรายการสุดท้าย — อ่านสดจากชีตทุกครั้งก่อนเขียน
+// ไปพิมพ์เพิ่มในชีตเองระหว่างวันได้ ตัวนี้จะเห็นแล้วเลื่อนลงไปแถวถัดไปเสมอ
 async function txFindEmptyRow(){
-  // อ่านสดจากชีตทุกครั้งก่อนเขียน — ไม่ได้จำแถวไว้ตายตัว
-  // ถ้าคุณไปพิมพ์เพิ่มในชีตเองระหว่างวัน ตัวนี้จะเห็นและเลื่อนลงไปแถวว่างถัดไปเสมอ
+  const M = txSheetMeta;
+  // ⚠ เช็คเฉพาะช่องที่จะเขียนจริง ห้ามเช็คทั้ง A:Z
+  // ชีตนี้มีคอลัมน์สูตรที่ให้ค่าลงไปถึงแถว 5000+ ถ้าเช็คทั้งแถว
+  // ทุกแถวจะดู "ไม่ว่าง" หมด แล้วไล่เท่าไหร่ก็ไม่มีวันเจอ
+  const watch = [M.colDate, M.colTx, M.colType, M.colDetail]
+    .concat((M.banks || []).map(b => b.col))
+    .filter(c => c != null && c >= 0);
+  if(!watch.length) throw new Error('อ่านคอลัมน์ของชีตไม่ได้ — กด Sync ใหม่');
+  const lastCol = txColLetter(Math.max.apply(null, watch));
+
   const CHUNK = 200, MAX_CHUNKS = 12;      // ไล่ได้ไกลสุด 2,400 แถวถัดไป
-  let start = (txSheetMeta.lastRow || 1) + 1;
+  let start = (M.lastRow || 1) + 1;
 
   for(let c = 0; c < MAX_CHUNKS; c++){
-    const rng = `Transaction!A${start}:Z${start + CHUNK - 1}`;
+    const rng = `Transaction!A${start}:${lastCol}${start + CHUNK - 1}`;
     const res = await fetch(
       `https://sheets.googleapis.com/v4/spreadsheets/${GS_CONFIG.spreadsheetId}`
       + `/values/${encodeURIComponent(rng)}`,
@@ -6676,7 +6683,8 @@ async function txFindEmptyRow(){
 
     for(let i = 0; i < CHUNK; i++){
       const r = vals[i] || [];
-      if(!r.some(cell => String(cell == null ? '' : cell).trim() !== '')) return start + i;
+      const used = watch.some(col => String(r[col] == null ? '' : r[col]).trim() !== '');
+      if(!used) return start + i;
     }
     start += CHUNK;                        // ก้อนนี้เต็ม → ไล่ก้อนถัดไปต่อ
   }
