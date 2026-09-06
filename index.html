@@ -711,8 +711,40 @@ select.month-display{text-align-last:center;outline:none}
 .tx-prev{font-family:var(--f-mono);font-size:11px;line-height:1.7;
   color:var(--muted2);background:var(--bg3);border:1px solid var(--border2);
   border-radius:8px;padding:9px 11px;margin:10px 0;white-space:pre-wrap;min-height:18px}
-@media(max-width:640px){.tx-fab{bottom:78px;right:16px}}
 @media(prefers-reduced-motion:reduce){.tx-fab{transition:none}}
+
+/* ══ v49 — Bottom navigation (มือถือ) ══════════════════════════════
+   เดิมมือถือต้องกด ☰ แล้วเลื่อนเมนู 14 รายการทุกครั้งที่สลับหน้า
+   4 หน้าที่ใช้บ่อยที่สุดย้ายมาอยู่แถบล่าง เหลือที่เหลือไว้ใน ☰ */
+.bnav{display:none;position:fixed;left:0;right:0;bottom:0;z-index:140;
+  background:var(--bg2);border-top:1px solid var(--border);
+  padding-bottom:env(safe-area-inset-bottom,0px)}
+.bnav-item{flex:1 1 0;min-width:0;background:transparent;border:none;cursor:pointer;
+  font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:3px;
+  padding:8px 2px 7px;color:var(--muted);border-top:2px solid transparent;margin-top:-1px;
+  transition:color .15s}
+.bnav-ic{font-size:17px;line-height:1}
+.bnav-lb{font-size:9.5px;letter-spacing:.02em;white-space:nowrap;max-width:100%;
+  overflow:hidden;text-overflow:ellipsis}
+.bnav-item.active{color:var(--income);border-top-color:var(--income)}
+.bnav-item:active{background:var(--bg3)}
+.bnav-item:focus-visible{outline:2px solid var(--income);outline-offset:-2px}
+/* แตะนอกเมนูเพื่อปิด — เดิมต้องกด ☰ ซ้ำอย่างเดียว */
+.sb-backdrop{display:none;position:fixed;inset:0;z-index:99;background:rgba(0,0,0,.55)}
+.sidebar.open ~ .sb-backdrop{display:block}
+
+@media(max-width:768px){
+  .bnav{display:flex}
+  .menu-toggle{display:none}                    /* ☰ ย้ายไปอยู่ในแถบล่างแล้ว */
+  /* เมนูต้องจบเหนือแถบล่าง ไม่งั้นปุ่มล่างสุด (New file) โดนบังกดไม่ได้ */
+  /* 40px = top-nav · 48px = แถบล่าง — ต้องใส่ !important เพราะกฎ .sidebar
+     ของ top-nav (top:40px) ใช้ !important ไว้ */
+  .sidebar{height:calc(100vh - 88px - env(safe-area-inset-bottom,0px)) !important}
+  .page{padding-bottom:calc(86px + env(safe-area-inset-bottom,0px))}
+  .tx-fab{right:16px;bottom:calc(74px + env(safe-area-inset-bottom,0px))}
+  #stale-toast{bottom:calc(80px + env(safe-area-inset-bottom,0px))!important}
+}
+@media(prefers-reduced-motion:reduce){.bnav-item{transition:none}}
 </style>
 </head>
 <body>
@@ -1639,6 +1671,21 @@ select.month-display{text-align-last:center;outline:none}
     </div>
 
   </div><!-- /main-content -->
+
+  <!-- v49 — แถบเมนูล่างสำหรับมือถือ -->
+  <nav class="bnav" id="bnav" aria-label="เมนูหลัก">
+    <button class="bnav-item active" data-page="overview" onclick="switchPage('overview')">
+      <span class="bnav-ic" aria-hidden="true">⌂</span><span class="bnav-lb">Overview</span></button>
+    <button class="bnav-item" data-page="cashflow" onclick="switchPage('cashflow')">
+      <span class="bnav-ic" aria-hidden="true">📊</span><span class="bnav-lb">Monthly</span></button>
+    <button class="bnav-item" data-page="accounts" onclick="switchPage('accounts')">
+      <span class="bnav-ic" aria-hidden="true">🏦</span><span class="bnav-lb">Accounts</span></button>
+    <button class="bnav-item" data-page="portfolio" onclick="switchPage('portfolio')">
+      <span class="bnav-ic" aria-hidden="true">💼</span><span class="bnav-lb">Holdings</span></button>
+    <button class="bnav-item" onclick="toggleSidebar()" aria-label="เมนูทั้งหมด">
+      <span class="bnav-ic" aria-hidden="true">☰</span><span class="bnav-lb">More</span></button>
+  </nav>
+  <div class="sb-backdrop" id="sb-backdrop" onclick="toggleSidebar()" aria-hidden="true"></div>
 </div><!-- /app -->
 
 <script src="shared.js"></script>
@@ -5914,12 +5961,16 @@ let renderedPages=new Set();
 
 function switchPage(name){
   document.querySelectorAll('.sb-item').forEach(el=>{el.classList.toggle('active',el.dataset.page===name);});
+  // v49 — แถบล่างต้องไฮไลต์ตามหน้าที่เปิดอยู่ (ปุ่ม More ไม่มี data-page จึงไม่โดน)
+  document.querySelectorAll('.bnav-item[data-page]').forEach(el=>{el.classList.toggle('active',el.dataset.page===name);});
   document.querySelectorAll('.page').forEach(el=>{el.classList.toggle('active',el.id===`page-${name}`);});
   if(!renderedPages.has(name)&&pageRenderFns[name]){
     try{ pageRenderFns[name](); renderedPages.add(name); updateBudgetBadge(); try{updateDebtBadge();}catch(e){} }
     catch(e){ console.error('[Page] render failed:',name,e); }
   }
-  if(window.innerWidth<=700){document.getElementById('sidebar').classList.remove('open');}
+  // v49 — 768 ให้ตรงกับ breakpoint ของ CSS (เดิม 700 ทำให้ช่วง 701–768px
+  // เมนูค้างเปิดทับเนื้อหาหลังกดเลือกหน้า)
+  if(window.innerWidth<=768){document.getElementById('sidebar').classList.remove('open');}
 }
 function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');}
 
