@@ -697,6 +697,22 @@ select.month-display{text-align-last:center;outline:none}
 .an-act-t{font-size:10px;color:var(--muted);letter-spacing:.06em;margin-bottom:6px}
 .an-act-i{font-size:11.5px;color:var(--gain);line-height:1.7;padding-left:15px;position:relative}
 .an-act-i::before{content:'\2192';position:absolute;left:0;opacity:.75}
+
+/* ══ v49 — ปุ่มเพิ่มรายการ + ฟอร์มบันทึก ══ */
+.tx-fab{position:fixed;right:22px;bottom:22px;z-index:900;
+  width:56px;height:56px;border-radius:50%;border:none;display:none;
+  font-size:28px;line-height:1;font-weight:600;cursor:pointer;
+  background:var(--income);color:#06131a;
+  box-shadow:0 6px 22px rgba(0,0,0,.45);transition:transform .15s}
+.tx-fab:hover{transform:scale(1.07)}
+.tx-fab:active{transform:scale(.94)}
+.tx-fab:focus-visible{outline:2px solid var(--income);outline-offset:3px}
+.tx-g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tx-prev{font-family:var(--f-mono);font-size:11px;line-height:1.7;
+  color:var(--muted2);background:var(--bg3);border:1px solid var(--border2);
+  border-radius:8px;padding:9px 11px;margin:10px 0;white-space:pre-wrap;min-height:18px}
+@media(max-width:640px){.tx-fab{bottom:78px;right:16px}}
+@media(prefers-reduced-motion:reduce){.tx-fab{transition:none}}
 </style>
 </head>
 <body>
@@ -4092,7 +4108,8 @@ const GS_CONFIG = {
   // ค่าเก็บใน localStorage เครื่องคุณ + อยู่ในไฟล์ 💾 Backup แล้ว
   clientId:    '',
   spreadsheetId: '',
-  scope:       'https://www.googleapis.com/auth/spreadsheets.readonly',
+  // v49 — read/write: ต้องใช้สิทธิ์เขียนเพื่อบันทึกรายการจากในแอป
+  scope:       'https://www.googleapis.com/auth/spreadsheets',
   // Asset_Dashboard removed — not present in current Excel version; Asset_Live_Price_Feed is the source of truth
   sheets:      ['Transaction','Asset_Tracker','Asset_Live_Price_Feed','Insurance_Policies','Insurance_Coverage'],
 };
@@ -4103,6 +4120,7 @@ let gsTokenExpiry = 0;
 let gsSyncTimer   = null;
 let gsLastSync    = null;
 let gsConnected   = false;
+let txSheetMeta   = null;   // v49 — layout ชีต Transaction จากรอบ sync ล่าสุด
 
 // ── Init: load saved config + token, show sync btn ──
 function gsInit(){
@@ -4117,6 +4135,18 @@ function gsInit(){
   }
   if(savedCid) GS_CONFIG.clientId      = savedCid;
   if(savedSid) GS_CONFIG.spreadsheetId = savedSid;
+
+  // ── v49 — scope readonly → read/write ────────────────────────────
+  // token เดิมมีแค่สิทธิ์อ่าน ถ้าปล่อยไว้จะ 403 ตอน append โดยไม่บอกสาเหตุ
+  // ล้างทิ้งครั้งเดียว แล้วให้ผู้ใช้กด Sync เพื่อขอ consent ใหม่
+  const GS_SCOPE_VER = '2';
+  if(localStorage.getItem('gs_scope_ver') !== GS_SCOPE_VER){
+    localStorage.removeItem('gs_access_token');
+    localStorage.removeItem('gs_token_expiry');
+    localStorage.removeItem('gs_ever_connected');
+    localStorage.setItem('gs_scope_ver', GS_SCOPE_VER);
+    console.log('[GS] scope อัปเกรดเป็น read/write — ต้อง login ใหม่ 1 ครั้ง');
+  }
 
   // Restore token if still valid
   const savedToken  = localStorage.getItem('gs_access_token');
@@ -4357,7 +4387,7 @@ async function gsSync(){
     console.log('[GS] Required:', Object.keys(map));
 
     // Optional sheets (skip if missing)
-    const OPT = [,'Insurance_Policies','Insurance_Coverage','Market_Data','Value_Log','Reconcile'];
+    const OPT = ['Insurance_Policies','Insurance_Coverage','Market_Data','Value_Log','Reconcile'];
     for(const s of OPT){
       try{
         // Value_Log เป็น time series วันละแถว — 500 แถว = ~1.4 ปีเท่านั้น
@@ -4489,6 +4519,23 @@ function gsProcessData(map){
           amount:Math.round(amt*100)/100});
       }
       txRows=rows;
+      // ── v49 — เก็บ layout จริงของชีตไว้ให้ฟอร์มบันทึกใช้ ────────────
+      // อ่านจาก header ทุกครั้ง ไม่ hardcode → แทรกคอลัมน์ใหม่แล้วยังทำงาน
+      txSheetMeta = {
+        colDate:   ti('Date'),
+        colTx:     ti('Transactions'),
+        colType:   ti('Type'),
+        colDetail: ti('Details'),
+        width:     hArr.length,
+        banks: bankCols.map(ci => ({
+          col:  ci,
+          name: bankNameRow[ci] != null ? String(bankNameRow[ci]).trim()
+                                        : (hArr[ci] || ('col' + ci))
+        })).filter(b => b.name)
+      };
+      const _fab = document.getElementById('tx-fab');
+      if(_fab) _fab.style.display = 'block';
+      console.log('[TX] schema พร้อม —', txSheetMeta.banks.length, 'บัญชี');
       const ms=new Set(rows.map(r=>r.month));
       availableMonths=Array.from(ms).sort();
       curMonthIdx=availableMonths.length-1;
@@ -6548,6 +6595,148 @@ if('serviceWorker' in navigator){
       .catch(err => console.warn('[SW] Registration failed:', err));
   });
 }
+
+// ══ v49 — WRITE: เพิ่มรายการลงชีต Transaction ═══════════════════════
+// เครื่องหมายต้องตรงกับ computeSummary(): net = income + expense + …
+// (ไม่มี Math.abs) → รายจ่ายทุกชนิดเก็บเป็นค่าติดลบ
+const TX_SIGN = {Income:+1, Expense:-1, Bills:-1, Savings:-1, Debt:-1, Transfer:-1};
+
+async function txAppendRow({date, txType, category, details, bankCol, amount, bankCol2}){
+  if(!txSheetMeta)    throw new Error('ยังไม่รู้โครงสร้างชีต — กด Sync ก่อน 1 ครั้ง');
+  if(!gsTokenValid()) throw new Error('Session หมดอายุ — กด Sync เพื่อเข้าสู่ระบบใหม่');
+
+  const M   = txSheetMeta;
+  const end = Math.max(M.width, ...M.banks.map(b => b.col + 1));
+  const row = new Array(end).fill('');
+
+  row[M.colDate]   = date;              // ISO — USER_ENTERED ให้ Sheets แปลงเป็นวันที่เอง
+  row[M.colTx]     = txType;
+  row[M.colType]   = category;
+  row[M.colDetail] = details || '';
+
+  const mag = Math.abs(Number(amount) || 0);
+  row[bankCol] = mag * (TX_SIGN[txType] ?? -1);
+  // Transfer: ออกจากบัญชีหนึ่ง เข้าอีกบัญชี → ยอดรวมของแถวเป็น 0
+  if(txType === 'Transfer' && bankCol2 != null && !isNaN(bankCol2) && bankCol2 !== bankCol){
+    row[bankCol2] = mag;
+  }
+
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${GS_CONFIG.spreadsheetId}`
+            + `/values/${encodeURIComponent('Transaction!A:Z')}:append`
+            + `?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
+
+  const res = await fetch(url, {
+    method:  'POST',
+    headers: {'Authorization':'Bearer '+gsAccessToken, 'Content-Type':'application/json'},
+    body:    JSON.stringify({values:[row]})
+  });
+
+  if(!res.ok){
+    const body = await res.text().catch(()=>'');
+    if(res.status === 401 || res.status === 403){
+      throw new Error('ไม่มีสิทธิ์เขียน — ออกจากระบบแล้วกด Sync เพื่อให้สิทธิ์ read/write ใหม่');
+    }
+    throw new Error('HTTP '+res.status+' · '+body.slice(0,140));
+  }
+  return (await res.json()).updates;
+}
+
+// ── ฟอร์มเพิ่มรายการ ────────────────────────────────────────────────
+function txFillOptions(){
+  const opts = (txSheetMeta && txSheetMeta.banks ? txSheetMeta.banks : [])
+    .map(b => `<option value="${b.col}">${b.name}</option>`).join('');
+  const a1 = document.getElementById('tx-f-acct');
+  const a2 = document.getElementById('tx-f-acct2');
+  if(a1) a1.innerHTML = opts;
+  if(a2) a2.innerHTML = opts;
+  // หมวดที่เคยใช้จริง → autocomplete
+  const cats = [...new Set(txRows.map(r => r.category).filter(Boolean))].sort();
+  const dl = document.getElementById('tx-cat-list');
+  if(dl) dl.innerHTML = cats.map(c => `<option value="${c}">`).join('');
+}
+
+function txOpenForm(){
+  if(!txSheetMeta){ alert('กด Sync ก่อน 1 ครั้ง เพื่อให้ระบบอ่านโครงสร้างชีต'); return; }
+  txFillOptions();
+  const d = new Date();
+  document.getElementById('tx-f-date').value =
+    `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  ['tx-f-amt','tx-f-detail','tx-f-cat'].forEach(id => { const e=document.getElementById(id); if(e) e.value=''; });
+  const st = document.getElementById('tx-f-status');
+  if(st){ st.textContent = 'รายการจะถูกเพิ่มต่อท้ายชีต Transaction'; st.style.color = 'var(--muted2)'; }
+  txOnTypeChange();
+  document.getElementById('tx-modal').classList.add('show');
+  setTimeout(() => { const a=document.getElementById('tx-f-amt'); if(a) a.focus(); }, 80);
+}
+
+function txCloseForm(){ document.getElementById('tx-modal').classList.remove('show'); }
+
+function txOnTypeChange(){
+  const t = document.getElementById('tx-f-type').value;
+  document.getElementById('tx-f-acct2-wrap').style.display = t === 'Transfer' ? 'block' : 'none';
+  document.getElementById('tx-f-acct-lbl').textContent   = t === 'Transfer' ? 'โอนออกจากบัญชี' : 'บัญชี';
+  txUpdatePreview();
+}
+
+function txUpdatePreview(){
+  const el = document.getElementById('tx-f-preview');
+  if(!el) return;
+  const t   = document.getElementById('tx-f-type').value;
+  const mag = Math.abs(parseFloat(document.getElementById('tx-f-amt').value) || 0);
+  const a1  = document.getElementById('tx-f-acct');
+  const n1  = (a1.options[a1.selectedIndex] || {}).text || '—';
+  const money = v => v.toLocaleString('en-US',{minimumFractionDigits:2, maximumFractionDigits:2});
+  const signed = mag * (TX_SIGN[t] ?? -1);
+  let out = `${n1}  ${signed < 0 ? '−' : '+'}${money(mag)}`;
+  if(t === 'Transfer'){
+    const a2 = document.getElementById('tx-f-acct2');
+    out += `\n${(a2.options[a2.selectedIndex] || {}).text || '—'}  +${money(mag)}`;
+  }
+  el.textContent = 'จะเขียนลงชีต →\n' + out;
+}
+
+async function txSubmitForm(){
+  const btn = document.getElementById('tx-f-save');
+  const st  = document.getElementById('tx-f-status');
+  const say = (m,c) => { st.textContent = m; st.style.color = c || 'var(--muted2)'; };
+
+  const date     = document.getElementById('tx-f-date').value;
+  const txType   = document.getElementById('tx-f-type').value;
+  const category = document.getElementById('tx-f-cat').value.trim();
+  const details  = document.getElementById('tx-f-detail').value.trim();
+  const amount   = parseFloat(document.getElementById('tx-f-amt').value);
+  const bankCol  = parseInt(document.getElementById('tx-f-acct').value, 10);
+  const bankCol2 = parseInt(document.getElementById('tx-f-acct2').value, 10);
+
+  if(!date)         return say('ใส่วันที่ก่อน', 'var(--expense)');
+  if(!category)     return say('ใส่หมวดก่อน', 'var(--expense)');
+  if(!(amount > 0)) return say('จำนวนเงินต้องมากกว่า 0', 'var(--expense)');
+  if(isNaN(bankCol))return say('เลือกบัญชีก่อน', 'var(--expense)');
+  if(txType === 'Transfer' && bankCol === bankCol2)
+    return say('บัญชีต้นทางกับปลายทางต้องคนละบัญชี', 'var(--expense)');
+
+  btn.disabled = true;
+  say('กำลังบันทึก…');
+  try{
+    await txAppendRow({date, txType, category, details, bankCol, amount, bankCol2});
+    say('บันทึกแล้ว — กำลังดึงข้อมูลใหม่', 'var(--income)');
+    await gsSync();
+    txCloseForm();
+  }catch(e){
+    say(e.message, 'var(--expense)');
+  }
+  btn.disabled = false;
+}
+
+// preview อัปเดตตามที่พิมพ์/เลือก
+document.addEventListener('input',  e => {
+  if(e.target && e.target.id && e.target.id.indexOf('tx-f-') === 0) txUpdatePreview();
+});
+document.addEventListener('change', e => {
+  if(!e.target || !e.target.id) return;
+  if(e.target.id === 'tx-f-type') txOnTypeChange();
+  else if(e.target.id.indexOf('tx-f-') === 0) txUpdatePreview();
+});
 </script>
 <!-- ⚙ Google Sheets Settings Modal (restored — CSS/JS อ้างถึงแต่ markup หายไป) -->
 <div id="gs-modal" class="gs-modal-overlay">
@@ -6568,6 +6757,63 @@ if('serviceWorker' in navigator){
     <div class="gs-modal-actions">
       <button class="gs-save-btn" onclick="gsSaveAndConnect()">บันทึก & เชื่อมต่อ</button>
       <button class="gs-cancel-btn" onclick="gsCloseModal()">ยกเลิก</button>
+    </div>
+  </div>
+</div>
+<!-- v49 — ปุ่มเพิ่มรายการ -->
+<button id="tx-fab" class="tx-fab" onclick="txOpenForm()" title="เพิ่มรายการ" aria-label="เพิ่มรายการ">+</button>
+
+<div id="tx-modal" class="gs-modal-overlay">
+  <div class="gs-modal">
+    <div class="gs-modal-close" onclick="txCloseForm()">&#10005;</div>
+    <div class="gs-modal-title">&#10133; เพิ่มรายการ</div>
+
+    <div class="tx-g2">
+      <div class="gs-field">
+        <div class="gs-label">วันที่</div>
+        <input id="tx-f-date" class="gs-input" type="date">
+      </div>
+      <div class="gs-field">
+        <div class="gs-label">ประเภท</div>
+        <select id="tx-f-type" class="gs-input">
+          <option>Expense</option><option>Income</option><option>Bills</option>
+          <option>Savings</option><option>Debt</option><option>Transfer</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="gs-field">
+      <div class="gs-label">หมวด</div>
+      <input id="tx-f-cat" class="gs-input" list="tx-cat-list" placeholder="เช่น Food, Transport" autocomplete="off">
+      <datalist id="tx-cat-list"></datalist>
+    </div>
+
+    <div class="gs-field">
+      <div class="gs-label">รายละเอียด</div>
+      <input id="tx-f-detail" class="gs-input" type="text" placeholder="ไม่บังคับ" autocomplete="off">
+    </div>
+
+    <div class="tx-g2">
+      <div class="gs-field">
+        <div class="gs-label" id="tx-f-acct-lbl">บัญชี</div>
+        <select id="tx-f-acct" class="gs-input"></select>
+      </div>
+      <div class="gs-field">
+        <div class="gs-label">จำนวนเงิน (บาท)</div>
+        <input id="tx-f-amt" class="gs-input" type="number" inputmode="decimal" step="0.01" placeholder="0.00">
+      </div>
+    </div>
+
+    <div class="gs-field" id="tx-f-acct2-wrap" style="display:none">
+      <div class="gs-label">โอนเข้าบัญชี</div>
+      <select id="tx-f-acct2" class="gs-input"></select>
+    </div>
+
+    <div class="tx-prev" id="tx-f-preview"></div>
+    <div class="gs-status-row"><span id="tx-f-status">รายการจะถูกเพิ่มต่อท้ายชีต Transaction</span></div>
+    <div class="gs-modal-actions">
+      <button class="gs-save-btn" id="tx-f-save" onclick="txSubmitForm()">บันทึกลงชีต</button>
+      <button class="gs-cancel-btn" onclick="txCloseForm()">ยกเลิก</button>
     </div>
   </div>
 </div>
