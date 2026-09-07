@@ -708,6 +708,12 @@ select.month-display{text-align-last:center;outline:none}
 .tx-fab:active{transform:scale(.94)}
 .tx-fab:focus-visible{outline:2px solid var(--income);outline-offset:3px}
 .tx-g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tx-editable{cursor:pointer}
+.tx-editable:hover{background:var(--bg3)}
+.tx-del-btn{background:transparent;border:1px solid rgba(255,64,96,.45);color:var(--expense);
+  padding:9px 14px;border-radius:8px;cursor:pointer;font-family:var(--f-mono);font-size:12px;margin-right:auto}
+.tx-del-btn:hover{background:rgba(255,64,96,.12)}
+.tx-del-btn[hidden]{display:none}
 .tx-prev{font-family:var(--f-mono);font-size:11px;line-height:1.7;
   color:var(--muted2);background:var(--bg3);border:1px solid var(--border2);
   border-radius:8px;padding:9px 11px;margin:10px 0;white-space:pre-wrap;min-height:18px}
@@ -2991,7 +2997,8 @@ function renderTxTable(rows){
       const at=r.amount>=0?'+฿'+Math.abs(r.amount).toLocaleString(LOC):'฿'+Math.abs(r.amount).toLocaleString(LOC);
       const TX_MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
       const fmtTxDate=ds=>{const[,m,d]=ds.split('-');return TX_MONTHS[+m-1]+'-'+d;};
-      return `<tr><td style="color:var(--muted);font-size:11px">${fmtTxDate(r.dateStr)}</td>
+      const ed=r.sheetRow?` class="tx-editable" onclick="txOpenForm(${r.sheetRow})" title="แตะเพื่อแก้ไข"`:'';
+      return `<tr${ed}><td style="color:var(--muted);font-size:11px">${fmtTxDate(r.dateStr)}</td>
         <td><span class="tp pill-${escHtml(r.type)}">${escHtml(r.type)}</span></td>
         <td style="font-size:11px;color:var(--muted2)">${escHtml(r.category)}</td>
         <td style="color:var(--text);max-width:160px;overflow:hidden;text-overflow:ellipsis" title="${escHtml(r.details)}">${escHtml(r.details)||'—'}</td>
@@ -4599,7 +4606,8 @@ function gsProcessData(map){
           month:monthKey(d),year:d.getFullYear(),type:txType,
           category:r[ti('Type')]?String(r[ti('Type')]).trim():'Other',
           details:r[ti('Details')]?String(r[ti('Details')]).trim():'',
-          amount:Math.round(amt*100)/100});
+          amount:Math.round(amt*100)/100,
+          sheetRow:i+1});        // v49 — เลขแถวจริงในชีต (1-based) ไว้แก้/ลบ
         lastTxRow=i;
       }
       txRows=rows;
@@ -6690,50 +6698,92 @@ if('serviceWorker' in navigator){
 // (ไม่มี Math.abs) → รายจ่ายทุกชนิดเก็บเป็นค่าติดลบ
 const TX_SIGN = {Income:+1, Expense:-1, Bills:-1, Savings:-1, Debt:-1, Transfer:-1};
 
-async function txAppendRow({date, txType, category, details, bankCol, amount, bankCol2}){
-  if(!txSheetMeta)    throw new Error('ยังไม่รู้โครงสร้างชีต — กด Sync ก่อน 1 ครั้ง');
-  if(!gsTokenValid()) throw new Error('Session หมดอายุ — กด Sync เพื่อเข้าสู่ระบบใหม่');
-
-  const M      = txSheetMeta;
-  const rowNum = await txFindEmptyRow();
-  const mag    = Math.abs(Number(amount) || 0);
-
-  // ── เขียนทีละช่อง ไม่เขียนทับทั้งแถว ────────────────────────────
-  // ชีตนี้มีคอลัมน์สูตรซ่อนอยู่ (B, C และอาจมีอีกหลังคอลัมน์ธนาคาร)
-  // ถ้า update เป็นช่วง A:P รวดเดียว ค่าว่างในอาเรย์จะไปลบสูตรพวกนั้นทิ้ง
+// สร้างรายการช่องที่จะเขียน — ใช้ร่วมกันทั้งตอนเพิ่มใหม่และตอนแก้
+// clearOthers: ตอนแก้ ถ้าเปลี่ยนบัญชี ต้องล้างยอดในคอลัมน์บัญชีเดิมด้วย
+function txCellPlan({date, txType, category, details, bankCol, amount, bankCol2}, clearOthers){
+  const M   = txSheetMeta;
+  const mag = Math.abs(Number(amount) || 0);
   const cells = [
-    [M.colDate,   date],                        // ISO — USER_ENTERED ให้ Sheets แปลงเป็นวันที่เอง
+    [M.colDate,   date],                 // ISO — USER_ENTERED ให้ Sheets แปลงเป็นวันที่เอง
     [M.colTx,     txType],
     [M.colType,   category],
     [M.colDetail, details || ''],
     [bankCol,     mag * (TX_SIGN[txType] ?? -1)]
   ];
+  const used = {}; used[bankCol] = 1;
   // Transfer: ออกจากบัญชีหนึ่ง เข้าอีกบัญชี → ยอดรวมของแถวเป็น 0
   if(txType === 'Transfer' && bankCol2 != null && !isNaN(bankCol2) && bankCol2 !== bankCol){
-    cells.push([bankCol2, mag]);
+    cells.push([bankCol2, mag]); used[bankCol2] = 1;
   }
+  if(clearOthers) (M.banks || []).forEach(b => { if(!used[b.col]) cells.push([b.col, '']); });
+  return cells.filter(([c]) => c != null && c >= 0);
+}
 
-  const data = cells
-    .filter(([c]) => c != null && c >= 0)
-    .map(([c, v]) => ({range: `Transaction!${txColLetter(c)}${rowNum}`, values: [[v]]}));
-
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${GS_CONFIG.spreadsheetId}`
-            + `/values:batchUpdate`;
-  const res = await fetch(url, {
-    method:  'POST',
-    headers: {'Authorization':'Bearer '+gsAccessToken, 'Content-Type':'application/json'},
-    body:    JSON.stringify({valueInputOption:'USER_ENTERED', data})
-  });
-
+// เขียนลงแถวที่ระบุ — ทีละช่อง ไม่แตะคอลัมน์สูตรที่ซ่อนอยู่ (B, C ฯลฯ)
+async function txWriteCells(rowNum, cells){
+  const data = cells.map(([c, v]) => ({range:`Transaction!${txColLetter(c)}${rowNum}`, values:[[v]]}));
+  const res = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${GS_CONFIG.spreadsheetId}/values:batchUpdate`, {
+      method:'POST',
+      headers:{'Authorization':'Bearer '+gsAccessToken, 'Content-Type':'application/json'},
+      body: JSON.stringify({valueInputOption:'USER_ENTERED', data})
+    });
   if(!res.ok){
     const body = await res.text().catch(()=>'');
-    if(res.status === 401 || res.status === 403){
+    if(res.status === 401 || res.status === 403)
       throw new Error('ไม่มีสิทธิ์เขียน — ออกจากระบบแล้วกด Sync เพื่อให้สิทธิ์ read/write ใหม่');
-    }
     throw new Error('HTTP '+res.status+' · '+body.slice(0,140));
   }
-  console.log('[TX] เขียนแถว', rowNum, '·', data.map(d => d.range.split('!')[1]).join(' '));
-  return {row: rowNum, cells: data.length};
+  console.log('[TX] เขียนแถว', rowNum, '·', data.length, 'ช่อง');
+}
+
+async function txAppendRow(fields){
+  if(!txSheetMeta)    throw new Error('ยังไม่รู้โครงสร้างชีต — กด Sync ก่อน 1 ครั้ง');
+  if(!gsTokenValid()) throw new Error('Session หมดอายุ — กด Sync เพื่อเข้าสู่ระบบใหม่');
+  const rowNum = await txFindEmptyRow();
+  await txWriteCells(rowNum, txCellPlan(fields, false));
+  return {row: rowNum};
+}
+
+async function txEditRowWrite(rowNum, fields){
+  if(!txSheetMeta)    throw new Error('ยังไม่รู้โครงสร้างชีต — กด Sync ก่อน 1 ครั้ง');
+  if(!gsTokenValid()) throw new Error('Session หมดอายุ — กด Sync เพื่อเข้าสู่ระบบใหม่');
+  await txWriteCells(rowNum, txCellPlan(fields, true));
+  return {row: rowNum};
+}
+
+// ── ลบทั้งแถว ───────────────────────────────────────────────────────
+// ใช้ deleteDimension ไม่ใช่การล้างค่า เพราะการล้างจะเหลือแถวว่างคาไว้
+// กลางตาราง 4,500 แถว · Sheets ปรับ reference ของสูตรให้เองเมื่อลบแถว
+async function txSheetGid(){
+  if(txSheetMeta && txSheetMeta.gid != null) return txSheetMeta.gid;
+  const res = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${GS_CONFIG.spreadsheetId}`
+    + `?fields=${encodeURIComponent('sheets(properties(sheetId,title))')}`,
+    {headers:{'Authorization':'Bearer '+gsAccessToken}});
+  if(!res.ok) throw new Error('อ่านข้อมูลชีตไม่ได้ (HTTP '+res.status+')');
+  const j  = await res.json();
+  const sh = (j.sheets || []).find(s => s.properties && s.properties.title === 'Transaction');
+  if(!sh) throw new Error('ไม่พบชีตชื่อ Transaction');
+  txSheetMeta.gid = sh.properties.sheetId;
+  return txSheetMeta.gid;
+}
+
+async function txDeleteRow(rowNum){
+  if(!gsTokenValid()) throw new Error('Session หมดอายุ — กด Sync เพื่อเข้าสู่ระบบใหม่');
+  const gid = await txSheetGid();
+  const res = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${GS_CONFIG.spreadsheetId}:batchUpdate`, {
+      method:'POST',
+      headers:{'Authorization':'Bearer '+gsAccessToken, 'Content-Type':'application/json'},
+      body: JSON.stringify({requests:[{deleteDimension:{range:{
+        sheetId: gid, dimension:'ROWS', startIndex: rowNum - 1, endIndex: rowNum}}}]})
+    });
+  if(!res.ok){
+    const body = await res.text().catch(()=>'');
+    throw new Error('ลบไม่สำเร็จ · HTTP '+res.status+' · '+body.slice(0,140));
+  }
+  console.log('[TX] ลบแถว', rowNum);
 }
 
 // index คอลัมน์ (0-based) → ตัวอักษรแบบ A1  เช่น 0→A, 6→G, 26→AA
@@ -6792,21 +6842,53 @@ function txFillOptions(){
   if(dl) dl.innerHTML = cats.map(c => `<option value="${c}">`).join('');
 }
 
-function txOpenForm(){
+// txOpenForm()          → โหมดเพิ่มรายการใหม่
+// txOpenForm(sheetRow)  → โหมดแก้ไขรายการที่แถวนั้นในชีต
+let txEditRow = null;
+
+function txOpenForm(sheetRow){
   if(!txSheetMeta){ alert('กด Sync ก่อน 1 ครั้ง เพื่อให้ระบบอ่านโครงสร้างชีต'); return; }
   txFillOptions();
-  const d = new Date();
-  document.getElementById('tx-f-date').value =
-    `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-  ['tx-f-amt','tx-f-detail','tx-f-cat'].forEach(id => { const e=document.getElementById(id); if(e) e.value=''; });
-  const st = document.getElementById('tx-f-status');
-  if(st){ st.textContent = 'รายการจะถูกเพิ่มต่อท้ายชีต Transaction'; st.style.color = 'var(--muted2)'; }
+  txEditRow = sheetRow || null;
+  const rec = txEditRow ? (txRows || []).find(r => r.sheetRow === txEditRow) : null;
+  if(txEditRow && !rec){ alert('หารายการนี้ไม่เจอ — กด Sync แล้วลองใหม่'); txEditRow = null; return; }
+
+  const $ = id => document.getElementById(id);
+  $('tx-modal-title').textContent = rec ? '✎ แก้ไขรายการ' : '➕ เพิ่มรายการ';
+  $('tx-f-save').textContent      = rec ? 'บันทึกการแก้ไข' : 'บันทึกลงชีต';
+  $('tx-f-del').hidden            = !rec;
+
+  if(rec){
+    $('tx-f-date').value   = rec.dateStr;
+    $('tx-f-type').value   = rec.type;
+    $('tx-f-cat').value    = rec.category === 'Other' ? '' : rec.category;
+    $('tx-f-detail').value = rec.details || '';
+    // หาว่ายอดอยู่คอลัมน์บัญชีไหน จาก movement รายบัญชีที่ parser เก็บไว้
+    const byName = {}; (txSheetMeta.banks || []).forEach(b => byName[b.name] = b.col);
+    const ent = Object.entries(rec.acct || {});
+    const src = (rec.type === 'Transfer' ? ent.find(([,v]) => v < 0) : ent[0]) || ent[0];
+    const dst = rec.type === 'Transfer' ? ent.find(([,v]) => v > 0) : null;
+    if(src && byName[src[0]] != null) $('tx-f-acct').value  = byName[src[0]];
+    if(dst && byName[dst[0]] != null) $('tx-f-acct2').value = byName[dst[0]];
+    $('tx-f-amt').value = src ? Math.abs(src[1]) : Math.abs(rec.amount);
+    $('tx-f-status').textContent = 'กำลังแก้แถว ' + txEditRow + ' ในชีต Transaction';
+  } else {
+    const d = new Date();
+    $('tx-f-date').value =
+      `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    ['tx-f-amt','tx-f-detail','tx-f-cat'].forEach(id => { const e = $(id); if(e) e.value = ''; });
+    $('tx-f-status').textContent = 'รายการจะถูกเพิ่มต่อท้ายชีต Transaction';
+  }
+  $('tx-f-status').style.color = 'var(--muted2)';
   txOnTypeChange();
-  document.getElementById('tx-modal').classList.add('show');
-  setTimeout(() => { const a=document.getElementById('tx-f-amt'); if(a) a.focus(); }, 80);
+  $('tx-modal').classList.add('show');
+  setTimeout(() => { const a = $('tx-f-amt'); if(a) a.focus(); }, 80);
 }
 
-function txCloseForm(){ document.getElementById('tx-modal').classList.remove('show'); }
+function txCloseForm(){
+  document.getElementById('tx-modal').classList.remove('show');
+  txEditRow = null;   // สำคัญ — ไม่งั้นกด + ครั้งต่อไปจะไปเขียนทับแถวที่เพิ่งแก้
+}
 
 function txOnTypeChange(){
   const t = document.getElementById('tx-f-type').value;
@@ -6834,6 +6916,7 @@ function txUpdatePreview(){
 
 async function txSubmitForm(){
   const btn = document.getElementById('tx-f-save');
+  const del = document.getElementById('tx-f-del');
   const st  = document.getElementById('tx-f-status');
   const say = (m,c) => { st.textContent = m; st.style.color = c || 'var(--muted2)'; };
 
@@ -6845,24 +6928,55 @@ async function txSubmitForm(){
   const bankCol  = parseInt(document.getElementById('tx-f-acct').value, 10);
   const bankCol2 = parseInt(document.getElementById('tx-f-acct2').value, 10);
 
-  if(!date)         return say('ใส่วันที่ก่อน', 'var(--expense)');
-  if(!category)     return say('ใส่หมวดก่อน', 'var(--expense)');
-  if(!(amount > 0)) return say('จำนวนเงินต้องมากกว่า 0', 'var(--expense)');
-  if(isNaN(bankCol))return say('เลือกบัญชีก่อน', 'var(--expense)');
+  if(!date)          return say('ใส่วันที่ก่อน', 'var(--expense)');
+  if(!category)      return say('ใส่หมวดก่อน', 'var(--expense)');
+  if(!(amount > 0))  return say('จำนวนเงินต้องมากกว่า 0', 'var(--expense)');
+  if(isNaN(bankCol)) return say('เลือกบัญชีก่อน', 'var(--expense)');
   if(txType === 'Transfer' && bankCol === bankCol2)
     return say('บัญชีต้นทางกับปลายทางต้องคนละบัญชี', 'var(--expense)');
 
-  btn.disabled = true;
+  btn.disabled = true; del.disabled = true;
   say('กำลังบันทึก…');
   try{
-    const wrote = await txAppendRow({date, txType, category, details, bankCol, amount, bankCol2});
-    say('บันทึกลง Transaction แถว '+wrote.row+' — กำลังดึงข้อมูลใหม่', 'var(--income)');
+    const f = {date, txType, category, details, bankCol, amount, bankCol2};
+    if(txEditRow){
+      await txEditRowWrite(txEditRow, f);
+      say('แก้แถว ' + txEditRow + ' แล้ว — กำลังดึงข้อมูลใหม่', 'var(--income)');
+    } else {
+      const wrote = await txAppendRow(f);
+      say('บันทึกลง Transaction แถว ' + wrote.row + ' — กำลังดึงข้อมูลใหม่', 'var(--income)');
+    }
     await gsSync();
     txCloseForm();
   }catch(e){
     say(e.message, 'var(--expense)');
   }
-  btn.disabled = false;
+  btn.disabled = false; del.disabled = false;
+}
+
+async function txDeleteCurrent(){
+  if(!txEditRow) return;
+  const rec = (txRows || []).find(r => r.sheetRow === txEditRow);
+  const what = rec ? `${rec.dateStr} · ${rec.category}${rec.details ? ' · '+rec.details : ''} · ${Math.abs(rec.amount).toLocaleString(LOC)}`
+                   : 'แถว ' + txEditRow;
+  if(!confirm('ลบรายการนี้ออกจากชีตถาวร?\n\n' + what + '\n\nกู้คืนได้ที่ File → Version history ใน Google Sheets')) return;
+
+  const btn = document.getElementById('tx-f-save');
+  const del = document.getElementById('tx-f-del');
+  const st  = document.getElementById('tx-f-status');
+  const say = (m,c) => { st.textContent = m; st.style.color = c || 'var(--muted2)'; };
+
+  btn.disabled = true; del.disabled = true;
+  say('กำลังลบ…');
+  try{
+    await txDeleteRow(txEditRow);
+    say('ลบแล้ว — กำลังดึงข้อมูลใหม่', 'var(--income)');
+    await gsSync();
+    txCloseForm();
+  }catch(e){
+    say(e.message, 'var(--expense)');
+  }
+  btn.disabled = false; del.disabled = false;
 }
 
 // preview อัปเดตตามที่พิมพ์/เลือก
@@ -6958,7 +7072,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <div id="tx-modal" class="gs-modal-overlay">
   <div class="gs-modal">
     <div class="gs-modal-close" onclick="txCloseForm()">&#10005;</div>
-    <div class="gs-modal-title">&#10133; เพิ่มรายการ</div>
+    <div class="gs-modal-title" id="tx-modal-title">&#10133; เพิ่มรายการ</div>
 
     <div class="tx-g2">
       <div class="gs-field">
@@ -7004,6 +7118,7 @@ document.addEventListener('DOMContentLoaded', () => {
     <div class="tx-prev" id="tx-f-preview"></div>
     <div class="gs-status-row"><span id="tx-f-status">รายการจะถูกเพิ่มต่อท้ายชีต Transaction</span></div>
     <div class="gs-modal-actions">
+      <button class="tx-del-btn" id="tx-f-del" onclick="txDeleteCurrent()" hidden>ลบรายการ</button>
       <button class="gs-save-btn" id="tx-f-save" onclick="txSubmitForm()">บันทึกลงชีต</button>
       <button class="gs-cancel-btn" onclick="txCloseForm()">ยกเลิก</button>
     </div>
