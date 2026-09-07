@@ -750,9 +750,13 @@ select.month-display{text-align-last:center;outline:none}
    Google บล็อก OAuth ใน embedded webview (LINE / Messenger / IG …)
    ด้วยนโยบาย disallowed_useragent — แก้ที่โค้ดไม่ได้
    สิ่งที่ทำได้คือบอกทางออกก่อนผู้ใช้ไปเจอหน้า error ของ Google */
-.wv-warn{position:fixed;top:0;left:0;right:0;z-index:400;display:flex;align-items:flex-start;gap:12px;
+.wv-warn{position:fixed;top:0;left:0;right:0;z-index:100000;display:flex;align-items:flex-start;gap:12px;
   padding:12px 14px;background:#2a1c05;border-bottom:1px solid rgba(255,149,0,.5);
   font-size:12.5px;line-height:1.55;color:#f0e2c8}
+/* ต้องมีบรรทัดนี้ — display:flex ข้างบนเป็น class selector ซึ่ง specificity
+   เท่ากับ [hidden]{display:none} ของเบราว์เซอร์ แต่มาทีหลังจึงชนะ
+   ผลคือแบนเนอร์แสดงตลอดและกดปิดไม่ได้ */
+.wv-warn[hidden]{display:none}
 .wv-warn b{color:#ffb340;font-weight:600}
 .wv-warn-txt{flex:1 1 auto;min-width:0}
 .wv-warn-btn{flex:0 0 auto;background:rgba(255,149,0,.16);border:1px solid rgba(255,149,0,.55);
@@ -6901,11 +6905,20 @@ function wvCopyLink(btn){
   else fallback();
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  if(!isInAppBrowser()) return;
+function wvDismiss(){
   const w = document.getElementById('wv-warn');
-  if(w) w.hidden = false;
-  console.log('[GS] เปิดในเบราว์เซอร์ของแอปอื่น — OAuth จะถูก Google ปฏิเสธ');
+  if(w) w.hidden = true;
+  // ปิดแล้วไม่ต้องขึ้นซ้ำทุกครั้งที่เปิดหน้า — แต่ยังเตือนตอนกด Sync อยู่
+  try{ sessionStorage.setItem('wv_dismissed','1'); }catch(e){}
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const w = document.getElementById('wv-warn');
+  if(!w) return;
+  let dismissed = false;
+  try{ dismissed = sessionStorage.getItem('wv_dismissed') === '1'; }catch(e){}
+  w.hidden = !isInAppBrowser() || dismissed;
+  if(!w.hidden) console.log('[GS] เปิดในเบราว์เซอร์ของแอปอื่น — OAuth จะถูก Google ปฏิเสธ');
 });
 </script>
 <!-- ⚙ Google Sheets Settings Modal (restored — CSS/JS อ้างถึงแต่ markup หายไป) -->
@@ -6936,7 +6949,7 @@ document.addEventListener('DOMContentLoaded', () => {
     Google ไม่ยอมให้ล็อกอินจากตรงนี้ กดปุ่ม ⋯ หรือ ⋮ มุมขวาบน
     แล้วเลือก <b>“เปิดในเบราว์เซอร์”</b> (Chrome หรือ Safari)</div>
   <button class="wv-warn-btn" onclick="wvCopyLink(this)">คัดลอกลิงก์</button>
-  <button class="wv-warn-x" onclick="this.parentElement.hidden=true" aria-label="ปิด">✕</button>
+  <button class="wv-warn-x" onclick="wvDismiss()" aria-label="ปิด">✕</button>
 </div>
 
 <!-- v49 — ปุ่มเพิ่มรายการ -->
