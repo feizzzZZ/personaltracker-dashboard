@@ -714,6 +714,16 @@ select.month-display{text-align-last:center;outline:none}
   padding:9px 14px;border-radius:8px;cursor:pointer;font-family:var(--f-mono);font-size:12px;margin-right:auto}
 .tx-del-btn:hover{background:rgba(255,64,96,.12)}
 .tx-del-btn[hidden]{display:none}
+/* ปุ่มเพิ่มรายการลงทุน + ฟอร์ม */
+.at-add-btn{align-items:center;gap:6px;background:rgba(124,111,236,.14);
+  border:1px solid rgba(124,111,236,.5);color:var(--savings);border-radius:8px;
+  padding:8px 14px;font-family:var(--f-mono);font-size:12px;cursor:pointer;white-space:nowrap}
+.at-add-btn:hover{background:rgba(124,111,236,.24)}
+.at-calc{font-family:var(--f-mono);font-size:11px;line-height:1.7;color:var(--muted2);
+  background:var(--bg3);border:1px solid var(--border2);border-radius:8px;
+  padding:9px 11px;margin:10px 0;white-space:pre-wrap;min-height:18px}
+.at-g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+@media(max-width:560px){.at-g3{grid-template-columns:1fr 1fr}}
 .tx-prev{font-family:var(--f-mono);font-size:11px;line-height:1.7;
   color:var(--muted2);background:var(--bg3);border:1px solid var(--border2);
   border-radius:8px;padding:9px 11px;margin:10px 0;white-space:pre-wrap;min-height:18px}
@@ -1202,7 +1212,9 @@ select.month-display{text-align-last:center;outline:none}
 
     <!-- ══ PORTFOLIO HOLDINGS ══ -->
     <div class="page" id="page-portfolio">
-      <div class="pg-hdr"><div><div class="pg-title">Holdings</div><div class="pg-sub">สินทรัพย์ทั้งหมด · WACC · True Cost · P&L</div></div></div>
+      <div class="pg-hdr"><div><div class="pg-title">Holdings</div><div class="pg-sub">สินทรัพย์ทั้งหมด · WACC · True Cost · P&L</div></div>
+        <button class="at-add-btn" id="at-add-btn" onclick="atOpenForm()" style="display:none">+ เพิ่มรายการลงทุน</button>
+      </div>
       <div class="sg">
         <div class="sc" style="--g:rgba(124,111,236,.1)"><div class="sc-lbl">Total value</div><div class="sc-val" id="pf-val" style="color:var(--white)">฿0</div><div class="sc-sub" id="pf-assets"></div></div>
         <div class="sc"><div class="sc-lbl">True cost (incl. fee)</div><div class="sc-val" id="pf-cost" style="color:var(--muted2)">฿0</div><div class="sc-sub" id="pf-fee-sub"></div></div>
@@ -4201,6 +4213,7 @@ let gsSyncTimer   = null;
 let gsLastSync    = null;
 let gsConnected   = false;
 let txSheetMeta   = null;   // v49 — layout ชีต Transaction จากรอบ sync ล่าสุด
+let atSheetMeta   = null;   // v49 — layout ชีต Asset_Tracker
 
 // ── Init: load saved config + token, show sync btn ──
 function gsInit(){
@@ -4717,9 +4730,11 @@ function gsParseAssetTracker(rows){
   const SIGN={'Buy':1,'Split':1,'Recieved':1,'Stake':1,'Sell':-1,'Send':-1,'Used':-1,'Transfer':0,'Dividend Payout':0};
   const IS_COST=new Set(['Buy','Split']);
   const trackerRows2=[],fxAcc={},waccAcc2={},netQtyMap2={};
+  let lastAtRow=0;                    // v49
   for(let i=1;i<rows.length;i++){
     const r=rows[i]||[];
     const ticker=r[AT.ticker]?String(r[AT.ticker]).trim():'';if(!ticker)continue;
+    lastAtRow=i;                      // v49 — แถวสุดท้ายที่มี ticker (ไว้เขียนต่อท้าย)
     const txType=r[AT.txType]?String(r[AT.txType]).trim():'';
     const d=parseDate(r[AT.date]);if(!d||isNaN(d.getTime()))continue;
     const fx=parseFloat(r[AT.fxRate])||1;
@@ -4743,6 +4758,17 @@ function gsParseAssetTracker(rows){
       fx,qty,amtTHB,commTHB,trueCost});
   }
   tracker=trackerRows2;
+  // v49 — เก็บ layout จริงไว้ให้ฟอร์มเพิ่มรายการลงทุนใช้ (อ่านสดทุก sync)
+  atSheetMeta = {
+    cols: AT,
+    lastRow: lastAtRow + 1,           // เลขแถวจริงในชีต (1-based) · header อยู่แถว 1
+    width: hArr.length,
+    formulaCols: (atSheetMeta && atSheetMeta.formulaCols) || null,
+    gid: atSheetMeta ? atSheetMeta.gid : null
+  };
+  const _atb = document.getElementById('at-add-btn');
+  if(_atb) _atb.style.display = 'inline-flex';
+  console.log('[AT] schema พร้อม — รายการสุดท้ายแถว', atSheetMeta.lastRow);
   fxMap={};for(const[t,v]of Object.entries(fxAcc))fxMap[t]=parseFloat((v.reduce((s,x)=>s+x,0)/v.length).toFixed(2));
   waccMap={};for(const[t,v]of Object.entries(waccAcc2))waccMap[t]=v.qty>0?v.cost/v.qty:0;
   // BUGFIX v48 #14 — ดูคำอธิบายในเส้นทาง Excel ด้านบน (ต้องแก้ทั้งสองที่)
@@ -6989,6 +7015,266 @@ document.addEventListener('change', e => {
   else if(e.target.id.indexOf('tx-f-') === 0) txUpdatePreview();
 });
 
+// ══ v49 — เพิ่มรายการลงทุนลงชีต Asset_Tracker ══════════════════════
+// ชีตนี้ต่างจาก Transaction: บางคอลัมน์ (ยอดรวม THB/USD) อาจเป็น "สูตร"
+// ที่ผู้ใช้เขียนไว้เอง ถ้าเขียนตัวเลขทับลงไปสูตรจะหายทั้งคอลัมน์
+// → ตรวจก่อนว่าคอลัมน์ไหนเป็นสูตร แล้วคัดลอกสูตรจากแถวก่อนหน้าลงมาแทน
+
+// อ่านแถวอ้างอิงแบบดิบ (เห็น = ของสูตร) → คืน {index คอลัมน์: สูตร}
+async function atFormulaCols(refRow){
+  const rng = `Asset_Tracker!A${refRow}:Z${refRow}`;
+  const res = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${GS_CONFIG.spreadsheetId}`
+    + `/values/${encodeURIComponent(rng)}?valueRenderOption=FORMULA`,
+    {headers:{'Authorization':'Bearer '+gsAccessToken}});
+  if(!res.ok) throw new Error('อ่านชีต Asset_Tracker ไม่ได้ (HTTP '+res.status+')');
+  const row = ((await res.json()).values || [])[0] || [];
+  const out = {};
+  row.forEach((v, i) => { if(typeof v === 'string' && v.charAt(0) === '=') out[i] = v; });
+  return out;
+}
+
+async function atSheetGid(){
+  if(atSheetMeta && atSheetMeta.gid != null) return atSheetMeta.gid;
+  const res = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${GS_CONFIG.spreadsheetId}`
+    + `?fields=${encodeURIComponent('sheets(properties(sheetId,title))')}`,
+    {headers:{'Authorization':'Bearer '+gsAccessToken}});
+  if(!res.ok) throw new Error('อ่านข้อมูลชีตไม่ได้ (HTTP '+res.status+')');
+  const j  = await res.json();
+  const sh = (j.sheets || []).find(s => s.properties && s.properties.title === 'Asset_Tracker');
+  if(!sh) throw new Error('ไม่พบชีตชื่อ Asset_Tracker');
+  atSheetMeta.gid = sh.properties.sheetId;
+  return atSheetMeta.gid;
+}
+
+// หาแถวว่างถัดจากรายการสุดท้าย — เช็คเฉพาะคอลัมน์ที่คนกรอก
+// (คอลัมน์สูตรมีค่าลงไปไกลกว่าข้อมูลจริงเสมอ ห้ามเอามานับ)
+async function atFindEmptyRow(){
+  const C = atSheetMeta.cols;
+  const watch = [C.date, C.txType, C.ticker, C.qty, C.price].filter(c => c != null && c >= 0);
+  if(!watch.length) throw new Error('อ่านคอลัมน์ของ Asset_Tracker ไม่ได้ — กด Sync ใหม่');
+  const lastCol = txColLetter(Math.max.apply(null, watch));
+  const CHUNK = 200, MAX_CHUNKS = 12;
+  let start = (atSheetMeta.lastRow || 1) + 1;
+
+  for(let c = 0; c < MAX_CHUNKS; c++){
+    const rng = `Asset_Tracker!A${start}:${lastCol}${start + CHUNK - 1}`;
+    const res = await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${GS_CONFIG.spreadsheetId}`
+      + `/values/${encodeURIComponent(rng)}`,
+      {headers:{'Authorization':'Bearer '+gsAccessToken}});
+    if(!res.ok) throw new Error('อ่านชีตไม่ได้ (HTTP '+res.status+') — กด Sync แล้วลองใหม่');
+    const vals = (await res.json()).values || [];
+    for(let i = 0; i < CHUNK; i++){
+      const r = vals[i] || [];
+      if(!watch.some(col => String(r[col] == null ? '' : r[col]).trim() !== '')) return start + i;
+    }
+    start += CHUNK;
+  }
+  throw new Error('ไล่หาแถวว่างใน Asset_Tracker ไม่เจอ — ตรวจชีตก่อน');
+}
+
+async function atAppendRow(f){
+  if(!atSheetMeta)    throw new Error('ยังไม่รู้โครงสร้างชีต — กด Sync ก่อน 1 ครั้ง');
+  if(!gsTokenValid()) throw new Error('Session หมดอายุ — กด Sync เพื่อเข้าสู่ระบบใหม่');
+
+  const C      = atSheetMeta.cols;
+  const refRow = atSheetMeta.lastRow;
+  const rowNum = await atFindEmptyRow();
+  const F      = atSheetMeta.formulaCols || await atFormulaCols(refRow);
+  atSheetMeta.formulaCols = F;
+
+  // 1) คัดลอกสูตรจากแถวอ้างอิงลงมาก่อน — Sheets ปรับ reference ให้เอง
+  const fCols = Object.keys(F).map(Number);
+  if(fCols.length){
+    const gid = await atSheetGid();
+    const requests = fCols.map(c => ({copyPaste:{
+      source:      {sheetId:gid, startRowIndex:refRow-1, endRowIndex:refRow,   startColumnIndex:c, endColumnIndex:c+1},
+      destination: {sheetId:gid, startRowIndex:rowNum-1, endRowIndex:rowNum,   startColumnIndex:c, endColumnIndex:c+1},
+      pasteType:'PASTE_FORMULA'}}));
+    const res = await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${GS_CONFIG.spreadsheetId}:batchUpdate`, {
+        method:'POST',
+        headers:{'Authorization':'Bearer '+gsAccessToken, 'Content-Type':'application/json'},
+        body: JSON.stringify({requests})});
+    if(!res.ok) throw new Error('คัดลอกสูตรไม่สำเร็จ (HTTP '+res.status+')');
+    console.log('[AT] คัดลอกสูตร', fCols.length, 'คอลัมน์ จากแถว', refRow);
+  }
+
+  // 2) เขียนค่าที่กรอก — ข้ามคอลัมน์ที่เป็นสูตร
+  const plan = [
+    [C.date, f.date], [C.txType, f.txType], [C.ticker, f.ticker],
+    [C.assetType, f.assetType], [C.industry, f.industry], [C.platform, f.platform],
+    [C.fxRate, f.fx], [C.qty, f.qty], [C.price, f.price], [C.commTHB, f.comm],
+    [C.amtTHB, f.amtTHB], [C.amtUS, f.amtUS]
+  ].filter(([c, v]) => c != null && c >= 0 && !F[c] && v !== undefined && v !== null);
+
+  const data = plan.map(([c, v]) => ({range:`Asset_Tracker!${txColLetter(c)}${rowNum}`, values:[[v]]}));
+  const res = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${GS_CONFIG.spreadsheetId}/values:batchUpdate`, {
+      method:'POST',
+      headers:{'Authorization':'Bearer '+gsAccessToken, 'Content-Type':'application/json'},
+      body: JSON.stringify({valueInputOption:'USER_ENTERED', data})});
+  if(!res.ok){
+    const body = await res.text().catch(()=>'');
+    if(res.status === 401 || res.status === 403)
+      throw new Error('ไม่มีสิทธิ์เขียน — ออกจากระบบแล้วกด Sync เพื่อให้สิทธิ์ read/write ใหม่');
+    throw new Error('HTTP '+res.status+' · '+body.slice(0,140));
+  }
+  console.log('[AT] เขียนแถว', rowNum, '·', data.length, 'ช่อง');
+  return {row: rowNum, formulaCols: fCols.length};
+}
+
+// ── ฟอร์ม ───────────────────────────────────────────────────────────
+function atFillOptions(){
+  const uniq = k => [...new Set((tracker || []).map(r => r[k]).filter(v => v && v !== '—'))].sort();
+  const put = (id, arr) => { const d = document.getElementById(id);
+    if(d) d.innerHTML = arr.map(v => `<option value="${escAttr(String(v))}">`).join(''); };
+  put('at-ticker-list',   uniq('ticker'));
+  put('at-industry-list', uniq('industry'));
+  put('at-platform-list', uniq('platform'));
+  // Asset_Type ไม่ได้เก็บดิบไว้ใน tracker — ใช้ group ที่ resolve แล้วแทน
+  put('at-asset-list',    uniq('group'));
+}
+
+// เลือก ticker ที่เคยมี → เติมข้อมูลที่เหลือจากรายการล่าสุดของตัวนั้น
+function atAutofillFromTicker(){
+  const tk = document.getElementById('at-f-ticker').value.trim().toUpperCase();
+  if(!tk) return;
+  const hist = (tracker || []).filter(r => String(r.ticker).toUpperCase() === tk);
+  if(!hist.length) return;
+  const last = hist[hist.length - 1];
+  const set = (id, v) => { const e = document.getElementById(id);
+    if(e && !e.value && v && v !== '—') e.value = v; };
+  set('at-f-asset',    last.group);
+  set('at-f-industry', last.industry);
+  set('at-f-platform', last.platform);
+  const fx = document.getElementById('at-f-fx');
+  if(fx && (fx.value === '' || fx.value === '1') && last.fx > 1) fx.value = last.fx;
+  atCalc();
+}
+
+function atOpenForm(){
+  if(!atSheetMeta){ alert('กด Sync ก่อน 1 ครั้ง เพื่อให้ระบบอ่านโครงสร้างชีต'); return; }
+  atFillOptions();
+  const d = new Date();
+  const $ = id => document.getElementById(id);
+  $('at-f-date').value = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  ['at-f-ticker','at-f-asset','at-f-industry','at-f-platform','at-f-qty','at-f-price','at-f-comm','at-f-thb','at-f-usd']
+    .forEach(id => { const e = $(id); if(!e) return;
+      e.value = '';
+      // ต้องล้างธงนี้ด้วย ไม่งั้นพอผู้ใช้เคยพิมพ์ยอดรวมเองครั้งเดียว
+      // ฟอร์มครั้งถัดๆ ไปจะเลิกคำนวณยอดให้ถาวร
+      delete e.dataset.touched; });
+  $('at-f-fx').value = '1';
+  $('at-f-status').textContent = 'รายการจะถูกเพิ่มต่อท้ายชีต Asset_Tracker';
+  $('at-f-status').style.color = 'var(--muted2)';
+  atCalc();
+  $('at-modal').classList.add('show');
+  setTimeout(() => { const t = $('at-f-ticker'); if(t) t.focus(); }, 80);
+
+  // ตรวจคอลัมน์สูตรครั้งแรก แล้วซ่อนช่องยอดรวมที่ชีตคำนวณเองอยู่แล้ว
+  if(!atSheetMeta.formulaCols && gsTokenValid()){
+    atFormulaCols(atSheetMeta.lastRow)
+      .then(F => { atSheetMeta.formulaCols = F; atApplyFormulaUI(); })
+      .catch(e => console.warn('[AT] ตรวจสูตรไม่ได้:', e.message));
+  } else atApplyFormulaUI();
+}
+
+// ช่องไหนที่ชีตมีสูตรอยู่แล้ว ไม่ต้องให้กรอก — กันเขียนทับสูตร
+function atApplyFormulaUI(){
+  const F = atSheetMeta && atSheetMeta.formulaCols;
+  if(!F) return;
+  const C = atSheetMeta.cols;
+  const thbIsF = C.amtTHB >= 0 && !!F[C.amtTHB];
+  const usdIsF = C.amtUS  >= 0 && !!F[C.amtUS];
+  const w1 = document.getElementById('at-f-thb-wrap');
+  if(w1) w1.style.display = thbIsF ? 'none' : '';
+  atCalc(usdIsF);
+}
+
+function atCalc(usdIsFormula){
+  const $  = id => document.getElementById(id);
+  const n  = id => parseFloat($(id).value) || 0;
+  const qty = n('at-f-qty'), price = n('at-f-price'), fx = n('at-f-fx') || 1, comm = n('at-f-comm');
+  const F   = atSheetMeta && atSheetMeta.formulaCols;
+  const C   = atSheetMeta && atSheetMeta.cols;
+  const usdF = usdIsFormula !== undefined ? usdIsFormula : !!(F && C && C.amtUS >= 0 && F[C.amtUS]);
+
+  const usdWrap = $('at-f-usd-wrap');
+  if(usdWrap) usdWrap.style.display = (fx > 1 && !usdF) ? '' : 'none';
+
+  const gross = qty * price;
+  const thb   = gross * fx;
+  const money = v => v.toLocaleString('en-US',{minimumFractionDigits:2, maximumFractionDigits:2});
+  const el = $('at-f-calc');
+  if(!el) return;
+  if(!qty || !price){ el.textContent = 'กรอกจำนวนกับราคา แล้วจะคำนวณยอดรวมให้'; return; }
+  let s = `${money(qty)} × ${money(price)}` + (fx > 1 ? ` × ${fx}` : '') + `  =  ฿${money(thb)}`;
+  if(comm) s += `\nค่าธรรมเนียม ฿${money(comm)}  →  รวม ฿${money(thb + comm)}`;
+  if(fx > 1) s += `\nยอด USD  $${money(gross)}`;
+  el.textContent = s;
+
+  // เติมยอดรวมให้อัตโนมัติ ถ้าผู้ใช้ยังไม่ได้พิมพ์เอง
+  const thbIn = $('at-f-thb'), usdIn = $('at-f-usd');
+  if(thbIn && !thbIn.dataset.touched) thbIn.value = thb ? thb.toFixed(2) : '';
+  if(usdIn && !usdIn.dataset.touched) usdIn.value = (fx > 1 && gross) ? gross.toFixed(2) : '';
+}
+
+function atCloseForm(){ document.getElementById('at-modal').classList.remove('show'); }
+
+async function atSubmitForm(){
+  const $   = id => document.getElementById(id);
+  const btn = $('at-f-save'), st = $('at-f-status');
+  const say = (m,c) => { st.textContent = m; st.style.color = c || 'var(--muted2)'; };
+
+  const f = {
+    date:      $('at-f-date').value,
+    txType:    $('at-f-type').value,
+    ticker:    $('at-f-ticker').value.trim().toUpperCase(),
+    assetType: $('at-f-asset').value.trim(),
+    industry:  $('at-f-industry').value.trim(),
+    platform:  $('at-f-platform').value.trim(),
+    fx:        parseFloat($('at-f-fx').value) || 1,
+    qty:       parseFloat($('at-f-qty').value),
+    price:     parseFloat($('at-f-price').value),
+    comm:      parseFloat($('at-f-comm').value) || 0
+  };
+  const thbRaw = parseFloat($('at-f-thb').value);
+  const usdRaw = parseFloat($('at-f-usd').value);
+  f.amtTHB = isNaN(thbRaw) ? undefined : thbRaw;
+  f.amtUS  = isNaN(usdRaw) ? undefined : usdRaw;
+
+  if(!f.date)          return say('ใส่วันที่ก่อน', 'var(--expense)');
+  if(!f.ticker)        return say('ใส่ Ticker ก่อน', 'var(--expense)');
+  if(!(f.qty > 0))     return say('จำนวนต้องมากกว่า 0', 'var(--expense)');
+  if(!(f.price >= 0))  return say('ใส่ราคาต่อหน่วย', 'var(--expense)');
+
+  btn.disabled = true;
+  say('กำลังบันทึก…');
+  try{
+    const w = await atAppendRow(f);
+    say('บันทึกลง Asset_Tracker แถว ' + w.row
+        + (w.formulaCols ? ` (คัดลอกสูตร ${w.formulaCols} คอลัมน์)` : '')
+        + ' — กำลังดึงข้อมูลใหม่', 'var(--income)');
+    await gsSync();
+    atCloseForm();
+  }catch(e){
+    say(e.message, 'var(--expense)');
+  }
+  btn.disabled = false;
+}
+
+// จำว่าผู้ใช้พิมพ์ยอดรวมเองหรือยัง — ถ้าพิมพ์แล้วห้ามคำนวณทับ
+document.addEventListener('input', e => {
+  const id = e.target && e.target.id;
+  if(!id || id.indexOf('at-f-') !== 0) return;
+  if(id === 'at-f-thb' || id === 'at-f-usd') e.target.dataset.touched = '1';
+  else if(id === 'at-f-ticker') atAutofillFromTicker();
+  else atCalc();
+});
+
 // ══ v49 — ตรวจว่ากำลังเปิดในเบราว์เซอร์ที่ฝังอยู่ในแอปอื่นหรือไม่ ═════
 // Google บล็อก OAuth ใน embedded webview ทุกตัว (นโยบาย disallowed_useragent)
 // ไม่มีทางแก้ในโค้ด — ทำได้แค่ตรวจแล้วบอกผู้ใช้ให้เปิดในเบราว์เซอร์จริง
@@ -7064,6 +7350,91 @@ document.addEventListener('DOMContentLoaded', () => {
     แล้วเลือก <b>“เปิดในเบราว์เซอร์”</b> (Chrome หรือ Safari)</div>
   <button class="wv-warn-btn" onclick="wvCopyLink(this)">คัดลอกลิงก์</button>
   <button class="wv-warn-x" onclick="wvDismiss()" aria-label="ปิด">✕</button>
+</div>
+
+<!-- v49 — ฟอร์มเพิ่มรายการลงทุน (Asset_Tracker) -->
+<div id="at-modal" class="gs-modal-overlay">
+  <div class="gs-modal">
+    <div class="gs-modal-close" onclick="atCloseForm()">&#10005;</div>
+    <div class="gs-modal-title">&#128200; เพิ่มรายการลงทุน</div>
+
+    <div class="tx-g2">
+      <div class="gs-field">
+        <div class="gs-label">วันที่</div>
+        <input id="at-f-date" class="gs-input" type="date">
+      </div>
+      <div class="gs-field">
+        <div class="gs-label">ประเภทรายการ</div>
+        <select id="at-f-type" class="gs-input">
+          <option>Buy</option><option>Sell</option><option>Dividend Payout</option>
+          <option>Split</option><option>Recieved</option><option>Send</option>
+          <option>Stake</option><option>Used</option><option>Transfer</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="gs-field">
+      <div class="gs-label">Ticker</div>
+      <input id="at-f-ticker" class="gs-input" list="at-ticker-list" placeholder="เช่น CPALL, AAPL, BTC" autocomplete="off">
+      <datalist id="at-ticker-list"></datalist>
+    </div>
+
+    <div class="at-g3">
+      <div class="gs-field">
+        <div class="gs-label">Asset Type</div>
+        <input id="at-f-asset" class="gs-input" list="at-asset-list" autocomplete="off">
+        <datalist id="at-asset-list"></datalist>
+      </div>
+      <div class="gs-field">
+        <div class="gs-label">Industry</div>
+        <input id="at-f-industry" class="gs-input" list="at-industry-list" autocomplete="off">
+        <datalist id="at-industry-list"></datalist>
+      </div>
+      <div class="gs-field">
+        <div class="gs-label">Platform</div>
+        <input id="at-f-platform" class="gs-input" list="at-platform-list" autocomplete="off">
+        <datalist id="at-platform-list"></datalist>
+      </div>
+    </div>
+
+    <div class="at-g3">
+      <div class="gs-field">
+        <div class="gs-label">จำนวน</div>
+        <input id="at-f-qty" class="gs-input" type="number" inputmode="decimal" step="any" placeholder="0">
+      </div>
+      <div class="gs-field">
+        <div class="gs-label">ราคา/หน่วย</div>
+        <input id="at-f-price" class="gs-input" type="number" inputmode="decimal" step="any" placeholder="0.00">
+      </div>
+      <div class="gs-field">
+        <div class="gs-label">FX Rate</div>
+        <input id="at-f-fx" class="gs-input" type="number" inputmode="decimal" step="any" value="1">
+      </div>
+    </div>
+
+    <div class="tx-g2">
+      <div class="gs-field">
+        <div class="gs-label">ค่าธรรมเนียม (บาท)</div>
+        <input id="at-f-comm" class="gs-input" type="number" inputmode="decimal" step="any" placeholder="0">
+      </div>
+      <div class="gs-field" id="at-f-thb-wrap">
+        <div class="gs-label">ยอดรวม (บาท)</div>
+        <input id="at-f-thb" class="gs-input" type="number" inputmode="decimal" step="any" placeholder="คำนวณให้">
+      </div>
+    </div>
+
+    <div class="gs-field" id="at-f-usd-wrap" style="display:none">
+      <div class="gs-label">ยอดรวม (USD)</div>
+      <input id="at-f-usd" class="gs-input" type="number" inputmode="decimal" step="any" placeholder="คำนวณให้">
+    </div>
+
+    <div class="at-calc" id="at-f-calc"></div>
+    <div class="gs-status-row"><span id="at-f-status">รายการจะถูกเพิ่มต่อท้ายชีต Asset_Tracker</span></div>
+    <div class="gs-modal-actions">
+      <button class="gs-save-btn" id="at-f-save" onclick="atSubmitForm()">บันทึกลงชีต</button>
+      <button class="gs-cancel-btn" onclick="atCloseForm()">ยกเลิก</button>
+    </div>
+  </div>
 </div>
 
 <!-- v49 — ปุ่มเพิ่มรายการ -->
