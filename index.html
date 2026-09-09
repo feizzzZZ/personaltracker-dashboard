@@ -724,6 +724,26 @@ select.month-display{text-align-last:center;outline:none}
   padding:9px 11px;margin:10px 0;white-space:pre-wrap;min-height:18px}
 .at-g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
 @media(max-width:560px){.at-g3{grid-template-columns:1fr 1fr}}
+
+/* ══ v49 — เมนูเลือกชนิดรายการ ตอนกดปุ่ม + ══════════════════════════
+   เดิมปุ่มเพิ่มรายการลงทุนซ่อนอยู่บนหัวหน้า Holdings หน้าเดียว หาไม่เจอ
+   ย้ายมาไว้ที่ปุ่ม + ซึ่งเป็นที่ที่คนมองหาจริง */
+.fab-menu{position:fixed;right:22px;z-index:901;display:flex;flex-direction:column;gap:8px;
+  bottom:calc(22px + 56px + 12px)}
+.fab-menu[hidden]{display:none}
+.fab-opt{display:flex;align-items:center;gap:11px;text-align:left;cursor:pointer;
+  background:var(--bg2);border:1px solid var(--border);border-radius:12px;
+  padding:11px 15px;color:var(--text);font-family:inherit;min-width:210px;
+  box-shadow:0 6px 20px rgba(0,0,0,.5)}
+.fab-opt:hover{border-color:var(--income);background:var(--bg3)}
+.fab-opt:focus-visible{outline:2px solid var(--income);outline-offset:2px}
+.fab-opt-ic{font-size:19px;flex:0 0 auto;line-height:1}
+.fab-opt b{display:block;font-size:13px;font-weight:600}
+.fab-opt small{display:block;font-size:10.5px;color:var(--muted);font-family:var(--f-mono);margin-top:1px}
+.fab-backdrop{position:fixed;inset:0;z-index:899;background:rgba(0,0,0,.45)}
+.fab-backdrop[hidden]{display:none}
+.tx-fab.open{transform:rotate(45deg)}
+@media(max-width:640px){.fab-menu{right:16px;bottom:calc(74px + env(safe-area-inset-bottom,0px) + 56px + 12px)}}
 .tx-prev{font-family:var(--f-mono);font-size:11px;line-height:1.7;
   color:var(--muted2);background:var(--bg3);border:1px solid var(--border2);
   border-radius:8px;padding:9px 11px;margin:10px 0;white-space:pre-wrap;min-height:18px}
@@ -7224,6 +7244,25 @@ function atCalc(usdIsFormula){
 
 function atCloseForm(){ document.getElementById('at-modal').classList.remove('show'); }
 
+// ── ปุ่ม + : มีสองชีตให้เลือกลง จึงต้องถามก่อน ──────────────────────
+// ถ้ายังไม่เคย sync Asset_Tracker ก็ข้ามการถาม เปิดฟอร์มเงินสดเลย
+function txFabTap(){
+  if(!atSheetMeta){ txOpenForm(); return; }
+  document.getElementById('fab-menu').hidden = false;
+  document.getElementById('fab-backdrop').hidden = false;
+  document.getElementById('tx-fab').classList.add('open');
+}
+function fabClose(){
+  document.getElementById('fab-menu').hidden = true;
+  document.getElementById('fab-backdrop').hidden = true;
+  document.getElementById('tx-fab').classList.remove('open');
+}
+function fabPick(kind){
+  fabClose();
+  if(kind === 'at') atOpenForm(); else txOpenForm();
+}
+document.addEventListener('keydown', e => { if(e.key === 'Escape') fabClose(); });
+
 async function atSubmitForm(){
   const $   = id => document.getElementById(id);
   const btn = $('at-f-save'), st = $('at-f-status');
@@ -7438,7 +7477,18 @@ document.addEventListener('DOMContentLoaded', () => {
 </div>
 
 <!-- v49 — ปุ่มเพิ่มรายการ -->
-<button id="tx-fab" class="tx-fab" onclick="txOpenForm()" title="เพิ่มรายการ" aria-label="เพิ่มรายการ">+</button>
+<button id="tx-fab" class="tx-fab" onclick="txFabTap()" title="เพิ่มรายการ" aria-label="เพิ่มรายการ">+</button>
+<div id="fab-backdrop" class="fab-backdrop" onclick="fabClose()" hidden></div>
+<div id="fab-menu" class="fab-menu" hidden>
+  <button class="fab-opt" onclick="fabPick('tx')">
+    <span class="fab-opt-ic" aria-hidden="true">&#128181;</span>
+    <span><b>รายรับ-รายจ่าย</b><small>ลงชีต Transaction</small></span>
+  </button>
+  <button class="fab-opt" onclick="fabPick('at')">
+    <span class="fab-opt-ic" aria-hidden="true">&#128200;</span>
+    <span><b>รายการลงทุน</b><small>ลงชีต Asset_Tracker</small></span>
+  </button>
+</div>
 
 <div id="tx-modal" class="gs-modal-overlay">
   <div class="gs-modal">
