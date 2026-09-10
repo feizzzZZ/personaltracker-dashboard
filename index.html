@@ -16,7 +16,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
@@ -46,13 +45,6 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 .logo-mark{font-family:var(--f-sans);font-size:11px;font-weight:700;letter-spacing:.4em;color:var(--muted);text-transform:uppercase;margin-bottom:8px}
 .upload-title{font-family:var(--f-sans);font-size:clamp(26px,5vw,48px);font-weight:800;line-height:1.1;text-align:center;letter-spacing:-.02em}
 .upload-title span{color:var(--income)}
-.upload-zone{width:100%;max-width:460px;border:1px dashed var(--border2);border-radius:16px;padding:36px 24px;text-align:center;cursor:pointer;transition:all .2s;background:var(--bg2)}
-.upload-zone:hover,.upload-zone.drag{border-color:var(--income);background:rgba(0,212,160,.04)}
-.upload-zone input{display:none}
-.upload-icon{font-size:32px;margin-bottom:10px;opacity:.4}
-.upload-label{font-size:13px;color:var(--muted2);line-height:1.7}
-.upload-label strong{color:var(--text)}
-.upload-note{font-size:11px;color:var(--muted);margin-top:6px}
 .upload-error{color:var(--expense);font-size:12px;display:none;margin-top:8px}
 
 /* ── App shell ── */
@@ -606,11 +598,7 @@ select.month-display{text-align-last:center;outline:none}
 .gs-dot.pulse{animation:pulse 1.2s infinite}
 .gs-sync-time{font-size:10px;color:var(--muted);margin-left:4px}
 /* Upload screen Google option */
-.gs-upload-divider{display:flex;align-items:center;gap:12px;color:var(--muted);
-  font-size:11px;margin:12px 0;max-width:480px;width:100%}
-.gs-upload-divider::before,.gs-upload-divider::after{content:'';flex:1;
-  height:1px;background:var(--border)}
-.gs-upload-connect{display:flex;align-items:center;gap:10px;background:rgba(66,133,244,.08);
+.gs-upload-divider::before,.gs-upload-connect{display:flex;align-items:center;gap:10px;background:rgba(66,133,244,.08);
   border:1px solid rgba(66,133,244,.25);border-radius:12px;padding:14px 20px;
   cursor:pointer;max-width:480px;width:100%;transition:all .2s;color:var(--text)}
 .gs-upload-connect:hover{background:rgba(66,133,244,.15);border-color:rgba(66,133,244,.5)}
@@ -827,19 +815,11 @@ select.month-display{text-align-last:center;outline:none}
     <div class="logo-mark">Personal Finance</div>
     <div class="upload-title">Finance<br><span>OS</span></div>
   </div>
-  <div class="upload-zone" id="uz">
-    <input type="file" id="fi" accept=".xlsx,.xls">
-    <div class="upload-icon">↑</div>
-    <div class="upload-label"><strong>Drop your Excel file here</strong><br>ใช้ไฟล์เดียว — อ่านทุก sheet อัตโนมัติ</div>
-    <div class="upload-note">Transaction · Asset_Tracker · Asset_Live_Price_Feed</div>
-  </div>
-  <div class="upload-error" id="ue"></div>
-  <div class="gs-upload-divider">หรือ</div>
   <div class="gs-upload-connect" onclick="gsConnect()">
     <svg class="gs-g-icon" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
     <div>
       <div class="gs-connect-text">Connect Google Sheets</div>
-      <div class="gs-connect-sub">sync real-time · ไม่ต้อง upload ทุกครั้ง</div>
+      <div class="gs-connect-sub">sync ข้อมูลสดจากชีตของคุณ</div>
     </div>
   </div>
 </div>
@@ -930,10 +910,6 @@ select.month-display{text-align-last:center;outline:none}
       </div>
       <button class="btn-pdf" onclick="generateMonthlyPDF()" style="width:100%;margin-bottom:6px;justify-content:center">
         ⬇ Export PDF
-      </button>
-      <button class="sb-upload-btn" onclick="document.getElementById('fi2').click()">
-        <span aria-hidden="true" style="font-size:13px;font-size:14px">↑</span>New file
-        <input type="file" id="fi2" accept=".xlsx,.xls" style="display:none">
       </button>
       <div style="display:flex;gap:6px;margin-top:6px">
         <button onclick="exportSettings()" title="สำรองการตั้งค่า + ประวัติ TWR เป็นไฟล์ JSON"
@@ -1309,6 +1285,23 @@ select.month-display{text-align-last:center;outline:none}
         <div class="yr-row" id="flow-yr-row"></div>
         <div style="position:relative;height:240px"><canvas id="flow-chart"></canvas></div>
       </div>
+      <div class="sl sl-mt">รายการลงทุนล่าสุด
+        <span style="font-size:10px;color:var(--muted);margin-left:8px">แตะเพื่อแก้ไข</span>
+      </div>
+      <div class="cc" style="padding:0;overflow:hidden;margin-bottom:18px">
+        <div style="overflow-x:auto">
+          <table class="at">
+            <thead><tr>
+              <th>Date</th><th>Type</th><th>Ticker</th>
+              <th class="r">จำนวน</th><th class="r">ราคา</th><th class="r">รวม (บาท)</th>
+            </tr></thead>
+            <tbody id="at-tx-body"></tbody>
+          </table>
+        </div>
+        <div class="tx-pag"><span id="at-tx-count">0 รายการ</span>
+          <div class="pg-btns"><button class="pg-btn" id="at-prev-pg" disabled>‹</button><button class="pg-btn" id="at-next-pg" disabled>›</button></div></div>
+      </div>
+
       <div class="sl sl-mt">Dividend income by year</div>
       <div class="cc" style="margin-bottom:18px"><div class="ct">Dividend payout summary</div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-top:4px" id="flow-div-grid"></div></div>
@@ -1917,379 +1910,6 @@ function mkDonut(id,labels,values,colors){
 }
 
 // ── Parse Excel ──────────────────────────────────────────────────────
-function parseFile(file){
-  return new Promise((res,rej)=>{
-    const reader=new FileReader();
-    reader.onload=e=>{
-      try{
-        const wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
-
-        // ── 1. Bank balances from Transaction sheet row 2 ──
-        const txRaw=XLSX.utils.sheet_to_json(wb.Sheets['Transaction'],{header:1,raw:true,defval:null});
-        bankBals=[];
-        for(let c=6;c<16;c++){
-          const name=txRaw[1]?.[c]?String(txRaw[1][c]).trim():null;
-          const accType=txRaw[0]?.[c]?String(txRaw[0][c]).trim():'Account';
-          const bal=parseFloat(txRaw[2]?.[c]);
-          if(name&&!isNaN(bal)) bankBals.push({name,balance:Math.round(bal*100)/100,type:accType});
-        }
-
-        // ── 2. Transaction rows ──
-        let hRow=-1;
-        // Search up to row 40 — this Excel's header is at row 25 (0-indexed 24)
-        for(let i=0;i<Math.min(40,txRaw.length);i++){
-          const r=txRaw[i];
-          if(r&&r.some(c=>c&&String(c).trim()==='Date')&&r.some(c=>c&&String(c).trim()==='Transactions')){hRow=i;break;}
-        }
-        // Search up to row 40 for the header containing 'Date' and 'Transactions'
-        // The actual header is at row 25 (0-indexed 24) in this Excel format
-        if(hRow===-1){rej('ไม่พบ header row (Date + Transactions)');return;}
-        const txH=txRaw[hRow].map(h=>h?String(h).trim():'');
-        const ti=k=>txH.indexOf(k);
-        const VALID=new Set(['Expense','Income','Transfer','Savings','Bills','Debt']);
-        const bankCols=[];for(let i=ti('Details')+1;i<txH.length;i++)if(txH[i])bankCols.push(i);
-        const rows=[];
-        for(let i=hRow+1;i<txRaw.length;i++){
-          const r=txRaw[i];if(!r||!r[ti('Transactions')])continue;
-          const type=String(r[ti('Transactions')]).trim();if(!VALID.has(type))continue;
-          const d=parseDate(r[ti('Date')]);if(!d||isNaN(d.getTime()))continue;
-          /* ══ ขาดหาย v48 #A — ROOT CAUSE ของ "หนี้ที่แสดงไม่ใช่มูลค่าจริง" ══
-             เดิมทุกแถวถูกยุบเหลือตัวเลขเดียว: amt = ผลรวมของ *ทุกคอลัมน์บัญชี*
-             ข้อมูลว่า "เงินก้อนนี้เข้า-ออกบัญชีไหน" ถูกทิ้งตั้งแต่ตอน parse
-             ผลที่ตามมา:
-               • ค่ากาแฟที่รูดบัตรเครดิต กับที่จ่ายจาก K-Bank แยกไม่ออกเลย
-               • Transfer SCB → Krungsri หักลบกันเป็น 0 (ถูกในแง่ยอดรวม
-                 แต่ทำให้ movement รายบัญชีหายไปทั้งคู่)
-               • ยอด −35,387 ในคอลัมน์บัตรเครดิตจึงเป็นก้อนเดียวที่
-                 "แยกประเภทไม่ได้" — ประกอบด้วยยอดรูด ยอดชำระ โอนเข้า
-                 ปนกันหมด แล้วถูกเรียกว่า "หนี้" ทั้งก้อน
-             แก้: เก็บ movement รายบัญชีไว้ใน r.acct = {ชื่อบัญชี: จำนวน}
-             (เก็บเฉพาะช่องที่ไม่เป็นศูนย์ — ขนาดไฟล์ cache แทบไม่เพิ่ม)
-             จากนี้ debtComposition() ใน shared.js จะแตกยอดหนี้ตามประเภทได้ */
-          let amt=0; const acct={};
-          bankCols.forEach(ci=>{
-            const v=parseFloat(r[ci]); if(isNaN(v)||v===0) return;
-            amt+=v;
-            const an = txRaw[1]?.[ci]!=null ? String(txRaw[1][ci]).trim() : (txH[ci]||('col'+ci));
-            if(an) acct[an]=(acct[an]||0)+v;
-          });
-          /* ══ BUGFIX v48 #18 — บั๊กที่ทำให้ "ชำระคืนสะสม ฿0" ══════════════
-             `if(amt===0 && type!=='Transfer') continue;`
-             amt คือผลรวมข้ามทุกคอลัมน์ ดังนั้นรายการ *สองขา* ที่หักกันพอดี
-             จะได้ amt = 0 แล้วถูกทิ้งทั้งแถว เว้นแต่ type จะเป็น 'Transfer'
-             บนชีตนี้ รายการจ่ายบัตร "Clear Debt SCB Up2ME" ถูกบันทึกเป็น
-             type = **Debt** (ไม่ใช่ Transfer) และมีสองขา:
-               SCB Up2ME +7,661.47   /   SCB-Bank −7,661.47   → amt = 0
-             ⇒ ยอดชำระบัตรทุกครั้งตลอด 3 ปี (34 แถว ~฿217k) หายไปจาก txRows
-               ทั้งหมด ไม่เคยถูกนับที่ไหนเลยในแอป
-             อาการที่เห็น: บล็อกองค์ประกอบหนี้ขึ้น "ชำระคืนสะสม ฿0 · 0%"
-             ทั้งที่จ่ายบัตรมาตลอด และหน้า Transactions ก็ไม่มีรายการจ่ายบัตร
-             แก้: ทิ้งแถวก็ต่อเมื่อ *ไม่มีการเคลื่อนไหวในบัญชีใดเลยจริงๆ*
-             (แถวสองขาให้ amt = 0 เหมือนเดิม จึงไม่กระทบยอดรวมหน้าไหน
-              แต่ r.acct จะมีข้อมูลรายบัญชีครบ) */
-          if(Object.keys(acct).length===0 && type!=='Transfer') continue;
-          const ds=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-          rows.push({date:d,dateStr:ds,month:monthKey(d),year:d.getFullYear(),type,acct,
-            category:r[ti('Type')]?String(r[ti('Type')]).trim():'Other',
-            details:r[ti('Details')]?String(r[ti('Details')]).trim():'',
-            amount:Math.round(amt*100)/100});
-        }
-        txRows=rows;
-        const ms=new Set(rows.map(r=>r.month));
-        availableMonths=Array.from(ms).sort();
-        curMonthIdx=availableMonths.length-1;
-        // Populate month dropdown
-        const mSel=document.getElementById('month-select');
-        if(mSel){
-          mSel.innerHTML=availableMonths.map(mk=>`<option value="${mk}">${monthLabel(mk)}</option>`).join('');
-          mSel.value=availableMonths[curMonthIdx];
-          if(!mSel.dataset.init){
-            mSel.dataset.init='1';
-            mSel.addEventListener('change',()=>{
-              curMonthIdx=availableMonths.indexOf(mSel.value);
-              renderCashflow();
-            });
-          }
-        }
-
-        // ── 3. Asset_Tracker ──
-        const atRaw=XLSX.utils.sheet_to_json(wb.Sheets['Asset_Tracker'],{header:1,raw:true,defval:null});
-        const atH=atRaw[0].map(h=>h?String(h).trim():'');
-        // Tolerant lookup: try candidate names in order (handles header typos
-        // like 'Quatity' / 'Total_Amout_THB' that exist in the real sheet)
-        const ai=(...ks)=>{for(const k of ks){const i=atH.indexOf(k);if(i>=0)return i;}return -1;};
-        const AT={
-          date:   ai('Date'),
-          txType: ai('Transaction_Type'),
-          ticker: ai('Ticker'),
-          assetType: ai('Asset_Type'),
-          industry: ai('Industry'),
-          platform: ai('Platform'),
-          fxRate:  ai('FX_Rate'),
-          qty:     ai('Quantity','Quatity'),
-          price:   ai('Price'),
-          commTHB: ai('Commission_THB','Commission_Fee-Tax_THB'),
-          amtTHB:  ai('Total_Amount_THB','Total_Amout_THB'),
-          amtUS:   ai('Total_Amount_US','Total_Amout_US'),
-        };
-        // Fallback for old file column names
-        if(AT.qty<0)     AT.qty     = ai('Quatity');
-        if(AT.commTHB<0) AT.commTHB = ai('Commission_Fee-Tax_THB');
-        if(AT.amtTHB<0)  AT.amtTHB  = ai('Total_Amout_THB');
-
-        // Sign map: Transfer=0 (internal wallet move), Split=+1 (DRIP/reinvestment)
-        const QTY_SIGN={
-          'Buy':1,'Split':1,'Recieved':1,'Stake':1,
-          'Sell':-1,'Send':-1,'Used':-1,
-          'Transfer':0,'Dividend Payout':0
-        };
-        // Transactions that count as cost basis (Buy + Split since Split = DRIP w/ cost)
-        const IS_COST_TX=new Set(['Buy','Split']);
-
-        const trackerRows2=[],fxAcc={},waccAcc={},netQtyMap={};
-        for(let i=1;i<atRaw.length;i++){
-          const r=atRaw[i];if(!r||!r[AT.ticker])continue;
-          const ticker=String(r[AT.ticker]).trim();
-          const txType=r[AT.txType]?String(r[AT.txType]).trim():'';
-          let rawDate=r[AT.date];
-    // Google Sheets sometimes returns dates as strings (ISO format)
-    const d=parseDate(rawDate);if(!d||isNaN(d.getTime()))continue;
-          const fx=parseFloat(r[AT.fxRate])||1;
-          const qty=Math.abs(parseFloat(r[AT.qty])||0); // always positive, sign from txType
-          const price=parseFloat(r[AT.price])||0;
-          const amtUS=AT.amtUS>=0?(parseFloat(r[AT.amtUS])||0):0;
-          let amtTHB=parseFloat(r[AT.amtTHB])||0;
-          const commTHB=parseFloat(r[AT.commTHB])||0;
-
-          // Guard: amtTHB=0 on Buy/Split with missing FX (row 563-564 GOOGL pattern)
-          // Reconstruct: amtUS×fx → price×qty×fx → price×qty×lastFx
-          if(amtTHB===0 && IS_COST_TX.has(txType) && qty>0){
-            const rawAmtUS=AT.amtUS>=0?(parseFloat(r[AT.amtUS])||0):0;
-            if(rawAmtUS>0 && fx>1)          amtTHB=rawAmtUS*fx;
-            else if(price>0 && fx>1)        amtTHB=price*qty*fx;
-            else if(price>0){
-              const lastFx=fxAcc[ticker]?.slice(-1)[0]||33;
-              amtTHB=price*qty*lastFx;
-            }
-          }
-          // ชีตไม่สม่ำเสมอ: บางแถว Total_Amout_THB รวม commission แล้ว บางแถวไม่รวม
-          // → ตรวจรายแถวเทียบ base (qty×price×fx) แล้วเติมเฉพาะที่ขาด ไม่ double-count
-          const trueCost=Math.abs(amtTHB)+feeToAdd(amtTHB,qty,parseFloat(r[AT.price])||0,fx,commTHB);
-          const platform=r[AT.platform]?String(r[AT.platform]).trim():'Unknown';
-          const group=resolveGroup(r[AT.assetType], ticker, platform);
-          const industry=r[AT.industry]?String(r[AT.industry]).trim():'—';
-
-          // FX tracking
-          if(fx>1){if(!fxAcc[ticker])fxAcc[ticker]=[];fxAcc[ticker].push(fx);}
-
-          // WACC: Buy + Split both have real cost basis (trueCost already inclusive of fee)
-          if(IS_COST_TX.has(txType)&&qty>0){
-            if(!waccAcc[ticker])waccAcc[ticker]={cost:0,qty:0};
-            waccAcc[ticker].cost+=trueCost;
-            waccAcc[ticker].qty+=qty;
-          }
-
-          // Net qty tracking
-          const sign=QTY_SIGN[txType]??0;
-          if(sign!==0){
-            if(!netQtyMap[ticker])netQtyMap[ticker]=0;
-            netQtyMap[ticker]+=qty*sign;
-          }
-
-          // Push to tracker (for dividend, investment flow, realized P&L)
-          // Note: trueCost = Math.abs(amtTHB) which already includes commTHB
-          // commTHB is stored separately for fee-display only
-          trackerRows2.push({date:d,ym:`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`,
-            year:d.getFullYear(),ticker,txType,group,platform,industry,
-            fx,qty,amtTHB,commTHB,trueCost});
-        }
-        tracker=trackerRows2;
-        fxMap={};
-        for(const[t,vals]of Object.entries(fxAcc))
-          fxMap[t]=parseFloat((vals.reduce((s,v)=>s+v,0)/vals.length).toFixed(2));
-        waccMap={};
-        for(const[t,v]of Object.entries(waccAcc))
-          waccMap[t]=v.qty>0?v.cost/v.qty:0;
-        totalFee=trackerRows2.filter(r=>IS_COST_TX.has(r.txType)).reduce((s,r)=>s+r.commTHB,0);
-        /* BUGFIX v48 #14 — platMap ยังเป็นบั๊กตัวเดิมที่ v47 บอกว่าแก้แล้ว
-           shared.js เพิ่ม qtyByPlatform()/dominantPlatform() ไว้จริง และหน้า
-           Asset Location ย้ายไปใช้ allocateByPlatform() แล้ว
-           แต่ "ตัวเขียน platMap" ในสองเส้นทาง parse ยังเป็นการเขียนทับตัวเดิม
-             sort(by date).forEach(r => platMap[r.ticker] = r.platform)
-           = ได้ platform ของการซื้อครั้งล่าสุดเสมอ
-           ค่านี้ยังถูกใช้เป็น a.platform ในตาราง Holdings และถูก cache ลง
-           finOS_dataCache/finOS_portfolio → หน้าอื่นรับค่าที่ผิดต่อไป
-           แก้: ใช้ platform ที่ "ถือหน่วยมากที่สุดจริง" (dominantPlatform)
-           ซึ่งคำนวณจากยอดคงเหลือ Buy−Sell แยกตามที่เก็บ ไม่ใช่ลำดับเวลา */
-        platMap={};
-        {
-          const _qbp = qtyByPlatform(trackerRows2);
-          [...new Set(trackerRows2.map(r=>r.ticker))].forEach(tk=>{
-            const per=_qbp[tk]||{}; let best=null,bq=-1;
-            Object.entries(per).forEach(([pl,q])=>{ if(q>bq){bq=q;best=pl;} });
-            if(!best){ const last=trackerRows2.filter(r=>r.ticker===tk).sort((a,b)=>a.date-b.date).pop();
-                       best=last?last.platform:'Unknown'; }
-            platMap[tk]=best;
-          });
-        }
-
-        // Realized P&L (Sell transactions) — running-WACC ต่อ ticker (กัน look-ahead bias)
-        realized=computeRunningWaccRealized(trackerRows2, IS_COST_TX, TX_SELL);
-
-        // ── 4. Asset_Live_Price_Feed — current prices (THB) ──
-        // Asset_Dashboard.Current_Price = NaN in new file format
-        // Correct source: Asset_Live_Price_Feed.Current_Price_THB (already FX-converted)
-        // Market_Data (optional) → live market bridge
-        if(wb.Sheets['Market_Data']){
-          saveMarketData(XLSX.utils.sheet_to_json(wb.Sheets['Market_Data'],{header:1,raw:true,defval:null}));
-        }
-        // v44 — ชีต Reconcile (ไม่มีก็ได้ ระบบทำงานต่อเหมือนเดิม)
-        reconMap = wb.Sheets['Reconcile']
-          ? parseReconcileRows(XLSX.utils.sheet_to_json(wb.Sheets['Reconcile'],{header:1,raw:true,defval:null}))
-          : {};
-        if(wb.Sheets['Value_Log']){
-          mergeValueLogFromSheet(XLSX.utils.sheet_to_json(wb.Sheets['Value_Log'],{header:1,raw:true,defval:null}));
-        }
-        const lpRaw=XLSX.utils.sheet_to_json(wb.Sheets['Asset_Live_Price_Feed'],{header:1,raw:true,defval:null});
-        const lpH=lpRaw[0]?lpRaw[0].map(h=>h?String(h).trim():''):[];
-        const LP={
-          ticker: lpH.indexOf('Ticker'),
-          curTHB: lpH.indexOf('Current_Price_THB'),
-          active: lpH.indexOf('Active'),
-        };
-        const curPriceMap={};
-        if(LP.ticker>=0&&LP.curTHB>=0){
-          for(let i=1;i<lpRaw.length;i++){
-            const r=lpRaw[i];if(!r||!r[LP.ticker])continue;
-            const ticker=String(r[LP.ticker]).trim();if(!ticker)continue;
-            // Skip Inactive rows if Active column exists
-            if(LP.active>=0&&r[LP.active]&&String(r[LP.active]).trim()==='Inactive')continue;
-            // parseFloat guards against #N/A formula errors from Google Sheets
-            const rawPrice=r[LP.curTHB];
-            if(rawPrice==null||String(rawPrice).includes('N/A'))continue;
-            const cur=parseFloat(rawPrice)||0;
-            if(cur>0)curPriceMap[ticker]=cur;
-          }
-        }
-        // Fallback: also read Asset_Dashboard in case Live_Price_Feed is missing
-        // This sheet may not exist in all file versions — gracefully skip if absent
-        try {
-          const adSheet = wb.Sheets['Asset_Dashboard'];
-          if(adSheet){
-            const adRaw=XLSX.utils.sheet_to_json(adSheet,{header:1,raw:true,defval:null});
-            const adH=adRaw[0]?adRaw[0].map(h=>h?String(h).trim():''):[];
-            const D={ticker:adH.indexOf('Ticker'),cur:adH.indexOf('Current_Price')};
-            if(D.ticker>=0&&D.cur>=0){
-              for(let i=1;i<adRaw.length;i++){
-                const r=adRaw[i];if(!r||!r[D.ticker])continue;
-                const ticker=String(r[D.ticker]).trim();if(!ticker)continue;
-                if(!curPriceMap[ticker]){
-                  const cur=parseFloat(r[D.cur])||0;
-                  if(cur>0)curPriceMap[ticker]=cur;
-                }
-              }
-            }
-          }
-        }catch(e){console.warn('[FinOS] Asset_Dashboard sheet not found or parse error — skipping fallback',e.message);}
-
-        // ── v44: รวมราคาจาก pipeline + ราคาล่าสุดที่จำไว้ เข้ากับราคาจากชีต ──
-        // ลำดับ: pipeline(สด) > ชีต > pipeline(ค้าง) > ราคาล่าสุดที่รู้
-        // เหตุผลที่ต้องมี: สูตรในชีตขึ้น #N/A เป็นระยะ (หุ้นไทย 6 ตัว + ทอง)
-        // แล้วโค้ดเดิม `curPriceMap[ticker]||0` นับสินทรัพย์นั้นเป็น ฿0 เงียบๆ
-        {
-          const _res = resolvePrices(curPriceMap);
-          Object.assign(curPriceMap, _res.priceMap);
-          window.priceSrc = _res.srcMap;
-        }
-
-        // ── Build assets[] from net qty × current price ──
-        const assetList=[];
-        const processedTickers=new Set();
-        trackerRows2.forEach(r=>{if(!processedTickers.has(r.ticker))processedTickers.add(r.ticker);});
-
-        for(const ticker of processedTickers){
-          const netQty=Math.max(netQtyMap[ticker]||0,0); // floor at 0
-          if(netQty<1e-8)continue; // skip fully sold/transferred
-          // Find asset metadata from tracker
-          const rows=trackerRows2.filter(r=>r.ticker===ticker);
-          if(!rows.length)continue;
-          const lastRow=rows[rows.length-1];
-          const group=lastRow.group;
-          const industry=rows.find(r=>r.industry&&r.industry!=='—')?.industry||'—';
-          const platform=platMap[ticker]||lastRow.platform||'Unknown';
-          const cur=curPriceMap[ticker]||0;
-          const val=netQty*cur;
-          const wacc=waccMap[ticker]||0;
-          const trueCostAdj=wacc>0?wacc*netQty:0;
-          const pnl=val-trueCostAdj;
-          const pnlPct=trueCostAdj>0?pnl/trueCostAdj*100:0;
-          const currency=fxMap[ticker]?'USD':'THB';
-          assetList.push({
-            ticker,group,industry,platform,
-            qty:netQty,avg:wacc,cur,wacc,
-            cost:trueCostAdj,val,pnl,pnlPct,
-            currency,hasPrice:cur>0
-          });
-        }
-        assets=assetList;
-
-        // ── 5. Insurance (optional sheets) ──
-        insPolicies=[];insCoverage=[];
-        const insPolSheet=wb.Sheets['Insurance_Policies']||wb.Sheets['Insurance_Policy'];
-        if(insPolSheet){
-          const ipRaw=XLSX.utils.sheet_to_json(insPolSheet,{header:1,raw:true,defval:null});
-          // Row 0 = Thai headers, Row 1 = English headers (machine-readable), data from Row 2
-          const ipH=ipRaw[1]?ipRaw[1].map(h=>h?String(h).trim():''):[];
-          const ip=k=>ipH.indexOf(k);
-          const IP={status:ip('Status'),policyId:ip('Policy_ID'),provider:ip('Provider'),
-            planName:ip('Plan_Name'),category:ip('Policy_Category'),premium:ip('Annual_Premium'),
-            renewal:ip('Renewal_Date'),policyDate:ip('Policy_Date'),maturity:ip('Maturity_Date'),
-            surrender:ip('Surrender_Value'),notes:ip('Notes')};
-          for(let i=2;i<ipRaw.length;i++){
-            const r=ipRaw[i];if(!r||!r[IP.policyId])continue;
-            const renewalD=parseDate(r[IP.renewal]);
-            insPolicies.push({
-              status:r[IP.status]?String(r[IP.status]).trim():'',
-              policyId:String(r[IP.policyId]).trim(),
-              provider:r[IP.provider]?String(r[IP.provider]).trim():'',
-              planName:r[IP.planName]?String(r[IP.planName]).trim():'',
-              category:r[IP.category]?String(r[IP.category]).trim():'Other',
-              premium:parseFloat(r[IP.premium])||0,
-              renewal:renewalD,
-              policyDate:parseDate(r[IP.policyDate]),
-              maturity:parseDate(r[IP.maturity]),
-              surrender:parseFloat(r[IP.surrender])||0,
-              notes:r[IP.notes]?String(r[IP.notes]).trim():''
-            });
-          }
-        }
-        if(wb.Sheets['Insurance_Coverage']){
-          const icRaw=XLSX.utils.sheet_to_json(wb.Sheets['Insurance_Coverage'],{header:1,raw:true,defval:null});
-          // Row 0 = Thai headers, Row 1 = English headers (machine-readable), data from Row 2
-          const icH=icRaw[1]?icRaw[1].map(h=>h?String(h).trim():''):[];
-          const ic=k=>icH.indexOf(k);
-          const IC={policyId:ic('Policy_ID'),covType:ic('Coverage_Type'),amount:ic('Coverage_Amount'),
-            unit:ic('Unit'),benefit:ic('Benefit_Name'),target:ic('Target_Amount')};
-          for(let i=2;i<icRaw.length;i++){
-            const r=icRaw[i];if(!r||!r[IC.policyId]||!r[IC.covType])continue;
-            insCoverage.push({
-              policyId:String(r[IC.policyId]).trim(),
-              covType:String(r[IC.covType]).trim(),
-              amount:parseFloat(r[IC.amount])||0,
-              unit:r[IC.unit]?String(r[IC.unit]).trim():'Lump Sum',
-              benefit:r[IC.benefit]?String(r[IC.benefit]).trim():'',
-              target:parseFloat(r[IC.target])||0
-            });
-          }
-        }
-
-        res(true);
-      }catch(err){rej(err.message||'Parse error');}
-    };
-    reader.onerror=()=>rej('File read error');
-    reader.readAsArrayBuffer(file);
-  });
-}
 
 // ── Overview ─────────────────────────────────────────────────────────
 function renderOverview(){
@@ -4192,7 +3812,46 @@ function renderFlow(){
       <div style="font-size:10px;color:var(--muted2);margin-bottom:3px">${y}</div>
       <div style="font-size:14px;font-weight:500;color:var(--gain)">+${fmt(divByYr[y])}</div></div>`).join('');
   renderDividendTable();
+  renderAtTxTable();
 }
+
+// ── v49 — ตารางรายการลงทุน (แตะเพื่อแก้ไข) ──────────────────────────
+let atPage = 0;
+const AT_PAGE_SIZE = 25;
+function renderAtTxTable(){
+  const body = document.getElementById('at-tx-body');
+  if(!body) return;
+  const rows  = [...(tracker || [])].sort((a,b) => b.date - a.date);
+  const total = rows.length;
+  const maxPage = Math.max(0, Math.ceil(total / AT_PAGE_SIZE) - 1);
+  if(atPage > maxPage) atPage = maxPage;
+  const start = atPage * AT_PAGE_SIZE;
+  const page  = rows.slice(start, start + AT_PAGE_SIZE);
+  const M = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  body.innerHTML = total === 0
+    ? '<tr><td colspan="6" class="nd">ยังไม่มีรายการ</td></tr>'
+    : page.map(r => {
+        const ed = r.sheetRow ? ` class="tx-editable" onclick="atOpenForm(${r.sheetRow})" title="แตะเพื่อแก้ไข"` : '';
+        const d  = r.date ? `${M[r.date.getMonth()]}-${String(r.date.getDate()).padStart(2,'0')} ${String(r.date.getFullYear()).slice(2)}` : '—';
+        return `<tr${ed}>
+          <td style="color:var(--muted);font-size:11px">${d}</td>
+          <td><span class="tp ${BADGE[r.group]||'badge-other'}">${escHtml(r.txType)}</span></td>
+          <td class="tk">${escHtml(r.ticker)}</td>
+          <td class="nr">${r.qty % 1 === 0 ? r.qty.toLocaleString(LOC) : fmtN(r.qty)}</td>
+          <td class="nr">${r.price > 0 ? fmtN(r.price) : '—'}</td>
+          <td class="nr">${fmt(Math.abs(r.amtTHB))}</td></tr>`;
+      }).join('');
+
+  document.getElementById('at-tx-count').textContent = `${total} รายการ`;
+  document.getElementById('at-prev-pg').disabled = atPage === 0;
+  document.getElementById('at-next-pg').disabled = start + AT_PAGE_SIZE >= total;
+}
+document.addEventListener('click', e => {
+  if(!e.target || !e.target.id) return;
+  if(e.target.id === 'at-prev-pg' && atPage > 0){ atPage--; renderAtTxTable(); }
+  else if(e.target.id === 'at-next-pg'){ atPage++; renderAtTxTable(); }
+});
 
 // ── Realized ──────────────────────────────────────────────────────────
 function renderRealized(){
@@ -4775,7 +4434,9 @@ function gsParseAssetTracker(rows){
     if(sign!==0){if(!netQtyMap2[ticker])netQtyMap2[ticker]=0;netQtyMap2[ticker]+=qty*sign;}
     trackerRows2.push({date:d,ym:`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`,
       year:d.getFullYear(),ticker,txType,group,platform,industry,
-      fx,qty,amtTHB,commTHB,trueCost});
+      fx,qty,amtTHB,commTHB,trueCost,
+      price:parseFloat(r[AT.price])||0,
+      sheetRow:i+1});     // v49 — เลขแถวจริงในชีต (1-based) ไว้แก้/ลบ
   }
   tracker=trackerRows2;
   // v49 — เก็บ layout จริงไว้ให้ฟอร์มเพิ่มรายการลงทุนใช้ (อ่านสดทุก sync)
@@ -5483,7 +5144,10 @@ function saveDataCache(){
     // (เช่นออฟไลน์ หรือ token ยังไม่ต่ออายุ) จะเห็น "ยังไม่เคย verify" ทุกครั้ง
     const payload={ savedAt:Date.now(), syncedAt:_syncedAt, txRows, tracker, assets, bankBals, realized,
                     reconMap, waccMap, fxMap, platMap,
-                    insPolicies, insCoverage, totalFee };   // ★ ชื่อตัวแปรจริง (เดิมเขียนผิดเป็น insurance/coverage → ข้อมูลประกันหาย)
+                    insPolicies, insCoverage, totalFee,
+                    // v49 — ต้อง cache ด้วย ไม่งั้นเปิดแอปครั้งถัดไปปุ่ม + จะกดไม่ได้
+                    // จนกว่า sync จะเสร็จ (ออฟไลน์ = บันทึกอะไรไม่ได้เลย)
+                    txSheetMeta, atSheetMeta };   // ★ ชื่อตัวแปรจริง (เดิมเขียนผิดเป็น insurance/coverage → ข้อมูลประกันหาย)
     localStorage.setItem(CACHE_KEY, JSON.stringify(payload));
     console.log('[Cache] saved', (JSON.stringify(payload).length/1048576).toFixed(2)+' MB');
   }catch(e){ console.warn('[Cache] save failed (quota?):', e.message); }
@@ -5514,6 +5178,11 @@ function restoreDataCache(){
       renewal:_d(r.renewal), policyDate:_d(r.policyDate), maturity:_d(r.maturity)}));
     insCoverage = p.insCoverage||[];
     if(typeof p.totalFee==='number') totalFee = p.totalFee;
+    // v49 — กู้ layout ชีตกลับมาด้วย แล้วเปิดปุ่มเพิ่มรายการให้ใช้ได้ทันที
+    if(p.txSheetMeta) txSheetMeta = p.txSheetMeta;
+    if(p.atSheetMeta) atSheetMeta = p.atSheetMeta;
+    if(txSheetMeta){ const f=document.getElementById('tx-fab'); if(f) f.style.display='block'; }
+    if(atSheetMeta){ const b=document.getElementById('at-add-btn'); if(b) b.style.display='inline-flex'; }
     availableMonths=[...new Set(txRows.map(r=>r.month))].sort();
     curMonthIdx=availableMonths.length-1;
     _syncedAt = stamp;
@@ -6065,13 +5734,6 @@ function switchPage(name){
 function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');}
 
 // ── Events ────────────────────────────────────────────────────────────
-const uz=document.getElementById('uz');
-uz.addEventListener('click',()=>document.getElementById('fi').click());
-uz.addEventListener('dragover',e=>{e.preventDefault();uz.classList.add('drag')});
-uz.addEventListener('dragleave',()=>uz.classList.remove('drag'));
-uz.addEventListener('drop',e=>{e.preventDefault();uz.classList.remove('drag');const f=e.dataTransfer.files[0];if(f)loadData(f)});
-document.getElementById('fi').addEventListener('change',e=>{if(e.target.files[0])loadData(e.target.files[0])});
-document.getElementById('fi2').addEventListener('change',e=>{if(e.target.files[0])loadData(e.target.files[0])});
 
 document.getElementById('prev-month').addEventListener('click',()=>{
   if(curMonthIdx>0){curMonthIdx--;const mSel=document.getElementById('month-select');if(mSel)mSel.value=availableMonths[curMonthIdx];renderCashflow();}
@@ -6699,26 +6361,6 @@ function insRenderDetail(covType,data){
 
 
 
-async function loadData(file){
-  const ue=document.getElementById('ue');ue.style.display='none';
-  try{
-    await parseFile(file);
-    const total=txRows.length+assets.length;
-    const _sb=document.getElementById('sb-status');
-    _sb.textContent=`${txRows.length.toLocaleString(LOC)} tx · ${assets.length} assets`;
-    // #12 — จุดสถานะต้องสะท้อนอายุข้อมูลจริง ไม่ใช่กระพริบเขียวตลอดเวลา
-    const _age=paintFreshnessDot(document.querySelector('.sb-status .dot-live'),_sb);
-    if(_age && _age.level!=='fresh') _sb.textContent+=` · ⚠ ${_age.label}`;
-    document.getElementById('up').style.display='none';
-    document.getElementById('app').style.display='flex';
-    renderedPages=new Set();
-    loadGoals();
-    updateBudgetBadge(); try{updateDebtBadge();}catch(e){}
-    const badge=document.getElementById('sb-goals-badge');
-    if(badge&&goals.length){badge.style.display='inline';badge.textContent=goals.length;}
-    switchPage('overview');
-  }catch(e){ue.textContent='Error: '+(e.message||e);ue.style.display='block';}
-}
 
 // ── กลับมาที่หน้านี้อีกครั้ง (สลับแท็บ/กลับจาก Analysis) → ทำให้ข้อมูลสดเสมอ ──
 document.addEventListener('visibilitychange', ()=>{
@@ -7146,6 +6788,53 @@ async function atAppendRow(f){
   return {row: rowNum, formulaCols: fCols.length};
 }
 
+// เขียนทับแถวเดิม — คอลัมน์สูตรไม่ต้องแตะ (มันอยู่ของมันอยู่แล้ว)
+async function atEditRowWrite(rowNum, f){
+  if(!atSheetMeta)    throw new Error('ยังไม่รู้โครงสร้างชีต — กด Sync ก่อน 1 ครั้ง');
+  if(!gsTokenValid()) throw new Error('Session หมดอายุ — กด Sync เพื่อเข้าสู่ระบบใหม่');
+  const C = atSheetMeta.cols;
+  const F = atSheetMeta.formulaCols || await atFormulaCols(atSheetMeta.lastRow);
+  atSheetMeta.formulaCols = F;
+
+  const plan = [
+    [C.date, f.date], [C.txType, f.txType], [C.ticker, f.ticker],
+    [C.assetType, f.assetType], [C.industry, f.industry], [C.platform, f.platform],
+    [C.fxRate, f.fx], [C.qty, f.qty], [C.price, f.price], [C.commTHB, f.comm],
+    [C.amtTHB, f.amtTHB], [C.amtUS, f.amtUS]
+  ].filter(([c, v]) => c != null && c >= 0 && !F[c] && v !== undefined && v !== null);
+
+  const data = plan.map(([c, v]) => ({range:`Asset_Tracker!${txColLetter(c)}${rowNum}`, values:[[v]]}));
+  const res = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${GS_CONFIG.spreadsheetId}/values:batchUpdate`, {
+      method:'POST',
+      headers:{'Authorization':'Bearer '+gsAccessToken, 'Content-Type':'application/json'},
+      body: JSON.stringify({valueInputOption:'USER_ENTERED', data})});
+  if(!res.ok){
+    const body = await res.text().catch(()=>'');
+    if(res.status === 401 || res.status === 403)
+      throw new Error('ไม่มีสิทธิ์เขียน — ออกจากระบบแล้วกด Sync เพื่อให้สิทธิ์ read/write ใหม่');
+    throw new Error('HTTP '+res.status+' · '+body.slice(0,140));
+  }
+  console.log('[AT] แก้แถว', rowNum, '·', data.length, 'ช่อง');
+  return {row: rowNum};
+}
+
+async function atDeleteRowNum(rowNum){
+  if(!gsTokenValid()) throw new Error('Session หมดอายุ — กด Sync เพื่อเข้าสู่ระบบใหม่');
+  const gid = await atSheetGid();
+  const res = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${GS_CONFIG.spreadsheetId}:batchUpdate`, {
+      method:'POST',
+      headers:{'Authorization':'Bearer '+gsAccessToken, 'Content-Type':'application/json'},
+      body: JSON.stringify({requests:[{deleteDimension:{range:{
+        sheetId: gid, dimension:'ROWS', startIndex: rowNum - 1, endIndex: rowNum}}}]})});
+  if(!res.ok){
+    const body = await res.text().catch(()=>'');
+    throw new Error('ลบไม่สำเร็จ · HTTP '+res.status+' · '+body.slice(0,140));
+  }
+  console.log('[AT] ลบแถว', rowNum);
+}
+
 // ── ฟอร์ม ───────────────────────────────────────────────────────────
 function atFillOptions(){
   const uniq = k => [...new Set((tracker || []).map(r => r[k]).filter(v => v && v !== '—'))].sort();
@@ -7175,24 +6864,56 @@ function atAutofillFromTicker(){
   atCalc();
 }
 
-function atOpenForm(){
+// atOpenForm()         → เพิ่มรายการใหม่
+// atOpenForm(sheetRow) → แก้รายการที่แถวนั้นในชีต Asset_Tracker
+let atEditRow = null;
+
+function atOpenForm(sheetRow){
   if(!atSheetMeta){ alert('กด Sync ก่อน 1 ครั้ง เพื่อให้ระบบอ่านโครงสร้างชีต'); return; }
   atFillOptions();
-  const d = new Date();
+  atEditRow = sheetRow || null;
+  const rec = atEditRow ? (tracker || []).find(r => r.sheetRow === atEditRow) : null;
+  if(atEditRow && !rec){ alert('หารายการนี้ไม่เจอ — กด Sync แล้วลองใหม่'); atEditRow = null; return; }
+
   const $ = id => document.getElementById(id);
-  $('at-f-date').value = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  $('at-modal-title').textContent = rec ? '✎ แก้ไขรายการลงทุน' : '📈 เพิ่มรายการลงทุน';
+  $('at-f-save').textContent      = rec ? 'บันทึกการแก้ไข' : 'บันทึกลงชีต';
+  $('at-f-del').hidden            = !rec;
+
   ['at-f-ticker','at-f-asset','at-f-industry','at-f-platform','at-f-qty','at-f-price','at-f-comm','at-f-thb','at-f-usd']
     .forEach(id => { const e = $(id); if(!e) return;
       e.value = '';
       // ต้องล้างธงนี้ด้วย ไม่งั้นพอผู้ใช้เคยพิมพ์ยอดรวมเองครั้งเดียว
       // ฟอร์มครั้งถัดๆ ไปจะเลิกคำนวณยอดให้ถาวร
       delete e.dataset.touched; });
-  $('at-f-fx').value = '1';
-  $('at-f-status').textContent = 'รายการจะถูกเพิ่มต่อท้ายชีต Asset_Tracker';
+
+  if(rec){
+    const d = rec.date;
+    $('at-f-date').value  = d ? `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` : '';
+    $('at-f-type').value  = rec.txType;
+    $('at-f-ticker').value   = rec.ticker;
+    $('at-f-asset').value    = rec.group    && rec.group    !== '—' ? rec.group    : '';
+    $('at-f-industry').value = rec.industry && rec.industry !== '—' ? rec.industry : '';
+    $('at-f-platform').value = rec.platform && rec.platform !== 'Unknown' ? rec.platform : '';
+    $('at-f-fx').value    = rec.fx || 1;
+    $('at-f-qty').value   = rec.qty;
+    $('at-f-price').value = rec.price || '';
+    $('at-f-comm').value  = rec.commTHB || '';
+    // ยอดรวมมาจากชีตจริง ไม่ใช่ค่าที่คำนวณใหม่ → ตั้งธงกันคำนวณทับ
+    const thb = $('at-f-thb'), usd = $('at-f-usd');
+    if(thb){ thb.value = Math.abs(rec.amtTHB) || ''; thb.dataset.touched = '1'; }
+    if(usd && rec.fx > 1){ usd.value = (Math.abs(rec.amtTHB) / rec.fx).toFixed(2); usd.dataset.touched = '1'; }
+    $('at-f-status').textContent = 'กำลังแก้แถว ' + atEditRow + ' ในชีต Asset_Tracker';
+  } else {
+    const d = new Date();
+    $('at-f-date').value = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    $('at-f-fx').value = '1';
+    $('at-f-status').textContent = 'รายการจะถูกเพิ่มต่อท้ายชีต Asset_Tracker';
+  }
   $('at-f-status').style.color = 'var(--muted2)';
   atCalc();
   $('at-modal').classList.add('show');
-  setTimeout(() => { const t = $('at-f-ticker'); if(t) t.focus(); }, 80);
+  setTimeout(() => { const t = $(rec ? 'at-f-qty' : 'at-f-ticker'); if(t) t.focus(); }, 80);
 
   // ตรวจคอลัมน์สูตรครั้งแรก แล้วซ่อนช่องยอดรวมที่ชีตคำนวณเองอยู่แล้ว
   if(!atSheetMeta.formulaCols && gsTokenValid()){
@@ -7242,7 +6963,10 @@ function atCalc(usdIsFormula){
   if(usdIn && !usdIn.dataset.touched) usdIn.value = (fx > 1 && gross) ? gross.toFixed(2) : '';
 }
 
-function atCloseForm(){ document.getElementById('at-modal').classList.remove('show'); }
+function atCloseForm(){
+  document.getElementById('at-modal').classList.remove('show');
+  atEditRow = null;   // สำคัญ — ไม่งั้นกดเพิ่มครั้งต่อไปจะเขียนทับแถวที่เพิ่งแก้
+}
 
 // ── ปุ่ม + : มีสองชีตให้เลือกลง จึงต้องถามก่อน ──────────────────────
 // ถ้ายังไม่เคย sync Asset_Tracker ก็ข้ามการถาม เปิดฟอร์มเงินสดเลย
@@ -7265,7 +6989,7 @@ document.addEventListener('keydown', e => { if(e.key === 'Escape') fabClose(); }
 
 async function atSubmitForm(){
   const $   = id => document.getElementById(id);
-  const btn = $('at-f-save'), st = $('at-f-status');
+  const btn = $('at-f-save'), del = $('at-f-del'), st = $('at-f-status');
   const say = (m,c) => { st.textContent = m; st.style.color = c || 'var(--muted2)'; };
 
   const f = {
@@ -7290,19 +7014,49 @@ async function atSubmitForm(){
   if(!(f.qty > 0))     return say('จำนวนต้องมากกว่า 0', 'var(--expense)');
   if(!(f.price >= 0))  return say('ใส่ราคาต่อหน่วย', 'var(--expense)');
 
-  btn.disabled = true;
+  btn.disabled = true; del.disabled = true;
   say('กำลังบันทึก…');
   try{
-    const w = await atAppendRow(f);
-    say('บันทึกลง Asset_Tracker แถว ' + w.row
-        + (w.formulaCols ? ` (คัดลอกสูตร ${w.formulaCols} คอลัมน์)` : '')
-        + ' — กำลังดึงข้อมูลใหม่', 'var(--income)');
+    if(atEditRow){
+      await atEditRowWrite(atEditRow, f);
+      say('แก้แถว ' + atEditRow + ' แล้ว — กำลังดึงข้อมูลใหม่', 'var(--income)');
+    } else {
+      const w = await atAppendRow(f);
+      say('บันทึกลง Asset_Tracker แถว ' + w.row
+          + (w.formulaCols ? ` (คัดลอกสูตร ${w.formulaCols} คอลัมน์)` : '')
+          + ' — กำลังดึงข้อมูลใหม่', 'var(--income)');
+    }
     await gsSync();
     atCloseForm();
   }catch(e){
     say(e.message, 'var(--expense)');
   }
-  btn.disabled = false;
+  btn.disabled = false; del.disabled = false;
+}
+
+async function atDeleteCurrent(){
+  if(!atEditRow) return;
+  const rec  = (tracker || []).find(r => r.sheetRow === atEditRow);
+  const what = rec ? `${rec.txType} ${rec.ticker} · ${rec.qty} หน่วย · ${fmt(Math.abs(rec.amtTHB))}`
+                   : 'แถว ' + atEditRow;
+  if(!confirm('ลบรายการลงทุนนี้ออกจากชีตถาวร?\n\n' + what
+      + '\n\nกู้คืนได้ที่ File → Version history ใน Google Sheets')) return;
+
+  const $   = id => document.getElementById(id);
+  const btn = $('at-f-save'), del = $('at-f-del'), st = $('at-f-status');
+  const say = (m,c) => { st.textContent = m; st.style.color = c || 'var(--muted2)'; };
+
+  btn.disabled = true; del.disabled = true;
+  say('กำลังลบ…');
+  try{
+    await atDeleteRowNum(atEditRow);
+    say('ลบแล้ว — กำลังดึงข้อมูลใหม่', 'var(--income)');
+    await gsSync();
+    atCloseForm();
+  }catch(e){
+    say(e.message, 'var(--expense)');
+  }
+  btn.disabled = false; del.disabled = false;
 }
 
 // จำว่าผู้ใช้พิมพ์ยอดรวมเองหรือยัง — ถ้าพิมพ์แล้วห้ามคำนวณทับ
@@ -7395,7 +7149,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <div id="at-modal" class="gs-modal-overlay">
   <div class="gs-modal">
     <div class="gs-modal-close" onclick="atCloseForm()">&#10005;</div>
-    <div class="gs-modal-title">&#128200; เพิ่มรายการลงทุน</div>
+    <div class="gs-modal-title" id="at-modal-title">&#128200; เพิ่มรายการลงทุน</div>
 
     <div class="tx-g2">
       <div class="gs-field">
@@ -7470,6 +7224,7 @@ document.addEventListener('DOMContentLoaded', () => {
     <div class="at-calc" id="at-f-calc"></div>
     <div class="gs-status-row"><span id="at-f-status">รายการจะถูกเพิ่มต่อท้ายชีต Asset_Tracker</span></div>
     <div class="gs-modal-actions">
+      <button class="tx-del-btn" id="at-f-del" onclick="atDeleteCurrent()" hidden>ลบรายการ</button>
       <button class="gs-save-btn" id="at-f-save" onclick="atSubmitForm()">บันทึกลงชีต</button>
       <button class="gs-cancel-btn" onclick="atCloseForm()">ยกเลิก</button>
     </div>
