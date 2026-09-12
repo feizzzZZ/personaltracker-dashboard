@@ -111,7 +111,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 .sb-upload-btn:hover{border-color:var(--income);color:var(--income)}
 
 /* ── Main content ── */
-.main-content{margin-left:var(--sidebar-w);flex:1;min-height:100vh;position:relative;z-index:1}
+.main-content{margin-left:var(--sidebar-w);flex:1;min-width:0;min-height:100vh;position:relative;z-index:1}
 .page{display:none;padding:24px;max-width:1200px}
 .page.active{display:block}
 
@@ -165,6 +165,10 @@ select.month-display{text-align-last:center;outline:none}
 .ct span{font-size:10px;color:var(--muted);font-weight:400;font-family:var(--f-mono);letter-spacing:0;text-transform:none}
 .cr2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px}
 .cr3{display:grid;grid-template-columns:220px 1fr;gap:12px;margin-bottom:18px}
+/* v52 — เดิม .acc-layout ตั้ง grid-template-columns:260px 1fr ไว้เป็น inline style
+   ซึ่งชนะ media query เสมอ → บนมือถือยังแบ่ง 2 คอลัมน์ การ์ดบัญชีเลยแคบจนเลขขาด
+   ย้ายมาไว้ใน stylesheet แล้ว media query ถึงจะมีผล */
+.acc-layout{display:grid;grid-template-columns:260px 1fr;gap:12px;margin-bottom:20px}
 @media(max-width:768px){.cr2,.cr3{grid-template-columns:1fr}.acc-layout{grid-template-columns:1fr}}
 
 /* ══ Total Wealth strip (v44) ══════════════════════════════════════════
@@ -1161,7 +1165,7 @@ select.month-display{text-align-last:center;outline:none}
       </div>
 
       <!-- Row 1: Donut + Bank cards -->
-      <div style="display:grid;grid-template-columns:260px 1fr;gap:12px;margin-bottom:20px" class="acc-layout">
+      <div class="acc-layout">
         <div class="cc">
           <div class="ct">Cash allocation</div>
           <div class="dw" style="height:160px">
@@ -2880,6 +2884,9 @@ function renderAccounts(){
     return 'Bank Account';
   };
 
+  // v52 — เพดานจำนวนคอลัมน์ตามความกว้างจอ
+  // สูตรด้านล่างคำนวณ "คอลัมน์ที่สวยที่สุด" จากจำนวนการ์ด แต่ไม่เคยดูขนาดจอ
+  // 6 บัญชี → 3 คอลัมน์ ต่อให้จอกว้าง 390px การ์ดจะเหลือ ~35px เลขขาดหมด
   // Compute symmetric grid columns — no orphaned cards
   // e.g. 8 accounts → 4 cols (2 rows), 5 → 5 cols (1 row), 9 → 5+4
   const n = active.length;
@@ -2889,7 +2896,7 @@ function renderAccounts(){
   else if (n === 7) cols = 4;           // 4+3
   else if (n <= 10) cols = Math.ceil(n/2); // 2 balanced rows
   else              cols = Math.ceil(n/3); // 3 balanced rows
-  document.getElementById('acc-bank-grid').style.gridTemplateColumns=`repeat(${cols},1fr)`;
+  document.getElementById('acc-bank-grid').style.gridTemplateColumns=`repeat(${capCols(cols)},1fr)`;
 
   document.getElementById('acc-bank-grid').innerHTML=active.map(b=>{
     const accType=getAccType(b);
@@ -3066,7 +3073,7 @@ function renderLocationGrid(){
   else if (ng===7) locCols=4;
   else             locCols=Math.ceil(ng/2);
   const locGridEl=document.getElementById('pf-location-grid');
-  locGridEl.style.gridTemplateColumns=`repeat(${locCols},1fr)`;
+  locGridEl.style.gridTemplateColumns=`repeat(${capCols(locCols)},1fr)`;
   locGridEl.style.alignItems='start';
 
   document.getElementById('pf-location-grid').innerHTML = groups.map(grp => {
@@ -6152,6 +6159,26 @@ function renderAnalystDesk(){
     else b.style.display='none'; }
 }
 
+// v52 — เพดานคอลัมน์ตามความกว้างจอ ใช้ร่วมกันทุก grid ที่ JS คำนวณเอง
+function capCols(n){
+  const w = window.innerWidth;
+  const max = w <= 420 ? 2 : w <= 768 ? 3 : Infinity;
+  return Math.max(1, Math.min(n, max));
+}
+// หมุนจอ = ความกว้างเปลี่ยน = จำนวนคอลัมน์ที่คำนวณไว้ไม่ตรงแล้ว ต้องวาดใหม่
+let _resizeT = null, _lastW = window.innerWidth;
+window.addEventListener('resize', () => {
+  if(Math.abs(window.innerWidth - _lastW) < 60) return;   // เลื่อนแล้วแถบ browser ยุบ ไม่นับ
+  _lastW = window.innerWidth;
+  clearTimeout(_resizeT);
+  _resizeT = setTimeout(() => {
+    const act = document.querySelector('.page.active');
+    if(!act) return;
+    renderedPages.clear();
+    try{ switchPage(act.id.replace(/^page-/,'')); }catch(e){ console.warn('[resize]', e.message); }
+  }, 250);
+});
+
 let renderedPages=new Set();
 
 function switchPage(name){
@@ -6626,7 +6653,7 @@ function renderInsurance(){
   else if (nc<=10) covCols=Math.ceil(nc/2);
   else             covCols=Math.ceil(nc/3);
   const covGrid=document.getElementById('ins-cov-grid');
-  covGrid.style.gridTemplateColumns=`repeat(${covCols},1fr)`;
+  covGrid.style.gridTemplateColumns=`repeat(${capCols(covCols)},1fr)`;
 
   document.getElementById('ins-cov-grid').innerHTML=covTypes.map(ct=>{
     const meta=INS_COV_META[ct]||INS_COV_META['Other'];
