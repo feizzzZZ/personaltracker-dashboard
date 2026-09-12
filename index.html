@@ -696,6 +696,11 @@ select.month-display{text-align-last:center;outline:none}
 .tx-fab:active{transform:scale(.94)}
 .tx-fab:focus-visible{outline:2px solid var(--income);outline-offset:3px}
 .tx-g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.gs-link-btn{width:100%;margin:2px 0 12px;padding:10px 12px;border-radius:8px;cursor:pointer;
+  background:rgba(124,111,236,.1);border:1px solid rgba(124,111,236,.35);
+  color:var(--savings);font-family:var(--f-mono);font-size:11.5px;line-height:1.5;text-align:left}
+.gs-link-btn:hover{background:rgba(124,111,236,.2)}
+.gs-link-btn[hidden]{display:none}
 .tx-editable{cursor:pointer}
 .tx-editable:hover{background:var(--bg3)}
 .tx-del-btn{background:transparent;border:1px solid rgba(255,64,96,.45);color:var(--expense);
@@ -3896,6 +3901,8 @@ let atSheetMeta   = null;   // v49 — layout ชีต Asset_Tracker
 
 // ── Init: load saved config + token, show sync btn ──
 function gsInit(){
+  // v50 — ถ้าเปิดมาด้วยลิงก์ตั้งค่า ต้องบันทึกก่อนอ่านค่าเก่า
+  gsApplySetupLink();
   // Load overrides from localStorage
   const savedCid = localStorage.getItem('gs_client_id');
   const savedSid = localStorage.getItem('gs_sheet_id');
@@ -4050,7 +4057,10 @@ function gsInitTokenClient(){
           gsUpdateSyncBtn(false);
           return;
         }
-        alert('OAuth error: '+(e.type||JSON.stringify(e)));
+        // popup ถูกปิด/บล็อก = เรื่องปกติ ไม่ต้องตกใจ
+        const t = (e && e.type) || '';
+        if(t === 'popup_closed'){ gsSetStatus('ปิดหน้าต่าง login ไปก่อน — กด Sync ใหม่ได้','err'); return; }
+        gsShowAuthHelp(t);
       }
     });
     console.log('[GS] gsTokenClient ready:', !!gsTokenClient);
@@ -4549,6 +4559,72 @@ function gsSetStatus(msg,type){
   el.style.color=type==='ok'?'var(--income)':type==='err'?'var(--expense)':'var(--muted2)';
 }
 
+// Client ID เก็บแยกในแต่ละเครื่อง (localStorage) — เครื่องหนึ่งใช้ได้
+// ไม่ได้แปลว่าอีกเครื่องจะใช้ได้ นี่คือสาเหตุอันดับหนึ่งของ invalid_client
+function gsShowAuthHelp(errType){
+  const cid = GS_CONFIG.clientId || '(ยังไม่ได้ตั้งค่า)';
+  alert('เข้าสู่ระบบ Google ไม่สำเร็จ' + (errType ? ' ('+errType+')' : '')
+    + '\n\nClient ID ที่เครื่องนี้ใช้อยู่:\n' + cid
+    + '\n\nถ้า Google บอกว่า "OAuth client was not found" แปลว่า ID นี้'
+    + '\nไม่มีอยู่แล้วใน Google Cloud — เครื่องนี้เก็บค่าเก่าไว้'
+    + '\n\nแก้โดยเอา Client ID ตัวปัจจุบันมาใส่ใหม่'
+    + '\n(ดูได้จากเครื่องที่ใช้งานได้ กดปุ่ม ⚙ แล้วคัดลอกมา)');
+  gsOpenModal();
+  gsSetStatus('วาง Client ID ตัวปัจจุบันแล้วกดบันทึก','err');
+}
+
+// ══ v50 — ย้ายการตั้งค่าข้ามเครื่องด้วยลิงก์เดียว ═══════════════════
+// พิมพ์ Client ID 70 ตัวบนคีย์บอร์ดมือถือพลาดง่ายมาก และพลาดแล้วเจอ
+// "Error 401: invalid_client" ที่ไม่บอกว่าผิดตรงไหน
+// ลิงก์นี้ไม่มี token — คนที่เปิดยังต้อง login เป็นเจ้าของบัญชีอยู่ดี
+// แต่มันบอกว่าคุณใช้ spreadsheet ไหน จึงไม่ควรโพสต์ที่สาธารณะ
+function gsCopySetupLink(btn){
+  if(!GS_CONFIG.clientId || !GS_CONFIG.spreadsheetId){
+    gsSetStatus('ต้องตั้งค่าให้ครบก่อนถึงจะสร้างลิงก์ได้','err'); return;
+  }
+  const payload = btoa(JSON.stringify({c:GS_CONFIG.clientId, s:GS_CONFIG.spreadsheetId}))
+                    .replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  const url = location.origin + location.pathname + '?setup=' + payload;
+  const done = () => { btn.textContent = '✓ คัดลอกแล้ว — เปิดลิงก์นี้บนเครื่องอื่น';
+                       setTimeout(()=>btn.textContent='🔗 คัดลอกลิงก์ตั้งค่า — เปิดบนเครื่องอื่นแล้วตั้งค่าให้เอง', 2500); };
+  const fallback = () => {
+    const t=document.createElement('textarea'); t.value=url; t.style.cssText='position:fixed;opacity:0';
+    document.body.appendChild(t); t.select();
+    try{ document.execCommand('copy'); done(); }catch(e){ prompt('คัดลอกลิงก์นี้:', url); }
+    t.remove();
+  };
+  if(navigator.clipboard && navigator.clipboard.writeText)
+    navigator.clipboard.writeText(url).then(done).catch(fallback);
+  else fallback();
+}
+
+// อ่าน ?setup=... ตอนเปิดหน้า → บันทึกลงเครื่องนี้ แล้วล้าง URL ทิ้ง
+// (ไม่ให้ค่าค้างอยู่ในประวัติเบราว์เซอร์)
+function gsApplySetupLink(){
+  const m = location.search.match(/[?&]setup=([A-Za-z0-9\-_]+)/);
+  if(!m) return false;
+  let ok = false;
+  try{
+    const b = m[1].replace(/-/g,'+').replace(/_/g,'/');
+    const o = JSON.parse(atob(b + '==='.slice((b.length + 3) % 4)));
+    if(o && GS_CID_RE.test(String(o.c||'')) && String(o.s||'').length >= 20){
+      localStorage.setItem('gs_client_id', o.c);
+      localStorage.setItem('gs_sheet_id',  o.s);
+      // ค่าที่มาจากลิงก์คือชุดใหม่ → token เดิมของเครื่องนี้ใช้ไม่ได้แล้ว
+      localStorage.removeItem('gs_access_token');
+      localStorage.removeItem('gs_token_expiry');
+      localStorage.removeItem('gs_ever_connected');
+      ok = true;
+      console.log('[GS] ตั้งค่าจากลิงก์สำเร็จ');
+    } else {
+      console.warn('[GS] ลิงก์ตั้งค่าไม่ถูกต้อง');
+    }
+  }catch(e){ console.warn('[GS] อ่านลิงก์ตั้งค่าไม่ได้:', e.message); }
+  history.replaceState(null, '', location.pathname);
+  if(ok) setTimeout(()=>alert('ตั้งค่าจากลิงก์เรียบร้อย\n\nกด Sync เพื่อเข้าสู่ระบบ Google'), 300);
+  return ok;
+}
+
 function gsOpenModal(){
   const m=document.getElementById('gs-modal');
   if(!m){alert('ไม่พบ Settings modal — โหลดหน้าใหม่ (Cmd+Shift+R) แล้วลองอีกครั้ง');return;}
@@ -4556,6 +4632,8 @@ function gsOpenModal(){
   const s=document.getElementById('gs-sheet-id-input');
   if(c) c.value=GS_CONFIG.clientId;
   if(s) s.value=GS_CONFIG.spreadsheetId;
+  const lb=document.getElementById('gs-link-btn');
+  if(lb) lb.hidden = !(GS_CONFIG.clientId && GS_CONFIG.spreadsheetId);
   m.classList.add('show');
 }
 function gsCloseModal(){const m=document.getElementById('gs-modal');if(m)m.classList.remove('show');}
@@ -4566,13 +4644,24 @@ function extractSheetId(input){
   if(m) return m[1];
   return s.replace(/[?#].*$/,'').replace(/\/.*$/,'');             // ตัด query/path ที่ติดมา
 }
+// Client ID ต้องเป็นรูปแบบนี้เท่านั้น — ตรวจก่อนบันทึกจะได้รู้ทันที
+// แทนที่จะไปเจอหน้า "invalid_client / OAuth client was not found" ของ Google
+// ที่ไม่บอกว่าผิดตรงไหน
+const GS_CID_RE = /^\d{6,}-[a-z0-9]{10,}\.apps\.googleusercontent\.com$/;
+
 function gsSaveAndConnect(){
-  const cid=(document.getElementById('gs-client-id-input')?.value||'').trim();
+  // มือถือ copy มามักติดช่องว่าง/ขึ้นบรรทัดใหม่ — ล้างทั้งหมดก่อน
+  const cid=(document.getElementById('gs-client-id-input')?.value||'').replace(/\s+/g,'');
   const sidRaw=(document.getElementById('gs-sheet-id-input')?.value||'').trim();
   const sid=extractSheetId(sidRaw);
   if(sidRaw && sid!==sidRaw){
     const el=document.getElementById('gs-sheet-id-input'); if(el) el.value=sid; // โชว์ค่าที่สกัดแล้ว
     console.log('[GS] extracted sheet ID from URL:', sid);
+  }
+  if(cid && !GS_CID_RE.test(cid)){
+    const el=document.getElementById('gs-client-id-input'); if(el) el.value=cid;
+    gsSetStatus('❌ Client ID ผิดรูปแบบ — ต้องลงท้ายด้วย .apps.googleusercontent.com','err');
+    return;   // ไม่บันทึกค่าผิด ไม่งั้นจะพังเงียบทุกครั้งที่เปิดแอป
   }
   if(cid){GS_CONFIG.clientId=cid;localStorage.setItem('gs_client_id',cid);}
   if(sid){GS_CONFIG.spreadsheetId=sid;localStorage.setItem('gs_sheet_id',sid);}
@@ -4630,6 +4719,11 @@ async function refreshMarketFeeds(reason){
 }
 
 window.addEventListener('DOMContentLoaded',()=>{
+  // v50 — ลิงก์ตั้งค่าต้องทำงานก่อนทุกอย่าง ไม่ผูกกับอะไรเลย
+  // เดิมเรียกจากใน gsInit() ซึ่งอยู่หลัง checkSharedVersion() และหลัง
+  // market feed โหลดเสร็จ +800ms → ถ้า shared.js เวอร์ชันไม่ตรง
+  // ลิงก์จะเงียบสนิท ผู้ใช้ไม่รู้ว่าทำไมตั้งค่าไม่ติด
+  try{ gsApplySetupLink(); }catch(e){ console.warn('[GS] setup link:', e.message); }
   // v45 — ตรวจเวอร์ชันก่อนทำอย่างอื่น ถ้าไม่ตรงก็ไม่ต้องเสียเวลา sync (มันจะล้มอยู่ดี)
   if(!checkSharedVersion()) return;
   // #19 — ต้องดึง feed ก่อน gsInit เสมอ ไม่งั้นหน้าแรกวาดด้วยราคาเก่า
@@ -7130,6 +7224,8 @@ document.addEventListener('DOMContentLoaded', () => {
              placeholder="docs.google.com/spreadsheets/d/【ส่วนนี้】/edit" autocomplete="off">
     </div>
     <div class="gs-status-row"><span id="gs-modal-status-text">ค่าจะถูกเก็บในเครื่องนี้</span></div>
+    <button class="gs-link-btn" id="gs-link-btn" onclick="gsCopySetupLink(this)">
+      🔗 คัดลอกลิงก์ตั้งค่า — เปิดบนเครื่องอื่นแล้วตั้งค่าให้เอง</button>
     <div class="gs-modal-actions">
       <button class="gs-save-btn" onclick="gsSaveAndConnect()">บันทึก & เชื่อมต่อ</button>
       <button class="gs-cancel-btn" onclick="gsCloseModal()">ยกเลิก</button>
