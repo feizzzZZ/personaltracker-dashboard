@@ -333,7 +333,7 @@ select.month-display{text-align-last:center;outline:none}
   .sidebar.open{transform:translateX(0)}
   .main-content{margin-left:0}
   .menu-toggle{display:flex}
-  .page{padding:14px;padding-top:60px}
+  .page{padding:14px;padding-top:58px}
 }
 
 /* Goals */
@@ -634,31 +634,8 @@ select.month-display{text-align-last:center;outline:none}
   border-radius:8px;padding:10px 12px;font-size:11px;color:var(--muted2);
   margin-top:12px;display:flex;align-items:center;gap:8px}
 
-/* ── Top App Switcher ─────────────────────────────── */
-.top-nav{
-  position:fixed;top:0;left:0;right:0;z-index:200;height:40px;
-  background:rgba(7,7,14,.92);backdrop-filter:blur(12px);
-  border-bottom:1px solid var(--border);
-  display:flex;align-items:center;padding:0 16px;gap:4px;
-}
-.top-nav-brand{
-  font-family:var(--f-sans);font-size:11px;font-weight:700;
-  color:var(--muted);letter-spacing:.12em;text-transform:uppercase;
-  padding-right:16px;border-right:1px solid var(--border);margin-right:8px;
-  white-space:nowrap;
-}
-.top-nav-tab{
-  display:flex;align-items:center;gap:7px;padding:5px 14px;border-radius:7px;
-  font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;
-  text-decoration:none;color:var(--muted2);border:1px solid transparent;
-  font-family:var(--f-sans);white-space:nowrap;
-}
-.top-nav-tab:hover{background:var(--bg3);color:var(--text);border-color:var(--border);}
-.top-nav-tab.active{background:var(--bg3);color:var(--white);border-color:var(--border2);}
-.top-nav-tab.active .tn-icon{color:var(--income);}
-.tn-icon{font-size:14px;line-height:1}
-.sidebar{top:40px !important;height:calc(100vh - 40px) !important}
-.main-content{padding-top:40px}
+/* v51 — เอาแถบสลับสองแอปออก (ยุบ investment-analysis.html เข้ามา)
+   sidebar กับ main-content จึงกลับไปเริ่มที่ขอบบนจอเหมือนเดิม */
 
 
 /* ══ v49 Analyst Desk ══ */
@@ -766,9 +743,8 @@ select.month-display{text-align-last:center;outline:none}
   .bnav{display:flex}
   .menu-toggle{display:none}                    /* ☰ ย้ายไปอยู่ในแถบล่างแล้ว */
   /* เมนูต้องจบเหนือแถบล่าง ไม่งั้นปุ่มล่างสุด (New file) โดนบังกดไม่ได้ */
-  /* 40px = top-nav · 48px = แถบล่าง — ต้องใส่ !important เพราะกฎ .sidebar
-     ของ top-nav (top:40px) ใช้ !important ไว้ */
-  .sidebar{height:calc(100vh - 88px - env(safe-area-inset-bottom,0px)) !important}
+  /* v51 — ไม่มี top-nav แล้ว เหลือหักแค่ความสูงแถบเมนูล่าง 48px */
+  .sidebar{height:calc(100vh - 48px - env(safe-area-inset-bottom,0px)) !important}
   .page{padding-bottom:calc(86px + env(safe-area-inset-bottom,0px))}
   .tx-fab{right:16px;bottom:calc(74px + env(safe-area-inset-bottom,0px))}
   #stale-toast{bottom:calc(80px + env(safe-area-inset-bottom,0px))!important}
@@ -803,16 +779,6 @@ select.month-display{text-align-last:center;outline:none}
 </style>
 </head>
 <body>
-<nav class="top-nav">
-  <span class="top-nav-brand">🚀 PERSONAL OS</span>
-  <a href="index.html" class="top-nav-tab active">
-    <span class="tn-icon">💰</span>Finance OS
-  </a>
-  <a href="investment-analysis.html" class="top-nav-tab">
-    <span class="tn-icon">📈</span>Investment Analysis
-  </a>
-</nav>
-
 
 <!-- Upload -->
 <div id="up">
@@ -891,6 +857,20 @@ select.month-display{text-align-last:center;outline:none}
       </div>
       <div class="sb-item" data-page="realized" onclick="switchPage('realized')">
         <span class="sb-icon" aria-hidden="true">🧾</span>Realized P&L
+      </div>
+      <div class="sb-section">ต้องตัดสินใจ</div>
+      <div class="sb-item" data-page="dormant" onclick="switchPage('dormant')">
+        <span class="sb-icon" aria-hidden="true">🔴</span>เงินที่ไม่มีใครดูแล
+        <span class="sb-badge sb-badge-warn" id="dorm-badge" style="display:none">—</span>
+      </div>
+      <div class="sb-item" data-page="cost" onclick="switchPage('cost')">
+        <span class="sb-icon" aria-hidden="true">💰</span>ต้นทุนที่มองไม่เห็น
+      </div>
+      <div class="sb-item" data-page="dca" onclick="switchPage('dca')">
+        <span class="sb-icon" aria-hidden="true">🎯</span>DCA เดือนนี้
+      </div>
+      <div class="sb-item" data-page="market" onclick="switchPage('market')">
+        <span class="sb-icon" aria-hidden="true">📊</span>ตลาดวันนี้
       </div>
 
     </div>
@@ -1730,6 +1710,40 @@ select.month-display{text-align-last:center;outline:none}
         <span aria-hidden="true" style="font-size:13px;">◎</span>
         ยังไม่มี goal — กด "Add goal" เพื่อเริ่มต้น
       </div>
+    </div>
+
+
+    <!-- ══ DORMANT (ยุบมาจาก investment-analysis.html) ══ -->
+    <div class="page" id="page-dormant">
+      <div class="pg-hdr"><div><div class="pg-title">เงินที่ไม่มีใครดูแล</div>
+        <div class="pg-sub">สินทรัพย์ที่หยุดซื้อเกิน 180 วัน — เงินจริงที่ยังจมอยู่แต่หลุดจากเรดาร์</div></div></div>
+      <div id="dorm-summary"></div>
+      <div id="dorm-list"></div>
+      <div class="sl sl-mt">ตั้งใจถือ (Core)</div>
+      <div id="dorm-intentional"></div>
+      <div class="sl sl-mt">ยัง Active — ซื้อสม่ำเสมอ</div>
+      <div id="dorm-active"></div>
+    </div>
+
+    <!-- ══ COST ══ -->
+    <div class="page" id="page-cost">
+      <div class="pg-hdr"><div><div class="pg-title">ต้นทุนที่มองไม่เห็น</div>
+        <div class="pg-sub">ค่าธรรมเนียม ภาษี ปันผล และความเสี่ยงค่าเงิน</div></div></div>
+      <div id="cost-body"></div>
+    </div>
+
+    <!-- ══ DCA ══ -->
+    <div class="page" id="page-dca">
+      <div class="pg-hdr"><div><div class="pg-title">DCA เดือนนี้</div>
+        <div class="pg-sub">เงินก้อนถัดไปควรไปที่ไหน — เฉพาะกองที่ยัง active</div></div></div>
+      <div id="dca-body"></div>
+    </div>
+
+    <!-- ══ MARKET ══ -->
+    <div class="page" id="page-market">
+      <div class="pg-hdr"><div><div class="pg-title">ตลาดวันนี้</div>
+        <div class="pg-sub">ข้อมูลดิบที่สดจริงเท่านั้น — ไม่ให้คะแนน ไม่แนะนำให้ซื้อขาย</div></div></div>
+      <div id="market-body"></div>
     </div>
 
   </div><!-- /main-content -->
@@ -5332,6 +5346,9 @@ function savePortfolioToStorage(){
     const summary={
       holdings, tradeLog,
       unpriced,
+      // v51 — หน้า "ต้นทุนที่มองไม่เห็น" อ่าน PORT.totalFees แต่เดิมไม่เคยส่งมา
+      // การ์ดค่าธรรมเนียมจึงไม่ขึ้นเลยตั้งแต่แรก
+      totalFees: Math.round(Number(totalFee) || 0),
       totalValue:Math.round(totalVal),totalCost:Math.round(totalCost),
       pnl:Math.round(totalPnl),pnlPct:totalCost>0?Math.round(totalPnl/totalCost*100):0,
       allocation:groupMap,topHoldings,
@@ -5656,6 +5673,329 @@ function renderDebt(){
   }
 }
 
+/* ══════════════════════════════════════════════════════════════════════
+   v51 — Investment Analysis (ยุบมาจากไฟล์ investment-analysis.html)
+   ══════════════════════════════════════════════════════════════════════
+   เดิมเป็นไฟล์แยกที่อ่านข้อมูลผ่าน localStorage 'finOS_portfolio' ที่
+   index.html เขียนไว้ — ต้องเปิดสองแท็บและข้อมูลอาจไม่ตรงกัน
+   ตอนนี้อยู่ไฟล์เดียวกันแล้ว แต่ยังอ่านผ่าน payload เดิมเพราะ
+   classifyHoldings()/computeDeviations() ใน shared.js รับรูปแบบนั้น
+   iaRefresh() จึงเรียก savePortfolioToStorage() ก่อนอ่านทุกครั้ง
+   เพื่อให้ payload สดเท่ากับ state ปัจจุบันเสมอ
+
+   escHtml / nz / fmt / fmtSign ใช้ของ index.html ที่มีอยู่แล้ว ไม่นิยามซ้ำ
+*/
+const pctS = v => v == null ? '—' : (v >= 0 ? '+' : '') + v.toFixed(1) + '%';
+const IA_GAIN = '#00d4a0', IA_LOSS = '#ff453a', IA_WARN = '#ff9f0a', IA_MUTE = '#8080b0';
+
+let PORT = null, CLS = null;
+
+function iaRefresh(){
+  // ⚠ ห้ามเรียก savePortfolioToStorage() ที่นี่
+  // มันไม่ได้แค่เซฟ payload — มันเขียน cache ใหม่ ตั้ง finOS_lastSync
+  // ซ่อน stale banner และ log ว่า "sync สำเร็จ" ด้วย
+  // เรียกทุกครั้งที่เปิดหน้า = แอปหลอกตัวเองว่าข้อมูลเพิ่งสด ทั้งที่ไม่ได้ sync
+  // payload ถูกเขียนตอน sync จริงอยู่แล้ว อ่านอย่างเดียวพอ
+  try{ PORT = JSON.parse(localStorage.getItem('finOS_portfolio') || 'null'); }catch(e){ PORT = null; }
+  CLS = null;
+  if(PORT && PORT.holdings && PORT.tradeLog && typeof classifyHoldings === 'function'){
+    const trades = PORT.tradeLog.map(r => ({date:new Date(r.d+'T00:00:00Z'), type:r.t, ticker:r.k, thb:r.thb}));
+    const as = PORT.holdings.map(h => ({ticker:h.ticker, label:h.label, assetType:h.assetType,
+                                        qty:h.qty, cost:h.cost, val:h.val}));
+    const psrc = {}; PORT.holdings.forEach(h => { if(h.priceSrc) psrc[h.ticker] = h.priceSrc; });
+    try{ CLS = classifyHoldings(trades, as, psrc); }catch(e){ console.warn('[IA] classify:', e.message); }
+  }
+  return CLS;
+}
+
+function iaNeedData(el, what){
+  const n = document.getElementById(el); if(!n) return;
+  n.innerHTML = `<div style="background:var(--bg3);border:1px dashed var(--border2);border-radius:12px;
+      padding:22px;text-align:center;font-size:13px;color:var(--muted)">
+      ยังไม่มีข้อมูล${what ? ' — ' + escHtml(what) : ''}<br>
+      <span style="color:var(--savings);font-size:12px">กด Sync เพื่อดึงข้อมูลจากชีตก่อน</span></div>`;
+}
+function iaEmptyRow(t){
+  return `<div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;
+    padding:16px;text-align:center;font-size:12px;color:var(--muted2)">${escHtml(t)}</div>`;
+}
+
+/* ═══ 1. DORMANT ═══════════════════════════════════════════════════════
+   เงินก้อนใหญ่ที่สุดที่ยังไม่มีใครตัดสินใจ
+   ปุ่ม "ตั้งใจถือ" ย้ายรายการออกจากรายการเตือน เพื่อให้สิ่งที่เหลือคือ
+   "ยังไม่ได้ตัดสินใจ" จริงๆ ไม่ใช่ noise ที่ผู้ใช้เรียนรู้ที่จะเมิน */
+function renderDormant(){
+  iaRefresh();
+  const badge = document.getElementById('dorm-badge');
+  if(!CLS){
+    iaNeedData('dorm-summary');
+    ['dorm-list','dorm-intentional','dorm-active'].forEach(id=>{
+      const n=document.getElementById(id); if(n) n.innerHTML=''; });
+    if(badge) badge.style.display='none';
+    return;
+  }
+  const S = CLS.stats, d = S.dormant, a = S.active;
+  if(badge){ badge.textContent = CLS.dormant.length || '0';
+             badge.style.display = CLS.dormant.length ? '' : 'none'; }
+
+  const totalCost = d.cost + a.cost + S.intentional.cost;
+  const share = totalCost > 0 ? d.cost / totalCost * 100 : 0;
+
+  document.getElementById('dorm-summary').innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:18px">
+      <div class="sc" style="--g:rgba(255,69,58,.06)">
+        <div class="sc-lbl">เงินที่จมอยู่</div>
+        <div class="sc-val" style="color:${IA_LOSS}">${fmt(d.cost)}</div>
+        <div class="sc-sub">${d.n} รายการ · ${share.toFixed(0)}% ของทุนทั้งหมด</div></div>
+      <div class="sc">
+        <div class="sc-lbl">ผลตอบแทน (เฉพาะที่มีราคา)</div>
+        <div class="sc-val" style="color:${d.plPct>=0?IA_GAIN:IA_LOSS}">${pctS(d.plPct)}</div>
+        <div class="sc-sub">${fmt(d.pricedCost)} → ${fmt(d.val)}</div></div>
+      <div class="sc">
+        <div class="sc-lbl">ปันผลที่ได้รับ</div>
+        <div class="sc-val" style="color:${IA_GAIN}">${fmt(d.div)}</div>
+        <div class="sc-sub">ยังจ่ายอยู่แม้หยุดซื้อ</div></div>
+      <div class="sc" style="--g:rgba(0,212,160,.06)">
+        <div class="sc-lbl">เทียบกับกลุ่ม Active</div>
+        <div class="sc-val" style="color:${a.plPct>=0?IA_GAIN:IA_LOSS}">${pctS(a.plPct)}</div>
+        <div class="sc-sub">${a.n} รายการ · ${fmt(a.cost)}</div></div>
+    </div>
+    ${d.unpricedN?`<div style="background:rgba(255,69,58,.07);border:1px solid rgba(255,69,58,.3);
+      border-radius:10px;padding:12px 15px;font-size:12px;line-height:1.8;margin-bottom:16px">
+      <strong style="color:${IA_LOSS}">${d.unpricedN} รายการไม่มีราคา รวมต้นทุน ${fmt(d.unpricedCost)}</strong> —
+      dashboard นับเป็น ฿0 มาตลอด ทั้งที่ยังจ่ายปันผลจริง<br>
+      <span style="color:var(--muted2)">นี่ไม่ใช่เรื่องบังเอิญ: ของที่เลิกสนใจ คือของที่ไม่มีใครสังเกตว่าราคาหาย</span></div>`:''}
+    <div style="font-size:12px;color:var(--muted2);line-height:1.8;margin-bottom:14px">
+      เกณฑ์: ไม่มีการซื้อเกิน ${typeof DORMANT_DAYS!=='undefined'?DORMANT_DAYS:180} วัน ·
+      กด <strong style="color:var(--text)">ตั้งใจถือ</strong> เพื่อย้ายออกจากรายการนี้ถาวร
+      (เก็บในเครื่อง — อยู่ใน Backup แล้ว)
+    </div>`;
+
+  document.getElementById('dorm-list').innerHTML = CLS.dormant.length
+    ? iaHoldingTable(CLS.dormant, true) : iaEmptyRow('ไม่มีรายการที่หลุดจากเรดาร์ 👍');
+  document.getElementById('dorm-intentional').innerHTML = CLS.intentional.length
+    ? iaHoldingTable(CLS.intentional, false, true) : iaEmptyRow('ยังไม่ได้ทำเครื่องหมายรายการใด');
+  document.getElementById('dorm-active').innerHTML = iaHoldingTable(CLS.active, false);
+}
+
+function iaHoldingTable(rows, showTagBtn, isTagged){
+  const body = rows.map(r => {
+    const plCol = r.pl == null ? IA_MUTE : (r.pl >= 0 ? IA_GAIN : IA_LOSS);
+    const ageTxt = r.ageDays == null ? '—'
+      : r.ageDays > 365 ? `${(r.ageDays/365).toFixed(1)} ปี` : `${r.ageDays} วัน`;
+    return `<tr style="border-top:1px solid var(--border)">
+      <td style="padding:9px 10px">
+        <div style="font-weight:600;font-size:12.5px">${escHtml(r.ticker)}</div>
+        <div style="font-size:10px;color:var(--muted2)">${escHtml(r.type||'')}</div></td>
+      <td class="nr" style="padding:9px 10px">${fmt(r.cost)}</td>
+      <td class="nr" style="padding:9px 10px">${r.unpriced
+        ? `<span style="color:${IA_LOSS};font-size:11px">ราคาหาไม่เจอ</span>` : fmt(r.val)}</td>
+      <td class="nr" style="padding:9px 10px;color:${plCol};font-weight:600">
+        ${r.pl==null?'—':pctS(r.plPct)}
+        ${r.pl!=null?`<div style="font-size:10px;font-weight:400;opacity:.75">${fmtSign(r.pl)}</div>`:''}</td>
+      <td class="nr" style="padding:9px 10px;color:${r.div>0?IA_GAIN:IA_MUTE}">${r.div>0?fmt(r.div):'—'}</td>
+      <td class="nr" style="padding:9px 10px;font-size:11px">
+        ${r.buys} ครั้ง
+        <div style="font-size:10px;color:var(--muted2)">
+          ${r.medianGap>0?`ทุก ~${r.medianGap}d`:''} ${r.regular?'· สม่ำเสมอ':''}</div></td>
+      <td class="nr" style="padding:9px 10px;font-size:11px;color:${r.ageDays>365?IA_LOSS:r.ageDays>180?IA_WARN:'var(--muted)'}">
+        ${ageTxt}</td>
+      ${showTagBtn||isTagged?`<td class="nr" style="padding:9px 10px">
+        <button onclick="iaToggleTag('${escAttr(String(r.ticker))}')"
+          style="background:${isTagged?'rgba(255,159,10,.15)':'var(--bg4)'};
+                 border:1px solid ${isTagged?'rgba(255,159,10,.4)':'var(--border2)'};
+                 color:${isTagged?IA_WARN:'var(--muted)'};border-radius:6px;padding:5px 10px;
+                 font-size:11px;cursor:pointer;font-family:inherit;white-space:nowrap">
+          ${isTagged?'✓ ตั้งใจถือ':'ตั้งใจถือ'}</button></td>`:'<td></td>'}
+    </tr>`;
+  }).join('');
+
+  return `<div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;overflow-x:auto">
+    <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:660px">
+      <thead><tr style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted2)">
+        <th style="text-align:left;padding:9px 10px;font-weight:600">สินทรัพย์</th>
+        <th style="text-align:right;padding:9px 10px;font-weight:600">ต้นทุน</th>
+        <th style="text-align:right;padding:9px 10px;font-weight:600">มูลค่า</th>
+        <th style="text-align:right;padding:9px 10px;font-weight:600">P&amp;L</th>
+        <th style="text-align:right;padding:9px 10px;font-weight:600">ปันผล</th>
+        <th style="text-align:right;padding:9px 10px;font-weight:600">ซื้อ</th>
+        <th style="text-align:right;padding:9px 10px;font-weight:600">หยุดมาแล้ว</th>
+        <th></th>
+      </tr></thead><tbody>${body}</tbody></table></div>`;
+}
+
+function iaToggleTag(ticker){
+  if(typeof loadHoldingTags !== 'function') return;
+  const tags = loadHoldingTags();
+  setHoldingTag(ticker, tags[ticker] ? null : 'core');
+  renderDormant();
+}
+
+/* ═══ 2. HIDDEN COST ═══════════════════════════════════════════════════
+   ค่าคอม/ภาษี เป็นต้นทุนเดียวที่ "แน่นอน 100%" ในการลงทุน — ผลตอบแทนไม่แน่
+   แต่ค่าธรรมเนียมจ่ายแน่ทุกครั้ง จึงควรวัดจริงจังกว่าการเดาทิศตลาด */
+function renderCost(){
+  iaRefresh();
+  if(!CLS || !PORT){ iaNeedData('cost-body'); return; }
+  const S = CLS.stats;
+  const totalDiv = S.active.div + S.dormant.div + S.intentional.div;
+  const totalVal = S.active.val + S.dormant.val + S.intentional.val;
+  const totalPricedCost = S.active.pricedCost + S.dormant.pricedCost + S.intentional.pricedCost;
+  const pl = totalVal - totalPricedCost;
+  const fees = nz(PORT.totalFees);
+
+  const USD_TYPES = /US_Stock|US Stock|Crypto|Gold/i;
+  let usdVal = 0, thbVal = 0;
+  [...CLS.active, ...CLS.dormant, ...CLS.intentional].forEach(r => {
+    if(r.val == null) return;
+    if(USD_TYPES.test(r.type || '')) usdVal += r.val; else thbVal += r.val;
+  });
+  const tot = usdVal + thbVal, usdPct = tot > 0 ? usdVal / tot * 100 : 0;
+  const fx = (typeof mdNum === 'function') ? mdNum('USDTHB') : 0;
+
+  document.getElementById('cost-body').innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:20px">
+      <div class="sc"><div class="sc-lbl">กำไร/ขาดทุนรวม</div>
+        <div class="sc-val" style="color:${pl>=0?IA_GAIN:IA_LOSS}">${fmtSign(pl)}</div>
+        <div class="sc-sub">${fmt(totalPricedCost)} → ${fmt(totalVal)}</div></div>
+      <div class="sc"><div class="sc-lbl">ปันผลสะสม</div>
+        <div class="sc-val" style="color:${IA_GAIN}">${fmt(totalDiv)}</div>
+        <div class="sc-sub">${pl>0?`= ${(totalDiv/pl*100).toFixed(0)}% ของกำไรทั้งหมด`:'รับจริงเป็นเงินสด'}</div></div>
+      ${fees>0?`<div class="sc"><div class="sc-lbl">ค่าธรรมเนียม+ภาษีสะสม</div>
+        <div class="sc-val" style="color:${IA_LOSS}">${fmt(fees)}</div>
+        <div class="sc-sub">${pl>0?`กินกำไรไป ${(fees/(pl+fees)*100).toFixed(0)}%`:'ต้นทุนที่จ่ายแน่นอน'}</div></div>`:''}
+      <div class="sc"><div class="sc-lbl">สัดส่วนอิงดอลลาร์</div>
+        <div class="sc-val" style="color:${usdPct>70?IA_WARN:'var(--white)'}">${usdPct.toFixed(0)}%</div>
+        <div class="sc-sub">${fmt(usdVal)} จาก ${fmt(tot)}</div></div>
+    </div>
+
+    <div class="sl">ความเสี่ยงค่าเงิน</div>
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin-bottom:20px">
+      <div style="display:flex;height:26px;border-radius:7px;overflow:hidden;margin-bottom:12px">
+        <div style="width:${usdPct}%;background:#4cc9f0;display:flex;align-items:center;justify-content:center;
+                    font-size:11px;font-weight:600;color:#04121a">USD ${usdPct.toFixed(0)}%</div>
+        <div style="width:${100-usdPct}%;background:#2a2a45;display:flex;align-items:center;justify-content:center;
+                    font-size:11px;color:var(--muted)">THB ${(100-usdPct).toFixed(0)}%</div>
+      </div>
+      <div style="font-size:12px;color:var(--muted2);line-height:1.85">
+        ${fx>0?`USD/THB ตอนนี้ <strong style="color:var(--text)">${fx.toFixed(2)}</strong> · `:''}
+        ถ้าบาทแข็งขึ้น 5% พอร์ตส่วนดอลลาร์จะลดลงราว
+        <strong style="color:${IA_LOSS}">${fmt(usdVal*0.05)}</strong> โดยที่ราคาสินทรัพย์ไม่ได้เปลี่ยนเลย<br>
+        <span style="font-size:11px">เทียบให้เห็นภาพ: มากกว่าปันผลที่คุณได้รับมาทั้งหมด
+        ${totalDiv>0?`(${fmt(totalDiv)})`:''} — ค่าเงินจึงเป็นตัวแปรที่ใหญ่กว่าที่คนส่วนใหญ่คิด</span>
+      </div>
+    </div>
+
+    <div class="sl">ปันผลรายตัว</div>
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:420px">
+        <thead><tr style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted2)">
+          <th style="text-align:left;padding:9px 10px;font-weight:600">สินทรัพย์</th>
+          <th style="text-align:right;padding:9px 10px;font-weight:600">ปันผลรับ</th>
+          <th style="text-align:right;padding:9px 10px;font-weight:600">ต้นทุน</th>
+          <th style="text-align:right;padding:9px 10px;font-weight:600">yield สะสม</th>
+        </tr></thead><tbody>
+        ${[...CLS.active,...CLS.dormant,...CLS.intentional].filter(r=>r.div>0)
+          .sort((a,b)=>b.div-a.div).map(r=>`
+          <tr style="border-top:1px solid var(--border)">
+            <td style="padding:8px 10px;font-weight:600">${escHtml(r.ticker)}</td>
+            <td class="nr" style="padding:8px 10px;color:${IA_GAIN}">${fmt(r.div)}</td>
+            <td class="nr" style="padding:8px 10px">${fmt(r.cost)}</td>
+            <td class="nr" style="padding:8px 10px">${r.cost>0?(r.div/r.cost*100).toFixed(1)+'%':'—'}</td>
+          </tr>`).join('') || '<tr><td colspan="4" style="padding:14px;text-align:center;color:var(--muted2)">ยังไม่มีปันผล</td></tr>'}
+        </tbody></table></div>`;
+}
+
+/* ═══ 3. DCA ═══════════════════════════════════════════════════════════
+   DCA อยู่บนรางอัตโนมัติแล้ว หน้านี้จึงไม่สั่งให้เปลี่ยนแผน
+   แค่บอกว่า "ถ้าจะเติมเพิ่ม ตรงไหนห่างเป้าที่สุด" และตัดสิ่งที่เติมไม่ได้ออก */
+function renderDCA(){
+  iaRefresh();
+  if(!CLS || !PORT){ iaNeedData('dca-body'); return; }
+  const dv = (typeof computeDeviations === 'function') ? computeDeviations(PORT) : null;
+  const budget = Number(localStorage.getItem('finOS_dcaBudget') || '') || 0;
+  const under = dv ? dv.list.filter(x => x.diff < 0).sort((a,b) => a.diff - b.diff) : [];
+  const sumGap = under.reduce((s,x) => s + Math.abs(x.diff), 0);
+
+  document.getElementById('dca-body').innerHTML = `
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin-bottom:18px">
+      <div style="font-size:12px;color:var(--muted2);margin-bottom:10px">งบ DCA เดือนนี้ (บาท)</div>
+      <input id="dca-budget" type="number" value="${budget||''}" placeholder="เช่น 5000"
+        oninput="localStorage.setItem('finOS_dcaBudget',this.value);renderDCA()"
+        style="background:var(--bg4);border:1px solid var(--border2);color:var(--white);
+               border-radius:8px;padding:10px 14px;font-size:15px;width:180px;font-family:var(--f-sans)">
+      ${dv&&dv.illiquidVal>0?`<div style="font-size:11px;color:var(--muted2);margin-top:10px;line-height:1.7">
+        🔒 ตัด ${escHtml(dv.illiquid.map(i=>i.label).join(', '))} ${fmt(dv.illiquidVal)} ออกจากการคำนวณ —
+        ถอนไม่ได้จนออกจากงาน จึงปรับสัดส่วนไม่ได้</div>`:''}
+    </div>
+    ${!under.length?iaEmptyRow('ทุกกลุ่มอยู่ที่เป้าหรือเกินเป้าแล้ว — เติมตามแผนเดิมได้เลย'):`
+    <div class="sl">กลุ่มที่ต่ำกว่าเป้า</div>
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;overflow:hidden">
+      ${under.map(x=>{
+        const share = sumGap>0 ? Math.abs(x.diff)/sumGap : 0;
+        return `<div style="padding:13px 16px;border-top:1px solid var(--border)">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap">
+            <div><span style="font-weight:600;font-size:13px">${escHtml(x.label)}</span>
+              <span style="font-size:11px;color:var(--muted2);margin-left:8px">
+                ${x.cur.toFixed(1)}% → เป้า ${x.target.toFixed(1)}%</span></div>
+            <div style="text-align:right">
+              ${budget>0?`<div style="font-size:15px;font-weight:700;color:${IA_GAIN}">${fmt(budget*share)}</div>`:''}
+              <div style="font-size:10px;color:var(--muted2)">ห่างเป้า ${fmt(x.amt)}</div></div>
+          </div>
+          <div style="height:5px;background:var(--bg4);border-radius:3px;margin-top:8px;overflow:hidden">
+            <div style="height:5px;width:${Math.min(100,x.cur/x.target*100)}%;background:${x.color};border-radius:3px"></div>
+          </div></div>`;}).join('')}
+    </div>
+    <div style="font-size:11px;color:var(--muted2);line-height:1.8;margin-top:12px">
+      สัดส่วนคำนวณจากระยะห่างเป้าเทียบกัน — ไม่ใช่คำแนะนำการลงทุน
+      คุณ DCA อัตโนมัติอยู่แล้ว ตัวเลขนี้ใช้ตอนมีเงินก้อนพิเศษเท่านั้น
+    </div>`}`;
+}
+
+/* ═══ 4. MARKET ════════════════════════════════════════════════════════
+   แสดงเฉพาะ key ที่ยังสดจริง และ "บอกอายุข้อมูลเสมอ"
+   ตัวเลขที่ไม่บอกอายุ = ตัวเลขที่คนจะเชื่อว่าเป็นวันนี้ */
+const IA_MARKET_KEYS = [
+  {k:'SP500',      t:'S&P 500',      d:2},
+  {k:'SP500_MA200',t:'S&P vs MA200', d:2, str:true},
+  {k:'VIX',        t:'VIX',          d:4},
+  {k:'USDTHB',     t:'USD/THB',      d:4},
+  {k:'GOLD_XAU',   t:'ทอง (USD/oz)', d:4},
+  {k:'BTCUSD',     t:'Bitcoin',      d:2},
+];
+function renderMarket(){
+  const md = (typeof loadMarketData === 'function') ? loadMarketData() : null;
+  if(!md || !md.data){ iaNeedData('market-body','ยังไม่มี market-data.json'); return; }
+  const today = Date.now();
+  const cards = IA_MARKET_KEYS.map(m => {
+    const o = md.data[m.k];
+    if(!o || o.value == null) return '';
+    const age = o.updated ? Math.floor((today - Date.parse(o.updated+'T00:00:00Z'))/864e5) : null;
+    const stale = age == null || age > m.d;
+    const val = m.str ? String(o.value)
+      : Number(o.value).toLocaleString(LOC,{maximumFractionDigits:2});
+    return `<div class="sc" style="opacity:${stale?.55:1}">
+      <div class="sc-lbl">${escHtml(m.t)}</div>
+      <div class="sc-val" style="font-size:20px">${escHtml(val)}</div>
+      <div class="sc-sub" style="color:${stale?IA_WARN:'var(--muted2)'}">
+        ${age==null?'ไม่ทราบวันที่':age===0?'วันนี้':age+' วันก่อน'}${stale?' · เก่า':''}</div></div>`;
+  }).filter(Boolean).join('');
+
+  document.getElementById('market-body').innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:18px">
+      ${cards}</div>
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;
+                padding:16px 18px;font-size:12px;color:var(--muted2);line-height:1.9">
+      <strong style="color:var(--text)">ทำไมหน้านี้ถึงสั้น</strong><br>
+      รุ่นก่อนมีสัญญาณ 14 ตัวและให้คะแนน regime แต่ 9 ตัวมาจาก FRED ที่ pipeline
+      ดึงไม่ได้เลย (สำเร็จ 0/14 · timeout 42 ครั้ง) และ fail-safe จะ carry ค่าเก่า
+      มาเรื่อยๆ ทำให้หน้าแสดง "สถานการณ์ปัจจุบัน" จากข้อมูลอายุ 3 เดือน<br><br>
+      รุ่นนี้จึงเหลือเฉพาะตัวที่ดึงจาก Yahoo ได้จริง แสดงพร้อมอายุข้อมูลเสมอ
+      และ<strong style="color:var(--text)">ไม่ให้คะแนน ไม่บอกให้ซื้อหรือขาย</strong> —
+      สำหรับพอร์ตที่ DCA อัตโนมัติ การจับจังหวะตลาดมักลดผลตอบแทนมากกว่าเพิ่ม
+    </div>`;
+}
+
 let pageRenderFns={
   overview:renderOverview,cashflow:renderCashflow,yearly:renderYearly,
   accounts:renderAccounts,portfolio:renderPortfolio,
@@ -5665,7 +6005,9 @@ let pageRenderFns={
   analyst:renderAnalystDesk,
   engine:renderEngine,dividends:renderDividends,
   goals:renderGoals,
-  debt:renderDebt
+  debt:renderDebt,
+  // v51 — ยุบมาจาก investment-analysis.html
+  dormant:renderDormant, cost:renderCost, dca:renderDCA, market:renderMarket
 };
 /* ══ v49 — Analyst Desk ═══════════════════════════════════════════════
    ตัวเชื่อมระหว่าง state ของแอปกับ analystDesk() ที่เป็น pure function
