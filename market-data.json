@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-09-12T01:17:15.421181+00:00",
+ "generated_at": "2026-09-12T14:18:53.118111+00:00",
  "source": "github-actions pipeline v49 (Yahoo + World Bank TH_CPI)",
  "stats": {
   "keys_this_run": 19,
@@ -41,7 +41,7 @@
   "VIX": {
    "value": 15.84,
    "updated": "2026-09-11",
-   "fetched_at": "2026-09-12T01:17:15.421181+00:00",
+   "fetched_at": "2026-09-12T14:18:53.118111+00:00",
    "note": "Yahoo ^VIX"
   },
   "CREDIT_SPREAD": {
@@ -60,9 +60,9 @@
    "note": "FRED DFII10: 10Y TIPS real yield"
   },
   "OIL_WTI": {
-   "value": 99.99,
+   "value": 100.05,
    "updated": "2026-09-11",
-   "fetched_at": "2026-09-12T01:17:15.421181+00:00",
+   "fetched_at": "2026-09-12T14:18:53.118111+00:00",
    "note": "Yahoo CL=F"
   },
   "US_CPI": {
@@ -103,103 +103,103 @@
   "SP500": {
    "value": 7657.0,
    "updated": "2026-09-11",
-   "fetched_at": "2026-09-12T01:17:15.421181+00:00",
+   "fetched_at": "2026-09-12T14:18:53.118111+00:00",
    "note": "Yahoo ^GSPC"
   },
   "SP500_CHG": {
    "value": 0.86,
    "updated": "2026-09-11",
-   "fetched_at": "2026-09-12T01:17:15.421181+00:00",
+   "fetched_at": "2026-09-12T14:18:53.118111+00:00",
    "note": "Yahoo ^GSPC daily change"
   },
   "NASDAQ": {
    "value": 26333.0,
    "updated": "2026-09-11",
-   "fetched_at": "2026-09-12T01:17:15.421181+00:00",
+   "fetched_at": "2026-09-12T14:18:53.118111+00:00",
    "note": "Yahoo ^IXIC"
   },
   "SET_INDEX": {
    "value": 1639.04,
    "updated": "2026-07-17",
-   "fetched_at": "2026-09-12T01:17:15.421181+00:00",
+   "fetched_at": "2026-09-12T14:18:53.118111+00:00",
    "note": "Yahoo ^SET.BK"
   },
   "GOLD_XAU": {
-   "value": 4390.0,
+   "value": 4366.2,
    "updated": "2026-09-11",
-   "fetched_at": "2026-09-12T01:17:15.421181+00:00",
+   "fetched_at": "2026-09-12T14:18:53.118111+00:00",
    "note": "Yahoo GC=F"
   },
   "USDTHB": {
    "value": 33.04,
-   "updated": "2026-09-11",
-   "fetched_at": "2026-09-12T01:17:15.421181+00:00",
+   "updated": "2026-09-12",
+   "fetched_at": "2026-09-12T14:18:53.118111+00:00",
    "note": "Yahoo THB=X"
   },
   "DXY": {
-   "value": 99.1,
+   "value": 99.12,
    "updated": "2026-09-11",
-   "fetched_at": "2026-09-12T01:17:15.421181+00:00",
+   "fetched_at": "2026-09-12T14:18:53.118111+00:00",
    "note": "Yahoo DXY"
   },
   "SP500_RSI": {
    "value": 50.0,
    "updated": "2026-09-11",
-   "fetched_at": "2026-09-12T01:17:15.421181+00:00",
+   "fetched_at": "2026-09-12T14:18:53.118111+00:00",
    "note": "Yahoo ^GSPC RSI(14)"
   },
   "SP500_MA200": {
    "value": "Above",
    "updated": "2026-09-11",
-   "fetched_at": "2026-09-12T01:17:15.421181+00:00",
+   "fetched_at": "2026-09-12T14:18:53.118111+00:00",
    "note": "close 7,657 vs MA200 7,163"
   },
   "SET_RSI": {
    "value": 64.9,
    "updated": "2026-07-17",
-   "fetched_at": "2026-09-12T01:17:15.421181+00:00",
+   "fetched_at": "2026-09-12T14:18:53.118111+00:00",
    "note": "Yahoo ^SET.BK RSI(14)"
   },
   "SET_MA200": {
    "value": "Above",
    "updated": "2026-07-17",
-   "fetched_at": "2026-09-12T01:17:15.421181+00:00",
+   "fetched_at": "2026-09-12T14:18:53.118111+00:00",
    "note": "close 1,639 vs MA200 1,404"
   },
   "NDX_RSI": {
    "value": 51.8,
    "updated": "2026-09-11",
-   "fetched_at": "2026-09-12T01:17:15.421181+00:00",
+   "fetched_at": "2026-09-12T14:18:53.118111+00:00",
    "note": "Yahoo ^IXIC RSI(14)"
   },
   "NDX_MA200": {
    "value": "Above",
    "updated": "2026-09-11",
-   "fetched_at": "2026-09-12T01:17:15.421181+00:00",
+   "fetched_at": "2026-09-12T14:18:53.118111+00:00",
    "note": "close 26,333 vs MA200 24,477"
   },
   "GOLD_GLD": {
-   "value": 396.36,
-   "updated": "2026-09-10",
-   "fetched_at": "2026-09-12T01:17:15.421181+00:00",
+   "value": 398.77,
+   "updated": "2026-09-11",
+   "fetched_at": "2026-09-12T14:18:53.118111+00:00",
    "note": "Yahoo GLD"
   },
   "BTCUSD": {
-   "value": 77364.0,
+   "value": 77358.0,
    "updated": "2026-09-12",
-   "fetched_at": "2026-09-12T01:17:15.421181+00:00",
+   "fetched_at": "2026-09-12T14:18:53.118111+00:00",
    "note": "Yahoo BTC-USD"
   },
   "ETHUSD": {
-   "value": 2516.0,
+   "value": 2540.0,
    "updated": "2026-09-12",
-   "fetched_at": "2026-09-12T01:17:15.421181+00:00",
+   "fetched_at": "2026-09-12T14:18:53.118111+00:00",
    "note": "Yahoo ETH-USD"
   },
   "TH_CPI": {
    "value": -0.13,
    "updated": "2025-12-31",
-   "fetched_at": "2026-09-12T01:17:15.421181+00:00",
+   "fetched_at": "2026-09-12T14:18:53.118111+00:00",
    "note": "World Bank FP.CPI.TOTL.ZG · เงินเฟ้อเฉลี่ยทั้งปี 2025"
   }
  },
@@ -207,103 +207,103 @@
   "sectors": {
    "XLK": {
     "name": "Technology",
-    "price": 185.22,
-    "chg1m": -0.47,
-    "chg3m": 4.86,
-    "rsi": 50.8,
-    "vsMA200": 14.99,
-    "rs1m": 1.18,
-    "rs3m": 0.39
+    "price": 187.67,
+    "chg1m": -0.63,
+    "chg3m": 2.43,
+    "rsi": 55.1,
+    "vsMA200": 16.32,
+    "rs1m": 0.43,
+    "rs3m": -1.17
    },
    "XLV": {
     "name": "Healthcare",
-    "price": 165.66,
-    "chg1m": -1.4,
-    "chg3m": 8.38,
-    "rsi": 41.6,
-    "vsMA200": 6.47,
-    "rs1m": 0.25,
-    "rs3m": 3.91
+    "price": 165.36,
+    "chg1m": -1.83,
+    "chg3m": 7.31,
+    "rsi": 41.0,
+    "vsMA200": 6.24,
+    "rs1m": -0.77,
+    "rs3m": 3.71
    },
    "XLF": {
     "name": "Financials",
-    "price": 56.87,
-    "chg1m": -1.61,
-    "chg3m": 8.88,
-    "rsi": 44.4,
-    "vsMA200": 6.15,
-    "rs1m": 0.04,
-    "rs3m": 4.41
+    "price": 57.25,
+    "chg1m": -1.16,
+    "chg3m": 8.8,
+    "rsi": 48.3,
+    "vsMA200": 6.81,
+    "rs1m": -0.1,
+    "rs3m": 5.2
    },
    "XLY": {
     "name": "Cons. Disc.",
-    "price": 111.96,
-    "chg1m": -6.11,
-    "chg3m": -1.35,
-    "rsi": 36.7,
-    "vsMA200": -4.3,
-    "rs1m": -4.46,
-    "rs3m": -5.82
+    "price": 112.96,
+    "chg1m": -4.18,
+    "chg3m": -2.87,
+    "rsi": 40.9,
+    "vsMA200": -3.44,
+    "rs1m": -3.12,
+    "rs3m": -6.47
    },
    "XLP": {
     "name": "Cons. Staples",
-    "price": 83.09,
-    "chg1m": -1.89,
-    "chg3m": -2.81,
-    "rsi": 38.2,
-    "vsMA200": -0.4,
-    "rs1m": -0.24,
-    "rs3m": -7.28
+    "price": 83.38,
+    "chg1m": -2.0,
+    "chg3m": -2.22,
+    "rsi": 40.4,
+    "vsMA200": -0.08,
+    "rs1m": -0.94,
+    "rs3m": -5.82
    },
    "XLI": {
     "name": "Industrials",
-    "price": 170.55,
-    "chg1m": -8.16,
-    "chg3m": 0.52,
-    "rsi": 30.1,
-    "vsMA200": -0.32,
-    "rs1m": -6.51,
-    "rs3m": -3.95
+    "price": 172.37,
+    "chg1m": -7.27,
+    "chg3m": -1.59,
+    "rsi": 36.5,
+    "vsMA200": 0.68,
+    "rs1m": -6.21,
+    "rs3m": -5.19
    },
    "XLE": {
     "name": "Energy",
-    "price": 64.93,
-    "chg1m": 6.56,
-    "chg3m": 11.47,
-    "rsi": 65.2,
-    "vsMA200": 17.77,
-    "rs1m": 8.21,
-    "rs3m": 7.0
+    "price": 65.14,
+    "chg1m": 6.73,
+    "chg3m": 14.04,
+    "rsi": 66.1,
+    "vsMA200": 17.94,
+    "rs1m": 7.79,
+    "rs3m": 10.44
    },
    "XLU": {
     "name": "Utilities",
-    "price": 42.52,
-    "chg1m": -2.54,
-    "chg3m": -3.36,
-    "rsi": 39.3,
-    "vsMA200": -4.76,
-    "rs1m": -0.89,
-    "rs3m": -7.83
+    "price": 42.39,
+    "chg1m": -3.31,
+    "chg3m": -3.77,
+    "rsi": 38.1,
+    "vsMA200": -5.03,
+    "rs1m": -2.25,
+    "rs3m": -7.37
    },
    "XLRE": {
     "name": "Real Estate",
-    "price": 43.05,
-    "chg1m": -2.34,
-    "chg3m": -4.31,
-    "rsi": 31.8,
-    "vsMA200": -0.14,
-    "rs1m": -0.69,
-    "rs3m": -8.78
+    "price": 43.42,
+    "chg1m": -2.41,
+    "chg3m": -3.34,
+    "rsi": 37.9,
+    "vsMA200": 0.69,
+    "rs1m": -1.35,
+    "rs3m": -6.94
    },
    "XLB": {
     "name": "Materials",
-    "price": 50.76,
-    "chg1m": -4.66,
-    "chg3m": 2.34,
-    "rsi": 37.1,
-    "vsMA200": 1.11,
-    "rs1m": -3.01,
-    "rs3m": -2.13
+    "price": 50.95,
+    "chg1m": -3.1,
+    "chg3m": -0.53,
+    "rsi": 39.1,
+    "vsMA200": 1.41,
+    "rs1m": -2.04,
+    "rs3m": -4.13
    }
   },
   "SP500": [
@@ -2401,63 +2401,63 @@
  },
  "prices": {
   "AAPL": {
-   "price": 326.570007,
+   "price": 332.269989,
    "ccy": "USD",
-   "updated": "2026-09-10",
+   "updated": "2026-09-11",
    "src": "Yahoo AAPL"
   },
   "V": {
-   "price": 367.209991,
+   "price": 370.450012,
    "ccy": "USD",
-   "updated": "2026-09-10",
+   "updated": "2026-09-11",
    "src": "Yahoo V"
   },
   "GOOGL": {
-   "price": 332.600006,
+   "price": 338.5,
    "ccy": "USD",
-   "updated": "2026-09-10",
+   "updated": "2026-09-11",
    "src": "Yahoo GOOGL"
   },
   "GOOG": {
-   "price": 330.390015,
+   "price": 335.450012,
    "ccy": "USD",
-   "updated": "2026-09-10",
+   "updated": "2026-09-11",
    "src": "Yahoo GOOG"
   },
   "COKE": {
-   "price": 188.800003,
+   "price": 192.610001,
    "ccy": "USD",
-   "updated": "2026-09-10",
+   "updated": "2026-09-11",
    "src": "Yahoo COKE"
   },
   "META": {
-   "price": 644.380005,
+   "price": 648.030029,
    "ccy": "USD",
-   "updated": "2026-09-10",
+   "updated": "2026-09-11",
    "src": "Yahoo META"
   },
   "WMT": {
-   "price": 105.730003,
+   "price": 107.150002,
    "ccy": "USD",
-   "updated": "2026-09-10",
+   "updated": "2026-09-11",
    "src": "Yahoo WMT"
   },
   "TSLA": {
-   "price": 363.559998,
+   "price": 365.440002,
    "ccy": "USD",
-   "updated": "2026-09-10",
+   "updated": "2026-09-11",
    "src": "Yahoo TSLA"
   },
   "VOO": {
-   "price": 696.650024,
+   "price": 702.559998,
    "ccy": "USD",
-   "updated": "2026-09-10",
+   "updated": "2026-09-11",
    "src": "Yahoo VOO"
   },
   "JEPI": {
-   "price": 56.259998,
+   "price": 56.650002,
    "ccy": "USD",
-   "updated": "2026-09-10",
+   "updated": "2026-09-11",
    "src": "Yahoo JEPI"
   },
   "AOT": {
@@ -2551,25 +2551,25 @@
    "src": "Yahoo TU.BK"
   },
   "BTC": {
-   "price": 77364.226562,
+   "price": 77357.976562,
    "ccy": "USD",
    "updated": "2026-09-12",
    "src": "Yahoo BTC-USD"
   },
   "BNB": {
-   "price": 728.880005,
+   "price": 735.919983,
    "ccy": "USD",
    "updated": "2026-09-12",
    "src": "Yahoo BNB-USD"
   },
   "USDT": {
-   "price": 0.99985,
+   "price": 0.99979,
    "ccy": "USD",
    "updated": "2026-09-12",
    "src": "Yahoo USDT-USD"
   },
   "Gold": {
-   "price": 4390.0,
+   "price": 4366.200195,
    "ccy": "USD",
    "updated": "2026-09-11",
    "src": "Yahoo GC=F"
