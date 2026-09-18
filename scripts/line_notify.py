@@ -29,7 +29,9 @@ import argparse
 import json
 import os
 import sys
+import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta, timezone
 
@@ -149,6 +151,49 @@ def fetch_asset_tracker() -> list | None:
 # "ยังไม่ได้ต่อชีต" แล้วผู้ใช้ต้องไล่เดาเองทีละข้อ ซึ่งเสียเวลามาก
 # ตอนนี้แต่ละสาเหตุมีข้อความของตัวเอง พร้อมบอกว่าต้องไปแก้ที่ไหน
 SHEET_TAB = os.environ.get("GS_SHEET_TAB", "Asset_Tracker")
+SCOPE = "https://www.googleapis.com/auth/spreadsheets.readonly"
+TOKEN_URI = "https://oauth2.googleapis.com/token"
+
+
+# ══════════════════════════════════════════════════════════════════════
+# ขอ access token เอง — ไม่ผ่าน transport ของ google-auth
+# ══════════════════════════════════════════════════════════════════════
+# เดิมใช้ google.auth.transport.requests.Request ซึ่งบังคับให้ต้องมี `requests`
+# ติดตั้งเพิ่มอีกตัว ทั้งที่ `pip install google-auth` ไม่ได้ลงมาให้
+# อาการคือ import google.auth ผ่าน แต่ล้มตอนสร้าง Request
+# ("The requests library is not installed")
+#
+# การเติม requests เข้าไปแก้ได้เฉพาะหน้า แต่ผูกเราไว้กับ dependency chain
+# ของ google-auth ที่เปลี่ยนได้อีก จึงตัดออกทั้งชั้น:
+#   เซ็น JWT ด้วย google.auth.crypt (มาพร้อม google-auth เสมอ)
+#   แล้วแลก token ด้วย urllib ที่อยู่ใน stdlib
+# ตอนนี้พึ่ง google-auth แค่ส่วนเซ็นลายเซ็น ที่เหลือเป็น stdlib ล้วน
+def _build_jwt_assertion(info: dict, scope: str) -> str:
+    """สร้าง signed JWT ตามสเปก OAuth 2.0 service account flow"""
+    from google.auth import crypt, jwt                     # type: ignore
+    now = int(time.time())
+    payload = {
+        "iss":   info["client_email"],
+        "scope": scope,
+        "aud":   info.get("token_uri") or TOKEN_URI,
+        "iat":   now,
+        "exp":   now + 3600,
+    }
+    signer = crypt.RSASigner.from_service_account_info(info)
+    tok = jwt.encode(signer, payload)
+    return tok.decode("ascii") if isinstance(tok, bytes) else tok
+
+
+def _access_token(info: dict, scope: str) -> str:
+    body = urllib.parse.urlencode({
+        "grant_type": "urn:ietf:params:oauth:grant-type:jwt-bearer",
+        "assertion":  _build_jwt_assertion(info, scope),
+    }).encode()
+    req = urllib.request.Request(
+        info.get("token_uri") or TOKEN_URI, data=body,
+        headers={"Content-Type": "application/x-www-form-urlencoded"})
+    with urllib.request.urlopen(req, timeout=30) as r:
+        return json.loads(r.read())["access_token"]
 
 
 def fetch_asset_tracker_dx() -> tuple[list | None, str]:
@@ -167,8 +212,7 @@ def fetch_asset_tracker_dx() -> tuple[list | None, str]:
                       "/d/ กับ /edit")
 
     try:
-        from google.oauth2 import service_account          # type: ignore
-        from google.auth.transport.requests import Request  # type: ignore
+        from google.auth import crypt, jwt                 # noqa: F401
     except ImportError as e:
         # บอก interpreter ที่กำลังรันด้วย — อาการนี้มักไม่ใช่ "ลืมติดตั้ง"
         # แต่เป็น pip ติดตั้งลงคนละ Python กับตัวที่รันสคริปต์
@@ -185,16 +229,23 @@ def fetch_asset_tracker_dx() -> tuple[list | None, str]:
         return None, "GOOGLE_SA_KEY ไม่ใช่คีย์แบบ service account (ใส่ไฟล์ผิดประเภท)"
     sa_email = info.get("client_email", "(ไม่รู้อีเมล)")
 
+    for k in ("private_key", "client_email"):
+        if not info.get(k):
+            return None, f"GOOGLE_SA_KEY ไม่มีฟิลด์ '{k}' — ไฟล์คีย์ไม่สมบูรณ์"
     try:
-        creds = service_account.Credentials.from_service_account_info(
-            info, scopes=["https://www.googleapis.com/auth/spreadsheets.readonly"])
-        creds.refresh(Request())
+        token = _access_token(info, SCOPE)
+    except urllib.error.HTTPError as e:
+        detail = e.read().decode("utf-8", "replace")[:200]
+        if "invalid_grant" in detail:
+            return None, ("Google ปฏิเสธคีย์ (invalid_grant) — คีย์ถูกลบ/ปิดใช้งาน "
+                          "หรือนาฬิกาเครื่องเพี้ยน")
+        return None, f"ขอ token ไม่สำเร็จ HTTP {e.code}: {detail}"
     except Exception as e:                                  # noqa: BLE001
-        return None, f"ขอ token ไม่สำเร็จ ({type(e).__name__}) — คีย์อาจถูกลบ/ปิดใช้งาน"
+        return None, f"ขอ token ไม่สำเร็จ ({type(e).__name__}: {e})"
 
     url = (f"https://sheets.googleapis.com/v4/spreadsheets/{sheet_id}"
            f"/values/{urllib.parse.quote(SHEET_TAB)}!A1:Z10000")
-    req = urllib.request.Request(url, headers={"Authorization": f"Bearer {creds.token}"})
+    req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
     try:
         with urllib.request.urlopen(req, timeout=30) as r:
             rows = json.loads(r.read()).get("values", [])
