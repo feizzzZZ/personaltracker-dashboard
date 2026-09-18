@@ -137,31 +137,83 @@ def _f(v) -> float:
 
 def fetch_asset_tracker() -> list | None:
     """อ่าน Asset_Tracker ด้วย service account — คืน None ถ้าไม่ได้ตั้งค่าไว้"""
+    rows, _ = fetch_asset_tracker_dx()
+    return rows
+
+
+# ══════════════════════════════════════════════════════════════════════
+# เวอร์ชันที่บอก "ทำไม" ไม่ใช่แค่ "ไม่ได้"
+# ══════════════════════════════════════════════════════════════════════
+# เดิมทุกความล้มเหลว — ไม่ได้ตั้ง secret, JSON เสีย, ยังไม่แชร์ชีต, พิมพ์
+# sheet id ผิด, ไม่มีแท็บ Asset_Tracker — ออกมาเป็นข้อความเดียวกันหมดคือ
+# "ยังไม่ได้ต่อชีต" แล้วผู้ใช้ต้องไล่เดาเองทีละข้อ ซึ่งเสียเวลามาก
+# ตอนนี้แต่ละสาเหตุมีข้อความของตัวเอง พร้อมบอกว่าต้องไปแก้ที่ไหน
+SHEET_TAB = os.environ.get("GS_SHEET_TAB", "Asset_Tracker")
+
+
+def fetch_asset_tracker_dx() -> tuple[list | None, str]:
+    """คืน (rows, reason) — reason='ok' เมื่อสำเร็จ ไม่งั้นเป็นคำอธิบายภาษาไทย"""
     sheet_id = os.environ.get("GS_SHEET_ID", "").strip()
     sa_raw = os.environ.get("GOOGLE_SA_KEY", "").strip()
-    if not sheet_id or not sa_raw:
-        return None
+
+    missing = [n for n, v in (("GS_SHEET_ID", sheet_id),
+                              ("GOOGLE_SA_KEY", sa_raw)) if not v]
+    if missing:
+        return None, f"ยังไม่ได้ตั้ง secret: {', '.join(missing)}"
+
+    # sheet id ที่ยาวผิดปกติมักแปลว่าวาง URL ทั้งอันมา ไม่ใช่เฉพาะ id
+    if "/" in sheet_id or "http" in sheet_id.lower():
+        return None, ("GS_SHEET_ID เป็น URL ทั้งอัน — ต้องใส่เฉพาะส่วนระหว่าง "
+                      "/d/ กับ /edit")
+
     try:
         from google.oauth2 import service_account          # type: ignore
         from google.auth.transport.requests import Request  # type: ignore
     except ImportError:
-        print("⚠️  ไม่มี google-auth — ข้ามส่วนพอร์ต (pip install google-auth)",
-              file=sys.stderr)
-        return None
+        return None, "ไม่มีไลบรารี google-auth (workflow ต้อง pip install google-auth)"
+
     try:
         info = json.loads(sa_raw)
+    except json.JSONDecodeError as e:
+        return None, (f"GOOGLE_SA_KEY ไม่ใช่ JSON ที่ถูกต้อง ({e.msg}) — "
+                      "ต้อง copy ทั้งไฟล์รวมปีกกา { }")
+    if info.get("type") != "service_account":
+        return None, "GOOGLE_SA_KEY ไม่ใช่คีย์แบบ service account (ใส่ไฟล์ผิดประเภท)"
+    sa_email = info.get("client_email", "(ไม่รู้อีเมล)")
+
+    try:
         creds = service_account.Credentials.from_service_account_info(
             info, scopes=["https://www.googleapis.com/auth/spreadsheets.readonly"])
         creds.refresh(Request())
-        url = (f"https://sheets.googleapis.com/v4/spreadsheets/{sheet_id}"
-               f"/values/Asset_Tracker!A1:Z10000")
-        req = urllib.request.Request(
-            url, headers={"Authorization": f"Bearer {creds.token}"})
-        with urllib.request.urlopen(req, timeout=30) as r:
-            return json.loads(r.read()).get("values", [])
     except Exception as e:                                  # noqa: BLE001
-        print(f"⚠️  อ่าน Asset_Tracker ไม่ได้: {type(e).__name__}: {e}", file=sys.stderr)
-        return None
+        return None, f"ขอ token ไม่สำเร็จ ({type(e).__name__}) — คีย์อาจถูกลบ/ปิดใช้งาน"
+
+    url = (f"https://sheets.googleapis.com/v4/spreadsheets/{sheet_id}"
+           f"/values/{urllib.parse.quote(SHEET_TAB)}!A1:Z10000")
+    req = urllib.request.Request(url, headers={"Authorization": f"Bearer {creds.token}"})
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            rows = json.loads(r.read()).get("values", [])
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8", "replace")[:400]
+        if e.code == 403 and "disabled" in body.lower():
+            return None, "Sheets API ยังไม่ได้เปิดในโปรเจกต์นี้"
+        if e.code == 403:
+            return None, (f"ชีตยังไม่ได้แชร์ให้ {sa_email} "
+                          "(Share → วางอีเมลนี้ → Viewer)")
+        if e.code == 404:
+            return None, "หา spreadsheet ไม่เจอ — GS_SHEET_ID น่าจะผิด"
+        if e.code == 400 and "Unable to parse range" in body:
+            return None, f"ไม่มีแท็บชื่อ '{SHEET_TAB}' ในชีตนี้"
+        return None, f"Sheets API ตอบ HTTP {e.code}: {body[:120]}"
+    except Exception as e:                                  # noqa: BLE001
+        return None, f"เชื่อมต่อ Sheets ไม่ได้ ({type(e).__name__}: {e})"
+
+    if not rows:
+        return None, f"แท็บ '{SHEET_TAB}' ว่างเปล่า"
+    if len(rows) < 2:
+        return None, f"แท็บ '{SHEET_TAB}' มีแต่หัวตาราง ไม่มีข้อมูล"
+    return rows, "ok"
 
 
 def build_portfolio(rows: list, market: dict) -> dict | None:
@@ -247,7 +299,7 @@ def build_portfolio(rows: list, market: dict) -> dict | None:
 # ══════════════════════════════════════════════════════════════════════
 # 3. ข้อความ
 # ══════════════════════════════════════════════════════════════════════
-def daily_message(port, market, prev) -> str:
+def daily_message(port, market, prev, reason="") -> str:
     L = [f"📊 สรุปพอร์ต {th_date(NOW)}", ""]
 
     if port:
@@ -278,7 +330,12 @@ def daily_message(port, market, prev) -> str:
             L.append(f"⚠️ ไม่มีราคา {len(port['missing'])} ตัว: "
                      + ", ".join(port["missing"][:6]))
     else:
-        L.append("(ยังไม่ได้ต่อชีต — แสดงได้แค่ภาวะตลาด)")
+        # บอกสาเหตุจริงในข้อความ ไม่ใช่ให้ไปเปิด log หา — ผู้ใช้เห็นปัญหา
+        # บนมือถือทันทีว่าต้องไปแก้ที่ไหน
+        L.append("⚠️ ยังอ่านพอร์ตไม่ได้")
+        if reason:
+            L.append(f"   {reason}")
+        L.append("   (ส่วนภาวะตลาดด้านล่างยังใช้ได้ปกติ)")
 
     d = market.get("data", {}) or {}
     bits = []
@@ -407,7 +464,7 @@ def broadcast(text: str, dry: bool = False) -> bool:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--mode", default="daily",
-                    choices=["daily", "alert", "weekly", "monthly"])
+                    choices=["daily", "alert", "weekly", "monthly", "check"])
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--stock-threshold", type=float, default=5.0)
     ap.add_argument("--crypto-threshold", type=float, default=8.0)
@@ -415,8 +472,34 @@ def main() -> int:
 
     market = load_market()
     state = load_state()
-    rows = fetch_asset_tracker()
+    rows, reason = fetch_asset_tracker_dx()
     port = build_portfolio(rows, market) if rows else None
+
+    if reason != "ok":
+        print(f"⚠️  อ่าน {SHEET_TAB} ไม่ได้: {reason}", file=sys.stderr)
+
+    # ── โหมดตรวจสอบ: ไม่ส่ง LINE ไม่แตะ state แค่บอกว่าต่อชีตได้ไหม ──
+    if a.mode == "check":
+        print("═══ ตรวจการเชื่อมต่อ Google Sheet ═══")
+        for k in ("GS_SHEET_ID", "GOOGLE_SA_KEY", "LINE_CHANNEL_TOKEN"):
+            v = os.environ.get(k, "")
+            print(f"  {k:<20} {'ตั้งแล้ว (' + str(len(v)) + ' ตัวอักษร)' if v else '❌ ยังไม่ได้ตั้ง'}")
+        print(f"  แท็บที่จะอ่าน       {SHEET_TAB}")
+        if reason != "ok":
+            print(f"\n❌ {reason}")
+            return 1
+        print(f"\n✓ อ่านได้ {len(rows)} แถว · หัวตาราง: {', '.join(str(h) for h in rows[0][:8])}")
+        if not port:
+            print("❌ อ่านชีตได้ แต่คำนวณพอร์ตไม่ได้ — ตรวจชื่อคอลัมน์ Ticker/Transaction_Type")
+            return 1
+        print(f"✓ พอร์ต {port['total']:,.2f} บาท · ต้นทุน {port['cost']:,.2f} "
+              f"· {len(port['holdings'])} ตัวที่มีราคา")
+        for tk, h in sorted(port["holdings"].items(),
+                            key=lambda kv: -kv[1]["value"])[:10]:
+            print(f"    {tk:<10} {h['value']:>14,.2f}  [{h['group']}]")
+        if port["missing"]:
+            print(f"  ไม่มีราคา: {', '.join(port['missing'])}")
+        return 0
 
     if a.mode == "alert":
         mv = movers(port, state.get("last", {}), a.stock_threshold, a.crypto_threshold)
@@ -428,7 +511,9 @@ def main() -> int:
         base = state.get("week" if a.mode == "weekly" else "month", {})
         sent = broadcast(period_message(port, market, base, label), a.dry_run)
     else:
-        sent = broadcast(daily_message(port, market, state.get("last", {})), a.dry_run)
+        sent = broadcast(
+            daily_message(port, market, state.get("last", {}),
+                          "" if reason == "ok" else reason), a.dry_run)
 
     # ── อัปเดต state ─────────────────────────────────────────────────
     # เก็บหลังส่งเสมอ แม้ส่งไม่สำเร็จ ไม่งั้นรอบหน้าจะเทียบกับฐานเก่าเกินจริง
