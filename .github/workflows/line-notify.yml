@@ -20,10 +20,10 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'โหมดที่จะส่ง'
+        description: 'โหมด — check = ตรวจการต่อชีตอย่างเดียว ไม่ส่ง LINE'
         type: choice
         default: daily
-        options: [daily, alert, weekly, monthly]
+        options: [check, daily, alert, weekly, monthly]
       dry_run:
         description: 'พิมพ์อย่างเดียว ไม่ส่งจริง'
         type: boolean
@@ -74,7 +74,7 @@ jobs:
             ${{ inputs.dry_run && '--dry-run' || '' }}
 
       - name: บันทึกฐานเทียบรอบถัดไป
-        if: ${{ !inputs.dry_run }}
+        if: ${{ !inputs.dry_run && steps.pick.outputs.mode != 'check' }}
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
