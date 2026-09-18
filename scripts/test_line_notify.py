@@ -52,7 +52,20 @@ if os.path.exists(os.environ["NOTIFY_STATE"]):
 
 import line_notify as LN  # noqa: E402
 
-port = LN.build_portfolio(ROWS, MARKET)
+# ── แท็บ Asset_Live_Price_Feed ที่ชีตจริงมี ────────────────────────────
+# ครอบคลุมเคสที่เจอจริง: กองทุนที่ Yahoo ไม่มี, #N/A จาก IMPORTXML,
+# แถว Inactive และราคา 0 ที่ต้องไม่ถูกนับ
+PRICE_ROWS = [
+    ["Ticker", "Current_Price_THB", "Active"],
+    ["PF4103", 13.4521, "Active"],          # provident fund — มีแต่ในชีต
+    ["K-VIETNAM", 11.8734, "Active"],
+    ["BNB", 31000, "Active"],               # ชีตมี แต่ pipeline ไม่มี
+    ["KBANK", 999, "Inactive"],             # Inactive → ต้องไม่ใช้
+    ["AAPL", "#N/A", "Active"],             # สูตรล้ม → ต้องไม่กลายเป็น 0
+    ["TPAC", 0, "Active"],                  # 0 → ไม่ใช่ราคา
+]
+
+port = LN.build_portfolio(ROWS, MARKET, PRICE_ROWS)
 assert port, "build_portfolio คืน None"
 
 print("═══ พอร์ตที่คำนวณได้ ═══")
@@ -86,9 +99,38 @@ assert LN.resolve_group("", "BNB", "bitkub") == "คริปโต", "เดา
 assert LN.resolve_group("", "BTC", "Unknown") == "คริปโต", "เดา group จาก ticker ไม่ทำงาน"
 assert LN.resolve_group("Weird_Type", "XYZ", "SCBS") == "อื่นๆ", \
     "ประเภทที่ไม่รู้จักต้องตกไป 'อื่นๆ' ให้เห็น ไม่ใช่โดนกลืนเข้าคริปโต"
-# ตัวที่ไม่มีราคาต้องหลุดออกจากพอร์ตและถูกรายงาน ไม่ใช่นับเป็น ฿0 เงียบๆ
-assert "BNB" not in port["holdings"] and "BNB" in port["missing"]
-assert "PF4103" in port["missing"], "PF4103 ต้องอยู่ในรายการไม่มีราคา"
+# ══ chain ราคา: pipeline สด > ชีต > pipeline ค้าง ══════════════════
+# BNB กับ PF4103 ไม่มีใน pipeline แต่ชีตมี → ต้องเข้าพอร์ตได้แล้ว
+assert port["holdings"]["BNB"]["src"] == "sheet", port["holdings"]["BNB"]
+near(port["holdings"]["BNB"]["value"], 2 * 31000)
+assert port["holdings"]["PF4103"]["src"] == "sheet"
+near(port["holdings"]["PF4103"]["value"], 500 * 13.4521)
+assert not port["missing"], f"ไม่ควรมีตัวไหนขาดราคาแล้ว: {port['missing']}"
+
+# AAPL มีทั้งสองแหล่ง แต่ชีตเป็น #N/A → ต้องใช้ pipeline ไม่ใช่กลายเป็น 0
+assert port["holdings"]["AAPL"]["src"] == "pipeline"
+near(port["holdings"]["AAPL"]["value"], 10 * 265 * 33.25)
+
+# KBANK ในชีตเป็น Inactive (999 บาท) → ต้องถูกข้าม ใช้ pipeline 158.5 แทน
+assert port["holdings"]["KBANK"]["src"] == "pipeline"
+near(port["holdings"]["KBANK"]["value"], 700 * 158.5)
+
+# แถวราคา 0 ต้องไม่ถูกตีความว่าเป็นราคา
+assert "TPAC" not in LN.parse_live_prices(PRICE_ROWS)
+assert "KBANK" not in LN.parse_live_prices(PRICE_ROWS), "Inactive หลุดเข้ามา"
+assert "AAPL" not in LN.parse_live_prices(PRICE_ROWS), "#N/A หลุดเข้ามา"
+
+# ราคาค้างเกิน PRICE_MAX_DAYS ต้องถูกทิ้ง ไม่ใช่เอามาใช้เงียบๆ
+_old = {**MARKET, "prices": {**MARKET["prices"],
+        "KBANK": {"price": 158.5, "ccy": "THB", "updated": "2026-01-01"}}}
+_pp = LN.pipeline_prices_thb(_old, 33.25)
+assert "KBANK" not in _pp, "ราคาเก่ากว่า 12 วันต้องถูกทิ้ง"
+
+# ราคาค้าง (stale) ต้องแพ้ชีตที่มีค่าจริง
+_st = {**MARKET, "prices": {**MARKET["prices"],
+       "BNB": {"price": 900, "ccy": "USD", "updated": "2026-09-08"}}}   # 10 วัน
+_p, _s, _d = LN.resolve_prices(_st, LN.parse_live_prices(PRICE_ROWS), 33.25)
+assert _s["BNB"] == "sheet", f"ราคาค้างไม่ควรชนะชีต (ได้ {_s['BNB']})"
 assert port["holdings"]["Gold"]["group"] == "ทอง"
 near(port["dividends"], 4200)
 
@@ -101,7 +143,9 @@ print(LN.daily_message(port, MARKET, {}))
 
 prev = {"total": port["total"] * 0.97,
         "groups": {k: {"value": v["value"] * 0.97} for k, v in port["groups"].items()},
-        "prices": {"AAPL": 249.0, "KBANK": 157.0, "BTC": 108000.0, "Gold": 4425.0}}
+        # ราคาสกุลเดิม (native) ไม่ใช่ THB — ตรงกับที่ state เก็บ
+        "prices": {"AAPL": 249.0, "KBANK": 157.0, "BTC": 108000.0,
+                   "Gold": 4425.0, "BNB": 30800.0, "PF4103": 13.44}}
 
 print("\n═══ daily (มีฐานเทียบ) ═══")
 print(LN.daily_message(port, MARKET, prev))

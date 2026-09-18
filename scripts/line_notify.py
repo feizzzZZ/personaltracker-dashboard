@@ -151,6 +151,10 @@ def fetch_asset_tracker() -> list | None:
 # "ยังไม่ได้ต่อชีต" แล้วผู้ใช้ต้องไล่เดาเองทีละข้อ ซึ่งเสียเวลามาก
 # ตอนนี้แต่ละสาเหตุมีข้อความของตัวเอง พร้อมบอกว่าต้องไปแก้ที่ไหน
 SHEET_TAB = os.environ.get("GS_SHEET_TAB", "Asset_Tracker")
+PRICE_TAB = os.environ.get("GS_PRICE_TAB", "Asset_Live_Price_Feed")
+# ค่าเดียวกับ shared.js — ถ้าแก้ที่นั่นต้องแก้ที่นี่ด้วย ไม่งั้นสองที่ตัดสินไม่ตรงกัน
+PRICE_STALE_DAYS = 4     # เกินนี้ = ติดธง stale แต่ยังใช้ได้ถ้าไม่มีอย่างอื่น
+PRICE_MAX_DAYS = 12      # เกินนี้ = ทิ้ง ไม่เอามาใช้เลย
 SCOPE = "https://www.googleapis.com/auth/spreadsheets.readonly"
 TOKEN_URI = "https://oauth2.googleapis.com/token"
 
@@ -243,12 +247,15 @@ def fetch_asset_tracker_dx() -> tuple[list | None, str]:
     except Exception as e:                                  # noqa: BLE001
         return None, f"ขอ token ไม่สำเร็จ ({type(e).__name__}: {e})"
 
-    url = (f"https://sheets.googleapis.com/v4/spreadsheets/{sheet_id}"
-           f"/values/{urllib.parse.quote(SHEET_TAB)}!A1:Z10000")
-    req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
-    try:
+    def read_tab(tab: str):
+        url = (f"https://sheets.googleapis.com/v4/spreadsheets/{sheet_id}"
+               f"/values/{urllib.parse.quote(tab)}!A1:Z10000")
+        req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
         with urllib.request.urlopen(req, timeout=30) as r:
-            rows = json.loads(r.read()).get("values", [])
+            return json.loads(r.read()).get("values", [])
+
+    try:
+        rows = read_tab(SHEET_TAB)
     except urllib.error.HTTPError as e:
         body = e.read().decode("utf-8", "replace")[:400]
         if e.code == 403 and "disabled" in body.lower():
@@ -268,10 +275,116 @@ def fetch_asset_tracker_dx() -> tuple[list | None, str]:
         return None, f"แท็บ '{SHEET_TAB}' ว่างเปล่า"
     if len(rows) < 2:
         return None, f"แท็บ '{SHEET_TAB}' มีแต่หัวตาราง ไม่มีข้อมูล"
+
+    # แท็บราคาเป็นของเสริม — ถ้าอ่านไม่ได้ก็ยังทำงานต่อด้วยราคาจาก pipeline
+    # (อย่าให้การขาดราคากองทุนทำให้ไม่ได้สรุปพอร์ตเลย)
+    global _live_price_rows
+    try:
+        _live_price_rows = read_tab(PRICE_TAB)
+    except Exception as e:                                  # noqa: BLE001
+        _live_price_rows = []
+        print(f"⚠️  อ่าน {PRICE_TAB} ไม่ได้ ({type(e).__name__}) — "
+              f"กองทุนที่ Yahoo ไม่มีจะไม่มีราคา", file=sys.stderr)
+
     return rows, "ok"
 
 
-def build_portfolio(rows: list, market: dict) -> dict | None:
+# แถวดิบของแท็บราคา — เติมโดย fetch_asset_tracker_dx() เพื่อไม่ต้องยิง API ซ้ำ
+_live_price_rows: list = []
+
+
+def parse_live_prices(rows: list) -> dict:
+    """{ticker: ราคา THB} จากแท็บ Asset_Live_Price_Feed
+
+    ตรรกะเดียวกับ gsParseLivePrice() ใน index.html:
+      - ข้ามแถวที่ Active == 'Inactive'
+      - ข้ามค่าที่เป็น #N/A (สูตร IMPORTXML ล้ม) — อย่าแปลงเป็น 0
+      - เอาเฉพาะราคา > 0
+    """
+    if not rows:
+        return {}
+    head = [str(h).strip() if h is not None else "" for h in rows[0]]
+
+    def idx(name):
+        return head.index(name) if name in head else -1
+
+    i_tk, i_px, i_act = idx("Ticker"), idx("Current_Price_THB"), idx("Active")
+    if i_tk < 0 or i_px < 0:
+        print(f"⚠️  {PRICE_TAB}: ไม่เจอคอลัมน์ Ticker/Current_Price_THB "
+              f"(มี: {', '.join(head[:10])})", file=sys.stderr)
+        return {}
+
+    out = {}
+    for r in rows[1:]:
+        tk = str(r[i_tk]).strip() if i_tk < len(r) and r[i_tk] else ""
+        if not tk:
+            continue
+        if 0 <= i_act < len(r) and str(r[i_act] or "").strip() == "Inactive":
+            continue
+        raw = r[i_px] if i_px < len(r) else None
+        if raw is None or "N/A" in str(raw):
+            continue
+        p = _f(raw)
+        if p > 0:
+            out[tk] = p
+    return out
+
+
+def pipeline_prices_thb(market: dict, usdthb: float) -> dict:
+    """{ticker: {p, stale}} จาก market-data.json — แปลงเป็น THB แล้ว
+
+    เช็คอายุจาก `updated` (วันของราคา) ไม่ใช่ generated_at (เวลาที่ pipeline รัน)
+    เพราะ Yahoo มีเคส "ดึงสำเร็จแต่ข้อมูลค้าง" ซึ่งเงียบและอันตรายกว่า error
+    """
+    src = (market or {}).get("prices") or {}
+    out = {}
+    today = NOW.date()
+    for tk, o in src.items():
+        p = _f((o or {}).get("price"))
+        if p <= 0:
+            continue
+        ccy = "THB" if (o.get("ccy") == "THB") else "USD"
+        if ccy == "USD" and not usdthb > 0:
+            continue
+        u = str(o.get("updated") or "").strip()[:10]
+        try:
+            age = (today - datetime.strptime(u, "%Y-%m-%d").date()).days
+        except ValueError:
+            continue                       # ไม่รู้วัน = ไม่กล้าใช้
+        if age > PRICE_MAX_DAYS:
+            continue
+        out[tk] = {"p": p if ccy == "THB" else p * usdthb,
+                   "native": p, "ccy": ccy,
+                   "stale": age > PRICE_STALE_DAYS, "age": age}
+    return out
+
+
+def resolve_prices(market: dict, sheet_px: dict, usdthb: float):
+    """รวมทุกแหล่งเป็นแผนที่เดียว + บอกที่มา — ลำดับเดียวกับ resolvePrices() ในแอป
+
+        pipeline (สด)  >  ชีต  >  pipeline (ค้าง)
+
+    ราคาค้างใช้เฉพาะเมื่อชีตไม่มีให้ เพราะชีตที่มีค่าจริงน่าเชื่อกว่าราคาที่ค้าง
+    """
+    # native = ราคาในสกุลของตัวมันเอง ใช้เทียบ "ราคาขยับ"
+    # ถ้าใช้ราคา THB เตือน จะเด้งทุกครั้งที่ค่าเงินบาทขยับ
+    # แล้วบอกว่า "BTC ขึ้น 3%" ทั้งที่ BTC ไม่ได้ขยับเลย — ผิดและทำให้ไขว้เขว
+    out = {}
+    for tk, p in (sheet_px or {}).items():
+        if p > 0:
+            out[tk] = {"thb": p, "native": p, "ccy": "THB", "src": "sheet"}
+    for tk, o in pipeline_prices_thb(market, usdthb).items():
+        if o["stale"] and (out.get(tk) or {}).get("thb", 0) > 0:
+            continue
+        out[tk] = {"thb": o["p"], "native": o["native"], "ccy": o["ccy"],
+                   "src": "stale" if o["stale"] else "pipeline"}
+    price = {k: v["thb"] for k, v in out.items()}
+    src = {k: v["src"] for k, v in out.items()}
+    return price, src, out
+
+
+def build_portfolio(rows: list, market: dict,
+                    sheet_prices_rows: list | None = None) -> dict | None:
     """คืน {total, cost, groups:{name:{value,cost}}, holdings:{ticker:{...}}}"""
     if not rows or len(rows) < 2:
         return None
@@ -321,34 +434,44 @@ def build_portfolio(rows: list, market: dict) -> dict | None:
         if s:
             net_qty[ticker] = net_qty.get(ticker, 0.0) + qty * s
 
-    px = market.get("prices", {}) or {}
-    usdthb = ((market.get("data", {}) or {}).get("USDTHB", {}) or {}).get("value") or 32.0
+    usdthb = _f(((market.get("data", {}) or {}).get("USDTHB", {}) or {}).get("value")) or 32.0
+    sheet_px = parse_live_prices(sheet_prices_rows if sheet_prices_rows is not None
+                                 else _live_price_rows)
+    price, srcmap, detail = resolve_prices(market, sheet_px, usdthb)
 
     holdings, groups = {}, {}
     total = cost_total = 0.0
     for tk, q in net_qty.items():
         if q <= 1e-9:
             continue
-        p = px.get(tk)
-        if not p:
+        thb = price.get(tk, 0.0)
+        if thb <= 0:
             continue                       # ไม่มีราคา → ข้าม ดีกว่านับเป็น ฿0 เงียบๆ
-        thb = float(p["price"]) * (usdthb if p.get("ccy") == "USD" else 1.0)
         val = q * thb
         w = wacc.get(tk, {})
         unit_cost = (w["cost"] / w["qty"]) if w.get("qty") else 0.0
         cst = q * unit_cost
         g = groups_of.get(tk, "อื่นๆ")
-        holdings[tk] = {"qty": q, "price": float(p["price"]), "ccy": p.get("ccy", "THB"),
-                        "value": val, "cost": cst, "group": g}
+        d = detail.get(tk, {})
+        holdings[tk] = {"qty": q, "price": thb, "value": val, "cost": cst,
+                        "group": g, "src": srcmap.get(tk, "?"),
+                        # native/ccy ใช้เทียบราคาขยับ — ต้องไม่ปน FX
+                        "native": d.get("native", thb), "ccy": d.get("ccy", "THB")}
         gg = groups.setdefault(g, {"value": 0.0, "cost": 0.0})
         gg["value"] += val
         gg["cost"] += cst
         total += val
         cost_total += cst
 
-    missing = [t for t, q in net_qty.items() if q > 1e-9 and t not in px]
+    missing = sorted(t for t, q in net_qty.items()
+                     if q > 1e-9 and not price.get(t, 0) > 0)
+    # นับว่าราคาแต่ละตัวมาจากไหน — ใช้บอกคุณภาพของตัวเลขที่ส่งออกไป
+    quality = {}
+    for h in holdings.values():
+        quality[h["src"]] = quality.get(h["src"], 0) + 1
     return {"total": total, "cost": cost_total, "groups": groups,
-            "holdings": holdings, "dividends": div_total, "missing": missing}
+            "holdings": holdings, "dividends": div_total, "missing": missing,
+            "quality": quality}
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -384,6 +507,10 @@ def daily_message(port, market, prev, reason="") -> str:
             L.append("")
             L.append(f"⚠️ ไม่มีราคา {len(port['missing'])} ตัว: "
                      + ", ".join(port["missing"][:6]))
+        # ราคาค้างไม่ใช่ราคาผิด แต่ต้องรู้ว่ากำลังดูของเก่าอยู่
+        nstale = port.get("quality", {}).get("stale", 0)
+        if nstale:
+            L.append(f"⚠️ ราคาค้างเกิน {PRICE_STALE_DAYS} วัน {nstale} ตัว")
     else:
         # บอกสาเหตุจริงในข้อความ ไม่ใช่ให้ไปเปิด log หา — ผู้ใช้เห็นปัญหา
         # บนมือถือทันทีว่าต้องไปแก้ที่ไหน
@@ -415,7 +542,9 @@ def movers(port, prev, th_stock=5.0, th_crypto=8.0):
         old = pp.get(tk)
         if not old:
             continue
-        chg = (h["price"] / old - 1) * 100 if old else 0.0
+        # เทียบราคาในสกุลของตัวมันเอง ไม่ใช่ THB — ไม่งั้นบาทอ่อน 3%
+        # จะกลายเป็น "ทุกตัวขึ้น 3%" ซึ่งไม่ใช่การเคลื่อนไหวของสินทรัพย์
+        chg = (h["native"] / old - 1) * 100 if old else 0.0
         lim = th_crypto if h["group"] == "คริปโต" else th_stock
         if abs(chg) >= lim:
             out.append((tk, chg, h["value"]))
@@ -453,7 +582,7 @@ def period_message(port, market, base, label) -> str:
     for tk, h in port["holdings"].items():
         o = bp.get(tk)
         if o:
-            ch.append((tk, (h["price"] / o - 1) * 100))
+            ch.append((tk, (h["native"] / o - 1) * 100))
     if ch:
         ch.sort(key=lambda x: -x[1])
         # แยกด้วย "เครื่องหมาย" ไม่ใช่ตำแหน่งในลิสต์ — ถ้าถือแค่ 4 ตัว
@@ -528,7 +657,7 @@ def main() -> int:
     market = load_market()
     state = load_state()
     rows, reason = fetch_asset_tracker_dx()
-    port = build_portfolio(rows, market) if rows else None
+    port = build_portfolio(rows, market, _live_price_rows) if rows else None
 
     if reason != "ok":
         print(f"⚠️  อ่าน {SHEET_TAB} ไม่ได้: {reason}", file=sys.stderr)
@@ -557,11 +686,16 @@ def main() -> int:
               f"{len(port['holdings'])} ตัว")
         print(f"✓ พอร์ต {port['total']:,.2f} บาท · ต้นทุน {port['cost']:,.2f} "
               f"· {len(port['holdings'])} ตัวที่มีราคา")
+        SRC = {"pipeline": "pipeline สด", "sheet": "ชีต", "stale": "pipeline ค้าง"}
+        print("  ที่มาของราคา: " + " · ".join(
+            f"{SRC.get(k, k)} {v}" for k, v in sorted(port["quality"].items())))
         for tk, h in sorted(port["holdings"].items(),
-                            key=lambda kv: -kv[1]["value"])[:10]:
-            print(f"    {tk:<10} {h['value']:>14,.2f}  [{h['group']}]")
+                            key=lambda kv: -kv[1]["value"])[:12]:
+            print(f"    {tk:<12} {h['value']:>14,.2f}  [{h['group']}] "
+                  f"← {SRC.get(h['src'], h['src'])}")
         if port["missing"]:
-            print(f"  ไม่มีราคา: {', '.join(port['missing'])}")
+            print(f"  ❗ ไม่มีราคา: {', '.join(port['missing'])}")
+            print(f"     → เติม Current_Price_THB ของตัวเหล่านี้ในแท็บ {PRICE_TAB}")
         return 0
 
     if a.mode == "alert":
@@ -585,7 +719,8 @@ def main() -> int:
             "at": NOW.isoformat(),
             "total": port["total"],
             "groups": {k: {"value": v["value"]} for k, v in port["groups"].items()},
-            "prices": {k: v["price"] for k, v in port["holdings"].items()},
+            # เก็บราคาสกุลเดิม (ไม่ใช่ THB) ให้รอบหน้าเทียบได้โดยไม่ปน FX
+            "prices": {k: v["native"] for k, v in port["holdings"].items()},
         }
         state["last"] = snap
         if a.mode == "weekly" or "week" not in state:
