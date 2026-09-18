@@ -169,8 +169,12 @@ def fetch_asset_tracker_dx() -> tuple[list | None, str]:
     try:
         from google.oauth2 import service_account          # type: ignore
         from google.auth.transport.requests import Request  # type: ignore
-    except ImportError:
-        return None, "ไม่มีไลบรารี google-auth (workflow ต้อง pip install google-auth)"
+    except ImportError as e:
+        # บอก interpreter ที่กำลังรันด้วย — อาการนี้มักไม่ใช่ "ลืมติดตั้ง"
+        # แต่เป็น pip ติดตั้งลงคนละ Python กับตัวที่รันสคริปต์
+        return None, (f"ไม่มีไลบรารี google-auth ใน {sys.executable} ({e}) — "
+                      "workflow ต้องใช้ `python3 -m pip install google-auth` "
+                      "ไม่ใช่ `pip install`")
 
     try:
         info = json.loads(sa_raw)
@@ -487,11 +491,19 @@ def main() -> int:
         print(f"  แท็บที่จะอ่าน       {SHEET_TAB}")
         if reason != "ok":
             print(f"\n❌ {reason}")
+            # ::error:: ทำให้เหตุผลขึ้นในกล่อง Annotations ของหน้า Summary
+            # ไม่ใช่ซ่อนอยู่ใน log ที่ต้องกดเข้าไปกาง — เดิมผู้ใช้เห็นแค่
+            # "Process completed with exit code 1" ซึ่งไม่บอกอะไรเลย
+            print(f"::error title=ต่อ Google Sheet ไม่ได้::{reason}")
             return 1
         print(f"\n✓ อ่านได้ {len(rows)} แถว · หัวตาราง: {', '.join(str(h) for h in rows[0][:8])}")
         if not port:
-            print("❌ อ่านชีตได้ แต่คำนวณพอร์ตไม่ได้ — ตรวจชื่อคอลัมน์ Ticker/Transaction_Type")
+            msg = "อ่านชีตได้ แต่คำนวณพอร์ตไม่ได้ — ตรวจชื่อคอลัมน์ Ticker/Transaction_Type"
+            print(f"❌ {msg}")
+            print(f"::error title=คำนวณพอร์ตไม่ได้::{msg}")
             return 1
+        print(f"::notice title=ต่อชีตสำเร็จ::พอร์ต {port['total']:,.0f} บาท · "
+              f"{len(port['holdings'])} ตัว")
         print(f"✓ พอร์ต {port['total']:,.2f} บาท · ต้นทุน {port['cost']:,.2f} "
               f"· {len(port['holdings'])} ตัวที่มีราคา")
         for tk, h in sorted(port["holdings"].items(),
