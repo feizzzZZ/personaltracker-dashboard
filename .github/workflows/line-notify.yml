@@ -1,0 +1,90 @@
+name: LINE notify
+
+# วางไฟล์นี้ที่  .github/workflows/line-notify.yml
+#
+# ทำไมแยกจาก workflow ที่ดึงราคา:
+#   ตัวดึงราคาต้องรันตรงเวลาตลาด ส่วนการแจ้งเตือนต้องรันตอนที่เรา "อยากอ่าน"
+#   ถ้ารวมกันจะเลือกเวลาให้ทั้งสองอย่างพอดีไม่ได้ และเวลาอันหนึ่งพัง
+#   อีกอันจะพังตามทั้งที่ไม่เกี่ยวกัน
+#
+# ตัวนี้อ่าน market-data.json ที่ pipeline commit ไว้แล้ว — ไม่ยิง Yahoo ซ้ำ
+# จึงต้องตั้งเวลาไว้ "หลัง" รอบ pipeline เสมอ
+
+on:
+  schedule:
+    # cron ของ GitHub เป็น UTC — ไทย = UTC+7
+    - cron: '0 1 * * *'      # 08:00 ไทย ทุกวัน       → สรุปพอร์ตรายวัน
+    - cron: '0 13 * * *'     # 20:00 ไทย ทุกวัน       → เช็คราคาผิดปกติ (ส่งเฉพาะเมื่อมี)
+    - cron: '30 1 * * 1'     # 08:30 ไทย ทุกวันจันทร์ → สรุปรายสัปดาห์
+    - cron: '45 1 1 * *'     # 08:45 ไทย วันที่ 1     → สรุปรายเดือน
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'โหมดที่จะส่ง'
+        type: choice
+        default: daily
+        options: [daily, alert, weekly, monthly]
+      dry_run:
+        description: 'พิมพ์อย่างเดียว ไม่ส่งจริง'
+        type: boolean
+        default: false
+
+# กันสองรอบชนกันตอนเขียน notify-state.json
+concurrency:
+  group: line-notify
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # google-auth ใช้เฉพาะตอนอ่านชีต — ถ้าไม่ตั้ง secret ไว้ สคริปต์ข้ามเองอยู่แล้ว
+      - run: pip install --quiet google-auth
+
+      - name: เลือกโหมดจากตารางเวลา
+        id: pick
+        run: |
+          case "${{ github.event.schedule }}" in
+            "0 13 * * *")  M=alert   ;;
+            "30 1 * * 1")  M=weekly  ;;
+            "45 1 1 * *")  M=monthly ;;
+            "0 1 * * *")   M=daily   ;;
+            *)             M="${{ inputs.mode || 'daily' }}" ;;
+          esac
+          echo "mode=$M" >> "$GITHUB_OUTPUT"
+          echo "จะส่งโหมด: $M"
+
+      - name: ส่งเข้า LINE
+        env:
+          LINE_CHANNEL_TOKEN: ${{ secrets.LINE_CHANNEL_TOKEN }}
+          GS_SHEET_ID:        ${{ secrets.GS_SHEET_ID }}
+          GOOGLE_SA_KEY:      ${{ secrets.GOOGLE_SA_KEY }}
+        run: |
+          python3 scripts/line_notify.py \
+            --mode "${{ steps.pick.outputs.mode }}" \
+            ${{ inputs.dry_run && '--dry-run' || '' }}
+
+      - name: บันทึกฐานเทียบรอบถัดไป
+        if: ${{ !inputs.dry_run }}
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add notify-state.json 2>/dev/null || true
+          git diff --cached --quiet && { echo "ไม่มีอะไรเปลี่ยน"; exit 0; }
+          git commit -m "chore: notify state (${{ steps.pick.outputs.mode }})"
+          # pipeline อาจ commit market-data.json ระหว่างนี้ → rebase แล้วลองใหม่
+          for i in 1 2 3; do
+            git pull --rebase --autostash && git push && exit 0
+            echo "push รอบ $i ไม่ผ่าน — ลองใหม่"
+            sleep 5
+          done
+          echo "::warning::push notify-state.json ไม่สำเร็จ — รอบหน้าจะเทียบกับฐานเก่า"
