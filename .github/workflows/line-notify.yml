@@ -47,17 +47,24 @@ jobs:
         with:
           python-version: '3.12'
 
-      # google-auth ใช้เฉพาะตอนอ่านชีต — ถ้าไม่ตั้ง secret ไว้ สคริปต์ข้ามเองอยู่แล้ว
+      # ใช้ google-auth เฉพาะส่วน "เซ็นลายเซ็น RSA" เท่านั้น
+      # การรับส่ง HTTP ทั้งหมดเป็น urllib ใน stdlib — จงใจไม่พึ่ง requests
+      # (เคยพังเพราะ pip install google-auth ไม่ได้ลง requests มาให้
+      #  แต่ transport ของมันต้องใช้ → "The requests library is not installed")
       #
       # ต้องเป็น `python3 -m pip` ไม่ใช่ `pip` เฉย ๆ
       # เดิมใช้ `pip install` ซึ่งขึ้นสำเร็จ แต่ python3 กลับ import ไม่เจอ
-      # เพราะ pip ที่อยู่ใน PATH กับ python3 ที่รันสคริปต์เป็นคนละ interpreter
-      # `python3 -m pip` บังคับให้ติดตั้งลงตัวเดียวกับที่จะรันเสมอ
+      # เพราะ pip ใน PATH กับ python3 ที่รันสคริปต์เป็นคนละ interpreter
       - name: ติดตั้ง google-auth
         run: |
           python3 -m pip install --quiet --upgrade google-auth
-          # ยืนยันว่า import ได้จริงตรงนี้ ไม่ใช่ไปพังตอนรันสคริปต์
-          python3 -c "import google.auth, sys; print('google-auth OK ·', sys.executable)"
+          # ยืนยันตรงนี้ว่าใช้ได้จริง ไม่ใช่ไปพังตอนรันสคริปต์แล้วดูเหมือนคนละปัญหา
+          python3 - <<'PY'
+          import sys
+          from google.auth import crypt, jwt
+          assert hasattr(crypt, "RSASigner") and hasattr(jwt, "encode")
+          print("google-auth OK ·", sys.executable)
+          PY
 
       - name: เลือกโหมดจากตารางเวลา
         id: pick
