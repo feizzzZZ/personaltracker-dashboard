@@ -48,7 +48,16 @@ jobs:
           python-version: '3.12'
 
       # google-auth ใช้เฉพาะตอนอ่านชีต — ถ้าไม่ตั้ง secret ไว้ สคริปต์ข้ามเองอยู่แล้ว
-      - run: pip install --quiet google-auth
+      #
+      # ต้องเป็น `python3 -m pip` ไม่ใช่ `pip` เฉย ๆ
+      # เดิมใช้ `pip install` ซึ่งขึ้นสำเร็จ แต่ python3 กลับ import ไม่เจอ
+      # เพราะ pip ที่อยู่ใน PATH กับ python3 ที่รันสคริปต์เป็นคนละ interpreter
+      # `python3 -m pip` บังคับให้ติดตั้งลงตัวเดียวกับที่จะรันเสมอ
+      - name: ติดตั้ง google-auth
+        run: |
+          python3 -m pip install --quiet --upgrade google-auth
+          # ยืนยันว่า import ได้จริงตรงนี้ ไม่ใช่ไปพังตอนรันสคริปต์
+          python3 -c "import google.auth, sys; print('google-auth OK ·', sys.executable)"
 
       - name: เลือกโหมดจากตารางเวลา
         id: pick
