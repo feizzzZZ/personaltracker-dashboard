@@ -16,7 +16,7 @@ window.LOC = window.LOC || 'th-TH-u-ca-gregory';
 //   • XIRR engine
 // กติกา: ไฟล์นี้ห้ามแตะ DOM ของหน้าใดหน้าหนึ่ง — pure data layer เท่านั้น
 // ═══════════════════════════════════════════════════════════════════
-const APP_BUILD = 'v49';
+const APP_BUILD = 'v50';
 console.log('[Finance OS shared] build', APP_BUILD);
 window.SHARED_BUILD = APP_BUILD;   // v45 — ให้ index.html ตรวจได้ว่าเวอร์ชันตรงกัน
 
@@ -246,6 +246,12 @@ function pipelinePricesTHB(staleDays){
 // เดิมราคาหาไม่เจอ = นับเป็น ฿0 ทำให้ Value_Log แกว่ง ±14% วันเว้นวัน
 // (ต่างกัน ~฿43,000 คือหุ้นไทย 6 ตัว + ทอง ที่หลุดสลับกันไปมา)
 // การใช้ราคาล่าสุดที่รู้จึงถูกกว่าเสมอ — ฿0 ไม่ใช่ประมาณการที่ดี มันคือคำโกหก
+// เพดานอายุของราคาที่จำไว้ — เกินนี้ถือว่าไม่รู้ราคาแล้ว ดีกว่าใช้ต่อไปเรื่อยๆ
+// เดิมไม่มีเพดานเลย ราคาข้ามปียังถูกดึงมาใช้เต็มมูลค่า ขัดกับ PRICE_MAX_DAYS
+// ที่ด่านหน้าทิ้งราคาเกิน 12 วัน  ตั้ง 30 เพราะ pipeline รัน 2 ครั้ง/วัน —
+// ช่องว่าง 30 วันแปลว่ามีอะไรพังจริง ไม่ใช่วันหยุดยาว และ UI รายงาน
+// ตัวที่ไม่มีราคาอยู่แล้ว การหายไปจึงเป็นสัญญาณ ไม่ใช่ความเงียบ
+const LKP_MAX_DAYS = 30;
 const LKP_KEY = 'finOS_lastPrice';
 function loadLastKnownPrices(){
   try{ return JSON.parse(localStorage.getItem(LKP_KEY)||'{}') || {}; }catch(e){ return {}; }
@@ -260,7 +266,10 @@ function saveLastKnownPrices(map){
 function resolvePrices(sheetPriceMap){
   const priceMap = Object.assign({}, sheetPriceMap || {});
   const srcMap   = {};
-  Object.keys(priceMap).forEach(t=>{ if(priceMap[t] > 0) srcMap[t] = 'sheet'; });
+  const ageMap   = {};          // v50 — อายุจริงของราคาแต่ละตัว (วัน)
+  Object.keys(priceMap).forEach(t=>{
+    if(priceMap[t] > 0){ srcMap[t] = 'sheet'; ageMap[t] = 0; }
+  });
 
   const pp = pipelinePricesTHB();
   Object.entries(pp).forEach(([tk, o])=>{
@@ -268,24 +277,43 @@ function resolvePrices(sheetPriceMap){
     if(o.stale && priceMap[tk] > 0) return;
     priceMap[tk] = o.p;
     srcMap[tk]   = o.stale ? 'stale' : 'pipeline';
+    ageMap[tk]   = o.ageDays || 0;
   });
 
+  /* v50 BUGFIX — ราคาที่จำไว้เคยไม่มีวันหมดอายุ
+     `lkp[tk].d` ถูกเขียนทุกรอบแต่ไม่เคยถูกอ่านเลย ราคาที่จำไว้ข้ามปี
+     จึงยังถูกดึงมาใช้เต็มมูลค่า ขัดกับ PRICE_MAX_DAYS โดยตรง
+     ตอนนี้อ่าน `d` จริงและทิ้งตัวที่เกิน LKP_MAX_DAYS */
   const lkp = loadLastKnownPrices();
+  const nowMs = Date.now();
+  const ageOf = d => {
+    if(!d) return null;
+    const t = Date.parse(String(d).slice(0,10) + 'T00:00:00Z');
+    return isFinite(t) ? Math.floor((nowMs - t) / 864e5) : null;
+  };
   Object.keys(lkp).forEach(tk=>{
-    if(!(priceMap[tk] > 0) && lkp[tk] && lkp[tk].p > 0){
-      priceMap[tk] = lkp[tk].p;
-      srcMap[tk]   = 'cached';
-    }
+    if(priceMap[tk] > 0) return;
+    const e = lkp[tk];
+    if(!e || !(e.p > 0)) return;
+    const age = ageOf(e.d);
+    if(age === null || age > LKP_MAX_DAYS) return;   // ไม่รู้อายุ/เก่าเกิน = ไม่กล้าใช้
+    priceMap[tk] = e.p;
+    srcMap[tk]   = 'cached';
+    ageMap[tk]   = age;
   });
 
-  // จำราคาที่ "รู้จริง" รอบนี้ไว้ใช้คราวหน้า — ไม่จำค่าที่มาจาก cache เอง
-  const today = new Date().toISOString().slice(0,10);
+  /* จำราคาที่ "รู้จริง" รอบนี้ไว้ใช้คราวหน้า — ไม่จำค่าที่มาจาก cache เอง
+     v50: ต้องบันทึก "วันของราคาจริง" ไม่ใช่วันนี้
+     เดิมราคา stale อายุ 11 วันถูกบันทึกด้วย d = วันนี้ → อายุจริงหายจากระบบ
+     ถาวร แล้วมันกลายเป็นราคา "ใหม่" ที่ใช้ต่อได้ไม่จำกัด */
   Object.entries(priceMap).forEach(([tk, p])=>{
-    if(p > 0 && srcMap[tk] !== 'cached') lkp[tk] = { p, d: today, src: srcMap[tk] };
+    if(!(p > 0) || srcMap[tk] === 'cached') return;
+    const d = new Date(nowMs - (ageMap[tk] || 0) * 864e5).toISOString().slice(0,10);
+    lkp[tk] = { p, d, src: srcMap[tk] };
   });
   saveLastKnownPrices(lkp);
 
-  return { priceMap, srcMap };
+  return { priceMap, srcMap, ageMap };
 }
 
 // สรุปคุณภาพราคาให้ UI ใช้ — ไม่ต้องคำนวณซ้ำหลายที่
@@ -296,7 +324,8 @@ function priceQuality(srcMap, tickersHeld){
     if(s) q[s]++; else q.missing.push(tk);
   });
   q.degraded = q.stale + q.cached;      // ใช้ได้ แต่ไม่ใช่ราคาสด
-  q.trustworthy = q.missing.length === 0;
+  // v50 — พอร์ตที่ทุกตัวใช้ราคาค้าง/ราคาที่จำไว้ ไม่ควรถูกเรียกว่า trustworthy
+  q.trustworthy = q.missing.length === 0 && q.degraded === 0;
   return q;
 }
 
@@ -449,10 +478,23 @@ function classifyHoldings(trades, assets, priceSrc){
   (trades||[]).forEach(t=>{
     if(!t.ticker || !(t.date instanceof Date) || isNaN(t.date)) return;
     const k=t.ticker;
-    (byT[k] = byT[k] || {buys:[], sells:0, div:0, cost:0}); 
+    (byT[k] = byT[k] || {buys:[], sells:0, div:0, cost:0, boughtQty:0});
     const tt=String(t.type||'').trim();
-    if(tt==='Buy'){ byT[k].buys.push(t.date.getTime()); byT[k].cost += (t.thb||0); }
-    else if(tt==='Sell'){ byT[k].sells++; byT[k].cost -= (t.thb||0); }
+    /* v50 — เก็บ "ยอดซื้อสะสม" กับ "จำนวนที่ซื้อสะสม" แยกกัน
+       เดิมทำ `cost -= เงินที่ได้จากการขาย` ซึ่งผิดคนละเรื่อง:
+       ต้นทุนของหน่วยที่ขายไป = จำนวนที่ขาย × ต้นทุนต่อหน่วย
+       ไม่ใช่ "เงินที่ได้จากการขาย" — สองค่านี้ต่างกันเท่ากับกำไรที่รับรู้
+         ซื้อ 10 @ ฿10,000 · ขาย 5 ได้ ฿9,000 (ต้นทุนของ 5 ตัวนั้น = ฿5,000)
+           หักถูก: 10,000 − 5,000 = ฿5,000 ✓
+           หักผิด: 10,000 − 9,000 = ฿1,000 ✗  หักเกินไป ฿4,000 = กำไรที่รับรู้
+       เก็บสองค่าไว้แล้วคำนวณ WACC × จำนวนที่เหลือ ตอนใช้งาน
+       จะได้ผลเดียวกับ a.cost ที่ index.html ส่งมา — ถูกทั้งสองทาง */
+    if(tt==='Buy'){
+      byT[k].buys.push(t.date.getTime());
+      byT[k].cost += (t.thb||0);
+      byT[k].boughtQty += Math.abs(t.qty||0);
+    }
+    else if(tt==='Sell'){ byT[k].sells++; }
     else if(tt==='Dividend Payout'){ byT[k].div += (t.thb||0); }
     // Split ไม่กระทบต้นทุนและไม่ใช่สัญญาณความสนใจ → ข้าม
   });
@@ -467,7 +509,24 @@ function classifyHoldings(trades, assets, priceSrc){
     const cad=cadenceRCV(h.buys);
     const lastBuy=h.buys.length?Math.max(...h.buys):null;
     const ageDays=lastBuy?Math.floor((now-lastBuy)/864e5):null;
-    const cost=h.cost>0?h.cost:(a.cost||0);
+    /* v50 BUGFIX — ต้นทุนผิดหลังขายบางส่วน → %กำไรผิดเป็นเท่าตัว
+       เดิมเลือก h.cost ก่อน ซึ่งเป็นยอดซื้อสะสม *ลบเงินที่ได้จากการขาย*
+       การขายที่มีกำไรจึงกัดต้นทุนของหน่วยที่ยังถืออยู่ให้เหลือน้อยผิดปกติ
+       และเพราะ h.cost>0 ยังจริง มันจึงชนะ a.cost ที่ถูกต้องอยู่แล้ว
+
+       พิสูจน์: ซื้อ 10 หน่วย ฿10,000 · ขาย 5 ได้ ฿9,000 · เหลือมูลค่า ฿9,000
+         เดิม  cost=฿1,000  plPct=+800%
+         ถูก   cost=฿5,000  plPct=+80%
+
+       a.cost = WACC × netQty ซึ่งเป็นนิยามต้นทุนของหน่วยที่ถืออยู่จริง
+       และ index.html ส่งมาให้ครบทุกตัวอยู่แล้ว จึงต้องเป็นตัวเลือกแรก */
+    /* ต้นทุนของ "หน่วยที่ยังถืออยู่" — ต้องลดลงตามจำนวนที่ขายไปแล้ว
+       a.cost = WACC × netQty ซึ่ง index.html คำนวณมาให้ครบทุกตัวอยู่แล้ว
+       fallback: คำนวณ WACC เองจากยอดซื้อ แล้วคูณจำนวนที่ "เหลือ"
+       ห้ามใช้ h.cost ดิบ ๆ เพราะนั่นคือยอดซื้อ *ทั้งหมด* ยังไม่หักส่วนที่ขายไป */
+    const _wacc = h.boughtQty > 0 ? h.cost / h.boughtQty : 0;
+    const cost = a.cost > 0 ? a.cost
+               : (_wacc > 0 ? _wacc * (a.qty || 0) : 0);
     const val=a.val>0?a.val:null;                  // null = ไม่มีราคา
     const row={
       ticker:a.ticker, label:a.label||a.ticker, type:a.assetType||a.type||'',
@@ -673,7 +732,16 @@ function computeDeviations(real){
                           illiquidPct: grossVal>0 ? illiquidVal/grossVal*100 : 0};
 
   // target ของกอง illiquid ต้องถูกกระจายคืนให้กองที่เหลือ ไม่งั้นผลรวม target < 100
-  const illiquidTargetSum = illiquid.reduce((sum,i)=>sum+(targets[i.key]||0), 0);
+  /* v50 BUGFIX — เดิมนับจาก illiquid[] ซึ่งมีเฉพาะกองที่ "ถืออยู่จริงและมีมูลค่า"
+     ถ้า Provident Fund ไม่อยู่ในพอร์ต (หรืออยู่แต่หาราคาไม่ได้ → value=0)
+     จะได้ 0 → scale=1 แต่ liquidTargetSum ตัด target 5% ของ PF ทิ้งไปแล้ว
+     ผล: sum(target)=95 ขณะที่ sum(cur)=100 → ทุกกองดู over-weight เกินจริง
+     ~5pp พร้อมกัน และคอลัมน์ "บาทที่ต้อง rebalance" พองตาม
+     ต้องนับจาก ALLOC_META ทั้งหมด เพราะ target ของกองที่ขายไม่ได้ต้องถูก
+     กระจายคืนเสมอ ไม่ว่าจะถืออยู่หรือไม่ */
+  const illiquidTargetSum = Object.entries(targets)
+    .filter(([k])=>ALLOC_META[k]?.illiquid)
+    .reduce((sum,[,t])=>sum+t, 0);
   const liquidTargetSum = Object.entries(targets)
     .filter(([k])=>!ALLOC_META[k]?.illiquid)
     .reduce((sum,[,t])=>sum+t, 0);
