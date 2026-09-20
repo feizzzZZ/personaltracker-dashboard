@@ -137,10 +137,38 @@ def _f(v) -> float:
         return 0.0
 
 
-def fetch_asset_tracker() -> list | None:
-    """อ่าน Asset_Tracker ด้วย service account — คืน None ถ้าไม่ได้ตั้งค่าไว้"""
-    rows, _ = fetch_asset_tracker_dx()
-    return rows
+# รูปแบบวันที่ที่พบจริงในชีต — "13-Sep-2026" คือรูปแบบหลัก
+_DATE_FMTS = ("%d-%b-%Y", "%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y", "%d-%m-%Y",
+              "%Y/%m/%d", "%d %b %Y", "%b %d, %Y")
+
+
+def parse_date(v):
+    """คืน date หรือ None — ต้องข้ามแถวที่วันที่ใช้ไม่ได้ให้เหมือน index.html
+
+    index.html มี `if(!d||isNaN(d.getTime()))continue;` แต่เดิมฝั่งนี้ไม่มี
+    ทำให้แถวร่าง/แถวที่ลบวันที่ทิ้งแต่ยังไม่ลบทั้งแถว ถูกนับใน LINE
+    แต่ไม่ถูกนับบนจอ → จำนวนหน่วยและต้นทุนสองที่ไม่ตรงกันแบบดูไม่ออก
+    """
+    if v is None:
+        return None
+    if isinstance(v, (int, float)) and not isinstance(v, bool):
+        # Google/Excel serial (25569 = 1970-01-01)
+        if 25569 < float(v) < 80000:
+            return (datetime(1970, 1, 1, tzinfo=TZ)
+                    + timedelta(days=float(v) - 25569)).date()
+        return None
+    s = str(v).strip()
+    if not s or s.startswith("#"):
+        return None
+    for f in _DATE_FMTS:
+        try:
+            return datetime.strptime(s, f).date()
+        except ValueError:
+            continue
+    try:                                    # ISO ที่มีเวลาต่อท้าย
+        return datetime.fromisoformat(s[:19]).date()
+    except ValueError:
+        return None
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -155,6 +183,9 @@ PRICE_TAB = os.environ.get("GS_PRICE_TAB", "Asset_Live_Price_Feed")
 # ค่าเดียวกับ shared.js — ถ้าแก้ที่นั่นต้องแก้ที่นี่ด้วย ไม่งั้นสองที่ตัดสินไม่ตรงกัน
 PRICE_STALE_DAYS = 4     # เกินนี้ = ติดธง stale แต่ยังใช้ได้ถ้าไม่มีอย่างอื่น
 PRICE_MAX_DAYS = 12      # เกินนี้ = ทิ้ง ไม่เอามาใช้เลย
+# มูลค่า/ต้นทุน เกินกี่เท่าถึงถือว่า "ผิดหน่วย" ไม่ใช่ "กำไรเยอะ"
+# 50 เท่าเผื่อไว้กว้างมากแล้ว — คริปโตที่ขึ้น 20 เท่ายังไม่ติด
+SANITY_MAX_RATIO = 50
 SCOPE = "https://www.googleapis.com/auth/spreadsheets.readonly"
 TOKEN_URI = "https://oauth2.googleapis.com/token"
 
@@ -345,7 +376,7 @@ def pipeline_prices_thb(market: dict, usdthb: float) -> dict:
             continue
         ccy = "THB" if (o.get("ccy") == "THB") else "USD"
         if ccy == "USD" and not usdthb > 0:
-            continue
+            continue                       # ไม่มี FX → ข้ามเฉพาะตัว USD ตัว THB ยังใช้ได้
         u = str(o.get("updated") or "").strip()[:10]
         try:
             age = (today - datetime.strptime(u, "%Y-%m-%d").date()).days
@@ -412,9 +443,15 @@ def build_portfolio(rows: list, market: dict,
         return r[i] if 0 <= i < len(r) else ""
 
     net_qty, wacc, groups_of, div_total = {}, {}, {}, 0.0
+    skipped_rows: list = []
     for r in rows[1:]:
         ticker = str(cell(r, "ticker")).strip()
         if not ticker:
+            continue
+        # ข้ามแถวที่วันที่ใช้ไม่ได้ — ต้องตรงกับ index.html บรรทัด 4573
+        # ไม่งั้น LINE กับ dashboard นับจำนวนหน่วยไม่เท่ากันโดยดูไม่ออก
+        if parse_date(cell(r, "date")) is None:
+            skipped_rows.append(ticker)
             continue
         tx = str(cell(r, "tx")).strip()
         fx = _f(cell(r, "fx")) or 1.0
@@ -434,7 +471,10 @@ def build_portfolio(rows: list, market: dict,
         if s:
             net_qty[ticker] = net_qty.get(ticker, 0.0) + qty * s
 
-    usdthb = _f(((market.get("data", {}) or {}).get("USDTHB", {}) or {}).get("value")) or 32.0
+    # ไม่มี FX = แปลง USD ไม่ได้ → ต้องข้ามตัว USD ไม่ใช่เดาอัตราแล้วคำนวณต่อ
+    # เดิมใช้ `or 32.0` ซึ่งทำให้พอร์ต USD ทั้งก้อนผิดเงียบๆ (ต่ำไป ~4%)
+    # shared.js ตัดสินแบบข้าม (`if(ccy==='USD' && !(fx>0)) return;`) — ต้องตรงกัน
+    usdthb = _f(((market.get("data", {}) or {}).get("USDTHB", {}) or {}).get("value"))
     sheet_px = parse_live_prices(sheet_prices_rows if sheet_prices_rows is not None
                                  else _live_price_rows)
     price, srcmap, detail = resolve_prices(market, sheet_px, usdthb)
@@ -463,6 +503,35 @@ def build_portfolio(rows: list, market: dict,
         total += val
         cost_total += cst
 
+    # ══ ยามกันหน่วยเพี้ยน ══════════════════════════════════════════
+    # เคสจริง: PF4103 ในชีตเก็บ Current_Price = "มูลค่ารวมทั้งกอง" (96,989)
+    # ไม่ใช่ NAV ต่อหน่วย พอคูณจำนวนหน่วย 91,835 ได้พอร์ต ฿8.9 พันล้าน
+    # แล้วส่งออกไปเหมือนเป็นความจริง
+    #
+    # ความผิดพลาดแบบ "ผิดหน่วย" จะผิดเป็นพันเท่าเสมอ ไม่ใช่ผิดนิดหน่อย
+    # จึงจับได้ด้วยอัตราส่วนมูลค่า/ต้นทุน — ของจริงไม่มีทางโต 50 เท่าเงียบๆ
+    # ตัวที่ต้องสงสัยถูก "กันออกจากยอดรวม" ไม่ใช่แค่ติดดาว เพราะยอดรวมที่ผิด
+    # พันเท่าอันตรายกว่ายอดรวมที่ขาดไปหนึ่งรายการ (อันหลังมองออก อันแรกไม่)
+    suspect = []
+    for tk in list(holdings):
+        h = holdings[tk]
+        if h["cost"] <= 0:
+            continue                      # ไม่มีต้นทุนให้เทียบ = ตัดสินไม่ได้
+        ratio = h["value"] / h["cost"]
+        if ratio > SANITY_MAX_RATIO or ratio < 1 / SANITY_MAX_RATIO:
+            suspect.append({"ticker": tk, "ratio": ratio, "value": h["value"],
+                            "cost": h["cost"], "price": h["price"],
+                            "qty": h["qty"], "src": h["src"]})
+            g = groups.get(h["group"])
+            if g:
+                g["value"] -= h["value"]
+                g["cost"] -= h["cost"]
+                if g["value"] <= 0.005 and g["cost"] <= 0.005:
+                    groups.pop(h["group"], None)
+            total -= h["value"]
+            cost_total -= h["cost"]
+            del holdings[tk]
+
     missing = sorted(t for t, q in net_qty.items()
                      if q > 1e-9 and not price.get(t, 0) > 0)
     # นับว่าราคาแต่ละตัวมาจากไหน — ใช้บอกคุณภาพของตัวเลขที่ส่งออกไป
@@ -471,7 +540,7 @@ def build_portfolio(rows: list, market: dict,
         quality[h["src"]] = quality.get(h["src"], 0) + 1
     return {"total": total, "cost": cost_total, "groups": groups,
             "holdings": holdings, "dividends": div_total, "missing": missing,
-            "quality": quality}
+            "quality": quality, "suspect": suspect}
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -503,6 +572,15 @@ def daily_message(port, market, prev, reason="") -> str:
                 line += f"  {pct((g['value'] - old) / old * 100)}"
             L.append(line)
 
+        if port.get("suspect"):
+            L.append("")
+            L.append("🚨 กันออกจากยอดรวม (ราคาน่าจะผิดหน่วย)")
+            for s in port["suspect"][:4]:
+                L.append(f"  {s['ticker']}: {s['qty']:,.2f} หน่วย × "
+                         f"{s['price']:,.2f} = {money(s['value'])}")
+                L.append(f"    ต้นทุน {money(s['cost'])} → โต {s['ratio']:,.0f} เท่า")
+            L.append("  ตรวจ Current_Price ในชีต — น่าจะเป็นมูลค่ารวม ไม่ใช่ราคาต่อหน่วย")
+
         if port["missing"]:
             L.append("")
             L.append(f"⚠️ ไม่มีราคา {len(port['missing'])} ตัว: "
@@ -521,8 +599,8 @@ def daily_message(port, market, prev, reason="") -> str:
 
     d = market.get("data", {}) or {}
     bits = []
-    for k, label, unit in [("SET_INDEX", "SET", ""), ("SP500", "S&P", ""),
-                           ("USDTHB", "USD/THB", ""), ("VIX", "VIX", "")]:
+    for k, label in [("SET_INDEX", "SET"), ("SP500", "S&P"),
+                     ("USDTHB", "USD/THB"), ("VIX", "VIX")]:
         v = (d.get(k) or {}).get("value")
         if v is not None:
             bits.append(f"{label} {v:,.2f}")
@@ -532,6 +610,17 @@ def daily_message(port, market, prev, reason="") -> str:
     gen = market.get("generated_at", "")[:16].replace("T", " ")
     L += ["", f"ข้อมูล {gen} UTC"]
     return "\n".join(L)
+
+
+def _prev_price(v):
+    """อ่านราคาจาก state — รองรับทั้งรูปแบบใหม่ [ราคา, สกุล] และของเก่า (ตัวเลขเปล่า)
+
+    ของเก่าไม่รู้สกุล จึงคืน ccy=None ซึ่งจะไม่ match กับอะไรเลย = ข้ามรอบเดียว
+    แล้วรอบถัดไปได้ฐานรูปแบบใหม่ ดีกว่าเดาสกุลแล้วเทียบผิด
+    """
+    if isinstance(v, (list, tuple)) and len(v) == 2:
+        return _f(v[0]), str(v[1])
+    return _f(v), None
 
 
 def movers(port, prev, th_stock=5.0, th_crypto=8.0):
@@ -544,7 +633,13 @@ def movers(port, prev, th_stock=5.0, th_crypto=8.0):
             continue
         # เทียบราคาในสกุลของตัวมันเอง ไม่ใช่ THB — ไม่งั้นบาทอ่อน 3%
         # จะกลายเป็น "ทุกตัวขึ้น 3%" ซึ่งไม่ใช่การเคลื่อนไหวของสินทรัพย์
-        chg = (h["native"] / old - 1) * 100 if old else 0.0
+        old_px, old_ccy = _prev_price(old)
+        if not old_px or old_ccy != h["ccy"]:
+            # ที่มาของราคาสลับ (ชีตเก็บบาท · pipeline เก็บสกุลตลาด)
+            # เทียบข้ามสกุลจะได้ตัวเลขไร้สาระ เช่น −97% ทั้งที่ราคาไม่ขยับ
+            # ข้ามรอบนี้ไป แล้วรอบหน้าจะมีฐานสกุลเดียวกันให้เทียบเอง
+            continue
+        chg = (h["native"] / old_px - 1) * 100
         lim = th_crypto if h["group"] == "คริปโต" else th_stock
         if abs(chg) >= lim:
             out.append((tk, chg, h["value"]))
@@ -580,9 +675,9 @@ def period_message(port, market, base, label) -> str:
     bp = (base or {}).get("prices", {})
     ch = []
     for tk, h in port["holdings"].items():
-        o = bp.get(tk)
-        if o:
-            ch.append((tk, (h["native"] / o - 1) * 100))
+        o_px, o_ccy = _prev_price(bp.get(tk))
+        if o_px and o_ccy == h["ccy"]:          # ข้ามสกุล = เทียบไม่ได้ (ดู movers)
+            ch.append((tk, (h["native"] / o_px - 1) * 100))
     if ch:
         ch.sort(key=lambda x: -x[1])
         # แยกด้วย "เครื่องหมาย" ไม่ใช่ตำแหน่งในลิสต์ — ถ้าถือแค่ 4 ตัว
@@ -693,6 +788,16 @@ def main() -> int:
                             key=lambda kv: -kv[1]["value"])[:12]:
             print(f"    {tk:<12} {h['value']:>14,.2f}  [{h['group']}] "
                   f"← {SRC.get(h['src'], h['src'])}")
+        if port.get("suspect"):
+            print("\n🚨 กันออกจากยอดรวม — ราคาน่าจะผิดหน่วย")
+            for s in port["suspect"]:
+                print(f"    {s['ticker']:<12} {s['qty']:>12,.2f} หน่วย × "
+                      f"{s['price']:>12,.2f} = {s['value']:>18,.2f}")
+                print(f"    {'':<12} ต้นทุน {s['cost']:,.2f} → โต {s['ratio']:,.0f} เท่า "
+                      f"(ราคามาจาก {SRC.get(s['src'], s['src'])})")
+                if s["qty"] > 0:
+                    print(f"    {'':<12} ถ้า Current_Price คือมูลค่ารวม "
+                          f"ราคาต่อหน่วยที่ควรเป็น ≈ {s['price'] / s['qty']:,.4f}")
         if port["missing"]:
             print(f"  ❗ ไม่มีราคา: {', '.join(port['missing'])}")
             print(f"     → เติม Current_Price_THB ของตัวเหล่านี้ในแท็บ {PRICE_TAB}")
@@ -719,8 +824,9 @@ def main() -> int:
             "at": NOW.isoformat(),
             "total": port["total"],
             "groups": {k: {"value": v["value"]} for k, v in port["groups"].items()},
-            # เก็บราคาสกุลเดิม (ไม่ใช่ THB) ให้รอบหน้าเทียบได้โดยไม่ปน FX
-            "prices": {k: v["native"] for k, v in port["holdings"].items()},
+            # เก็บ [ราคาสกุลเดิม, สกุล] — ต้องมีสกุลกำกับ ไม่งั้นรอบหน้าที่
+            # ที่มาของราคาสลับ (ชีต=บาท · pipeline=สกุลตลาด) จะเทียบข้ามสกุล
+            "prices": {k: [v["native"], v["ccy"]] for k, v in port["holdings"].items()},
         }
         state["last"] = snap
         if a.mode == "weekly" or "week" not in state:
@@ -729,7 +835,10 @@ def main() -> int:
             state["month"] = snap
         save_state(state)
 
-    return 0 if sent or a.mode == "alert" else 0     # ไม่เคยทำให้ workflow แดง
+    # ไม่เคยทำให้ workflow แดง — ส่งไม่สำเร็จถูก log เป็น error/warning ไปแล้ว
+    # และการแจ้งเตือนที่ล้มไม่ควรทำให้ pipeline ทั้งอันดูเหมือนพัง
+    del sent
+    return 0
 
 
 if __name__ == "__main__":
