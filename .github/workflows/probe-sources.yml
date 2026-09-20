@@ -1,0 +1,28 @@
+name: Probe data sources
+
+# วางที่  .github/workflows/probe-sources.yml
+#
+# งานสำรวจครั้งเดียว ไม่ใช่งานประจำ — รันเองจากแท็บ Actions
+# ไม่เขียนไฟล์ ไม่ commit ไม่แตะ market-data.json ไม่ส่ง LINE
+#
+# ทำไมต้องรันจาก Actions ไม่ใช่เครื่อง dev:
+#   v44 ตัด FRED ออกเพราะมันบล็อก IP ของ GitHub Actions (fred_ok 0/14 ·
+#   TimeoutError 42 ครั้ง) ขณะที่ Yahoo ผ่าน 23/23 ในรอบเดียวกัน
+#   ความต่างนี้เห็นได้จากที่ที่โค้ดรันจริงเท่านั้น
+#
+# ในสคริปต์มี "กลุ่มควบคุม" (World Bank กับ ^VIX) ซึ่งรู้อยู่แล้วว่าใช้ได้
+# ถ้าสองตัวนี้ล้มด้วย แปลว่าเครือข่ายมีปัญหาทั้งหมด ไม่ใช่แหล่งนั้นบล็อกเรา
+
+on:
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: สำรวจแหล่งข้อมูล
+        run: python3 scripts/probe_sources.py
