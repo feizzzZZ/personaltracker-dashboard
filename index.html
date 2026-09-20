@@ -12,6 +12,72 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon/icon-180x180.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon/icon-192x192.png">
+
+<!-- iOS splash screens — สร้างด้วย scripts/make_splash.py
+     media query ต้องตรงทั้ง 3 ค่า ไม่งั้น iOS ไม่ใช้ไฟล์นั้นเลย
+     device-width/height ไม่สลับตามการหมุนจอ — สลับแค่ขนาดภาพ
+     (เพิ่มรุ่นใหม่: เติมใน DEVICES แล้วรันสคริปต์ใหม่ อย่าแก้มือที่นี่) -->
+<link rel="apple-touch-startup-image" href="splash/iphone-16-pro-max.png"
+      media="(device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+<link rel="apple-touch-startup-image" href="splash/iphone-16-pro-max-land.png"
+      media="(device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)">
+<link rel="apple-touch-startup-image" href="splash/iphone-16-pro.png"
+      media="(device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+<link rel="apple-touch-startup-image" href="splash/iphone-16-pro-land.png"
+      media="(device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)">
+<link rel="apple-touch-startup-image" href="splash/iphone-15-pro-max.png"
+      media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+<link rel="apple-touch-startup-image" href="splash/iphone-15-pro-max-land.png"
+      media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)">
+<link rel="apple-touch-startup-image" href="splash/iphone-15-pro.png"
+      media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+<link rel="apple-touch-startup-image" href="splash/iphone-15-pro-land.png"
+      media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)">
+<link rel="apple-touch-startup-image" href="splash/iphone-13-pro-max.png"
+      media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+<link rel="apple-touch-startup-image" href="splash/iphone-13-pro-max-land.png"
+      media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)">
+<link rel="apple-touch-startup-image" href="splash/iphone-13.png"
+      media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+<link rel="apple-touch-startup-image" href="splash/iphone-13-land.png"
+      media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)">
+<link rel="apple-touch-startup-image" href="splash/iphone-11-pro-max.png"
+      media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+<link rel="apple-touch-startup-image" href="splash/iphone-11-pro-max-land.png"
+      media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)">
+<link rel="apple-touch-startup-image" href="splash/iphone-11.png"
+      media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+<link rel="apple-touch-startup-image" href="splash/iphone-11-land.png"
+      media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)">
+<link rel="apple-touch-startup-image" href="splash/iphone-x.png"
+      media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+<link rel="apple-touch-startup-image" href="splash/iphone-x-land.png"
+      media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)">
+<link rel="apple-touch-startup-image" href="splash/iphone-8-plus.png"
+      media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+<link rel="apple-touch-startup-image" href="splash/iphone-8-plus-land.png"
+      media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)">
+<link rel="apple-touch-startup-image" href="splash/iphone-se.png"
+      media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+<link rel="apple-touch-startup-image" href="splash/iphone-se-land.png"
+      media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)">
+<link rel="apple-touch-startup-image" href="splash/ipad-pro-13.png"
+      media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+<link rel="apple-touch-startup-image" href="splash/ipad-pro-13-land.png"
+      media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)">
+<link rel="apple-touch-startup-image" href="splash/ipad-pro-11.png"
+      media="(device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+<link rel="apple-touch-startup-image" href="splash/ipad-pro-11-land.png"
+      media="(device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)">
+<link rel="apple-touch-startup-image" href="splash/ipad-air-11.png"
+      media="(device-width: 820px) and (device-height: 1180px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+<link rel="apple-touch-startup-image" href="splash/ipad-air-11-land.png"
+      media="(device-width: 820px) and (device-height: 1180px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)">
+<link rel="apple-touch-startup-image" href="splash/ipad-10.png"
+      media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+<link rel="apple-touch-startup-image" href="splash/ipad-10-land.png"
+      media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)">
+
 <title>Personal Tracker</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -171,6 +237,13 @@ select.month-display{text-align-last:center;outline:none}
    ซึ่งชนะ media query เสมอ → บนมือถือยังแบ่ง 2 คอลัมน์ การ์ดบัญชีเลยแคบจนเลขขาด
    ย้ายมาไว้ใน stylesheet แล้ว media query ถึงจะมีผล */
 .acc-layout{display:grid;grid-template-columns:260px 1fr;gap:12px;margin-bottom:20px}
+/* v54 — เดิมสองอันนี้เป็น inline style ซึ่ง media query ทับไม่ได้
+   บนจอ 390px จึงยังแบ่ง 3 คอลัมน์ ข้อความขึ้นบรรทัดละคำ */
+.sg-perf{grid-template-columns:1.2fr 1fr 1fr}
+.sg-2{grid-template-columns:1fr 1fr}
+@media(max-width:768px){
+  .sg-perf,.sg-2{grid-template-columns:1fr}
+}
 @media(max-width:768px){.cr2,.cr3{grid-template-columns:1fr}.acc-layout{grid-template-columns:1fr}}
 
 /* ══ Total Wealth strip (v44) ══════════════════════════════════════════
@@ -1257,7 +1330,7 @@ html.standalone .a2hs{display:none}
 
       <div id="pf-dq-warn" style="display:none"></div>
       <div class="sl sl-mt">True Performance — ผลตอบแทนที่แท้จริง</div>
-      <div class="sg" style="grid-template-columns:1.2fr 1fr 1fr">
+      <div class="sg sg-perf">
         <div class="sc" style="--g:rgba(0,212,160,.12)">
           <div class="sc-lbl">Portfolio XIRR (Money-Weighted)</div>
           <div class="sc-val" id="perf-xirr" style="font-size:26px">—</div>
@@ -1274,7 +1347,7 @@ html.standalone .a2hs{display:none}
           <div class="sc-sub" id="perf-twr-sub"></div>
         </div>
       </div>
-      <div class="sg" style="grid-template-columns:1fr 1fr">
+      <div class="sg sg-2">
         <div class="sc"><div class="sc-lbl">🚀 เครื่องยนต์ของพอร์ต (XIRR สูงสุด)</div><div id="perf-top" style="font-size:12px;line-height:2;margin-top:6px">—</div></div>
         <div class="sc"><div class="sc-lbl">⚓ ตัวถ่วง (XIRR ต่ำสุด)</div><div id="perf-bottom" style="font-size:12px;line-height:2;margin-top:6px">—</div></div>
       </div>
@@ -1832,6 +1905,20 @@ const BADGE={'Thai Stock':'badge-thai','US Stock':'badge-us','Crypto':'badge-cry
              'Gold':'badge-gold','Other':'badge-other'};
 const TM={'Thai_Stock':'Thai Stock','US_Stock':'US Stock','Cryptocurrency':'Crypto',
           'Mutual_Fund':'Mutual Fund','Provident_Fund':'Provident Fund','Gold':'Gold'};
+/* v52 — แผนที่ย้อนกลับ: ชื่อที่แสดง → ค่าดิบที่ชีตใช้
+   จำเป็นเพราะฟอร์มเพิ่ม/แก้รายการลงทุนเขียนค่ากลับลงชีต ถ้าเขียนชื่อที่แสดง
+   ('Thai Stock' มีเว้นวรรค) ลงไป รอบ sync ถัดไป TM['Thai Stock'] = undefined
+   → resolveGroup ตกไป 'Other' → สินทรัพย์ย้ายกลุ่มถาวรโดยยอดรวมยังดูปกติ
+   Gold รอดเพราะชื่อเหมือนกัน · Crypto รอดเพราะ CRYPTO_TICKERS รับช่วงต่อ
+   ที่เหลือ (หุ้นไทย/หุ้น US/กองทุนรวม/กองทุนสำรองฯ) พังทั้งหมด */
+const TM_REV = Object.fromEntries(Object.entries(TM).map(([k,v])=>[v,k]));
+function toSheetAssetType(v){
+  const t = String(v==null?'':v).trim();
+  if(!t) return '';
+  if(TM[t]) return t;            // เป็นค่าดิบอยู่แล้ว (Thai_Stock) — ส่งต่อตรงๆ
+  if(TM_REV[t]) return TM_REV[t];// เป็นชื่อที่แสดง (Thai Stock) — แปลงกลับ
+  return t;                      // ค่าที่ไม่รู้จัก: ปล่อยผ่านให้เห็นใน 'Other'
+}
 // Fallback inference when Asset_Type lookup fails ('Not Found' / blank):
 // infer from known crypto tickers or crypto-exchange platforms; otherwise 'Other'
 // so misclassified rows are VISIBLE (fix Asset_Type in the sheet) instead of
@@ -2942,7 +3029,8 @@ function renderAccounts(){
   else if (n === 7) cols = 4;           // 4+3
   else if (n <= 10) cols = Math.ceil(n/2); // 2 balanced rows
   else              cols = Math.ceil(n/3); // 3 balanced rows
-  document.getElementById('acc-bank-grid').style.gridTemplateColumns=`repeat(${capCols(cols)},1fr)`;
+  // การ์ดบัญชี: ชื่อธนาคาร + ยอด ต้องการราว 150px
+  document.getElementById('acc-bank-grid').style.gridTemplateColumns=`repeat(${capCols(cols,150)},1fr)`;
 
   document.getElementById('acc-bank-grid').innerHTML=active.map(b=>{
     const accType=getAccType(b);
@@ -3119,7 +3207,8 @@ function renderLocationGrid(){
   else if (ng===7) locCols=4;
   else             locCols=Math.ceil(ng/2);
   const locGridEl=document.getElementById('pf-location-grid');
-  locGridEl.style.gridTemplateColumns=`repeat(${capCols(locCols)},1fr)`;
+  // การ์ดแหล่งลงทุน: มีชื่อ platform ยาว (Binance_Global_Spot) + ยอด + % ต้องการ 230px
+  locGridEl.style.gridTemplateColumns=`repeat(${capCols(locCols,230)},1fr)`;
   locGridEl.style.alignItems='start';
 
   document.getElementById('pf-location-grid').innerHTML = groups.map(grp => {
@@ -4500,7 +4589,8 @@ function gsParseAssetTracker(rows){
     // ตรวจรายแถวว่า commission รวมมาแล้วหรือยัง (ดูหมายเหตุที่ feeToAdd)
     const trueCost=Math.abs(amtTHB)+feeToAdd(amtTHB,qty,parseFloat(r[AT.price])||0,fx,commTHB);
     const platform=r[AT.platform]?String(r[AT.platform]).trim():'Unknown';
-    const group=resolveGroup(r[AT.assetType], ticker, platform);
+    const assetTypeRaw=r[AT.assetType]?String(r[AT.assetType]).trim():'';
+    const group=resolveGroup(assetTypeRaw, ticker, platform);
     const industry=r[AT.industry]?String(r[AT.industry]).trim():'—';
     if(fx>1){if(!fxAcc[ticker])fxAcc[ticker]=[];fxAcc[ticker].push(fx);}
     if(IS_COST.has(txType)&&qty>0){
@@ -4511,6 +4601,7 @@ function gsParseAssetTracker(rows){
     if(sign!==0){if(!netQtyMap2[ticker])netQtyMap2[ticker]=0;netQtyMap2[ticker]+=qty*sign;}
     trackerRows2.push({date:d,ym:`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`,
       year:d.getFullYear(),ticker,txType,group,platform,industry,
+      assetTypeRaw,          // v52 — ค่าดิบจากชีต ห้ามเขียน group กลับลงไป
       fx,qty,amtTHB,commTHB,trueCost,
       price:parseFloat(r[AT.price])||0,
       sheetRow:i+1});     // v49 — เลขแถวจริงในชีต (1-based) ไว้แก้/ลบ
@@ -4782,6 +4873,18 @@ async function refreshMarketFeeds(reason){
   } else {
     console.warn('[feeds] ไม่ได้ market-data.json — ราคาจาก pipeline (รวม Gold) จะไม่อัพเดต');
   }
+  /* v52 — ต่อสายจุดสถานะเข้ากับอายุข้อมูลจริง
+     shared.js เขียน paintFreshnessDot() ไว้แก้ปัญหานี้ตั้งแต่ #12 พร้อมคอมเมนต์
+     ยาวเรื่อง run #40-47 ที่ข้อมูลค้าง 11 วันแต่ไฟยังเขียวกระพริบ แต่ index.html
+     ไม่เคยเรียกมันเลย — .dot-live ยัง hardcode เขียว+pulse อยู่ใน CSS
+     ผลคืออาการที่ประกาศว่าแก้แล้ว ยังอยู่ครบ
+     วางไว้ที่นี่ (ไม่ใช่ใน DOMContentLoaded) เพื่อให้ทาสีใหม่ทุกครั้งที่ดึง feed
+     ไม่ใช่แค่ตอนเปิดแอป — ข้อมูลเก่าลงระหว่างที่เปิดแอปค้างไว้ได้
+     เขียว=สด · ส้ม=เริ่มเก่า · แดง=ตาย และหยุดกระพริบเมื่อไม่สด
+     เพราะ "การกระพริบ" คือสิ่งที่สื่อว่า live */
+  try{ paintFreshnessDot(document.querySelector('.dot-live'),
+                         document.getElementById('sb-status')); }
+  catch(e){ console.warn('[feeds] freshness dot:', e.message); }
   return act;
 }
 
@@ -6090,7 +6193,10 @@ function buildAnalystCtx(){
       // ไม่มี loadValueLog() ในแอป — อ่าน finOS_valueLog ตรงๆ เหมือน renderPerformance
       let vlog=[]; try{ vlog=JSON.parse(localStorage.getItem('finOS_valueLog')||'[]'); }catch(e){}
       const twr=computeTWR(vlog, flows);
-      if(twr){ twrPct=twr.pct; twrDays=twr.days; }
+      // v52 — computeTWR คืน {total, annual, days} ไม่มี .pct
+      // เดิมอ่าน twr.pct = undefined เสมอ → finding "จังหวะเข้าซื้อ"
+      // ใน analystPortfolio ไม่เคยแสดงเลยตั้งแต่เขียนมา และไม่มี error
+      if(twr){ twrPct=twr.total*100; twrDays=twr.days; }
     }
   }catch(e){ console.warn('[analyst] perf:',e.message); }
 
@@ -6143,7 +6249,9 @@ function buildAnalystCtx(){
 
   return {
     assets:held, totalVal, xirr:xirrV, perAsset, moneyIn, moneyOut, twrPct, twrDays,
-    totalFee:(assets||[]).reduce((s,a)=>s+(a.fee||0),0),
+    // v52 — asset object ไม่มี field `fee` (ดู assetList.push)
+    // ค่าจริงอยู่ในตัวแปร global totalFee ที่ gsParseAssetTracker คำนวณไว้
+    totalFee: Math.round(Number(totalFee)||0),
     expectedReturn:gcfg.expectedReturn||7,
     usdthb:mdNum('USDTHB'), vix:mdNum('VIX'), cpi:mdNum('TH_CPI'),
     // ปีของข้อมูล CPI — pipeline ส่ง observation date เป็นสิ้นปีของข้อมูลจริง
@@ -6206,10 +6314,16 @@ function renderAnalystDesk(){
 }
 
 // v52 — เพดานคอลัมน์ตามความกว้างจอ ใช้ร่วมกันทุก grid ที่ JS คำนวณเอง
-function capCols(n){
-  const w = window.innerWidth;
-  const max = w <= 420 ? 2 : w <= 768 ? 3 : Infinity;
-  return Math.max(1, Math.min(n, max));
+// v54 — เดิมตัดตายตัวที่ 2 คอลัมน์บนจอเล็ก โดยไม่สนว่าการ์ดต้องการกว้างเท่าไหร่
+// การ์ด "ลงทุนอยู่ที่ไหนบ้าง" มีชื่อ platform ยาว + ยอดเงิน ต้องการ ~230px
+// พอบีบเป็น 2 คอลัมน์บนจอ 390px เหลือ 175px → ตัวเลขขาด ชื่อถูกตัด
+// ตอนนี้คิดจากความกว้างจริงที่มี หารด้วยความกว้างขั้นต่ำของการ์ดแต่ละชนิด
+function capCols(n, minW){
+  minW = minW || 150;
+  const pad  = window.innerWidth <= 768 ? 28 : 48;   // padding ซ้าย+ขวาของ .page
+  const avail = Math.min(window.innerWidth, 1200) - pad;
+  const fit   = Math.max(1, Math.floor(avail / minW));
+  return Math.max(1, Math.min(n, fit));
 }
 // หมุนจอ = ความกว้างเปลี่ยน = จำนวนคอลัมน์ที่คำนวณไว้ไม่ตรงแล้ว ต้องวาดใหม่
 let _resizeT = null, _lastW = window.innerWidth;
@@ -6699,7 +6813,8 @@ function renderInsurance(){
   else if (nc<=10) covCols=Math.ceil(nc/2);
   else             covCols=Math.ceil(nc/3);
   const covGrid=document.getElementById('ins-cov-grid');
-  covGrid.style.gridTemplateColumns=`repeat(${capCols(covCols)},1fr)`;
+  // การ์ดความคุ้มครอง: วงแหวน 84px + ตัวเลข ต้องการราว 120px
+  covGrid.style.gridTemplateColumns=`repeat(${capCols(covCols,120)},1fr)`;
 
   document.getElementById('ins-cov-grid').innerHTML=covTypes.map(ct=>{
     const meta=INS_COV_META[ct]||INS_COV_META['Other'];
@@ -7352,8 +7467,8 @@ function atFillOptions(){
   put('at-ticker-list',   uniq('ticker'));
   put('at-industry-list', uniq('industry'));
   put('at-platform-list', uniq('platform'));
-  // Asset_Type ไม่ได้เก็บดิบไว้ใน tracker — ใช้ group ที่ resolve แล้วแทน
-  put('at-asset-list',    uniq('group'));
+  // v52 — ต้องใช้ค่าดิบ ไม่ใช่ group ที่ resolve แล้ว (ดูคอมเมนต์ที่ TM_REV)
+  put('at-asset-list',    uniq('assetTypeRaw'));
 }
 
 // เลือก ticker ที่เคยมี → เติมข้อมูลที่เหลือจากรายการล่าสุดของตัวนั้น
@@ -7365,7 +7480,7 @@ function atAutofillFromTicker(){
   const last = hist[hist.length - 1];
   const set = (id, v) => { const e = document.getElementById(id);
     if(e && !e.value && v && v !== '—') e.value = v; };
-  set('at-f-asset',    last.group);
+  set('at-f-asset',    last.assetTypeRaw);
   set('at-f-industry', last.industry);
   set('at-f-platform', last.platform);
   const fx = document.getElementById('at-f-fx');
@@ -7401,7 +7516,7 @@ function atOpenForm(sheetRow){
     $('at-f-date').value  = d ? `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` : '';
     $('at-f-type').value  = rec.txType;
     $('at-f-ticker').value   = rec.ticker;
-    $('at-f-asset').value    = rec.group    && rec.group    !== '—' ? rec.group    : '';
+    $('at-f-asset').value    = rec.assetTypeRaw || '';
     $('at-f-industry').value = rec.industry && rec.industry !== '—' ? rec.industry : '';
     $('at-f-platform').value = rec.platform && rec.platform !== 'Unknown' ? rec.platform : '';
     $('at-f-fx').value    = rec.fx || 1;
@@ -7505,7 +7620,7 @@ async function atSubmitForm(){
     date:      $('at-f-date').value,
     txType:    $('at-f-type').value,
     ticker:    $('at-f-ticker').value.trim().toUpperCase(),
-    assetType: $('at-f-asset').value.trim(),
+    assetType: toSheetAssetType($('at-f-asset').value),   // v52 — กันเขียนชื่อที่แสดงลงชีต
     industry:  $('at-f-industry').value.trim(),
     platform:  $('at-f-platform').value.trim(),
     fx:        parseFloat($('at-f-fx').value) || 1,

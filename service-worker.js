@@ -17,14 +17,22 @@
 //   2. ย้าย shared.js ไป network-first เหมือน HTML (แก้ถาวร)
 //      เหตุผล: shared.js คือ data layer ที่ index.html เรียกใช้โดยตรง
 //      สองไฟล์นี้ต้องมาจาก deploy เดียวกันเสมอ ไม่มีข้อยกเว้น
-const CACHE_NAME = 'finance-os-v49';  // bump version so old cache is cleared on deploy
+//
+// v50 — ลบ investment-analysis.html ออกจาก SHELL_FILES
+// หน้านั้นถูกยุบเข้า index.html และลบออกจาก repo แล้ว ถ้ายังอยู่ในลิสต์
+// ทุกครั้งที่ install จะ log "ข้ามไฟล์ที่หาไม่เจอ" ซึ่งเป็น noise ที่จะกลบ
+// warning จริงในอนาคต (กลไกข้ามไฟล์หายทำงานถูกแล้ว — แต่ต้องไม่มีของหายตั้งแต่แรก)
+const CACHE_NAME = 'finance-os-v50';  // bump version so old cache is cleared on deploy
 const BASE = '/personaltracker-dashboard';
 
 // App shell — files to pre-cache on install
+//
+// หมายเหตุ: splash/*.png ไม่อยู่ในนี้โดยตั้งใจ — iOS อ่านภาพ splash ตอนเปิดแอป
+// ซึ่งเกิดก่อน service worker จะทำงาน การ precache จึงไม่ช่วยอะไร
+// และมี 15 ไฟล์ (~430 KB) ที่เครื่องหนึ่งใช้จริงแค่ไฟล์เดียว
 const SHELL_FILES = [
   BASE + '/',
   BASE + '/index.html',
-  BASE + '/investment-analysis.html',  // was missing — caused offline failure on nav
   BASE + '/shared.js',                 // data layer กลาง — ต้อง precache ให้ offline ทำงาน
   BASE + '/manifest.json',
   BASE + '/icon/icon-192x192.png',
