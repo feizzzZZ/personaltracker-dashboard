@@ -1,0 +1,33 @@
+name: Probe FRED (UA experiment)
+
+# วางที่  .github/workflows/probe-fred.yml
+#
+# งานสำรวจครั้งเดียว ไม่ใช่งานประจำ — รันเองจากแท็บ Actions
+# ไม่เขียนไฟล์ ไม่ commit ไม่แตะ market-data.json ไม่ส่ง LINE
+#
+# ตอบคำถามเดียว: FRED ปฏิเสธเราเพราะ IP หรือเพราะ User-Agent
+#
+# ที่มา: 20 ก.ย. probe_sources.py รายงานว่า FRED timeout จึงสรุปว่าบล็อก IP
+# แล้วออกแบบระบบโดยใช้ตัวแทนทั้งหมด (US3M · CREDIT_STRESS · ex-post real yield)
+# แต่ 21 ก.ย. log ของ market-data.yml กลับแสดงว่า FRED ตอบ 200 ใน 0.2s
+# ตัวแปรเดียวที่ต่างคือ UA — probe เดิมใช้ค่าที่ขึ้นต้นด้วย "Mozilla/5.0"
+# ทั้งที่ตั้งชื่อตัวแปรว่า UA_BOT
+#
+# ทำไมต้องรันจาก Actions ไม่ใช่เครื่อง dev:
+#   คำถามนี้เกี่ยวกับ "ใครยิงมาจากที่ไหนด้วยหัวข้อความแบบไหน"
+#   ซึ่งวัดได้จากที่ที่โค้ดรันจริงเท่านั้น
+
+on:
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: ทดลองแยกตัวแปร User-Agent
+        run: python3 scripts/probe_fred_ua.py

@@ -1,7 +1,7 @@
 name: Update market data
 
 # ทำงาน 2 รอบ/วัน — 06:30 และ 18:30 เวลาไทย
-# FRED อัปเดตดึกตามเวลา US, Yahoo ปิดตลาดราว 04:00 ไทย → 06:30 ได้ของสดของวัน
+# Yahoo ปิดตลาดราว 04:00 ไทย → 06:30 ได้ของสดของวัน
 # รอบเย็นไว้อัปเดต SET + ค่าเงินหลังตลาดไทยปิด
 on:
   schedule:
@@ -20,9 +20,10 @@ jobs:
   update:
     runs-on: ubuntu-latest
     # เพดานรวมของ job — เป็นตาข่ายชั้นนอกเท่านั้น ไม่ใช่ตัวคุมเวลาจริง
-    # ตัวคุมจริงคือ timeout-minutes ที่ step "Fetch market data" + MARKET_DATA_DEADLINE
-    # ต้องมากกว่า step timeout อย่างชัดเจน เผื่อเวลา checkout/setup-python/commit
-    timeout-minutes: 20
+    # ตัวคุมจริงคือ timeout-minutes ของแต่ละ step + DEADLINE ในสคริปต์
+    # ต้องมากกว่าผลรวมของ step อย่างชัดเจน เผื่อเวลา checkout/setup-python/commit
+    #   fetch (10m) + signals (7m) + งานประกอบ ≈ 18m  →  ตั้ง 25m
+    timeout-minutes: 25
 
     steps:
       - name: Checkout
@@ -33,82 +34,52 @@ jobs:
         with:
           python-version: '3.12'
 
-      # สคริปต์ใช้ stdlib ล้วน — ไม่มี pip install ให้พังตอน CI
-      # continue-on-error: ให้ commit ขั้นถัดไปยังรันด้วยข้อมูลที่ merge เก็บค่าเดิมไว้แล้ว
-      # แต่ยัง fail job รวมได้ตอนท้าย (step ถัดไป) เพื่อไม่ให้ CI เขียวทั้งที่ fetch พังหนัก
+      # ══════════════════════════════════════════════════════════════
+      # v44 ตัด FRED ออกทั้งหมดแล้ว — step "Probe FRED endpoints" กับ
+      # secret FRED_API_KEY ถูกลบทิ้งในรุ่นนี้ เหตุผล:
+      #   • ไม่มีสคริปต์ไหนอ่าน FRED_API_KEY อีกแล้ว (fetch_market_data.py v44+)
+      #   • probe กินเวลาได้ถึง 3 นาทีทุกรอบ เพื่อยืนยันสิ่งที่รู้อยู่แล้ว
+      #     ว่า FRED บล็อก IP ของ GitHub Actions (0/14 · TimeoutError 42 ครั้ง)
+      #   • log ที่ยังพูดถึง FRED ทำให้คนอ่านรอบหน้าเข้าใจผิดว่ายังใช้อยู่
+      # งานสำรวจแหล่งข้อมูลย้ายไปอยู่ workflow แยก (probe-sources.yml)
+      # ซึ่งรันเองเมื่อต้องการ ไม่ใช่ทุกรอบ
+      # ══════════════════════════════════════════════════════════════
+
+      # ── ขั้นที่ 1: ราคา + ดัชนี + sector ───────────────────────────
+      # continue-on-error: ให้ commit ขั้นถัดไปยังรันด้วยข้อมูลที่ merge เก็บค่าเดิมไว้
+      # แต่ยัง fail job รวมได้ตอนท้าย เพื่อไม่ให้ CI เขียวทั้งที่ fetch พังหนัก
       #
       # ★ ROOT CAUSE ของ run #40-47 ที่ตายทุกรอบที่ 15m18s ★
       #   เดิม timeout-minutes: 15 อยู่ที่ระดับ JOB
       #   พอชนเพดาน GitHub จะ "ยกเลิกทั้ง job" ไม่ใช่ "ทำให้ step นี้ fail"
       #   -> continue-on-error ไม่มีผล เพราะมันดักได้แค่ step ที่ exit non-zero
-      #      ไม่ได้ดัก job cancellation
       #   -> step "Commit if changed" ไม่เคยได้รันเลยสักครั้ง
       #   -> market-data.json ค้างที่ 27-28 ก.ค. นาน 11 วัน
-      #      ทั้งที่ FRED หลาย key ดึงสำเร็จแล้วในรอบนั้น
-      #
-      #   ย้าย timeout มาไว้ที่ STEP: step ที่หมดเวลาจะนับเป็น "failed"
-      #   ซึ่ง continue-on-error ดักได้ -> commit step ได้รันต่อ -> ข้อมูลถูกบันทึก
-      #
-      #   ลำดับตัวเลขต้องเป็น: DEADLINE(8m) < step timeout(10m) < job timeout(20m)
-      #   เพื่อให้สคริปต์หยุดเองอย่างสุภาพก่อน แล้วเขียนไฟล์ทัน
-      #   ถ้าสคริปต์ค้างจริงๆ step timeout เป็นตาข่ายชั้นสอง
-      # ── v42 diagnostic ─────────────────────────────────────────────
-      # ทดสอบจาก runner จริงว่า FRED endpoint ไหนใช้ได้ แทนการเดา
-      # (run 8 ส.ค. 11:55 UTC: FRED 14/14 ล้มด้วย read timeout ขณะที่ Yahoo 17/17 ผ่าน)
-      # continue-on-error — step นี้เป็นแค่ข้อมูล ไม่ควรทำให้ job พัง
-      - name: Probe FRED endpoints
-        continue-on-error: true
-        timeout-minutes: 3
-        env:
-          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
-        run: |
-          python3 - <<'PY'
-          import os, time, urllib.request, urllib.error
-          H = {"User-Agent": ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                              "AppleWebKit/537.36 (KHTML, like Gecko) "
-                              "Chrome/126.0.0.0 Safari/537.36"),
-               "Accept": "text/csv,text/plain,application/json,*/*;q=0.8",
-               "Accept-Language": "en-US,en;q=0.9",
-               "Accept-Encoding": "identity", "Connection": "close"}
-          KEY = os.environ.get("FRED_API_KEY", "").strip()
-          cands = [
-            ("fredgraph.csv          ", "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DGS10"),
-            ("/data/DGS10.txt        ", "https://fred.stlouisfed.org/data/DGS10.txt"),
-            ("downloaddata csv       ", "https://fred.stlouisfed.org/series/DGS10/downloaddata/DGS10.csv"),
-          ]
-          if KEY:
-            cands.insert(0, ("official API           ",
-              f"https://api.stlouisfed.org/fred/series/observations?series_id=DGS10&api_key={KEY}&file_type=json"))
-          else:
-            print("  (ยังไม่ได้ตั้ง secret FRED_API_KEY — ข้าม official API)")
-          # ยิงด้วย UA ของเบราว์เซอร์ และ UA แบบ bot เพื่อดูว่าโดนบล็อกที่ UA หรือ IP
-          for ua_name, ua in (("browser-UA", H["User-Agent"]), ("bot-UA", "FinanceOS-pipeline/42")):
-            print(f"\n=== {ua_name} ===")
-            for name, url in cands:
-              h = dict(H); h["User-Agent"] = ua
-              t0 = time.time()
-              try:
-                req = urllib.request.Request(url, headers=h)
-                with urllib.request.urlopen(req, timeout=10) as r:
-                  body = r.read()
-                print(f"  OK    {name} {r.status}  {len(body):>7} bytes  {time.time()-t0:.1f}s")
-              except urllib.error.HTTPError as e:
-                print(f"  HTTP  {name} {e.code}                    {time.time()-t0:.1f}s")
-              except Exception as e:
-                print(f"  FAIL  {name} {type(e).__name__}: {e}   {time.time()-t0:.1f}s")
-          PY
-
+      #   ย้าย timeout มาไว้ที่ STEP: step ที่หมดเวลานับเป็น "failed"
+      #   ซึ่ง continue-on-error ดักได้ -> commit step ได้รันต่อ
+      #   ลำดับตัวเลขต้องเป็น: DEADLINE(8m) < step timeout(10m) < job timeout(25m)
       - name: Fetch market data
         id: fetch
         continue-on-error: true
         timeout-minutes: 10
         env:
-          MARKET_DATA_DEADLINE: '480'   # 8 นาที (ดู fetch_market_data.py v42)
-          # v42: ถ้าตั้ง secret นี้ สคริปต์จะใช้ official FRED API เป็น endpoint แรก
-          # ซึ่งเป็นทางที่ FRED support จริง (ฟรี ขอที่ fred.stlouisfed.org/docs/api/api_key.html)
-          # ถ้าไม่ตั้ง จะ fallback ไปลอง endpoint สาธารณะ 3 ตัวตามลำดับ
-          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+          MARKET_DATA_DEADLINE: '480'   # 8 นาที
         run: python3 scripts/fetch_market_data.py
+
+      # ── ขั้นที่ 2: macro + สัญญาณรายตัว + ความเสี่ยง ───────────────
+      # ต้องรันหลัง fetch_market_data.py เสมอ เพราะอ่าน market-data.json
+      # ที่เพิ่งเขียน (ใช้รายชื่อสินทรัพย์จาก block "prices")
+      #
+      # แยก step ไม่รวมกับข้างบน เพื่อให้ log บอกได้ว่าขั้นไหนพัง
+      # และถ้าขั้นนี้ล้ม market-data.json ที่เขียนไปแล้วยังใช้ได้ปกติ
+      # ลำดับตัวเลข: SIGNALS_DEADLINE(5m) < step timeout(7m)
+      - name: Compute signals
+        id: signals
+        continue-on-error: true
+        timeout-minutes: 7
+        env:
+          SIGNALS_DEADLINE: '300'       # 5 นาที
+        run: python3 scripts/fetch_signals.py
 
       # if: always() — ต้องเห็น summary โดยเฉพาะรอบที่ fetch พัง
       # และต้องไม่ crash เองถ้าไฟล์หาย ไม่งั้นมันจะบัง Commit step ข้างล่าง
@@ -125,7 +96,7 @@ jobs:
           print(f"keys รอบนี้ : {s.get('keys_this_run')}")
           print(f"keys รวม    : {s.get('keys_total')}")
           print(f"sectors     : {s.get('sectors')}")
-          # telemetry ใหม่จาก v41 — แยกให้ออกว่า "หมดเวลา" กับ "API ล่ม" คนละเรื่อง
+          print(f"prices      : {s.get('prices_this_run')}/{s.get('prices_total')}")
           rt, bg = s.get('runtime_sec'), s.get('budget_sec')
           if rt is not None:
               print(f"runtime     : {rt}s / งบ {bg}s")
@@ -139,18 +110,38 @@ jobs:
                   bad = {k: n for k, n in v.items() if k != 'ok'}
                   flag = '' if ok and not bad else '  <-- มีปัญหา'
                   print(f"              {h:32s} ok={ok} {bad or ''}{flag}")
-          fo, ft = s.get('fred_ok'), s.get('fred_total')
-          if ft:
-              ep = s.get('fred_endpoint') or 'ไม่มีตัวไหนใช้ได้'
-              print(f"FRED        : {fo}/{ft} series · endpoint: {ep}")
-              if not fo:
-                  print("::warning::FRED ใช้ไม่ได้ทุก endpoint — ค่า macro ทั้ง 14 ตัวเป็นของเก่าที่ merge เก็บไว้ "
-                        "ดู step 'Probe FRED endpoints' ว่าตัวไหนตอบ แล้วตั้ง secret FRED_API_KEY")
           if s.get('budget_exhausted'):
               print(f"::warning::หมดงบเวลา — ข้าม {s.get('skipped_for_budget')} request "
                     f"ไฟล์ถูกเขียนด้วยข้อมูลเท่าที่ดึงทัน + ค่าเดิมที่ merge ไว้")
           for w in s.get('warnings', []):
               print(f"  ⚠️  {w}")
+
+          # ── สรุปขั้นสัญญาณ ──────────────────────────────────────
+          m = j.get('signals_meta')
+          if not m:
+              print("::warning::ไม่มี block signals_meta — fetch_signals.py ไม่ได้รันหรือพังก่อนเขียนไฟล์")
+          else:
+              print(f"\nสัญญาณ      : {m.get('count')} ตัว · macro {len(m.get('macro_keys') or [])} keys")
+              print(f"macro keys  : {', '.join(m.get('macro_keys') or []) or '(ไม่มี)'}")
+              dropped = m.get('dropped_stale_fred') or []
+              if dropped:
+                  print(f"ลบค่าค้าง   : {', '.join(dropped)}")
+              r = j.get('risk') or {}
+              print(f"ความเสี่ยง  : {r.get('level')} (severity {r.get('severity')}) · "
+                    f"breadth sector {r.get('breadth_sectors')}% · พอร์ต {r.get('breadth_portfolio')}%")
+              for f in (r.get('flags') or []):
+                  print(f"  ! {f.get('msg')}")
+              for w in m.get('warnings', []):
+                  print(f"  ⚠️  {w}")
+
+          if os.path.exists('signal-history.json'):
+              h = json.load(open('signal-history.json'))
+              days = sorted((h.get('days') or {}).keys())
+              size = os.path.getsize('signal-history.json') / 1024
+              print(f"\nประวัติ     : {len(days)} วัน ({size:.0f} KB)"
+                    + (f" · {days[0]} → {days[-1]}" if days else ""))
+          else:
+              print("::warning::ไม่มี signal-history.json — backtest จะไม่มีข้อมูลย้อนหลัง")
           PY
 
       # if: always() — จุดสำคัญที่สุดของไฟล์นี้
@@ -165,21 +156,56 @@ jobs:
           fi
           git config user.name  "market-data-bot"
           git config user.email "market-data-bot@users.noreply.github.com"
+
+          # ══════════════════════════════════════════════════════════
+          # signal-history.json ต้องถูก commit ด้วย — ไม่ใช่ของแถม
+          # ══════════════════════════════════════════════════════════
+          # runner เริ่มจาก checkout สะอาดทุกครั้ง ไฟล์ที่ไม่ได้ commit
+          # จะหายไปพร้อม runner แล้วรอบหน้าสร้างใหม่ตั้งแต่ศูนย์
+          # ผลคือ "ประวัติสัญญาณ" จะมีแค่วันเดียวตลอดไป และ backtest
+          # จะทำไม่ได้เลย — ซึ่งเป็นเหตุผลทั้งหมดที่เก็บไฟล์นี้ตั้งแต่วันแรก
+          # ใช้ if...fi แทน `[ -f f ] && git add f`
+          # GitHub รัน run: ด้วย `bash -e` ซึ่งยกเว้นคำสั่งที่ไม่ใช่ตัวสุดท้าย
+          # ของ AND-list ให้ (ทดสอบแล้วว่าแบบ && ไม่ทำให้ step ตายตรงนี้)
+          # แต่จะตายทันทีถ้าบรรทัดนั้นบังเอิญกลายเป็นบรรทัดสุดท้ายของสคริปต์
+          # เพราะ exit status ของสคริปต์จะเป็น 1 — if...fi ไม่มีกับดักนี้
           git add market-data.json
-          # เทียบข้อมูลจริงโดยตัด generated_at/fetched_at ออกก่อน — timestamp เปลี่ยน
-          # ทุกรันแม้ข้อมูลจริงจะเหมือนเดิม ทำให้ git diff --quiet เดิมไม่เคยว่างเลย
-          OLD_HASH=$(git show HEAD:market-data.json 2>/dev/null | jq -S 'del(.generated_at) | .data |= with_entries(.value |= del(.fetched_at))' | sha256sum | cut -d' ' -f1 || true)
-          NEW_HASH=$(jq -S 'del(.generated_at) | .data |= with_entries(.value |= del(.fetched_at))' market-data.json | sha256sum | cut -d' ' -f1)
-          if [ "$OLD_HASH" = "$NEW_HASH" ]; then
+          if [ -f signal-history.json ]; then git add signal-history.json; fi
+
+          # เทียบข้อมูลจริงโดยตัด timestamp ออกก่อน — timestamp เปลี่ยนทุกรัน
+          # แม้ข้อมูลจริงจะเหมือนเดิม ทำให้ git diff --quiet ไม่เคยว่างเลย
+          # ต้องตัดให้ครบทุกที่ที่มีเวลา: generated_at · data.*.fetched_at ·
+          # signals_meta.generated_at · signals.*.<ไม่มีเวลา แต่ price เปลี่ยน> ·
+          # risk.computed_at   (ไม่ตัด signals เพราะราคาที่เปลี่ยน = ข้อมูลจริง)
+          STRIP='del(.generated_at, .signals_meta.generated_at, .risk.computed_at)
+                 | .data |= with_entries(.value |= del(.fetched_at))'
+          OLD_HASH=$(git show HEAD:market-data.json 2>/dev/null | jq -S "$STRIP" | sha256sum | cut -d' ' -f1 || true)
+          NEW_HASH=$(jq -S "$STRIP" market-data.json | sha256sum | cut -d' ' -f1)
+
+          # ประวัติเพิ่มวันใหม่ = ต้อง commit เสมอ แม้ราคาจะไม่ขยับเลย
+          # (เช่นรอบเย็นของวันหยุดตลาด) ไม่งั้นวันนั้นจะหายจาก backtest ถาวร
+          #
+          # เทียบด้วย "รายชื่อวัน" ไม่ใช่ "จำนวนวัน" — พอประวัติเต็มเพดาน
+          # HIST_MAX_DAYS (500) วันเก่าถูกตัดทิ้งพร้อมกับวันใหม่ที่เพิ่มเข้ามา
+          # จำนวนจึงเท่าเดิมทั้งที่เนื้อหาเปลี่ยน ถ้าเทียบด้วยจำนวน วันใหม่
+          # ในรอบที่ราคาไม่ขยับเลย (วันหยุดตลาด) จะหายจาก backtest ถาวร
+          HIST_CHANGED=0
+          if [ -f signal-history.json ]; then
+            OLD_DAYS=$(git show HEAD:signal-history.json 2>/dev/null | jq -Sc '.days | keys' 2>/dev/null || echo 'none')
+            NEW_DAYS=$(jq -Sc '.days | keys' signal-history.json)
+            if [ "$OLD_DAYS" != "$NEW_DAYS" ]; then HIST_CHANGED=1; fi
+          fi
+
+          if [ "$OLD_HASH" = "$NEW_HASH" ] && [ "$HIST_CHANGED" = "0" ]; then
             echo "ข้อมูลจริงไม่เปลี่ยน (ต่างแค่ timestamp) — ข้าม commit"
           else
-            git commit -m "chore(data): market data $(date -u +'%Y-%m-%d %H:%M UTC')"
+            git commit -m "chore(data): market data + signals $(date -u +'%Y-%m-%d %H:%M UTC')"
             git push
           fi
 
       # outcome รวมทั้ง 'failure' (exit≠0) และ 'cancelled' (step timeout)
-      - name: Fail job if fetch was degraded
-        if: always() && steps.fetch.outcome != 'success'
+      - name: Fail job if a step was degraded
+        if: always() && (steps.fetch.outcome != 'success' || steps.signals.outcome != 'success')
         run: |
-          echo "::error::fetch_market_data.py จบด้วย exit code ผิดปกติ — ข้อมูลที่ merge ไว้อาจถูก commit ไปแล้ว แต่ต้องตรวจ warnings ในขั้นตอน Fetch market data ด้านบน"
+          echo "::error::fetch=${{ steps.fetch.outcome }} · signals=${{ steps.signals.outcome }} — ข้อมูลที่ merge ไว้อาจถูก commit ไปแล้ว แต่ต้องตรวจ warnings ในขั้นตอนด้านบน"
           exit 1
