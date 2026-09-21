@@ -37,6 +37,11 @@ MD = os.environ.get("MARKET_DATA_OUT", "market-data.json")
 HIST = os.environ.get("SIGNAL_HISTORY_OUT", "signal-history.json")
 HIST_MAX_DAYS = 500          # ~2 ปีทำการ พอสำหรับ backtest สัญญาณระยะกลาง
 
+# ต้องตรงกับ SIGNAL_MAX_DAYS ใน shared.js เป๊ะ ๆ
+# ถ้าสองที่ไม่ตรงกัน breadth ที่คำนวณใน pipeline จะไม่ตรงกับที่หน้าเว็บคำนวณ
+# จากชุดข้อมูลเดียวกัน — ตัวเลขขัดกันเองโดยไม่มีใครเห็น
+SIGNAL_MAX_DAYS = 7
+
 UA_BOT = "Mozilla/5.0 (compatible; FinanceOS-signals/1)"
 _CTX = ssl.create_default_context()
 DEADLINE_SEC = int(os.environ.get("SIGNALS_DEADLINE", "300"))
@@ -179,6 +184,22 @@ def vol_annual(vals: list[float], n: int = 30) -> float | None:
     m = sum(rets) / len(rets)
     var = sum((r - m) ** 2 for r in rets) / (len(rets) - 1)
     return round(math.sqrt(var) * math.sqrt(252) * 100, 1)
+
+
+def _age_days(updated) -> int | None:
+    """อายุเป็นจำนวนวันเต็มจากสตริงวันที่ YYYY-MM-DD — ไม่รู้วัน คืน None
+
+    ใช้ floor เหมือน shared.js (v51 แก้บั๊ก round/floor ที่ไม่ตรงกันมาแล้ว)
+    ราคาของวันที่ 10 มีอายุ 11 วันจนถึงวันที่ 22 เวลา 00:00Z
+    """
+    if not updated:
+        return None
+    try:
+        d = datetime.strptime(str(updated)[:10], "%Y-%m-%d").replace(
+            tzinfo=timezone.utc)
+    except (TypeError, ValueError):
+        return None
+    return max(0, (NOW - d).days)
 
 
 def zscore(vals: list[float], n: int = 252) -> float | None:
@@ -522,6 +543,29 @@ def main() -> int:
         print(f"  ✓ {tk:<10} {label:<14} score {sc:+d}  RSI {r}  "
               f"MA200 {e['ma200']}  dd {dd}%")
 
+    # ══════════════════════════════════════════════════════════════
+    # รวมกับสัญญาณรอบก่อน — ตัวที่ดึงไม่ได้รอบนี้ต้อง "แก่ลง" ไม่ใช่ "หายไป"
+    # ══════════════════════════════════════════════════════════════
+    # บั๊กที่แก้ตรงนี้: fetch_market_data.py สร้าง payload ใหม่ทุกรอบโดยไม่
+    # carry บล็อก signals/risk มาด้วย พอ Yahoo ล่มหนึ่งรอบ ไฟล์ที่ commit
+    # จะมี signals = {} แล้วหน้าเว็บขึ้นว่า "ต้องรัน fetch_signals.py ก่อน"
+    # ทั้งที่เมื่อวานข้อมูลครบและเพิ่งเก่าไปวันเดียว
+    #
+    # ที่สำคัญกว่า: shared.js มี SIGNAL_MAX_DAYS = 7 พร้อม UI ที่ทำแถวจาง
+    # แยกตารางของเก่า และไม่นับรวมในสรุป — โค้ดชุดนั้นไม่มีทางถูกเรียกเลย
+    # ถ้าข้อมูลถูกลบทิ้งแทนที่จะแก่ลง
+    #
+    # merge ราย-ticker แบบเดียวกับที่ prices ทำอยู่แล้วใน fetch_market_data.py
+    # ตัวที่ดึงได้รอบนี้ทับของเก่า ตัวที่ดึงไม่ได้คงของเก่าไว้พร้อมวันเดิม
+    # (frontend เช็คอายุจาก "updated" เองอยู่แล้ว จึงไม่มีทางเข้าใจผิดว่าเป็นของสด)
+    prev_signals = payload.get("signals") or {}
+    carried = [k for k in prev_signals if k not in signals]
+    merged_signals = {**prev_signals, **signals}
+    if carried:
+        print(f"  ↻ คงสัญญาณรอบก่อนไว้ {len(carried)} ตัว: "
+              f"{', '.join(sorted(carried)[:8])}"
+              f"{' …' if len(carried) > 8 else ''}")
+
     # ── 3. ความเสี่ยงระดับตลาด ─────────────────────────────────────
     print("── Market risk ──────────────────────────────")
     def dnum(k):
@@ -535,7 +579,13 @@ def main() -> int:
     sect_up = [s for s in sect.values() if isinstance(s.get("vsMA200"), (int, float))]
     breadth = (round(100 * sum(1 for s in sect_up if s["vsMA200"] > 0) / len(sect_up), 1)
                if sect_up else None)
-    held = [e for e in signals.values() if e["ma200"] is not None]
+    # ใช้สัญญาณที่ยัง "ใช้ตัดสินใจได้" เท่านั้น — รวมของรอบก่อนที่ยังไม่เก่าเกิน
+    # ต้องตรงกับ SIGNAL_MAX_DAYS ใน shared.js ไม่งั้นตัวเลข breadth บนหน้าเว็บ
+    # กับใน block risk จะไม่ตรงกันโดยไม่มีใครเห็น
+    usable = [e for e in merged_signals.values()
+              if _age_days(e.get("updated")) is not None
+              and _age_days(e.get("updated")) <= SIGNAL_MAX_DAYS]
+    held = [e for e in usable if e.get("ma200") is not None]
     port_up = (round(100 * sum(1 for e in held if e["ma200"] == "Above") / len(held), 1)
                if held else None)
 
@@ -560,12 +610,39 @@ def main() -> int:
                       "msg": f"พอร์ต {100-port_up:.0f}% หลุด MA200 แล้ว"})
 
     sev = sum(f["sev"] for f in flags)
-    level = "high" if sev >= 4 else "elevated" if sev >= 2 else "normal"
+    # ══════════════════════════════════════════════════════════════
+    # "ไม่มีข้อมูล" ต้องไม่ถูกรายงานว่า "ปกติ"
+    # ══════════════════════════════════════════════════════════════
+    # เดิมถ้า Yahoo ล่มทั้งหมด จะไม่มีธงสักอัน → sev = 0 → level = "normal"
+    # แล้วหน้าเว็บขึ้นแถบเขียวว่า "ไม่มีสัญญาณเตือนระดับตลาด" ทั้งที่
+    # ระบบไม่รู้อะไรเลยสักอย่าง — เป็นการให้ความมั่นใจปลอม ซึ่งอันตราย
+    # กว่าการเตือนเกินจริง เพราะคนอ่านจะไม่ไปหาข้อมูลเพิ่มเอง
+    #
+    # เกณฑ์: ต้องมี "สัญญาณรายตัวที่ยังไม่เก่าเกิน" อย่างน้อยหนึ่งตัว
+    #
+    # จงใจไม่นับ breadth ของ sector เป็นฐาน ทั้งที่มันก็เป็นข้อมูลตลาด
+    # เพราะ history.sectors ใน market-data.json **ไม่มีฟิลด์วันที่เลย**
+    # (ดู fetch_market_data.py — entry มีแค่ name/price/chg/rsi/vsMA200)
+    # ค่าที่ merge ค้างไว้จากเมื่อไหร่ก็ได้ อาจเก่าเป็นเดือนโดยไม่มีทางรู้
+    # ถ้าเอามาเป็นหลักฐานว่า "ตลาดปกติ" ก็เท่ากับเชื่อข้อมูลที่ตรวจอายุไม่ได้
+    # — ซึ่งเป็นความผิดแบบเดียวกับที่ทั้งงานนี้พยายามกำจัด
+    #
+    # breadth ยังใช้ "ติดธงเตือน" ได้ตามปกติ (เตือนเกินจริงเสียหายน้อยกว่า
+    # ให้ความมั่นใจปลอม) แต่ลำพังมันอย่างเดียวยืนยันว่าปลอดภัยไม่ได้
+    have_basis = bool(held)
+    if not have_basis:
+        level = "unknown"
+        flags = [{"k": "nodata", "sev": 1,
+                  "msg": "ไม่มีสัญญาณที่ใช้ได้ — ประเมินความเสี่ยงไม่ได้รอบนี้"}]
+        sev = 0
+    else:
+        level = "high" if sev >= 4 else "elevated" if sev >= 2 else "normal"
     risk = {"level": level, "severity": sev, "flags": flags,
             "breadth_sectors": breadth, "breadth_portfolio": port_up,
-            "computed_at": FETCHED_AT}
+            "basis_count": len(held), "computed_at": FETCHED_AT}
     print(f"  ระดับความเสี่ยง: {level} (severity {sev}) · "
-          f"breadth sector {breadth}% · พอร์ต {port_up}% เหนือ MA200")
+          f"breadth sector {breadth}% · พอร์ต {port_up}% เหนือ MA200 "
+          f"· ฐานข้อมูล {len(held)} ตัว")
     for f in flags:
         print(f"    ! {f['msg']}")
 
@@ -573,15 +650,17 @@ def main() -> int:
     data.update(fresh)
     dropped = purge_stale(data, set(fresh))
     payload["data"] = data
-    payload["signals"] = signals
+    payload["signals"] = merged_signals
     payload["risk"] = risk
     payload["signals_meta"] = {
         "generated_at": FETCHED_AT,
-        "count": len(signals),
+        "count": len(merged_signals),
+        "fresh_this_run": len(signals),     # ดึงได้จริงรอบนี้กี่ตัว
+        "carried_over": len(carried),       # คงของรอบก่อนไว้กี่ตัว
         "macro_keys": sorted(fresh),
         "dropped_stale_fred": dropped,
         "warnings": warnings,
-        "version": "signals v1",
+        "version": "signals v2",
     }
     with open(MD, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, indent=1)
@@ -609,6 +688,12 @@ def main() -> int:
                  "breadth": breadth, "port_breadth": port_up},
         # เก็บเฉพาะ 3 ค่าต่อสินทรัพย์ — ราคา/RSI/คะแนน พอสำหรับ backtest
         # ว่า "ถ้าทำตามสัญญาณวันนั้นแล้วผลเป็นอย่างไร" และทำให้ไฟล์โตช้า
+        #
+        # ใช้ `signals` (ดึงได้จริงรอบนี้) ไม่ใช่ `merged_signals` โดยเจตนา
+        # ตัวที่ carry มาจากรอบก่อนเป็นข้อมูลของ "วันก่อน" ถ้าบันทึกซ้ำลงวันนี้
+        # จะกลายเป็นการสร้างจุดข้อมูลปลอม แล้ว backtest จะเห็นราคาค้างนิ่ง
+        # หลายวันติดกันเหมือนตลาดไม่เคลื่อนไหว ซึ่งบิดเบือนผลทดสอบ
+        # วันที่ดึงไม่ได้ควรเป็น "ช่องว่าง" ในประวัติ ไม่ใช่ค่าที่ลอกมา
         "assets": {k: [v["price"], v["rsi"], v["score"]] for k, v in signals.items()},
     }
     if len(hist["days"]) > HIST_MAX_DAYS:
