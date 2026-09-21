@@ -992,6 +992,9 @@ html.standalone .a2hs{display:none}
       <div class="sb-item" data-page="dca" onclick="switchPage('dca')">
         <span class="sb-icon" aria-hidden="true">🎯</span>DCA เดือนนี้
       </div>
+      <div class="sb-item" data-page="signals" onclick="switchPage('signals')">
+        <span class="sb-icon" aria-hidden="true">📡</span>สัญญาณรายตัว
+      </div>
       <div class="sb-item" data-page="market" onclick="switchPage('market')">
         <span class="sb-icon" aria-hidden="true">📊</span>ตลาดวันนี้
       </div>
@@ -1860,6 +1863,14 @@ html.standalone .a2hs{display:none}
       <div class="pg-hdr"><div><div class="pg-title">DCA เดือนนี้</div>
         <div class="pg-sub">เงินก้อนถัดไปควรไปที่ไหน — เฉพาะกองที่ยัง active</div></div></div>
       <div id="dca-body"></div>
+    </div>
+
+    <!-- ══ SIGNALS (v53) ══ -->
+    <div class="page" id="page-signals">
+      <div class="pg-hdr"><div><div class="pg-title">สัญญาณรายตัว</div>
+        <div class="pg-sub">RSI · เทรนด์ · ระยะห่างจากจุดสูงสุด — คำนวณใน pipeline
+          ไม่ใช่ที่หน้าเว็บ เพื่อให้สูตรมีที่เดียว</div></div></div>
+      <div id="signals-body"></div>
     </div>
 
     <!-- ══ MARKET ══ -->
@@ -3436,7 +3447,7 @@ const VLOG_PURGED_KEY = 'finOS_valueLogPurged_v44';
 //   ฟังก์ชันหาย  → BLOCK  (แอปคำนวณผิดแน่นอน — นี่คือสิ่งที่ guard มีไว้จับ)
 //   เลขไม่ตรง    → WARN   (แค่ลืม bump — log ไว้ ไม่รบกวนผู้ใช้)
 // ฟังก์ชันที่ต้องมีคือสัญญาจริงระหว่างสองไฟล์ ส่วนสตริงเวอร์ชันเป็นแค่ป้าย
-const EXPECTED_SHARED_BUILD = 'v50';
+const EXPECTED_SHARED_BUILD = 'v51';
 const REQUIRED_SHARED_FNS = [
   'resolvePrices', 'pipelinePricesTHB', 'parseReconcileRows',
   'computeReconciliation', 'splitBalances', 'debtVsInvest', 'buildDebtPlan',
@@ -6105,7 +6116,46 @@ function renderDCA(){
     <div style="font-size:11px;color:var(--muted2);line-height:1.8;margin-top:12px">
       สัดส่วนคำนวณจากระยะห่างเป้าเทียบกัน — ไม่ใช่คำแนะนำการลงทุน
       คุณ DCA อัตโนมัติอยู่แล้ว ตัวเลขนี้ใช้ตอนมีเงินก้อนพิเศษเท่านั้น
-    </div>`}`;
+    </div>`}
+    ${dcaTimingBlock()}`;
+}
+
+/* v53 — จังหวะเข้าซื้อรายตัว บนหน้า DCA
+   แยกจาก "กลุ่มไหนต่ำกว่าเป้า" คนละคำถามกัน:
+     ส่วนบนตอบ "เงินควรไปกลุ่มไหน" (จากสัดส่วนพอร์ต)
+     ส่วนนี้ตอบ "ในกลุ่มนั้น ตัวไหนอยู่ในจังหวะที่ดีกว่า" (จากราคา)
+   ไม่รวมสองอย่างเข้าด้วยกันโดยเจตนา — ถ้ารวมแล้วให้คะแนนเดียว จะแยกไม่ออกว่า
+   ตัวเลขที่เห็นมาจากความเบี่ยงเบนของพอร์ตหรือจากราคาตลาด                     */
+function dcaTimingBlock(){
+  const L = (typeof loadSignals === 'function') ? loadSignals() : null;
+  if(!L) return '';
+  const sum = signalSummary(L);
+  if(!sum || !sum.count) return '';
+  const best = sum.buy.slice(0, 6);
+  const hold = sum.trim.slice(0, 6);
+  if(!best.length && !hold.length) return `
+    <div style="font-size:11px;color:var(--muted2);line-height:1.8;margin-top:16px">
+      สัญญาณรายตัวตอนนี้ไม่มีตัวไหนเด่นทั้งด้านบวกและลบ — เดินตามแผนเดิมได้เลย</div>`;
+  const chip = (x, col) => `<div style="display:flex;justify-content:space-between;
+      gap:10px;padding:8px 0;border-top:1px solid var(--border);font-size:12px">
+    <span style="font-weight:600">${escHtml(x.ticker)}</span>
+    <span style="color:var(--muted2);font-size:11px;text-align:right">
+      ${escHtml((x.why||[]).slice(0,2).join(' · ')) || escHtml(x.action||'')}</span>
+    <span style="color:${col};font-weight:600;font-size:11.5px;white-space:nowrap">
+      ${x.score>0?'+':''}${x.score}</span></div>`;
+  return `
+    <div class="sl sl-mt">จังหวะรายตัว</div>
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:6px 16px 14px">
+      ${best.length?`<div style="font-size:11px;color:${IA_GAIN};margin-top:10px;font-weight:600">
+        อยู่ในจังหวะที่ดี</div>${best.map(x=>chip(x,IA_GAIN)).join('')}`:''}
+      ${hold.length?`<div style="font-size:11px;color:${IA_WARN};margin-top:14px;font-weight:600">
+        ควรรอ</div>${hold.map(x=>chip(x,IA_WARN)).join('')}`:''}
+      <div style="font-size:10.5px;color:var(--muted2);line-height:1.8;margin-top:12px;
+        border-top:1px solid var(--border);padding-top:10px">
+        ดูเฉพาะราคา ไม่ได้ดูสัดส่วนพอร์ต — ถ้าตัวที่ "อยู่ในจังหวะดี" อยู่ในกลุ่มที่เกินเป้าแล้ว
+        การเติมเพิ่มจะยิ่งทำให้พอร์ตเอียง ใช้คู่กับตารางด้านบนเสมอ
+      </div>
+    </div>`;
 }
 
 /* ═══ 4. MARKET ════════════════════════════════════════════════════════
@@ -6119,6 +6169,166 @@ const IA_MARKET_KEYS = [
   {k:'GOLD_XAU',   t:'ทอง (USD/oz)', d:4},
   {k:'BTCUSD',     t:'Bitcoin',      d:2},
 ];
+/* ═══ 4b. SIGNALS (v53) ════════════════════════════════════════════════
+   หน้านี้ "อ่านอย่างเดียว" — ไม่คำนวณ RSI/MA ซ้ำจาก pipeline
+   เหตุผล: เคยมีสูตร RSI สองชุดในระบบมาแล้ว และไม่มีใครรู้จนกระทั่งตัวเลข
+   บนสองหน้าไม่ตรงกัน  ที่นี่จึงทำแค่ 3 อย่าง: ตรวจอายุ · จัดกลุ่ม · วาด     */
+const SIG_COL = { 4:IA_GAIN, 3:IA_GAIN, 2:'#4cc9f0', 1:'#4cc9f0', 0:IA_MUTE,
+                  '-1':IA_MUTE, '-2':IA_WARN, '-3':IA_WARN, '-4':IA_LOSS };
+
+// เส้นกราฟจิ๋วจากราคา 26 จุด — SVG ฝังในตาราง ไม่ใช้ไลบรารี
+// (Chart.js หนึ่งตัวต่อแถว × 30 แถว = หน่วงจนรู้สึกได้บนมือถือ)
+function sigSpark(pts, color){
+  if(!Array.isArray(pts) || pts.length < 3) return '';
+  const w = 64, h = 18, lo = Math.min(...pts), hi = Math.max(...pts);
+  const rng = hi - lo || 1;
+  const d = pts.map((v,i)=>
+    (i?'L':'M') + (i/(pts.length-1)*w).toFixed(1) + ' ' +
+    (h - (v-lo)/rng*h).toFixed(1)).join(' ');
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"
+    aria-hidden="true" style="display:block"><path d="${d}" fill="none"
+    stroke="${color}" stroke-width="1.5" stroke-linejoin="round"/></svg>`;
+}
+
+function sigRiskBanner(R){
+  if(!R) return '';
+  const tone = R.level==='high' ? IA_LOSS : R.level==='elevated' ? IA_WARN : IA_GAIN;
+  const th   = R.level==='high' ? 'ความเสี่ยงตลาดสูง'
+             : R.level==='elevated' ? 'ความเสี่ยงตลาดสูงกว่าปกติ'
+             : 'ไม่มีสัญญาณเตือนระดับตลาด';
+  return `<div style="background:var(--bg3);border:1px solid ${tone}55;
+      border-left:3px solid ${tone};border-radius:12px;padding:15px 18px;margin-bottom:18px">
+    <div style="font-weight:700;font-size:13.5px;color:${tone};margin-bottom:${R.flags.length?'9px':'0'}">
+      ${escHtml(th)}</div>
+    ${R.flags.map(f=>`<div style="font-size:12px;color:var(--muted2);line-height:1.9">
+      ${f.sev>=2?'●':'○'} ${escHtml(f.msg)}</div>`).join('')}
+    ${R.breadth_portfolio!=null?`<div style="font-size:11px;color:var(--muted2);margin-top:9px">
+      พอร์ต ${R.breadth_portfolio.toFixed(0)}% อยู่เหนือ MA200 ·
+      กลุ่มอุตสาหกรรม ${R.breadth_sectors!=null?R.breadth_sectors.toFixed(0)+'%':'—'}</div>`:''}
+  </div>`;
+}
+
+function sigRegimeBlock(){
+  const rg = (typeof computeRegime === 'function') ? computeRegime() : null;
+  if(!rg) return `<div style="background:var(--bg3);border:1px solid var(--border);
+    border-radius:12px;padding:16px 18px;font-size:12px;color:var(--muted2);line-height:1.9">
+    ข้อมูล macro ที่ยังสดมีไม่ถึง 3 ตัว จึงไม่สรุปภาพรวม —
+    ตัวเลขที่เก่าเกินเพดานถูกตัดออกจากการให้คะแนน ไม่ใช่แค่ทำเป็นสีจาง</div>`;
+  const col = rg.color==='gain'?IA_GAIN : rg.color==='loss'?IA_LOSS : IA_WARN;
+  return `<div style="background:var(--bg3);border:1px solid var(--border);
+      border-radius:12px;padding:17px 19px;margin-bottom:18px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap">
+      <div><div style="font-size:16px;font-weight:700;color:${col}">${escHtml(rg.label)}</div>
+        <div style="font-size:12px;color:var(--muted2);margin-top:3px">${escHtml(rg.desc)}</div></div>
+      <div style="text-align:right;font-size:11px;color:var(--muted2)">
+        ${rg.signals.length} สัญญาณ${rg.stale.length?` · ตัดของเก่า ${rg.stale.length}`:''}<br>
+        ข้อมูลเก่าสุด ${escHtml(rg.oldestAsOf||'—')}</div>
+    </div>
+    <div style="height:6px;background:var(--bg4);border-radius:3px;margin:13px 0 5px;position:relative">
+      <div style="position:absolute;left:${rg.spectrum}%;top:-3px;width:12px;height:12px;
+        margin-left:-6px;border-radius:50%;background:${col};border:2px solid var(--bg3)"></div></div>
+    <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted2)">
+      <span>ระวัง</span><span>เป็นกลาง</span><span>เปิดรับความเสี่ยง</span></div>
+    <div style="font-size:11.5px;color:var(--muted2);line-height:1.9;margin-top:12px;
+      border-top:1px solid var(--border);padding-top:11px">
+      แนวทาง <strong style="color:var(--text)">${escHtml(rg.posture)}</strong> ·
+      เงินสดแนะนำ ${escHtml(rg.cashRange)} · ระดับความเสี่ยง ${escHtml(rg.risk)}</div>
+    <details style="margin-top:10px"><summary style="font-size:11.5px;color:var(--muted2);
+      cursor:pointer">ดูสัญญาณทั้ง ${rg.signals.length} ตัว</summary>
+      <div style="margin-top:9px">${rg.signals.map(x=>`
+        <div style="display:flex;justify-content:space-between;gap:10px;padding:6px 0;
+          border-top:1px solid var(--border);font-size:11.5px">
+          <span style="color:var(--muted2)">${escHtml(x.label)}
+            ${x.age!=null&&x.age>2?`<span style="font-size:10px;opacity:.7">· ${x.age} วันก่อน</span>`:''}</span>
+          <span><strong style="color:var(--text)">${escHtml(x.val)}</strong>
+            <span style="color:${x.score>0?IA_GAIN:x.score<0?IA_LOSS:IA_MUTE};
+              margin-left:7px">${x.score>0?'+':''}${x.score}</span></span>
+        </div>`).join('')}
+      ${rg.stale.length?`<div style="font-size:11px;color:${IA_WARN};margin-top:10px;line-height:1.85">
+        ตัดออกเพราะเก่าเกิน: ${rg.stale.map(x=>
+          `${escHtml(x.label)} (${x.age} วัน · เพดาน ${x.limit})`).join(' · ')}</div>`:''}
+      </div></details>
+  </div>`;
+}
+
+function renderSignals(){
+  const el = document.getElementById('signals-body');
+  if(!el) return;
+  const L = (typeof loadSignals === 'function') ? loadSignals() : null;
+  const R = (typeof loadRisk === 'function') ? loadRisk() : null;
+  if(!L){ iaNeedData('signals-body',
+    'ยังไม่มีสัญญาณใน market-data.json — ต้องรัน scripts/fetch_signals.py ก่อน'); return; }
+  const sum = signalSummary(L);
+  const fresh = L.filter(x=>!x.stale), old = L.filter(x=>x.stale);
+
+  const row = x => {
+    const c = SIG_COL[String(x.score)] || IA_MUTE;
+    return `<tr style="border-top:1px solid var(--border)${x.stale?';opacity:.45':''}">
+      <td style="padding:9px 10px">
+        <div style="font-weight:600;font-size:12.5px">${escHtml(x.ticker)}</div>
+        <div style="font-size:10px;color:var(--muted2)">${escHtml(x.sym||'')}${
+          x.stale?` · ข้อมูล ${x.age==null?'ไม่ทราบวัน':x.age+' วันก่อน'}`:''}</div></td>
+      <td style="padding:9px 10px">${sigSpark(x.spark, c)}</td>
+      <td class="nr" style="padding:9px 10px;font-size:12px">${
+        x.rsi==null?'—':`<span style="color:${x.rsi>=70?IA_WARN:x.rsi<=30?IA_GAIN:'var(--text)'}">${x.rsi.toFixed(0)}</span>`}</td>
+      <td class="nr" style="padding:9px 10px;font-size:11.5px;color:${
+        x.ma200==='Above'?IA_GAIN:x.ma200==='Below'?IA_LOSS:IA_MUTE}">${
+        x.ma200==='Above'?'เหนือ':x.ma200==='Below'?'ต่ำกว่า':'—'}</td>
+      <td class="nr" style="padding:9px 10px;font-size:12px;color:${
+        x.drawdown!=null&&x.drawdown<=-10?IA_WARN:'var(--muted2)'}">${
+        x.drawdown==null?'—':(Math.abs(x.drawdown)<0.5?'0':x.drawdown.toFixed(0))+'%'}</td>
+      <td class="nr" style="padding:9px 10px;font-size:12px;color:${
+        x.chg3m>0?IA_GAIN:x.chg3m<0?IA_LOSS:'var(--muted2)'}">${
+        x.chg3m==null?'—':(x.chg3m>0?'+':'')+x.chg3m.toFixed(1)+'%'}</td>
+      <td style="padding:9px 10px;text-align:right">
+        <div style="font-size:11.5px;font-weight:600;color:${c}">${escHtml(x.action||'')}</div>
+        <div style="font-size:10px;color:var(--muted2)">${x.score>0?'+':''}${x.score}</div></td>
+    </tr>`;
+  };
+
+  const table = rows => `<div style="background:var(--bg3);border:1px solid var(--border);
+      border-radius:12px;overflow-x:auto">
+    <table style="width:100%;border-collapse:collapse;min-width:560px">
+      <thead><tr style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted2)">
+        <th style="text-align:left;padding:9px 10px;font-weight:600">สินทรัพย์</th>
+        <th style="text-align:left;padding:9px 10px;font-weight:600">6 เดือน</th>
+        <th style="text-align:right;padding:9px 10px;font-weight:600">RSI</th>
+        <th style="text-align:right;padding:9px 10px;font-weight:600">MA200</th>
+        <th style="text-align:right;padding:9px 10px;font-weight:600">ห่างจุดสูง</th>
+        <th style="text-align:right;padding:9px 10px;font-weight:600">3 เดือน</th>
+        <th style="text-align:right;padding:9px 10px;font-weight:600">สัญญาณ</th>
+      </tr></thead><tbody>${rows.map(row).join('')}</tbody></table></div>`;
+
+  el.innerHTML = `
+    ${sigRiskBanner(R)}
+    ${sigRegimeBlock()}
+    ${sum && sum.count ? `<div class="sg" style="margin-bottom:18px">
+      <div class="sc"><div class="sc-lbl">น่าทยอยเข้าเพิ่ม</div>
+        <div class="sc-val" style="font-size:20px;color:${IA_GAIN}">${sum.buy.length}</div>
+        <div class="sc-sub">${escHtml(sum.buy.map(x=>x.ticker).slice(0,4).join(', '))||'—'}</div></div>
+      <div class="sc"><div class="sc-lbl">ควรชะลอ/ลดน้ำหนัก</div>
+        <div class="sc-val" style="font-size:20px;color:${sum.trim.length?IA_WARN:'var(--white)'}">${sum.trim.length}</div>
+        <div class="sc-sub">${escHtml(sum.trim.map(x=>x.ticker).slice(0,4).join(', '))||'—'}</div></div>
+      <div class="sc"><div class="sc-lbl">อยู่เหนือ MA200</div>
+        <div class="sc-val" style="font-size:20px">${sum.breadth==null?'—':sum.breadth+'%'}</div>
+        <div class="sc-sub">จาก ${sum.count} ตัวที่ข้อมูลยังสด</div></div>
+    </div>` : ''}
+    ${fresh.length ? table(fresh) : iaEmptyRow('ไม่มีสัญญาณที่ข้อมูลยังสดพอจะใช้ตัดสินใจ')}
+    ${old.length ? `<div class="sl sl-mt">ข้อมูลเก่ากว่า ${SIGNAL_MAX_DAYS} วัน — ไม่นับรวมในสรุป</div>
+      ${table(old)}` : ''}
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;
+        padding:15px 18px;font-size:11.5px;color:var(--muted2);line-height:1.9;margin-top:18px">
+      <strong style="color:var(--text)">คะแนนนี้อ่านยังไง</strong><br>
+      ตรรกะคือ <strong style="color:var(--text)">ซื้อสวนในขาขึ้น</strong> ไม่ใช่ซื้อของที่ลง —
+      ของที่ตกแรงแต่หลุด MA200 ได้คะแนนติดลบ เพราะอาจกำลังพัง ไม่ใช่ของถูก
+      ส่วนของที่ย่อแต่ยังเหนือ MA200 ได้คะแนนบวก<br>
+      สินทรัพย์ที่มีประวัติไม่ถึง 200 วันจะขึ้น "—" ที่ช่อง MA200 และ
+      <strong style="color:var(--text)">ไม่ถูกหักคะแนน</strong> — ข้อมูลไม่พอไม่เท่ากับสัญญาณลบ<br><br>
+      กองทุนไทยที่ราคามาจากชีตไม่มีในตารางนี้ เพราะไม่มีประวัติราคาให้คำนวณ
+      ตัวเลขทั้งหมดเป็นการอธิบายสถานะ ไม่ใช่คำแนะนำการลงทุน
+    </div>`;
+}
+
 function renderMarket(){
   const md = (typeof loadMarketData === 'function') ? loadMarketData() : null;
   if(!md || !md.data){ iaNeedData('market-body','ยังไม่มี market-data.json'); return; }
@@ -6140,15 +6350,20 @@ function renderMarket(){
   document.getElementById('market-body').innerHTML = `
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:18px">
       ${cards}</div>
+    <div class="sl">ภาพรวมจากสัญญาณ macro</div>
+    ${sigRegimeBlock()}
     <div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;
                 padding:16px 18px;font-size:12px;color:var(--muted2);line-height:1.9">
-      <strong style="color:var(--text)">ทำไมหน้านี้ถึงสั้น</strong><br>
-      รุ่นก่อนมีสัญญาณ 14 ตัวและให้คะแนน regime แต่ 9 ตัวมาจาก FRED ที่ pipeline
-      ดึงไม่ได้เลย (สำเร็จ 0/14 · timeout 42 ครั้ง) และ fail-safe จะ carry ค่าเก่า
-      มาเรื่อยๆ ทำให้หน้าแสดง "สถานการณ์ปัจจุบัน" จากข้อมูลอายุ 3 เดือน<br><br>
-      รุ่นนี้จึงเหลือเฉพาะตัวที่ดึงจาก Yahoo ได้จริง แสดงพร้อมอายุข้อมูลเสมอ
-      และ<strong style="color:var(--text)">ไม่ให้คะแนน ไม่บอกให้ซื้อหรือขาย</strong> —
-      สำหรับพอร์ตที่ DCA อัตโนมัติ การจับจังหวะตลาดมักลดผลตอบแทนมากกว่าเพิ่ม
+      <strong style="color:var(--text)">ทำไมถึงกลับมาให้คะแนนได้อีก</strong><br>
+      v44 ปิดการให้คะแนนไปเพราะ 9 ใน 14 สัญญาณมาจาก FRED ที่ดึงไม่ได้เลย
+      (สำเร็จ 0/14 · timeout 42 ครั้ง) แล้วกลไก merge carry ค่าเก่ามาเรื่อยๆ
+      หน้านี้จึงเคยแสดง "สถานการณ์ปัจจุบัน" จากข้อมูลอายุ 3 เดือน<br><br>
+      ตอนนี้สัญญาณเหล่านั้นมาจาก Yahoo (ผลตอบแทนพันธบัตร) กับ BLS (เงินเฟ้อ · ว่างงาน)
+      ซึ่งทดสอบแล้วว่าเข้าถึงได้จาก CI จริง และเพิ่ม<strong style="color:var(--text)">เพดานอายุรายสัญญาณ</strong> —
+      ตัวไหนเก่าเกินจะถูก<strong style="color:var(--text)">ตัดออกจากการให้คะแนน</strong>
+      ไม่ใช่แค่ทำเป็นสีจาง เพราะค่าเฉลี่ยที่มีตัวเก่าปนคือตัวเลขที่ผิดโดยไม่มีใครเห็น<br><br>
+      สำหรับพอร์ตที่ DCA อัตโนมัติ การจับจังหวะตลาดมักลดผลตอบแทนมากกว่าเพิ่ม —
+      ใช้หน้านี้ปรับ "น้ำหนัก" ไม่ใช่ปรับ "จะลงทุนต่อหรือไม่"
     </div>`;
 }
 
@@ -6163,7 +6378,9 @@ let pageRenderFns={
   goals:renderGoals,
   debt:renderDebt,
   // v51 — ยุบมาจาก investment-analysis.html
-  dormant:renderDormant, cost:renderCost, dca:renderDCA, market:renderMarket
+  dormant:renderDormant, cost:renderCost, dca:renderDCA, market:renderMarket,
+  // v53
+  signals:renderSignals
 };
 /* ══ v49 — Analyst Desk ═══════════════════════════════════════════════
    ตัวเชื่อมระหว่าง state ของแอปกับ analystDesk() ที่เป็น pure function
