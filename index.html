@@ -6192,9 +6192,16 @@ function sigSpark(pts, color){
 
 function sigRiskBanner(R){
   if(!R) return '';
-  const tone = R.level==='high' ? IA_LOSS : R.level==='elevated' ? IA_WARN : IA_GAIN;
+  /* v54 — "ไม่รู้" ต้องไม่หน้าตาเหมือน "ปลอดภัย"
+     เดิมทุก level ที่ไม่ใช่ high/elevated ตกมาที่แถบเขียว "ไม่มีสัญญาณเตือน"
+     รวมถึงกรณีที่ pipeline ดึงข้อมูลไม่ได้เลยสักตัว ซึ่งเป็นการให้ความมั่นใจ
+     ปลอม — อันตรายกว่าการเตือนเกินจริง เพราะคนอ่านจะไม่ไปหาข้อมูลเพิ่มเอง
+     pipeline ส่ง level='unknown' มาในกรณีนั้น ที่นี่ต้องแสดงเป็นสีเตือน */
+  const tone = R.level==='high' ? IA_LOSS
+             : (R.level==='elevated' || R.level==='unknown') ? IA_WARN : IA_GAIN;
   const th   = R.level==='high' ? 'ความเสี่ยงตลาดสูง'
              : R.level==='elevated' ? 'ความเสี่ยงตลาดสูงกว่าปกติ'
+             : R.level==='unknown' ? 'ประเมินความเสี่ยงไม่ได้ — ข้อมูลไม่พอ'
              : 'ไม่มีสัญญาณเตือนระดับตลาด';
   return `<div style="background:var(--bg3);border:1px solid ${tone}55;
       border-left:3px solid ${tone};border-radius:12px;padding:15px 18px;margin-bottom:18px">
