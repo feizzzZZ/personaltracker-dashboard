@@ -98,6 +98,23 @@ console.log('\n═══ 3. resolvePrices — ราคาที่จำไว�
   const saved=JSON.parse(localStorage.getItem('finOS_lastPrice')).ST;
   chk('ราคา stale ติดธงถูก', r3.srcMap.ST==='stale', `age=${r3.ageMap.ST}`);
   chk('บันทึกวันของราคาจริง ไม่ใช่วันนี้', saved.d===iso(11), `บันทึก d=${saved.d} ควรเป็น ${iso(11)}`);
+
+  /* v51 — อายุต้องไม่ขึ้นกับ "เวลาของวันที่รันเทสต์"
+     บั๊กจริงที่เจอ: pipelinePricesTHB ใช้ Math.round ส่วน ageOf ใช้ Math.floor
+     ราคาลงวันที่ N วันก่อน (00:00Z) พออ่านหลังเที่ยง UTC จะได้ N.6 วัน
+     round → N+1  อายุจึงกระโดดกลางวัน และวันที่ที่คำนวณย้อนกลับเลื่อนไป 1 วัน
+     ข้อข้างบนจับได้เฉพาะตอนรันช่วงบ่าย UTC — ลูปนี้จับได้ทุกเวลา */
+  for(const n of [0,1,3,4,5,11,12]){
+    setLkp({});
+    localStorage.setItem('finOS_actions',JSON.stringify(
+      {prices:{[`A${n}`]:{price:50,ccy:'THB',updated:iso(n)}},data:{}}));
+    const rr=resolvePrices({});
+    const sv=JSON.parse(localStorage.getItem('finOS_lastPrice'))[`A${n}`];
+    chk(`อายุ ${n} วัน นับตรง ไม่ปัดขึ้น`, rr.ageMap[`A${n}`]===n,
+        `ได้ ${rr.ageMap[`A${n}`]}`);
+    chk(`อายุ ${n} วัน บันทึกวันเดิมกลับมาได้`, !!sv && sv.d===iso(n),
+        `ได้ ${sv&&sv.d} ควรเป็น ${iso(n)}`);
+  }
 }
 
 console.log('\n═══ ไม่ทำลายของเดิม ═══');
