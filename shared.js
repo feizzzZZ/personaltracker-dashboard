@@ -16,7 +16,7 @@ window.LOC = window.LOC || 'th-TH-u-ca-gregory';
 //   • XIRR engine
 // กติกา: ไฟล์นี้ห้ามแตะ DOM ของหน้าใดหน้าหนึ่ง — pure data layer เท่านั้น
 // ═══════════════════════════════════════════════════════════════════
-const APP_BUILD = 'v50';
+const APP_BUILD = 'v51';
 console.log('[Finance OS shared] build', APP_BUILD);
 window.SHARED_BUILD = APP_BUILD;   // v45 — ให้ index.html ตรวจได้ว่าเวอร์ชันตรงกัน
 
@@ -228,13 +228,23 @@ function pipelinePricesTHB(staleDays){
     const _u = o.updated ? String(o.updated).trim() : '';
     const t = _u ? Date.parse(/^\d{4}-\d{2}-\d{2}$/.test(_u) ? _u+'T00:00:00Z' : _u) : NaN;
     if(!isFinite(t)) return;                       // ไม่รู้วัน = ไม่กล้าใช้
-    const ageDays = (today - t) / 864e5;
+    /* v51 BUGFIX — อายุราคาต้องนับเป็น "จำนวนวันเต็ม" ทุกที่
+       เดิมบรรทัดนี้เทียบด้วยเศษส่วน (11.6 วัน) แล้วเก็บด้วย Math.round
+       ขณะที่ ageOf() ใน resolvePrices ใช้ Math.floor  ผลที่ตามมา 3 อย่าง:
+         1. อายุที่แสดงกระโดดเพิ่ม 1 ตอนเที่ยง UTC ทั้งที่ไม่มีอะไรเปลี่ยน
+         2. resolvePrices คำนวณ "วันของราคา" ย้อนกลับจากอายุนี้ไปบันทึกใน
+            lastPrice → วันเลื่อนไป 1 วัน = ฟอกอายุราคา ซึ่ง v50 เพิ่งแก้ไป
+         3. เส้นตัด PRICE_MAX_DAYS/PRICE_STALE_DAYS ขยับตามเวลาของวัน —
+            ราคาอายุ 12 วันถูกใช้ตอนเช้าแต่ถูกทิ้งตอนบ่ายของวันเดียวกัน
+       floor ถูกตามความหมาย: ราคาของวันที่ 10 มีอายุ 11 วันจนถึงวันที่ 22 00:00Z
+       และ PRICE_MAX_DAYS = 12 แปลว่า "ถึง 12 วันยังใช้ได้" ตลอดทั้งวัน */
+    const ageDays = Math.max(0, Math.floor((today - t) / 864e5));
     if(ageDays > PRICE_MAX_DAYS) return;           // เก่าเกินไป ทิ้ง
 
     out[tk] = {
       p: ccy === 'THB' ? Number(o.price) : Number(o.price) * fx,
       ccy, updated: o.updated,
-      ageDays: Math.max(0, Math.round(ageDays)),
+      ageDays,
       stale: ageDays > (staleDays || PRICE_STALE_DAYS),
       src: o.src || 'pipeline',
     };
@@ -935,21 +945,47 @@ function mdAsOf(key){
 
 function computeRegime(){
   const sig = [];
-  const push = (o) => { if(o) sig.push(o); };
+  const stale = [];
+  // อายุสูงสุดที่ยอมรับได้ต่อสัญญาณหนึ่งตัว — ต่างกันตามความถี่ของข้อมูลต้นทาง
+  //   ผลตอบแทนพันธบัตร/VIX/ดัชนี = รายวัน → 10 วันก็เก่ามากแล้ว
+  //   CPI/ว่างงาน = รายเดือน + BLS ประกาศช้าราว 2 สัปดาห์ → เผื่อ 75 วัน
+  // สัญญาณที่เกินอายุถูก "ตัดออกจากการให้คะแนน" ไม่ใช่แค่ทำเป็นสีจาง
+  // เพราะค่าเฉลี่ยที่มีตัวเก่าปนอยู่ = ตัวเลขที่ผิดโดยไม่มีใครเห็น
+  const push = (o, maxDays) => {
+    if(!o) return;
+    const lim = maxDays || 10;
+    if(o.asOf){
+      const age = Math.floor((Date.now() - Date.parse(o.asOf+'T00:00:00Z'))/864e5);
+      if(isFinite(age) && age > lim){ stale.push({...o, age, limit:lim}); return; }
+      o.age = isFinite(age) ? age : null;
+    }
+    sig.push(o);
+  };
 
   // 1) เงินเฟ้อ — เทียบเป้า Fed 2%
   const cpi = mdNum('US_CPI');
   if(cpi!=null) push({key:'cpi', label:'เงินเฟ้อ US (CPI YoY)', val:cpi.toFixed(1)+'%',
     score: cpi>=4?-2 : cpi>=3?-1 : cpi>=2.5?0 : cpi>=1.5?1 : 0,
     note: cpi>=3?'สูงกว่าเป้า 2% มาก — จำกัดพื้นที่ผ่อนคลายนโยบาย'
-        : cpi>=2.5?'ยังเหนือเป้าเล็กน้อย' : 'ใกล้เป้า Fed', asOf: mdAsOf('US_CPI')});
+        : cpi>=2.5?'ยังเหนือเป้าเล็กน้อย' : 'ใกล้เป้า Fed', asOf: mdAsOf('US_CPI')}, 75);
 
-  // 2) นโยบายการเงิน — เทียบ neutral rate ~3%
-  const fed = mdNum('FED_RATE');
-  if(fed!=null) push({key:'fed', label:'Fed Funds Rate', val:fed.toFixed(2)+'%',
-    score: fed>=5?-2 : fed>=4?-1 : fed>=3?0 : 1,
-    note: fed>=4?'ตึงตัวกว่า neutral — กดดัน valuation'
-        : fed>=3?'ใกล้ neutral' : 'ผ่อนคลาย หนุนสินทรัพย์เสี่ยง', asOf: mdAsOf('FED_RATE')});
+  // 2) ภาวะการเงินระยะสั้น — เทียบ neutral rate ~3%
+  // ═══════════════════════════════════════════════════════════════
+  // เดิมใช้ FED_RATE (FRED DFEDTARU) ซึ่งเข้าไม่ถึงแล้วตั้งแต่ v44
+  // ตัวแทนคือผลตอบแทนตั๋วเงินคลัง 3 เดือน (^IRX) ซึ่งเกาะดอกเบี้ยนโยบาย
+  // ใกล้ชิดที่สุดในบรรดาสิ่งที่ดึงได้ฟรี แต่ "ไม่ใช่" ดอกเบี้ยนโยบาย —
+  // ป้ายกำกับจึงต้องบอกตามจริง ไม่ใช่เขียนว่า Fed Funds Rate แล้วใส่เลขอื่น
+  // (ตลาดคาดการณ์ล่วงหน้า ค่านี้จึงนำ/ตาม Fed ได้หลายสิบ bps ในช่วงเปลี่ยนทิศ)
+  const st = mdNum('FED_RATE') ?? mdNum('US3M');
+  const stIsFed = mdNum('FED_RATE') != null;
+  if(st!=null) push({key:'fed',
+    label: stIsFed ? 'Fed Funds Rate' : 'ดอกเบี้ยระยะสั้น (T-bill 3M)',
+    val: st.toFixed(2)+'%',
+    score: st>=5?-2 : st>=4?-1 : st>=3?0 : 1,
+    note: (st>=4?'ตึงตัวกว่า neutral — กดดัน valuation'
+        : st>=3?'ใกล้ neutral' : 'ผ่อนคลาย หนุนสินทรัพย์เสี่ยง')
+        + (stIsFed?'':' · ใช้ ^IRX แทนดอกเบี้ยนโยบาย'),
+    asOf: stIsFed ? mdAsOf('FED_RATE') : mdAsOf('US3M')});
 
   // 3) Yield curve 2s10s — inverted = สัญญาณ recession คลาสสิก
   const yc = mdNum('YIELD_CURVE');
@@ -977,11 +1013,24 @@ function computeRegime(){
     asOf: mdAsOf('SP500_RSI')});
 
   // 6) เครดิต — วัดความเครียดระบบการเงิน
+  // ═══════════════════════════════════════════════════════════════
+  // HY OAS ตัวจริงหาฟรีไม่ได้แล้ว (FRED บล็อก · ICE คิดเงิน)
+  // ตัวแทนคือ z-score ของอัตราส่วน HYG/IEF กลับเครื่องหมาย: บวก = เครียด
+  // หน่วยเป็น "ส่วนเบี่ยงเบนมาตรฐาน" ไม่ใช่ % จึงต้องใช้เกณฑ์คนละชุด
+  // ห้ามยัดค่านี้ลง key CREDIT_SPREAD เด็ดขาด — เกณฑ์ 3/4.5/6% จะอ่านค่า
+  // ~0.9 ว่า "ผ่อนคลายมาก" ตลอดกาล ซึ่งเป็นความผิดที่ไม่มีใครมองเห็น
   const cs = mdNum('CREDIT_SPREAD');
+  const cz = mdNum('CREDIT_STRESS');
   if(cs!=null) push({key:'credit', label:'Credit Spread (HY OAS)', val:cs.toFixed(2)+'%',
     score: cs>=6?-2 : cs>=4.5?-1 : cs>=3?0 : 1,
     note: cs>=4.5?'ตลาดเครดิตเริ่มเครียด' : cs>=3?'ปกติ' : 'ผ่อนคลาย — ความเสี่ยงถูกประเมินต่ำ',
     asOf: mdAsOf('CREDIT_SPREAD')});
+  else if(cz!=null) push({key:'credit', label:'ความเครียดเครดิต (HYG/IEF)',
+    val:(cz>=0?'+':'')+cz.toFixed(2)+' SD',
+    score: cz>=2?-2 : cz>=1?-1 : cz>=-0.5?0 : 1,
+    note: cz>=2?'ตลาดเครดิตเครียดผิดปกติ' : cz>=1?'เริ่มตึงกว่าค่าเฉลี่ยปี'
+        : cz>=-0.5?'ปกติ' : 'ผ่อนคลาย — ความเสี่ยงถูกประเมินต่ำ',
+    asOf: mdAsOf('CREDIT_STRESS')});
 
   // 7) ตลาดไทย
   const smt = mdStr('SET_MA200'), srsi = mdNum('SET_RSI');
@@ -997,21 +1046,21 @@ function computeRegime(){
   if(core!=null) push({key:'core', label:'Core inflation', val:core.toFixed(1)+'%',
     score: core>=3.5?-2 : core>=2.8?-1 : core>=2.2?0 : 1,
     note: core>=2.8?'core ยังหนืด — Fed ผ่อนคลายยาก' : 'core เข้าใกล้เป้า',
-    asOf: mdAsOf('US_CORE_PCE')||mdAsOf('US_CORE_CPI')});
+    asOf: mdAsOf('US_CORE_PCE')||mdAsOf('US_CORE_CPI')}, 75);
 
   // 9) ตลาดแรงงาน — เย็นเกินไป = สัญญาณ recession
   const un = mdNum('US_UNEMP');
   if(un!=null) push({key:'unemp', label:'US Unemployment', val:un.toFixed(1)+'%',
     score: un>=5?-2 : un>=4.5?-1 : un>=3.5?1 : 0,
     note: un>=4.5?'ว่างงานสูงขึ้น — อุปสงค์อ่อน' : un>=3.5?'ตลาดแรงงานแข็งแรง':'ตึงตัวมาก',
-    asOf: mdAsOf('US_UNEMP')});
+    asOf: mdAsOf('US_UNEMP')}, 75);
 
   // 10) Real yield — ต้นทุนเงินจริงหลังหักเงินเฟ้อ
   const rr = mdNum('US_REAL10Y');
   if(rr!=null) push({key:'real', label:'Real 10Y (TIPS)', val:rr.toFixed(2)+'%',
     score: rr>=2.5?-2 : rr>=1.8?-1 : rr>=0.5?0 : 1,
     note: rr>=1.8?'ต้นทุนเงินจริงสูง — กดดันสินทรัพย์เสี่ยง' : 'ต้นทุนเงินจริงไม่ตึง',
-    asOf: mdAsOf('US_REAL10Y')});
+    asOf: mdAsOf('US_REAL10Y')}, 75);
 
   // 11) น้ำมัน — ตัวส่งผ่านเข้าเงินเฟ้อ
   const oil = mdNum('OIL_WTI');
@@ -1051,8 +1100,57 @@ function computeRegime(){
 
   return { label, color, desc, posture, risk, avg, spectrum, signals: sig,
            cashRange: cashLo+'-'+(cashLo+5)+'%', negatives: neg, positives: pos,
+           stale,                                  // สัญญาณที่ถูกตัดเพราะเก่าเกิน
            dataAsOf: asOfList.length ? asOfList[asOfList.length-1] : null,
            oldestAsOf: asOfList.length ? asOfList[0] : null };
+}
+
+// ═══ SIGNALS — สัญญาณรายตัวจาก fetch_signals.py ════════════════════
+// pipeline คำนวณ RSI/MA/drawdown/คะแนน มาให้แล้ว ฝั่งนี้ไม่คำนวณซ้ำ
+// เหตุผล: ถ้าคำนวณสองที่ วันหนึ่งสูตรจะต่างกันโดยไม่มีใครรู้ (เคยเกิดกับ RSI มาแล้ว)
+// หน้าที่ของฟังก์ชันพวกนี้คือ "อ่าน + ตรวจอายุ" เท่านั้น
+const SIGNAL_MAX_DAYS = 7;          // สัญญาณเก่ากว่านี้ = ไม่ใช้ตัดสินใจ
+
+function loadSignals(){
+  const act = loadActions();
+  const s = act && act.signals;
+  if(!s || !Object.keys(s).length) return null;
+  const now = Date.now();
+  const out = [];
+  Object.entries(s).forEach(([tk, d])=>{
+    if(!d || typeof d !== 'object') return;
+    const age = d.updated ? Math.floor((now - Date.parse(d.updated+'T00:00:00Z'))/864e5) : null;
+    out.push({ ticker: tk, ...d, age, stale: age == null || age > SIGNAL_MAX_DAYS });
+  });
+  // เรียงตามคะแนน มาก→น้อย แล้วตามชื่อ เพื่อให้ลำดับคงที่เมื่อคะแนนเท่ากัน
+  // (ลำดับที่เปลี่ยนไปมาระหว่างรีเฟรชทำให้คนอ่านสับสนว่าอะไรเปลี่ยนจริง)
+  out.sort((a,b)=> (b.score||0)-(a.score||0) || a.ticker.localeCompare(b.ticker));
+  return out;
+}
+
+function loadRisk(){
+  const act = loadActions();
+  const r = act && act.risk;
+  if(!r || !r.level) return null;
+  // ธงเรียงจากรุนแรงมากไปน้อย — คนอ่านบรรทัดแรกก่อนเสมอ
+  const flags = (r.flags||[]).slice().sort((a,b)=>(b.sev||0)-(a.sev||0));
+  return { ...r, flags };
+}
+
+// สรุปสัญญาณทั้งพอร์ตเป็นประโยคเดียว — ใช้บนการ์ดสรุปและใน LINE
+function signalSummary(list){
+  const L = list || loadSignals();
+  if(!L || !L.length) return null;
+  const usable = L.filter(x=>!x.stale);
+  if(!usable.length) return { count:0, stale:L.length, buy:[], trim:[], breadth:null };
+  const buy  = usable.filter(x=>(x.score||0) >= 3);
+  const trim = usable.filter(x=>(x.score||0) <= -2);
+  const withTrend = usable.filter(x=>x.ma200);
+  const breadth = withTrend.length
+    ? Math.round(100 * withTrend.filter(x=>x.ma200==='Above').length / withTrend.length)
+    : null;
+  return { count: usable.length, stale: L.length - usable.length,
+           buy, trim, breadth };
 }
 
 // ═══ SECTOR DATA จาก pipeline (สำหรับหน้า Sectors) ═══════════════════
