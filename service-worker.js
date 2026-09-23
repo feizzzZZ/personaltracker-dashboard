@@ -1,6 +1,8 @@
+
+Service worker · JS
 // Finance OS — Service Worker v2
 // Cache strategy: Cache-first for shell, Network-first for CDN
-
+ 
 // ══════════════════════════════════════════════════════════════════════
 // v45 — bug ที่ทำให้ Sync ล้มและหน้า Debt โชว์ ฿0
 // ══════════════════════════════════════════════════════════════════════
@@ -22,9 +24,9 @@
 // หน้านั้นถูกยุบเข้า index.html และลบออกจาก repo แล้ว ถ้ายังอยู่ในลิสต์
 // ทุกครั้งที่ install จะ log "ข้ามไฟล์ที่หาไม่เจอ" ซึ่งเป็น noise ที่จะกลบ
 // warning จริงในอนาคต (กลไกข้ามไฟล์หายทำงานถูกแล้ว — แต่ต้องไม่มีของหายตั้งแต่แรก)
-const CACHE_NAME = 'finance-os-v52';  // bump version so old cache is cleared on deploy
+const CACHE_NAME = 'finance-os-v54';  // bump version so old cache is cleared on deploy
 const BASE = '/personaltracker-dashboard';
-
+ 
 // App shell — files to pre-cache on install
 //
 // หมายเหตุ: splash/*.png ไม่อยู่ในนี้โดยตั้งใจ — iOS อ่านภาพ splash ตอนเปิดแอป
@@ -38,7 +40,7 @@ const SHELL_FILES = [
   BASE + '/icon/icon-192x192.png',
   BASE + '/icon/icon-512x512.png',
 ];
-
+ 
 // CDN assets — cache on first use
 // Font URL must match the exact href used in <link> tags so cache hits work
 const CDN_ASSETS = [
@@ -51,7 +53,7 @@ const CDN_ASSETS = [
   // 400'd, so this was caching a failure and Thai text had no font offline.
   'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap',
 ];
-
+ 
 // ── Install: pre-cache app shell ──────────────────────────────────────
 // v40 FIX: เดิมใช้ cache.addAll() ซึ่งเป็น all-or-nothing —
 // ถ้าไฟล์ใดไฟล์หนึ่งหาย (เช่น icon-192 ยังไม่ได้ commit) install จะ reject ทั้งชุด
@@ -73,7 +75,7 @@ self.addEventListener('install', event => {
     }).then(() => self.skipWaiting())
   );
 });
-
+ 
 // ── Activate: clean old caches ────────────────────────────────────────
 self.addEventListener('activate', event => {
   event.waitUntil(
@@ -82,14 +84,14 @@ self.addEventListener('activate', event => {
     ).then(() => self.clients.claim())
   );
 });
-
+ 
 // ── Fetch: serve from cache or network ───────────────────────────────
 self.addEventListener('fetch', event => {
   const url = event.request.url;
-
+ 
   // Skip non-GET and cross-origin except CDN
   if (event.request.method !== 'GET') return;
-
+ 
   // CDN assets: cache-first (they rarely change)
   if (CDN_ASSETS.some(cdn => url.startsWith(cdn)) || url.includes('fonts.g')) {
     event.respondWith(
@@ -106,7 +108,7 @@ self.addEventListener('fetch', event => {
     );
     return;
   }
-
+ 
   // HTML/navigation: NETWORK-FIRST — deploy แล้วเห็นเวอร์ชันใหม่ทันที
   // (cache ใช้เฉพาะตอน offline) แก้ปัญหา "hard reload ทุกครั้งหลัง deploy" ถาวร
   const cleanUrl = url.split('?')[0];
@@ -144,7 +146,7 @@ self.addEventListener('fetch', event => {
     );
     return;
   }
-
+ 
   // Static assets อื่นๆ: cache-first (เร็ว, เปลี่ยนไม่บ่อย)
   if (url.includes(BASE) || url.includes(self.location.origin)) {
     event.respondWith(
@@ -161,8 +163,10 @@ self.addEventListener('fetch', event => {
     );
   }
 });
-
+ 
 // ── Message: force refresh ────────────────────────────────────────────
 self.addEventListener('message', event => {
   if (event.data === 'SKIP_WAITING') self.skipWaiting();
 });
+
+
