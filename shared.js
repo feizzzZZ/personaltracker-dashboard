@@ -1,3 +1,5 @@
+
+Shared · JS
 /* ── #2 + #5: one locale constant for the whole app ─────────────────────
    'th-TH' alone defaults to the BUDDHIST calendar in ICU, so
    toLocaleDateString('th-TH',{year:'numeric'}) returned "2569" instead of
@@ -16,10 +18,10 @@ window.LOC = window.LOC || 'th-TH-u-ca-gregory';
 //   • XIRR engine
 // กติกา: ไฟล์นี้ห้ามแตะ DOM ของหน้าใดหน้าหนึ่ง — pure data layer เท่านั้น
 // ═══════════════════════════════════════════════════════════════════
-const APP_BUILD = 'v51';
+const APP_BUILD = 'v53';
 console.log('[Finance OS shared] build', APP_BUILD);
 window.SHARED_BUILD = APP_BUILD;   // v45 — ให้ index.html ตรวจได้ว่าเวอร์ชันตรงกัน
-
+ 
 // ═══ LIVE_META — นิยามการ์ดข้อมูลตลาด ═══
 const LIVE_META = {
   SP500:     {label:'S&P 500',        fmt:v=>Number(v).toLocaleString(LOC,{maximumFractionDigits:0})},
@@ -63,7 +65,7 @@ const LIVE_META = {
   NDX_RSI:   {label:'Nasdaq RSI (14d)',fmt:v=>Number(v).toFixed(0)},
   NDX_MA200: {label:'Nasdaq vs MA200',fmt:v=>String(v)},
 };
-
+ 
 // ═══ Method 3 — pipeline JSON layer + loadMarketData (merge chain) ═══
 // ── METHOD 3: GitHub Actions pipeline (market-data.json ใน repo เดียวกัน) ──
 function loadActions(){ try{ return JSON.parse(localStorage.getItem('finOS_actions')||'null'); }catch(e){ return null; } }
@@ -126,7 +128,7 @@ function loadMarketData(){
 }
 // เรียกเมื่อเขียนทับ localStorage โดยตรง (เช่น restore backup) เพื่อบังคับให้อ่านใหม่
 function invalidateMarketCache(){ _mdCacheKey = null; _mdCacheVal = null; }
-
+ 
 // ── v48 #21: ตัวไหนที่ pipeline มีราคาให้ แต่ยังไปไม่ถึงจอ ────────────
 // ใช้ debug อาการ "ราคา X ไม่มา" ได้ในบรรทัดเดียวจาก console:
 //   pipelinePriceReport()
@@ -143,7 +145,7 @@ function pipelinePriceReport(){
   console.table(out.sample); console.log(out);
   return out;
 }
-
+ 
 // ═══ #12 — pipeline freshness ═════════════════════════════════════════
 // เหตุผลที่ต้องมี: UI มีจุดเขียว .dot-live กระพริบ `animation:pulse 2s infinite`
 // ตลอดเวลา โดยไม่เคยเช็คอายุข้อมูลเลย ระหว่าง run #40-47 ของ GitHub Actions ที่
@@ -169,7 +171,7 @@ function marketDataAge(){
   return { hours, days, generatedAt: new Date(ts), level, label,
            stats: (act && act.stats) || null };
 }
-
+ 
 // ผูกจุดสถานะกับอายุข้อมูลจริง — เขียว=สด / ส้ม=เริ่มเก่า / แดง=ตาย
 // และ "หยุดกระพริบ" เมื่อไม่สดแล้ว เพราะการกระพริบคือสิ่งที่สื่อว่า live
 function paintFreshnessDot(dotEl, textEl){
@@ -190,7 +192,7 @@ function paintFreshnessDot(dotEl, textEl){
   if(textEl && a.level !== 'fresh') textEl.title = dotEl.title;
   return a;
 }
-
+ 
 // ═══ v44 — HOLDING PRICES จาก pipeline (ช่องทางใหม่ แทนสูตรในชีต) ═══
 // ปัญหาเดิม: ราคาพอร์ตมาจาก Asset_Live_Price_Feed ทางเดียว พอ IMPORTXML ขึ้น
 // #N/A (หุ้นไทย 6 ตัว + Gold) → index.html นับสินทรัพย์นั้นเป็น ฿0 เงียบๆ
@@ -203,7 +205,7 @@ function paintFreshnessDot(dotEl, textEl){
 // จึงต้องเช็คอายุจาก `updated` (วันของราคา) ไม่ใช่ `generated_at` (เวลาที่รัน)
 const PRICE_STALE_DAYS = 4;    // > นี้ = ติดธง stale แต่ยังใช้ได้
 const PRICE_MAX_DAYS   = 12;   // > นี้ = ทิ้ง ไม่เอามาใช้เลย
-
+ 
 // คืน { TICKER: {p, ccy, updated, ageDays, stale, src} } — p เป็น THB แล้ว
 // หมายเหตุ: mdNum(key) รับ argument เดียวและเรียก loadMarketData() เอง
 // (ห้ามส่ง md เข้าไปเป็นตัวแรก — จะกลายเป็น md.data[object] = undefined เงียบๆ)
@@ -211,17 +213,17 @@ function pipelinePricesTHB(staleDays){
   const act = loadActions();
   const src = act && act.prices;
   if(!src || typeof src !== 'object') return {};
-
+ 
   const fx = mdNum('USDTHB');
   const out = {};
   const today = Date.now();
-
+ 
   Object.entries(src).forEach(([tk, o])=>{
     if(!o || !(Number(o.price) > 0)) return;
     const ccy = o.ccy === 'THB' ? 'THB' : 'USD';
     // ไม่มี FX = แปลง USD ไม่ได้ → ข้ามเฉพาะตัว USD ตัว THB ยังใช้ได้
     if(ccy === 'USD' && !(fx > 0)) return;
-
+ 
     // BUGFIX v48 #2 — เดิมต่อ 'T00:00:00Z' ตายตัว ถ้า pipeline ส่ง ISO เต็ม
     // ('2026-08-21T13:05:00Z') จะได้ '…T13:05:00ZT00:00:00Z' = Invalid Date
     // แล้ว `if(!isFinite(t)) return;` จะทิ้งราคานั้นทั้งตัวโดยไม่มีสัญญาณเตือน
@@ -240,7 +242,7 @@ function pipelinePricesTHB(staleDays){
        และ PRICE_MAX_DAYS = 12 แปลว่า "ถึง 12 วันยังใช้ได้" ตลอดทั้งวัน */
     const ageDays = Math.max(0, Math.floor((today - t) / 864e5));
     if(ageDays > PRICE_MAX_DAYS) return;           // เก่าเกินไป ทิ้ง
-
+ 
     out[tk] = {
       p: ccy === 'THB' ? Number(o.price) : Number(o.price) * fx,
       ccy, updated: o.updated,
@@ -251,7 +253,7 @@ function pipelinePricesTHB(staleDays){
   });
   return out;
 }
-
+ 
 // ═══ v44 — LAST KNOWN PRICE: กันพอร์ตกระตุกเวลาไม่มีราคา ═══
 // เดิมราคาหาไม่เจอ = นับเป็น ฿0 ทำให้ Value_Log แกว่ง ±14% วันเว้นวัน
 // (ต่างกัน ~฿43,000 คือหุ้นไทย 6 ตัว + ทอง ที่หลุดสลับกันไปมา)
@@ -269,7 +271,7 @@ function loadLastKnownPrices(){
 function saveLastKnownPrices(map){
   try{ localStorage.setItem(LKP_KEY, JSON.stringify(map)); }catch(e){}
 }
-
+ 
 // รวมทุกแหล่งเป็นแผนที่ราคาเดียว + บอกที่มาของทุก ticker
 //   pipeline (สด) > ชีต > pipeline (stale) > ราคาล่าสุดที่จำไว้
 // คืน { priceMap, srcMap }  โดย srcMap[tk] ∈ pipeline|sheet|stale|cached
@@ -280,7 +282,7 @@ function resolvePrices(sheetPriceMap){
   Object.keys(priceMap).forEach(t=>{
     if(priceMap[t] > 0){ srcMap[t] = 'sheet'; ageMap[t] = 0; }
   });
-
+ 
   const pp = pipelinePricesTHB();
   Object.entries(pp).forEach(([tk, o])=>{
     // ราคา stale ใช้เฉพาะเมื่อชีตไม่มีให้ — ชีตที่มีค่าจริงยังน่าเชื่อกว่าราคาค้าง
@@ -289,7 +291,7 @@ function resolvePrices(sheetPriceMap){
     srcMap[tk]   = o.stale ? 'stale' : 'pipeline';
     ageMap[tk]   = o.ageDays || 0;
   });
-
+ 
   /* v50 BUGFIX — ราคาที่จำไว้เคยไม่มีวันหมดอายุ
      `lkp[tk].d` ถูกเขียนทุกรอบแต่ไม่เคยถูกอ่านเลย ราคาที่จำไว้ข้ามปี
      จึงยังถูกดึงมาใช้เต็มมูลค่า ขัดกับ PRICE_MAX_DAYS โดยตรง
@@ -311,7 +313,7 @@ function resolvePrices(sheetPriceMap){
     srcMap[tk]   = 'cached';
     ageMap[tk]   = age;
   });
-
+ 
   /* จำราคาที่ "รู้จริง" รอบนี้ไว้ใช้คราวหน้า — ไม่จำค่าที่มาจาก cache เอง
      v50: ต้องบันทึก "วันของราคาจริง" ไม่ใช่วันนี้
      เดิมราคา stale อายุ 11 วันถูกบันทึกด้วย d = วันนี้ → อายุจริงหายจากระบบ
@@ -322,10 +324,10 @@ function resolvePrices(sheetPriceMap){
     lkp[tk] = { p, d, src: srcMap[tk] };
   });
   saveLastKnownPrices(lkp);
-
+ 
   return { priceMap, srcMap, ageMap };
 }
-
+ 
 // สรุปคุณภาพราคาให้ UI ใช้ — ไม่ต้องคำนวณซ้ำหลายที่
 function priceQuality(srcMap, tickersHeld){
   const q = { pipeline:0, sheet:0, stale:0, cached:0, missing:[] };
@@ -338,7 +340,7 @@ function priceQuality(srcMap, tickersHeld){
   q.trustworthy = q.missing.length === 0 && q.degraded === 0;
   return q;
 }
-
+ 
 // ══════════════════════════════════════════════════════════════════════
 // v44 — RECONCILIATION  (ชีต `Reconcile`)
 // ══════════════════════════════════════════════════════════════════════
@@ -355,7 +357,7 @@ function priceQuality(srcMap, tickersHeld){
 //   ‣ Account ต้องสะกดตรงกับหัวคอลัมน์บัญชีในชีต Transaction แถว 2
 //   ‣ กรอกทับได้เรื่อยๆ — ระบบใช้ "แถวล่าสุดต่อบัญชี" เท่านั้น
 const RECON_STALE_DAYS = 10;   // เกินนี้ = เตือนว่าถึงเวลา reconcile
-
+ 
 // แปลงแถวดิบจากชีตเป็น { account: {date, actual, note} } เอาแถวล่าสุดต่อบัญชี
 // รับ rows แบบ array-of-array (header อยู่แถว 0) เหมือน sheet_to_json({header:1})
 function parseReconcileRows(rows){
@@ -365,7 +367,7 @@ function parseReconcileRows(rows){
   const iD = idx('date'), iA = idx('account'),
         iB = H.findIndex(h=>/^actual_?balance$/i.test(h)), iN = idx('note');
   if(iA < 0 || iB < 0) return {};
-
+ 
   const out = {};
   for(let i=1;i<rows.length;i++){
     const r = rows[i]; if(!r) continue;
@@ -373,7 +375,7 @@ function parseReconcileRows(rows){
     if(!acc) continue;
     const bal = parseFloat(r[iB]);
     if(!isFinite(bal)) continue;                 // ช่องว่าง/#N/A → ข้าม
-
+ 
     // วันที่: รับทั้ง Date, ISO string และ Google serial number
     let d = '';
     const raw = r[iD];
@@ -382,14 +384,14 @@ function parseReconcileRows(rows){
     // ไม่งั้นการเทียบ d >= prev.date จะข้ามฟอร์แมตกัน ('2026-07-31T…' vs '2026-08-01')
     else if(typeof raw === 'number' && raw > 20000) d = (gserialToISO(raw)||'').slice(0,10);
     else if(raw) d = String(raw).trim().slice(0,10);
-
+ 
     const prev = out[acc];
     if(!prev || (d && d >= prev.date)) out[acc] = { date:d, actual:bal,
       note: iN>=0 && r[iN] ? String(r[iN]).trim() : '' };
   }
   return out;
 }
-
+ 
 // เทียบยอดคำนวณ vs ยอดจริง → คืนรายการที่ต่างกัน + สถานะรวม
 // tolerance: ต่างไม่เกิน 1 บาท = ถือว่าตรง (ปัดเศษ/ดอกเบี้ยเล็กน้อย)
 function computeReconciliation(bals, reconMap, tolerance){
@@ -397,7 +399,7 @@ function computeReconciliation(bals, reconMap, tolerance){
   const map = reconMap || {};
   const accounts = [];
   let worstDate = null, unmatched = 0, totalDrift = 0;
-
+ 
   (bals||[]).forEach(b=>{
     const rec = map[b.name];
     if(!rec){ accounts.push({name:b.name, computed:b.balance, checked:false}); return; }
@@ -408,19 +410,19 @@ function computeReconciliation(bals, reconMap, tolerance){
     accounts.push({name:b.name, computed:b.balance, actual:rec.actual,
                    diff, ok, checked:true, date:rec.date, note:rec.note});
   });
-
+ 
   // BUGFIX v48 #3 — ชื่อบัญชีในชีต Reconcile ที่สะกดไม่ตรงกับหัวคอลัมน์ใน
   // Transaction จะถูกทิ้งเงียบ ผู้ใช้กรอกยอดจริงทุกสัปดาห์แล้วสงสัยว่าทำไม
   // หน้าจอยังบอก "ยังไม่เคย verify" — ต้องบอกให้เห็นว่าชื่อไหนจับคู่ไม่ได้
   const known = new Set((bals||[]).map(b=>b.name));
   const orphans = Object.keys(map).filter(n=>!known.has(n));
-
+ 
   const checked = accounts.filter(a=>a.checked);
   // อายุ = วันที่ reconcile "เก่าสุด" ในบรรดาบัญชีที่เคยเช็ค — ไม่ใช่ล่าสุด
   // เพราะเช็คแค่บัญชีเดียวเมื่อวานไม่ได้แปลว่าทั้งพอร์ตถูก verify แล้ว
   const ageDays = worstDate
     ? Math.floor((Date.now() - Date.parse(worstDate+'T00:00:00Z'))/864e5) : null;
-
+ 
   return {
     accounts,
     checkedCount: checked.length,
@@ -432,7 +434,7 @@ function computeReconciliation(bals, reconMap, tolerance){
     clean: checked.length > 0 && unmatched === 0,
   };
 }
-
+ 
 // ══════════════════════════════════════════════════════════════════════
 // v46 — HOLDING LIFECYCLE  (engine ของหน้า Investment Analysis ใหม่)
 // ══════════════════════════════════════════════════════════════════════
@@ -447,7 +449,7 @@ function computeReconciliation(bals, reconMap, tolerance){
 //     ทั้งที่เป็นการซื้อที่มีวินัยที่สุดในพอร์ต  robust CV ให้ 0.00 ถูกต้อง
 const DORMANT_DAYS = 180;      // ไม่ซื้อเกินนี้ = หลุดจากเรดาร์
 const REGULAR_RCV  = 0.6;      // robust CV ต่ำกว่านี้ = ซื้อเป็นจังหวะสม่ำเสมอ
-
+ 
 function _median(a){
   if(!a.length) return 0;
   const s=[...a].sort((x,y)=>x-y), m=s.length>>1;
@@ -464,7 +466,7 @@ function cadenceRCV(dates){
   const mad=_median(gaps.map(g=>Math.abs(g-med)));
   return {median:med, rcv:mad/med, gaps:gaps.length};
 }
-
+ 
 // ── แท็กที่ผู้ใช้กำหนดเอง: 'core' = ตั้งใจถือ ไม่ต้องเตือน ──
 const HTAG_KEY='finOS_holdingTags';
 function loadHoldingTags(){
@@ -477,7 +479,7 @@ function setHoldingTag(ticker, tag){
   try{ localStorage.setItem(HTAG_KEY, JSON.stringify(t)); }catch(e){}
   return t;
 }
-
+ 
 // จัดกลุ่มสินทรัพย์ที่ยังถืออยู่ ตามพฤติกรรมการซื้อจริง
 //   trades: [{date:Date, type:'Buy'|'Sell'|'Dividend Payout'|'Split',
 //             ticker, qty, thb}]
@@ -508,11 +510,11 @@ function classifyHoldings(trades, assets, priceSrc){
     else if(tt==='Dividend Payout'){ byT[k].div += (t.thb||0); }
     // Split ไม่กระทบต้นทุนและไม่ใช่สัญญาณความสนใจ → ข้าม
   });
-
+ 
   const tags=loadHoldingTags();
   const now=Date.now();
   const out={active:[], dormant:[], intentional:[], stats:{}};
-
+ 
   (assets||[]).forEach(a=>{
     if(!(a.qty>1e-8)) return;                     // ขายหมดแล้ว ไม่ต้องพูดถึง
     const h=byT[a.ticker]||{buys:[],sells:0,div:0,cost:0};
@@ -523,11 +525,11 @@ function classifyHoldings(trades, assets, priceSrc){
        เดิมเลือก h.cost ก่อน ซึ่งเป็นยอดซื้อสะสม *ลบเงินที่ได้จากการขาย*
        การขายที่มีกำไรจึงกัดต้นทุนของหน่วยที่ยังถืออยู่ให้เหลือน้อยผิดปกติ
        และเพราะ h.cost>0 ยังจริง มันจึงชนะ a.cost ที่ถูกต้องอยู่แล้ว
-
+ 
        พิสูจน์: ซื้อ 10 หน่วย ฿10,000 · ขาย 5 ได้ ฿9,000 · เหลือมูลค่า ฿9,000
          เดิม  cost=฿1,000  plPct=+800%
          ถูก   cost=฿5,000  plPct=+80%
-
+ 
        a.cost = WACC × netQty ซึ่งเป็นนิยามต้นทุนของหน่วยที่ถืออยู่จริง
        และ index.html ส่งมาให้ครบทุกตัวอยู่แล้ว จึงต้องเป็นตัวเลือกแรก */
     /* ต้นทุนของ "หน่วยที่ยังถืออยู่" — ต้องลดลงตามจำนวนที่ขายไปแล้ว
@@ -555,7 +557,7 @@ function classifyHoldings(trades, assets, priceSrc){
     else if(ageDays!=null && ageDays>DORMANT_DAYS) out.dormant.push(row);
     else                                      out.active.push(row);
   });
-
+ 
   const sum=(arr,f)=>arr.reduce((s,r)=>s+(f(r)||0),0);
   // เทียบ P&L เฉพาะตัวที่มีราคา — ไม่งั้นเอาต้นทุนเต็มไปหารกับมูลค่าบางส่วน
   const priced=arr=>arr.filter(r=>!r.unpriced);
@@ -573,7 +575,7 @@ function classifyHoldings(trades, assets, priceSrc){
   out.active.sort(bySize); out.dormant.sort(bySize); out.intentional.sort(bySize);
   return out;
 }
-
+ 
 // ══════════════════════════════════════════════════════════════════════
 // v47 — PLATFORM ALLOCATION: กระจายมูลค่าตาม platform ที่ถือจริง
 // ══════════════════════════════════════════════════════════════════════
@@ -593,7 +595,7 @@ function classifyHoldings(trades, assets, priceSrc){
 // วิธีใหม่: นับจำนวนหน่วยคงเหลือแยกตาม (ticker, platform) แล้วแบ่งมูลค่า
 // ปัจจุบันตามสัดส่วนหน่วย — ถูกต้องเพราะหน่วยเดียวกันมีราคาเดียวกัน
 // ไม่ว่าถืออยู่ที่ไหน
-
+ 
 // คืน { ticker: { platform: qty } } — เฉพาะที่คงเหลือ > 0
 function qtyByPlatform(tracker){
   const acc = {};
@@ -608,7 +610,7 @@ function qtyByPlatform(tracker){
     if(tt==='Buy' || tt==='Split')      acc[r.ticker][plat] = (acc[r.ticker][plat]||0) + q;
     else if(tt==='Sell')                acc[r.ticker][plat] = (acc[r.ticker][plat]||0) - q;
   });
-
+ 
   // ปัดเศษลบเป็น 0 — เกิดได้เมื่อขายจากที่หนึ่งแต่บันทึก platform เป็นอีกที่
   // (เช่นโอนเหรียญข้าม exchange แล้วขาย) กรณีนี้ไม่พยายามเดา แต่ไม่ให้ติดลบ
   Object.keys(acc).forEach(t=>{
@@ -618,7 +620,7 @@ function qtyByPlatform(tracker){
   });
   return acc;
 }
-
+ 
 // แบ่งมูลค่าปัจจุบันของแต่ละ asset ตามสัดส่วนหน่วยที่ถือในแต่ละ platform
 // คืน [{group, platform, val, cost, tickers:[]}] พร้อมใช้กับ UI
 function allocateByPlatform(tracker, assets){
@@ -642,7 +644,7 @@ function allocateByPlatform(tracker, assets){
   });
   return out;
 }
-
+ 
 // platform ที่ถือมากที่สุดของ ticker — ใช้แทน platMap เดิมในที่ที่ต้องการค่าเดียว
 function dominantPlatform(tracker, ticker){
   const per = (qtyByPlatform(tracker)[ticker])||{};
@@ -650,7 +652,7 @@ function dominantPlatform(tracker, ticker){
   Object.entries(per).forEach(([p,q])=>{ if(q>bq){ bq=q; best=p; } });
   return best;
 }
-
+ 
 // ═══ Method 2 — external API layer (alternative.me + CoinGecko) ═══
 const EXT_TTL = 10*60e3;
 function loadExt(){ try{ return JSON.parse(localStorage.getItem('finOS_ext')||'null'); }catch(e){ return null; } }
@@ -686,7 +688,7 @@ function mergeExtIntoMarket(md){
   });
   return md;
 }
-
+ 
 // ═══ ALLOC_META + CASH_TARGET ═══
 const ALLOC_META = {
   'US Stock':       {label:'US Stocks',    color:'#00d4a0', target:25},
@@ -705,7 +707,7 @@ const ALLOC_META = {
 const CASH_TARGET = 25; // default เท่านั้น — ค่าจริงมาจาก getTargets()
 // #16 — กองอื่นรวมกัน 75% (25+15+13+10+5+5+2) ดังนั้น cash ต้อง 25 ให้ครบ 100
 //       เดิมตั้ง 22 ทำให้ default รวมได้แค่ 97%
-
+ 
 // ═══ getTargets — เป้า allocation ของผู้ใช้ ═══
 function getTargets(){
   const def = {}; Object.keys(ALLOC_META).forEach(k=>def[k]=ALLOC_META[k].target);
@@ -714,7 +716,7 @@ function getTargets(){
        if(s && typeof s==='object') return {...def, ...s}; }catch(e){}
   return def;
 }
-
+ 
 // ═══ computeDeviations — ตัวคำนวณกลาง Alerts/Allocation ═══
 // v45 — คิด deviation บนฐาน "เงินที่ rebalance ได้จริง" (ตัด illiquid ออก)
 // เหตุผล: target มีความหมายเฉพาะกับเงินที่คุณสั่งซื้อ-ขายได้ Provident Fund
@@ -724,7 +726,7 @@ function computeDeviations(real){
   const targets = getTargets();
   const cashBal = real.cashBalance||0;
   const alloc = real.allocation||{};
-
+ 
   // แยกกองที่ขายไม่ได้ออกก่อน
   const illiquid = [];
   let illiquidVal = 0;
@@ -735,12 +737,12 @@ function computeDeviations(real){
       illiquidVal += v.value;
     }
   });
-
+ 
   const grossVal    = (real.totalValue||0)+cashBal;          // ทั้งพอร์ต+เงินสด
   const totalVal    = grossVal - illiquidVal;                 // ฐานที่ rebalance ได้
   if(totalVal<=0) return {list:[], totalVal:0, grossVal, illiquid, illiquidVal,
                           illiquidPct: grossVal>0 ? illiquidVal/grossVal*100 : 0};
-
+ 
   // target ของกอง illiquid ต้องถูกกระจายคืนให้กองที่เหลือ ไม่งั้นผลรวม target < 100
   /* v50 BUGFIX — เดิมนับจาก illiquid[] ซึ่งมีเฉพาะกองที่ "ถืออยู่จริงและมีมูลค่า"
      ถ้า Provident Fund ไม่อยู่ในพอร์ต (หรืออยู่แต่หาราคาไม่ได้ → value=0)
@@ -756,14 +758,14 @@ function computeDeviations(real){
     .filter(([k])=>!ALLOC_META[k]?.illiquid)
     .reduce((sum,[,t])=>sum+t, 0);
   const scale = liquidTargetSum>0 ? (liquidTargetSum+illiquidTargetSum)/liquidTargetSum : 1;
-
+ 
   const cur={};
   Object.entries(alloc).forEach(([k,v])=>{
     if(ALLOC_META[k]?.illiquid) return;
     if(v.value>0) cur[k]=v.value/totalVal*100;
   });
   cur['Cash']=cashBal/totalVal*100;
-
+ 
   const list=[];
   new Set([...Object.keys(cur),...Object.keys(targets)]).forEach(k=>{
     if(ALLOC_META[k]?.illiquid) return;
@@ -777,7 +779,7 @@ function computeDeviations(real){
   return {list, totalVal, grossVal, illiquid, illiquidVal,
           illiquidPct: grossVal>0 ? illiquidVal/grossVal*100 : 0};
 }
-
+ 
 // ═══ Market bridge — ชีต → localStorage (ทั้ง Excel และ Sheets sync) ═══
 function gserialToISO(v){
   // Google/Excel serial date → ISO string (25569 = 1970-01-01)
@@ -810,7 +812,7 @@ function saveMarketData(rows){
     console.log('[Market] saved', Object.keys(data).length, 'keys');
   }catch(e){console.warn('[Market] save failed:', e.message);}
 }
-
+ 
 // ═══ Value_Log — ประวัติมูลค่าพอร์ตรายวันจากชีต (Apps Script เขียนทุกเช้า) ═══
 // merge เข้า finOS_valueLog: ชีตอุดวันที่โหว่ / วันซ้ำค่าในเครื่องชนะ (convention เดียวกับ restore)
 function mergeValueLogFromSheet(rows){
@@ -834,7 +836,7 @@ function mergeValueLogFromSheet(rows){
     return merged.length;
   }catch(e){ console.warn('[ValueLog] merge failed:', e.message); return 0; }
 }
-
+ 
 // ═══ Benchmark simulation — "ถ้าเงินก้อนเดียวกันเข้า S&P 500 แทน" ═══
 // จำลอง cashflow เดิมทุกรายการซื้อ/ขาย ^GSPC ณ ราคาสัปดาห์นั้น (แปลงเป็นบาทด้วย
 // USD/THB ณ วันเดียวกัน — FX คือส่วนหนึ่งของผลตอบแทนจริงของนักลงทุนไทย)
@@ -884,7 +886,7 @@ function benchmarkXIRR(flows){
   for(const [d] of h.SP500){ if(Date.parse(d) <= nowT) asOf = d; else break; }
   return r===null ? { error:'xirr_no_solution' } : { rate:r, terminal, asOf };
 }
-
+ 
 // ═══ WEALTH GOAL CONFIG — แหล่งเดียวของเป้าหมาย (ทุกหน้าต้องอ่านจากที่นี่) ═══
 // เดิมเป้าหมายกระจายอยู่ 3 ที่และไม่ตรงกัน (Overview ฿3M / Wealth Engine ฿1M /
 // อีเมล Apps Script ฿1M) → ทำให้ progress ที่แสดงขัดกันเอง แก้โดยรวมมาที่นี่
@@ -908,7 +910,7 @@ function nextMilestone(netWorth){
   const cfg = getGoalCfg();
   return cfg.milestones.find(m => netWorth < m) ?? cfg.final;
 }
-
+ 
 // ═══ feeToAdd — commission ที่ยังไม่ถูกรวมใน Total_Amout_THB ═══════
 // ชีตต้นทางไม่สม่ำเสมอ: บางแถวใส่ค่าธรรมเนียมไว้ในยอดรวมแล้ว บางแถวไม่ใส่
 // เทียบกับ base = qty×price×fx เพื่อตัดสินรายแถว — กัน double-count
@@ -921,7 +923,7 @@ function feeToAdd(amtTHB, qty, price, fx, comm){
   const already = Math.abs(gap - c) <= Math.max(0.02, c*0.05);
   return already ? 0 : c;
 }
-
+ 
 // ═══ REGIME ENGINE — บทวิเคราะห์ที่คำนวณจากข้อมูลสด ไม่ใช่ข้อความ hardcode ═══
 // รับสัญญาณจาก market data (ชีต + pipeline FRED/Yahoo + CoinGecko) แล้วให้คะแนน
 // แต่ละตัว -2..+2 → รวมเป็น regime + posture + คำอธิบายที่อ้างตัวเลขจริงทุกคำ
@@ -937,12 +939,50 @@ function mdStr(key){
   const d = md && md.data && md.data[key];
   return d && d.value!=null ? String(d.value) : null;
 }
+/* ═══ ageDaysOf — อายุเป็นวันจากค่าวันที่รูปแบบไหนก็ได้ (v52) ═══════════
+   อาการที่ทำให้ต้องมีฟังก์ชันนี้: หน้า "ตลาดวันนี้" แสดง "NaN วันก่อน"
+   ที่การ์ด S&P 500 · VIX · USD/THB · Bitcoin ขณะที่ทอง กับ S&P vs MA200
+   แสดง "วันนี้" ถูกต้อง — ทั้งที่โค้ดคำนวณอายุบรรทัดเดียวกัน
+ 
+   ต้นเหตุ: โค้ดต่อ 'T00:00:00Z' ท้ายค่าดิบเสมอ ถ้าชีตส่งรูปแบบอื่นมา
+   (เช่น "22-Sep-2026" หรือ ISO เต็ม หรือ serial ของ Excel) จะได้สตริงที่
+   Date.parse อ่านไม่ออก → NaN แล้ว NaN ไหลไปโผล่บนจอตรง ๆ
+   shared.js เคยแก้เรื่องนี้ไปแล้วครั้งหนึ่งที่ pipelinePricesTHB (v48 #2)
+   แต่แก้เฉพาะจุดนั้น ที่อื่นยังต่อสตริงแบบเดิมอยู่ — คราวนี้รวมเป็นที่เดียว
+ 
+   คืน null เมื่ออ่านวันไม่ออก ไม่ใช่ NaN — เพื่อให้ผู้เรียกแยก
+   "ไม่รู้วันที่" ออกจาก "อายุ 0 วัน" ได้ชัดเจน                            */
+function ageDaysOf(v){
+  if(v == null || v === '') return null;
+  let t = NaN;
+  if(v instanceof Date){ t = v.getTime(); }
+  else if(typeof v === 'number' && isFinite(v)){
+    // serial ของ Google Sheets/Excel (25569 = 1970-01-01)
+    if(v > 25569 && v < 80000) t = Math.round((v - 25569) * 86400e3);
+  } else {
+    const s = String(v).trim();
+    if(!s) return null;
+    // ขึ้นต้นด้วย YYYY-MM-DD → ตัดเอาเฉพาะวัน แล้วตรึงเป็น UTC เที่ยงคืน
+    // (ถ้าปล่อยให้ new Date() ตีความเอง จะกลายเป็นเวลาท้องถิ่นแล้วอายุเพี้ยน 1 วัน)
+    const m = s.match(/^(\d{4}-\d{2}-\d{2})/);
+    t = m ? Date.parse(m[1] + 'T00:00:00Z') : Date.parse(s);
+  }
+  if(!isFinite(t)) return null;
+  return Math.max(0, Math.floor((Date.now() - t) / 864e5));
+}
+window.ageDaysOf = ageDaysOf;
+ 
 function mdAsOf(key){
   const md = loadMarketData();
   const d = md && md.data && md.data[key];
-  return d && d.updated ? String(d.updated).slice(0,10) : null;
+  if(!d || d.updated == null || d.updated === '') return null;
+  const s = String(d.updated).trim();
+  // v52 — ตัด 10 ตัวแรกเฉพาะเมื่อเป็น ISO จริง ๆ เท่านั้น
+  // เดิม slice(0,10) แบบไม่ดูรูปแบบ ทำให้ "22-Sep-2026" กลายเป็น "22-Sep-202"
+  // ซึ่งอ่านเป็นวันที่ไม่ได้เลย แล้วอายุกลายเป็น NaN ไหลไปโผล่บนจอ
+  return /^\d{4}-\d{2}-\d{2}/.test(s) ? s.slice(0,10) : s;
 }
-
+ 
 function computeRegime(){
   const sig = [];
   const stale = [];
@@ -955,20 +995,26 @@ function computeRegime(){
     if(!o) return;
     const lim = maxDays || 10;
     if(o.asOf){
-      const age = Math.floor((Date.now() - Date.parse(o.asOf+'T00:00:00Z'))/864e5);
-      if(isFinite(age) && age > lim){ stale.push({...o, age, limit:lim}); return; }
-      o.age = isFinite(age) ? age : null;
+      // v52 — ใช้ ageDaysOf ที่อ่านได้ทุกรูปแบบ แทนการต่อ 'T00:00:00Z' ตายตัว
+      const age = ageDaysOf(o.asOf);
+      // "อ่านวันไม่ออก" ต้องถูกตัดทิ้งเหมือน "เก่าเกิน" ไม่ใช่ผ่านไปเป็นของสด
+      // เดิมถ้า parse ไม่ได้จะได้ NaN แล้วเงื่อนไข isFinite ทำให้ "ผ่าน"
+      // = สัญญาณที่ตรวจอายุไม่ได้ถูกนับรวมในค่าเฉลี่ยเหมือนของสด
+      // ซึ่งเป็นความผิดแบบเดียวกับที่ทั้งงานนี้ตั้งใจกำจัด
+      if(age === null){ stale.push({...o, age:null, limit:lim}); return; }
+      if(age > lim){ stale.push({...o, age, limit:lim}); return; }
+      o.age = age;
     }
     sig.push(o);
   };
-
+ 
   // 1) เงินเฟ้อ — เทียบเป้า Fed 2%
   const cpi = mdNum('US_CPI');
   if(cpi!=null) push({key:'cpi', label:'เงินเฟ้อ US (CPI YoY)', val:cpi.toFixed(1)+'%',
     score: cpi>=4?-2 : cpi>=3?-1 : cpi>=2.5?0 : cpi>=1.5?1 : 0,
     note: cpi>=3?'สูงกว่าเป้า 2% มาก — จำกัดพื้นที่ผ่อนคลายนโยบาย'
         : cpi>=2.5?'ยังเหนือเป้าเล็กน้อย' : 'ใกล้เป้า Fed', asOf: mdAsOf('US_CPI')}, 75);
-
+ 
   // 2) ภาวะการเงินระยะสั้น — เทียบ neutral rate ~3%
   // ═══════════════════════════════════════════════════════════════
   // เดิมใช้ FED_RATE (FRED DFEDTARU) ซึ่งเข้าไม่ถึงแล้วตั้งแต่ v44
@@ -986,21 +1032,21 @@ function computeRegime(){
         : st>=3?'ใกล้ neutral' : 'ผ่อนคลาย หนุนสินทรัพย์เสี่ยง')
         + (stIsFed?'':' · ใช้ ^IRX แทนดอกเบี้ยนโยบาย'),
     asOf: stIsFed ? mdAsOf('FED_RATE') : mdAsOf('US3M')});
-
+ 
   // 3) Yield curve 2s10s — inverted = สัญญาณ recession คลาสสิก
   const yc = mdNum('YIELD_CURVE');
   if(yc!=null) push({key:'curve', label:'Yield Curve 2s10s', val:(yc>=0?'+':'')+yc.toFixed(0)+'bps',
     score: yc<-50?-2 : yc<0?-1 : yc<25?0 : 1,
     note: yc<0?'inverted — สัญญาณเตือน recession'
         : yc<25?'แบนราบ — วัฏจักรปลายทาง' : 'ชันขึ้น — คลายสัญญาณ recession', asOf: mdAsOf('YIELD_CURVE')});
-
+ 
   // 4) ความผันผวน
   const vix = mdNum('VIX');
   if(vix!=null) push({key:'vix', label:'VIX', val:vix.toFixed(1),
     score: vix>=30?-2 : vix>=22?-1 : vix>=15?1 : 0,
     note: vix>=30?'ตลาดตื่นตระหนก' : vix>=22?'ความกังวลสูงขึ้น'
         : vix>=15?'สงบ ปกติ' : 'สงบมาก — ระวังความประมาท', asOf: mdAsOf('VIX')});
-
+ 
   // 5) เทรนด์ US — MA200 + RSI
   const ma = mdStr('SP500_MA200'), rsi = mdNum('SP500_RSI');
   if(ma) push({key:'trend', label:'S&P vs MA200', val:ma,
@@ -1011,7 +1057,7 @@ function computeRegime(){
     note: rsi>=75?'overbought — เสี่ยงพักฐาน' : rsi>=60?'โมเมนตัมดี'
         : rsi>=40?'กลางๆ' : rsi>=25?'อ่อนแรง' : 'oversold — โซนที่ historically คุ้มเสี่ยง',
     asOf: mdAsOf('SP500_RSI')});
-
+ 
   // 6) เครดิต — วัดความเครียดระบบการเงิน
   // ═══════════════════════════════════════════════════════════════
   // HY OAS ตัวจริงหาฟรีไม่ได้แล้ว (FRED บล็อก · ICE คิดเงิน)
@@ -1031,7 +1077,7 @@ function computeRegime(){
     note: cz>=2?'ตลาดเครดิตเครียดผิดปกติ' : cz>=1?'เริ่มตึงกว่าค่าเฉลี่ยปี'
         : cz>=-0.5?'ปกติ' : 'ผ่อนคลาย — ความเสี่ยงถูกประเมินต่ำ',
     asOf: mdAsOf('CREDIT_STRESS')});
-
+ 
   // 7) ตลาดไทย
   const smt = mdStr('SET_MA200'), srsi = mdNum('SET_RSI');
   if(smt) push({key:'th', label:'SET vs MA200', val:smt, score:/above/i.test(smt)?1:-1,
@@ -1040,37 +1086,37 @@ function computeRegime(){
     score: srsi>=75?-1 : srsi>=60?1 : srsi>=40?0 : -1,
     note: srsi>=75?'ร้อนแรงเกิน' : srsi>=60?'โมเมนตัมดี' : srsi>=40?'กลางๆ':'อ่อนแรง',
     asOf: mdAsOf('SET_RSI')});
-
+ 
   // 8) Core inflation — ตัวที่ Fed ดูจริง (sticky กว่า headline)
   const core = mdNum('US_CORE_PCE') ?? mdNum('US_CORE_CPI');
   if(core!=null) push({key:'core', label:'Core inflation', val:core.toFixed(1)+'%',
     score: core>=3.5?-2 : core>=2.8?-1 : core>=2.2?0 : 1,
     note: core>=2.8?'core ยังหนืด — Fed ผ่อนคลายยาก' : 'core เข้าใกล้เป้า',
     asOf: mdAsOf('US_CORE_PCE')||mdAsOf('US_CORE_CPI')}, 75);
-
+ 
   // 9) ตลาดแรงงาน — เย็นเกินไป = สัญญาณ recession
   const un = mdNum('US_UNEMP');
   if(un!=null) push({key:'unemp', label:'US Unemployment', val:un.toFixed(1)+'%',
     score: un>=5?-2 : un>=4.5?-1 : un>=3.5?1 : 0,
     note: un>=4.5?'ว่างงานสูงขึ้น — อุปสงค์อ่อน' : un>=3.5?'ตลาดแรงงานแข็งแรง':'ตึงตัวมาก',
     asOf: mdAsOf('US_UNEMP')}, 75);
-
+ 
   // 10) Real yield — ต้นทุนเงินจริงหลังหักเงินเฟ้อ
   const rr = mdNum('US_REAL10Y');
   if(rr!=null) push({key:'real', label:'Real 10Y (TIPS)', val:rr.toFixed(2)+'%',
     score: rr>=2.5?-2 : rr>=1.8?-1 : rr>=0.5?0 : 1,
     note: rr>=1.8?'ต้นทุนเงินจริงสูง — กดดันสินทรัพย์เสี่ยง' : 'ต้นทุนเงินจริงไม่ตึง',
     asOf: mdAsOf('US_REAL10Y')}, 75);
-
+ 
   // 11) น้ำมัน — ตัวส่งผ่านเข้าเงินเฟ้อ
   const oil = mdNum('OIL_WTI');
   if(oil!=null) push({key:'oil', label:'WTI Crude', val:'$'+oil.toFixed(0),
     score: oil>=100?-2 : oil>=85?-1 : oil>=55?1 : 0,
     note: oil>=85?'น้ำมันแพง — กดดันเงินเฟ้อ' : oil>=55?'ระดับปกติ':'ต่ำ — อุปสงค์อ่อน?',
     asOf: mdAsOf('OIL_WTI')});
-
+ 
   if(sig.length < 3) return null;   // ข้อมูลน้อยเกินกว่าจะสรุป regime
-
+ 
   const avg = sig.reduce((s,x)=>s+x.score,0)/sig.length;
   let label, color, desc;
   if(avg >= 0.7){ label='Risk-On Expansion'; color='gain';
@@ -1083,7 +1129,7 @@ function computeRegime(){
     desc='ปัจจัยลบเริ่มมากกว่าบวก — เน้นคุณภาพและกระจายความเสี่ยง'; }
   else { label='Risk-Off / Defensive'; color='loss';
     desc='สัญญาณเตือนหลายด้านพร้อมกัน — ให้ความสำคัญกับการรักษาเงินต้น'; }
-
+ 
   // posture + cash จาก score
   const posture = avg>=0.7 ? 'Growth + Momentum'
                 : avg>=0.25 ? 'Quality Growth'
@@ -1097,20 +1143,20 @@ function computeRegime(){
   const neg = sig.filter(x=>x.score<0).sort((a,b)=>a.score-b.score);
   const pos = sig.filter(x=>x.score>0).sort((a,b)=>b.score-a.score);
   const asOfList = sig.map(x=>x.asOf).filter(Boolean).sort();
-
+ 
   return { label, color, desc, posture, risk, avg, spectrum, signals: sig,
            cashRange: cashLo+'-'+(cashLo+5)+'%', negatives: neg, positives: pos,
            stale,                                  // สัญญาณที่ถูกตัดเพราะเก่าเกิน
            dataAsOf: asOfList.length ? asOfList[asOfList.length-1] : null,
            oldestAsOf: asOfList.length ? asOfList[0] : null };
 }
-
+ 
 // ═══ SIGNALS — สัญญาณรายตัวจาก fetch_signals.py ════════════════════
 // pipeline คำนวณ RSI/MA/drawdown/คะแนน มาให้แล้ว ฝั่งนี้ไม่คำนวณซ้ำ
 // เหตุผล: ถ้าคำนวณสองที่ วันหนึ่งสูตรจะต่างกันโดยไม่มีใครรู้ (เคยเกิดกับ RSI มาแล้ว)
 // หน้าที่ของฟังก์ชันพวกนี้คือ "อ่าน + ตรวจอายุ" เท่านั้น
 const SIGNAL_MAX_DAYS = 7;          // สัญญาณเก่ากว่านี้ = ไม่ใช้ตัดสินใจ
-
+ 
 function loadSignals(){
   const act = loadActions();
   const s = act && act.signals;
@@ -1119,7 +1165,7 @@ function loadSignals(){
   const out = [];
   Object.entries(s).forEach(([tk, d])=>{
     if(!d || typeof d !== 'object') return;
-    const age = d.updated ? Math.floor((now - Date.parse(d.updated+'T00:00:00Z'))/864e5) : null;
+    const age = ageDaysOf(d.updated);   // v52 — อ่านได้ทุกรูปแบบ ไม่ใช่แค่ ISO
     out.push({ ticker: tk, ...d, age, stale: age == null || age > SIGNAL_MAX_DAYS });
   });
   // เรียงตามคะแนน มาก→น้อย แล้วตามชื่อ เพื่อให้ลำดับคงที่เมื่อคะแนนเท่ากัน
@@ -1127,7 +1173,7 @@ function loadSignals(){
   out.sort((a,b)=> (b.score||0)-(a.score||0) || a.ticker.localeCompare(b.ticker));
   return out;
 }
-
+ 
 function loadRisk(){
   const act = loadActions();
   const r = act && act.risk;
@@ -1136,23 +1182,33 @@ function loadRisk(){
   const flags = (r.flags||[]).slice().sort((a,b)=>(b.sev||0)-(a.sev||0));
   return { ...r, flags };
 }
-
+ 
 // สรุปสัญญาณทั้งพอร์ตเป็นประโยคเดียว — ใช้บนการ์ดสรุปและใน LINE
 function signalSummary(list){
   const L = list || loadSignals();
   if(!L || !L.length) return null;
   const usable = L.filter(x=>!x.stale);
-  if(!usable.length) return { count:0, stale:L.length, buy:[], trim:[], breadth:null };
-  const buy  = usable.filter(x=>(x.score||0) >= 3);
-  const trim = usable.filter(x=>(x.score||0) <= -2);
-  const withTrend = usable.filter(x=>x.ma200);
+  if(!usable.length) return { count:0, stale:L.length, buy:[], trim:[],
+                              breadth:null, ref:0 };
+  /* v53 — สรุปต้องนับเฉพาะ "ของที่ถือจริง"
+     อาการเดิม: การ์ด "ควรชะลอ/ลดน้ำหนัก" ขึ้นว่า AAPL, JEPI, META, NASDAQ
+     NASDAQ เป็นดัชนีอ้างอิง ไม่ใช่สิ่งที่ถืออยู่ — จะ "ลดน้ำหนัก" ไม่ได้
+     และ SP500 (ดัชนี) + VOO (ETF ที่ตามดัชนีนั้น) + NASDAQ นับเป็น 3 เสียง
+     ใน breadth ทั้งที่เป็นความเสี่ยงก้อนเดียวกันเกือบหมด
+     ส่วน USDT เป็น stablecoin ตรึงที่ 1 ดอลลาร์ ไม่มีเทรนด์ให้วัดตั้งแต่แรก
+     pipeline ติดป้าย kind มาให้แล้ว ที่นี่แค่กรอง */
+  const own = usable.filter(x=>(x.kind||'holding')==='holding');
+  const buy  = own.filter(x=>(x.score||0) >= 3);
+  const trim = own.filter(x=>(x.score||0) <= -2);
+  const withTrend = own.filter(x=>x.ma200);
   const breadth = withTrend.length
     ? Math.round(100 * withTrend.filter(x=>x.ma200==='Above').length / withTrend.length)
     : null;
-  return { count: usable.length, stale: L.length - usable.length,
+  return { count: own.length, stale: L.length - usable.length,
+           ref: usable.length - own.length,   // ดัชนี/stablecoin ที่ไม่นับ
            buy, trim, breadth };
 }
-
+ 
 // ═══ SECTOR DATA จาก pipeline (สำหรับหน้า Sectors) ═══════════════════
 function loadSectors(){
   const act = loadActions();
@@ -1173,7 +1229,7 @@ function sectorRating(s){
        : score>=-1? {label:'Neutral',    color:'debt'}
                   : {label:'Underweight',color:'loss'};
 }
-
+ 
 // ═══ XIRR engine (validated กับ ground truth ±0.01%) ═══
 function xirrJS(cfs){
   if(!cfs || cfs.length<2) return null;
@@ -1186,14 +1242,14 @@ function xirrJS(cfs){
   for(let i=0;i<200;i++){ const mid=(lo+hi)/2; if(npv(lo)*npv(mid)<=0) hi=mid; else lo=mid; }
   return (lo+hi)/2;
 }
-
+ 
 // ═══════════════════════════════════════════════════════════════════
 // v40 — LIABILITY & DEBT ENGINE
 // ═══════════════════════════════════════════════════════════════════
 // เดิม bankBals ถูกรวมเป็นก้อนเดียว → บัตรเครดิตติดลบไปหักเงินสดเงียบๆ
 // ทำให้การ์ด "Cash" แสดง ฿22,840 ทั้งที่เงินสดจริง ฿60,894 และหนี้ ฿38,053
 // ตัวเลข Net Worth ถูกอยู่แล้ว แต่คนอ่านตัดสินใจผิดเพราะเห็นเงินสดน้อยกว่าจริง
-
+ 
 // จำแนกบัญชี → 'cash' | 'liability'
 // เกณฑ์: type มีคำว่า Credit = หนี้เสมอ (แม้ยอด 0 หรือบวกจากการจ่ายเกิน)
 //        บัญชีอื่นถ้ายอดติดลบ = เบิกเกินบัญชี ถือเป็นหนี้
@@ -1212,7 +1268,7 @@ function classifyAccount(b){
   if(isCreditAccount(b)) return 'liability';
   return (Number(b.balance) < -BAL_EPS) ? 'liability' : 'cash';
 }
-
+ 
 // แยก bankBals เป็นสองฝั่ง + ยอดรวม
 // คืน: {cashAccounts, liabAccounts, cash, liabilities, net}
 //   cash        = เงินสดที่ใช้ได้จริง (รวมยอดบวกของบัญชี credit ที่จ่ายเกินด้วย)
@@ -1234,7 +1290,7 @@ function splitBalances(bals){
   }, 0);
   return { cashAccounts, liabAccounts, cash, liabilities, net: cash-liabilities };
 }
-
+ 
 // ══════════════════════════════════════════════════════════════════════
 // v48 — DEBT COMPOSITION & RECONCILED BALANCES
 // ══════════════════════════════════════════════════════════════════════
@@ -1247,9 +1303,9 @@ function splitBalances(bals){
 //   2) หนี้ *จริง* คือเท่าไร — ยอดคำนวณจากธุรกรรมที่กรอกมือ ≠ ยอดที่ธนาคารบอก
 //      ชีต Reconcile มีคำตอบข้อ 2 อยู่แล้ว แต่ไม่เคยถูกใช้กับตัวเลขหนี้เลย
 //      (ใช้แค่โชว์ตารางเทียบในหน้า Accounts)
-
+ 
 const RECON_TRUST_DAYS = 45;   // ยอดจริงเก่าเกินนี้ = ไม่กล้าใช้แทนยอดคำนวณแล้ว
-
+ 
 // ── applyReconciliation ──────────────────────────────────────────────
 // คืนชุดยอดบัญชีที่ "ใช้ยอดจริงจากธนาคารเมื่อมี และยังไม่เก่าเกินไป"
 // คืน { bals, source:{name:'bank'|'computed'|'stale'}, nBank, nStale, asOf }
@@ -1259,7 +1315,7 @@ function applyReconciliation(bals, reconMap, maxAgeDays){
   const map = reconMap || {};
   const source = {};
   let nBank = 0, nStale = 0, newest = null;
-
+ 
   const out = (bals||[]).map(b=>{
     const rec = map[b.name];
     if(!rec || !isFinite(rec.actual)){ source[b.name]='computed'; return {...b}; }
@@ -1271,13 +1327,13 @@ function applyReconciliation(bals, reconMap, maxAgeDays){
     return {...b, balance: rec.actual, computedBalance: b.balance,
             reconDate: rec.date||null, reconDiff: rec.actual - b.balance};
   });
-
+ 
   return { bals: out, source, nBank, nStale,
            nTotal: out.length, asOf: newest,
            // ผลต่างรวมที่ถูก "ยอมรับ" เข้าไปในตัวเลข — ต้องโชว์ให้เห็น
            adopted: out.reduce((s,b)=>s+(b.reconDiff||0), 0) };
 }
-
+ 
 // ── debtComposition ──────────────────────────────────────────────────
 // แตกยอดคงเหลือของแต่ละบัญชีหนี้ออกตาม "ประเภทธุรกรรม" ที่ทำให้เกิดยอดนั้น
 // ต้องการ txRows ที่มี r.acct = {ชื่อบัญชี: จำนวน} (เพิ่มใน v48)
@@ -1302,14 +1358,14 @@ function normMerchant(raw){
   _MERCH_CACHE.set(s0, out);
   return out;
 }
-
+ 
 function debtComposition(txRows, accountNames, monthKey){
   const want = new Set(accountNames||[]);
   const out = {};
   want.forEach(n=>{ out[n] = { name:n, byType:{}, byMerchant:{}, charged:0, repaid:0, net:0,
                                mCharged:0, mRepaid:0, mNet:0, n:0, mN:0,
                                firstDate:null, lastDate:null, hasDetail:false }; });
-
+ 
   (txRows||[]).forEach(r=>{
     if(!r || !r.acct) return;
     Object.entries(r.acct).forEach(([name, amt])=>{
@@ -1327,7 +1383,7 @@ function debtComposition(txRows, accountNames, monthKey){
       if(amt < 0){ o.byType[t].out += -amt; o.charged += -amt; }
       else       { o.byType[t].in  +=  amt; o.repaid  +=  amt; }
       o.byType[t].n++; o.n++; o.net += amt;
-
+ 
       // แกนหลัก: ร้านค้า/รายละเอียด (เฉพาะฝั่งที่ทำให้หนี้เพิ่ม)
       if(amt < 0){
         const m = normMerchant(r.details) || (r.category || 'ไม่ระบุ');
@@ -1346,7 +1402,7 @@ function debtComposition(txRows, accountNames, monthKey){
       }
     });
   });
-
+ 
   // จัดอันดับประเภทที่สร้างหนี้มากที่สุด — คือคำตอบของ "หนี้ก้อนนี้มาจากอะไร"
   Object.values(out).forEach(o=>{
     o.topCharge = Object.entries(o.byType)
@@ -1362,7 +1418,7 @@ function debtComposition(txRows, accountNames, monthKey){
   });
   return out;
 }
-
+ 
 // ═══ Realized P&L — running-WACC ═══
 // waccMap (เฉลี่ยจากยอดซื้อทั้งหมด) ใช้ประเมิน cost basis ของ "หุ้นที่ถืออยู่ตอนนี้" ได้ถูกต้อง
 // (เพราะ WACC เฉลี่ยไม่เปลี่ยนตอนขาย) แต่ใช้ค่าเดียวนี้ย้อนไปคำนวณ P&L ของการขายในอดีต "ผิด"
@@ -1398,7 +1454,7 @@ function computeRunningWaccRealized(trackerRows, isCostTx, sellTxTypes){
   });
   return realized;
 }
-
+ 
 // ═══ DEBT CONFIG — ดอกเบี้ย/ขั้นต่ำต่อบัญชี (ผู้ใช้กรอกเอง เก็บในเครื่อง) ═══
 // ดอกเบี้ยไม่ได้อยู่ในชีต — ต้องให้ผู้ใช้ใส่ ไม่งั้นแผนปลดหนี้เป็นแค่การเดา
 const DEBT_DEFAULT = {
@@ -1420,7 +1476,7 @@ function saveDebtCfg(cfg){
   const cur = getDebtCfg();
   localStorage.setItem('finOS_debtCfg', JSON.stringify({...cur, ...cfg, apr:{...cur.apr, ...(cfg.apr||{})}, free:{...(cur.free||{}), ...(cfg.free||{})}}));
 }
-
+ 
 // ═══ buildDebtPlan — จำลองการปลดหนี้เดือนต่อเดือน ═══
 // avalanche: จ่ายขั้นต่ำทุกใบ แล้วโยนเงินเหลือทั้งหมดใส่ใบที่ APR สูงสุด
 // snowball : เหมือนกันแต่เรียงตามยอดน้อยสุด (แพงกว่า แต่เห็นผลเร็ว = แรงใจ)
@@ -1446,21 +1502,21 @@ function buildDebtPlan(liabAccounts, cfg){
     })
     .filter(d=>d.bal > 0.5);
   if(!debts.length) return null;
-
+ 
   const totalStart = debts.reduce((s,d)=>s+d.bal, 0);
   const minOf = d => Math.min(d.bal, Math.max(cfg.minFloor, d.bal * cfg.minPct/100));
   const baseMin = debts.reduce((s,d)=>s+minOf(d), 0);
   const budget = baseMin + Math.max(0, Number(cfg.extraPerMonth)||0);
-
+ 
   // เรียงลำดับเป้าโจมตี
   const order = cfg.strategy==='snowball'
     ? [...debts].sort((a,b)=>a.bal-b.bal)
     : [...debts].sort((a,b)=>b.apr-a.apr || a.bal-b.bal);
-
+ 
   let month = 0, totalInterest = 0;
   const timeline = [], payoffMonth = {};
   const MAX = 600;   // 50 ปี — เกินนี้ถือว่าไม่มีวันหมด
-
+ 
   while(debts.some(d=>d.bal>0.5) && month < MAX){
     month++;
     let pool = budget;
@@ -1490,7 +1546,7 @@ function buildDebtPlan(liabAccounts, cfg){
     debts.forEach(d=>{ if(d.bal<=0.5 && !payoffMonth[d.name]){ payoffMonth[d.name]=month; d.bal=0; d.free=0; } });
     timeline.push({ m:month, total: debts.reduce((s,d)=>s+d.bal,0) });
   }
-
+ 
   const done = month < MAX;
   return {
     months: done ? month : Infinity,
@@ -1509,7 +1565,7 @@ function totalStartOf(liabAccounts, name){
   const b = (liabAccounts||[]).find(x=>x.name===name);
   return b ? Math.abs(Math.min(0, b.balance)) : 0;
 }
-
+ 
 // ═══ debtVsInvest — เปรียบเทียบ "จ่ายหนี้" vs "ลงทุน" ═══
 // จ่ายหนี้ APR 16% = ผลตอบแทนรับประกัน 16% ปลอดภาษี ปลอดความผันผวน
 // ต้องเทียบกับผลตอบแทนคาดหวังของพอร์ต (getGoalCfg().expectedReturn)
@@ -1543,7 +1599,7 @@ function debtVsInvest(liabAccounts, cfg){
   return { rows, expectedReturn: exp, yearlyInterest,
            monthlyInterest: yearlyInterest/12, freeTotal, intTotal };
 }
-
+ 
 // ══════════════════════════════════════════════════════════════════════
 // v49 — ANALYST DESK
 // ══════════════════════════════════════════════════════════════════════
@@ -1561,13 +1617,13 @@ function debtVsInvest(liabAccounts, cfg){
 // สัญญาของฟังก์ชัน: pure — รับ ctx ก้อนเดียว คืน array ไม่แตะ DOM/globals
 // ระดับความสำคัญ: 'r' = ต้องแก้, 'y' = เฝ้าดู, 'g' = ผ่าน
 const ANALYST_SEV = { r:3, y:2, g:1 };
-
+ 
 /* LOC ถูกประกาศใน index.html ไม่ใช่ที่นี่ — engine ต้องไม่พึ่งตัวแปรของฝั่ง UI
    ไม่งั้นทดสอบนอกเบราว์เซอร์ไม่ได้ และถ้าลำดับโหลดเปลี่ยนก็พังทั้งชุด
    (จับได้จาก try/catch รายคน ตอนรันจริงกับข้อมูลในชีต) */
 const _AL = (typeof LOC!=='undefined' && LOC) ? LOC : 'th-TH';
 const _n  = v => Math.round(Number(v)||0).toLocaleString(_AL);
-
+ 
 function _pick(findings){
   // headline = ประเด็นที่หนักสุด ถ้าไม่มีอะไรหนักเลยค่อยชมได้
   const sorted = [...findings].sort((a,b)=>ANALYST_SEV[b.s]-ANALYST_SEV[a.s]);
@@ -1584,16 +1640,16 @@ function _mk(id, name, role, icon, findings, actions){
            counts: { r:nR, y:nY, g:f.length-nR-nY } };
 }
 const _pc = v => (v>=0?'+':'−') + Math.abs(v).toFixed(1) + '%';
-
+ 
 // ── 1. Portfolio Analyst ─────────────────────────────────────────────
 function analystPortfolio(c){
   const F=[], A=[];
   const held = (c.assets||[]).filter(a=>a.val>0);
   const tot  = held.reduce((s,a)=>s+a.val,0);
-
+ 
   if(!held.length) return _mk('portfolio','Portfolio Analyst','คุณภาพผลตอบแทน','📊',
     [{s:'y',t:'ยังไม่มีสินทรัพย์ในพอร์ต',d:'เพิ่มรายการในชีต Asset_Tracker แล้ว sync'}],[]);
-
+ 
   // (1) โตเพราะฝีมือ หรือเพราะเติมเงิน — คำถามแรกที่ต้องตอบเสมอ
   if(c.moneyIn>0){
     const gain = c.totalVal + (c.moneyOut||0) - c.moneyIn;
@@ -1636,7 +1692,7 @@ function analystPortfolio(c){
   }
   return _mk('portfolio','Portfolio Analyst','คุณภาพผลตอบแทน','📊',F,A);
 }
-
+ 
 // ── 2. Risk Analyst ──────────────────────────────────────────────────
 function analystRisk(c){
   const F=[], A=[];
@@ -1644,7 +1700,7 @@ function analystRisk(c){
   const tot=held.reduce((s,a)=>s+a.val,0);
   if(!tot) return _mk('risk','Risk Analyst','จุดที่จะเจ็บถ้าตลาดพัง','🛡',
     [{s:'y',t:'ยังไม่มีพอร์ตให้ประเมินความเสี่ยง',d:''}],[]);
-
+ 
   // (1) กระจุกตัวรายตัว — อันตรายกว่ากระจุกราย asset class
   const bySym=[...held].sort((a,b)=>b.val-a.val);
   const t1=bySym[0], p1=t1.val/tot*100;
@@ -1655,26 +1711,26 @@ function analystRisk(c){
   const top3=bySym.slice(0,3).reduce((s,a)=>s+a.val,0)/tot*100;
   if(top3>50) F.push({s:'y',t:`3 ตัวแรกรวมกัน ${top3.toFixed(0)}% ของพอร์ต`,
     d:`${bySym.slice(0,3).map(a=>a.ticker).join(' · ')} — จำนวนตัวเยอะไม่ได้แปลว่ากระจายความเสี่ยงแล้ว`});
-
+ 
   // (2) ค่าเงิน — รายจ่ายเป็นบาท 100% แต่สินทรัพย์ไม่ใช่
   const usd=held.filter(a=>a.currency==='USD').reduce((s,a)=>s+a.val,0);
   const up=usd/tot*100;
   if(up>0) F.push({ s:up>60?'y':'g', t:`อิงค่าเงินดอลลาร์ ${up.toFixed(0)}% (${_n(usd)} บาท)`,
     d:`USD/THB แข็ง/อ่อน 1 บาท ≈ ${_n(usd/(c.usdthb||34))} บาทในมูลค่าพอร์ต`
       + (up>60?' — รายจ่ายคุณเป็นบาททั้งหมด ความเสี่ยงนี้ไม่มีอะไรหักล้าง':'') });
-
+ 
   // (3) สภาพคล่อง — เงินที่แตะไม่ได้ตอนต้องใช้ คือเงินที่ไม่มี
   if(c.illiquidPct>0) F.push({ s:c.illiquidPct>35?'y':'g',
     t:`สินทรัพย์ที่ขายไม่ได้ ${c.illiquidPct.toFixed(0)}% ของความมั่งคั่ง`,
     d:'กองทุนสำรองเลี้ยงชีพถอนไม่ได้จนกว่าจะออกจากงาน — ตัวเลข Net Worth ที่เห็นจึงใช้จริงได้ไม่หมด' });
-
+ 
   // (4) เงินสำรองฉุกเฉิน — ด่านแรกที่กันไม่ให้ต้องขายพอร์ตตอนตลาดแดง
   if(c.efMonths!=null) F.push({ s:c.efMonths<3?'r':c.efMonths<6?'y':'g',
     t:`เงินสำรองฉุกเฉินครอบคลุม ${c.efMonths.toFixed(1)} เดือน`,
     d: c.efMonths<3
       ? `ต่ำกว่า 3 เดือน — ถ้ารายได้สะดุดตอนตลาดลง จะถูกบังคับขายพอร์ตที่จุดต่ำสุด ซึ่งเปลี่ยนขาดทุนชั่วคราวให้เป็นขาดทุนถาวร`
       : 'พอรับแรงกระแทกได้โดยไม่ต้องแตะพอร์ต' });
-
+ 
   // (5) บริบทตลาด — ไม่ทำนาย แค่บอกว่ายืนอยู่ตรงไหน
   if(c.vix!=null) F.push({ s:c.vix>28?'y':'g', t:`VIX ${c.vix.toFixed(1)} — ${c.vix>28?'ตลาดกำลังกลัว':c.vix<15?'ตลาดนิ่งผิดปกติ':'ปกติ'}`,
     d: c.vix>28?'ช่วงผันผวนสูงคือช่วงที่ DCA ได้เปรียบที่สุด และเป็นช่วงที่คนหยุด DCA มากที่สุด'
@@ -1690,14 +1746,14 @@ function analystRisk(c){
     A.push(`${t1.ticker} ขายไม่ได้จึงลดน้ำหนักตรงๆ ไม่ได้ — ให้เจือจางด้วยการเติมเงินใหม่เข้ากองอื่นแทน`);
   return _mk('risk','Risk Analyst','จุดที่จะเจ็บถ้าตลาดพัง','🛡',F,A);
 }
-
+ 
 // ── 3. Cashflow Analyst ──────────────────────────────────────────────
 function analystCashflow(c){
   const F=[], A=[];
   const m=c.months||[];
   if(m.length<2) return _mk('cashflow','Cashflow Analyst','เก็บได้จริงเท่าไร รั่วตรงไหน','💧',
     [{s:'y',t:'ข้อมูลยังไม่พอ ต้องมีอย่างน้อย 2 เดือน',d:''}],[]);
-
+ 
   const recent=m.slice(-6);
   const avgInc=recent.reduce((s,x)=>s+x.income,0)/recent.length;
   const avgSav=recent.reduce((s,x)=>s+Math.abs(x.savings),0)/recent.length;
@@ -1705,12 +1761,12 @@ function analystCashflow(c){
   F.push({ s:sr<10?'r':sr<20?'y':'g', t:`Saving rate เฉลี่ย ${sr.toFixed(0)}% (${recent.length} เดือนล่าสุด)`,
     d:`เก็บได้เดือนละ ${_n(avgSav)} จากรายได้ ${_n(avgInc)} บาท`
       + (sr<20?' — ทุก 1% ที่เพิ่มได้ มีผลต่อวันเกษียณมากกว่าการหาผลตอบแทนเพิ่ม 1%':'') });
-
+ 
   // เดือนที่ติดลบ = เดือนที่กินเงินเก็บ
   const neg=recent.filter(x=>x.net<0);
   if(neg.length) F.push({ s:neg.length>=3?'r':'y', t:`${neg.length} ใน ${recent.length} เดือนล่าสุดใช้เกินรายได้`,
     d:`${neg.map(x=>x.mk).join(' · ')} — เดือนที่ติดลบคือเดือนที่กินเงินเก็บหรือก่อหนี้เพิ่ม` });
-
+ 
   // ความผันผวนของรายจ่าย — วางแผนไม่ได้ถ้าเดือนต่อเดือนเหวี่ยง
   const exps=recent.map(x=>Math.abs(x.expense));
   const avgE=exps.reduce((a,b)=>a+b,0)/exps.length;
@@ -1719,11 +1775,11 @@ function analystCashflow(c){
   F.push({ s:cv>40?'y':'g', t:`รายจ่ายเหวี่ยง ±${cv.toFixed(0)}% ระหว่างเดือน`,
     d: cv>40?'ผันผวนสูงแปลว่ามีรายจ่ายก้อนใหญ่ที่ไม่ได้ตั้งงบไว้ — ควรกันเป็นก้อนแยกล่วงหน้า'
             :'ค่อนข้างคงที่ วางแผนงบได้แม่น' });
-
+ 
   // เก็บได้แต่ไม่ได้ลงทุน — เงินนอนอยู่เฉยๆ คือขาดทุนจากเงินเฟ้อ
   if(c.investGap>1000) F.push({ s:'y', t:`เก็บได้แต่ยังไม่ลงทุน ${_n(c.investGap)} บาท/เดือน`,
     d:'เงินสดส่วนเกินจากเงินสำรองที่จำเป็น แพ้เงินเฟ้อทุกเดือนที่ปล่อยไว้เฉยๆ' });
-
+ 
   if(c.overBudget && c.overBudget.length){
     const o=c.overBudget;
     F.push({ s:'y', t:`เดือนนี้งบเกิน ${o.length} หมวด รวม ${Math.round(o.reduce((s,x)=>s+(x.spent-x.lim),0)).toLocaleString(_AL)} บาท`,
@@ -1733,18 +1789,18 @@ function analystCashflow(c){
   if(sr<20) A.push(`ดัน saving rate จาก ${sr.toFixed(0)}% ไป 20% = เก็บเพิ่มเดือนละ ${_n(avgInc*0.2-avgSav)} บาท`);
   return _mk('cashflow','Cashflow Analyst','เก็บได้จริงเท่าไร รั่วตรงไหน','💧',F,A);
 }
-
+ 
 // ── 4. Debt Analyst ──────────────────────────────────────────────────
 function analystDebt(c){
   const F=[], A=[];
   if(!c.liabilities || c.liabilities<=0)
     return _mk('debt','Debt Analyst','หนี้โตหรือลด · โปะหรือลงทุน','⚖️',
       [{s:'g',t:'ไม่มีหนี้คงค้าง',d:'สถานะที่ดีที่สุด — เงินทุกบาทที่เก็บได้ไปทำงานให้คุณเต็มจำนวน'}],[]);
-
+ 
   F.push({ s:'y', t:`หนี้คงค้างรวม ${_n(c.liabilities)} บาท`,
     d: c.reconVerified ? 'ยอดนี้ตรวจสอบกับยอดจริงจากธนาคารแล้ว'
                        : '⚠ ยอดนี้คำนวณจากธุรกรรมที่กรอกมือ ยังไม่ได้ verify กับแอปธนาคาร' });
-
+ 
   if(c.monthlyInterest>0){
     const yr=c.monthlyInterest*12;
     F.push({ s: c.monthlyInterest>2000?'r':'y', t:`ดอกเบี้ย ${_n(c.monthlyInterest)} บาท/เดือน (${_n(yr)}/ปี)`,
@@ -1775,14 +1831,14 @@ function analystDebt(c){
       d:'ยอดที่จ่ายไม่พอกลบดอกเบี้ยที่เกิดใหม่ — ต้องเพิ่มยอดจ่ายต่อเดือน' });
   return _mk('debt','Debt Analyst','หนี้โตหรือลด · โปะหรือลงทุน','⚖️',F,A);
 }
-
+ 
 // ── 5. FIRE Analyst ──────────────────────────────────────────────────
 function analystFire(c){
   const F=[], A=[];
   const nw=c.netWorth||0, goal=c.goal||0;
   if(goal>0) F.push({ s:'g', t:`ความมั่งคั่งสุทธิ ${_n(nw)} — ${(nw/goal*100).toFixed(1)}% ของเป้า`,
     d:`เหลืออีก ${_n(Math.max(0,goal-nw))} บาท` });
-
+ 
   // ผลตอบแทนที่แท้จริง — เงินเฟ้อคือคู่แข่งที่ไม่เคยหยุดพัก
   if(c.xirr!=null && c.cpi!=null){
     const real=((1+c.xirr)/(1+c.cpi/100)-1)*100;
@@ -1816,13 +1872,13 @@ function analystFire(c){
       d:'ต้องเพิ่มเงินที่เก็บต่อเดือน หรือทบทวนเป้าให้สมจริง' });
   } else if(goal>nw)
     F.push({ s:'r', t:'ยังไม่มีเงินเข้าพอร์ตสม่ำเสมอ', d:'ไม่มีอัตราการเติมเงิน = คำนวณเวลาถึงเป้าไม่ได้' });
-
+ 
   if(c.safeWithdraw>0) F.push({ s:'g', t:`ตอนนี้ถอนได้ ${_n(c.safeWithdraw)} บาท/เดือน ตามกฎ 4%`,
     d: c.burn>0 ? `รายจ่ายจริงของคุณ ${_n(c.burn)} บาท/เดือน — ครอบคลุม ${(c.safeWithdraw/c.burn*100).toFixed(0)}%`
                 : 'คำนวณจากความมั่งคั่งสุทธิปัจจุบัน' });
   return _mk('fire','FIRE Analyst','อีกกี่ปีถึงอิสรภาพ','🔥',F,A);
 }
-
+ 
 function analystDesk(ctx){
   const runners=[analystPortfolio,analystRisk,analystCashflow,analystDebt,analystFire];
   return runners.map(fn=>{
@@ -1831,3 +1887,7 @@ function analystDesk(ctx){
       return _mk(fn.name,'—','เกิดข้อผิดพลาด','⚠',[{s:'y',t:'วิเคราะห์ไม่สำเร็จ',d:e.message}],[]); }
   });
 }
+ 
+
+This file type cannot be opened.
+
