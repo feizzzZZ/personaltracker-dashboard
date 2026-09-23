@@ -575,7 +575,7 @@ merged_prices.update(prices)
 
 payload = {
     "generated_at": FETCHED_AT,
-    "source": "github-actions pipeline v49 (Yahoo + World Bank TH_CPI)",
+    "source": "github-actions pipeline v54 (Yahoo + World Bank TH_CPI)",
     "stats": {
         "keys_this_run": len(data),
         "keys_total": len(merged_data),
@@ -595,6 +595,20 @@ payload = {
     "history": merged_hist,
     "prices": merged_prices,
 }
+
+# ══════════════════════════════════════════════════════════════════════
+# v54 BUGFIX — ต้องคงบล็อกที่ fetch_signals.py เป็นเจ้าของไว้
+# ══════════════════════════════════════════════════════════════════════
+# เดิม payload ถูกสร้างใหม่ทั้งก้อนโดยมีแค่ data/history/prices
+# ถ้าขั้น Compute signals ล้มรอบไหน (Yahoo ล่ม · SyntaxError · หมดเวลา)
+# ไฟล์ที่ commit จะไม่มี signals/risk/signals_meta เลย → หน้า Signals ว่าง
+# และ risk หายไปทั้งที่เมื่อวานยังมีครบ
+# คงของรอบก่อนไว้ตามหลักเดียวกับ prices/sectors: ข้อมูลต้อง "แก่ลง" ไม่ใช่ "หายไป"
+# (shared.js เช็คอายุเอง: signals จาก updated · risk จาก computed_at)
+# ถ้า fetch_signals.py รันสำเร็จ มันจะเขียนทับสามบล็อกนี้ด้วยของใหม่อยู่แล้ว
+for _k in ("signals", "risk", "signals_meta"):
+    if _k in prev:
+        payload[_k] = prev[_k]
 
 with open(OUT, "w", encoding="utf-8") as f:
     json.dump(payload, f, ensure_ascii=False, indent=1)
