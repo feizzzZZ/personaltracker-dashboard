@@ -3447,7 +3447,7 @@ const VLOG_PURGED_KEY = 'finOS_valueLogPurged_v44';
 //   ฟังก์ชันหาย  → BLOCK  (แอปคำนวณผิดแน่นอน — นี่คือสิ่งที่ guard มีไว้จับ)
 //   เลขไม่ตรง    → WARN   (แค่ลืม bump — log ไว้ ไม่รบกวนผู้ใช้)
 // ฟังก์ชันที่ต้องมีคือสัญญาจริงระหว่างสองไฟล์ ส่วนสตริงเวอร์ชันเป็นแค่ป้าย
-const EXPECTED_SHARED_BUILD = 'v51';
+const EXPECTED_SHARED_BUILD = 'v53';
 const REQUIRED_SHARED_FNS = [
   'resolvePrices', 'pipelinePricesTHB', 'parseReconcileRows',
   'computeReconciliation', 'splitBalances', 'debtVsInvest', 'buildDebtPlan',
@@ -4541,7 +4541,11 @@ function gsProcessData(map){
     loadGoals();
     updateBudgetBadge(); try{updateDebtBadge();}catch(e){}
     savePortfolioToStorage();
-    switchPage('overview');
+    /* v54 — กลับไปหน้าที่ผู้ใช้เปิดค้างไว้ ไม่ใช่ตีกลับ Overview ทุกครั้ง
+       sync เกิดได้เองจาก visibilitychange (แค่สลับแท็บแล้วกลับมา) การบังคับ
+       ไปหน้าแรกทุกรอบทำให้รู้สึกเหมือนหน้าเว็บ refresh เองตลอดเวลา
+       เงื่อนไข: ต้องมี <div id="page-…"> จริง ไม่งั้นถอยกลับ overview */
+    switchPage(document.getElementById('page-'+curPage) ? curPage : 'overview');
   } catch(e){
     console.error('[GS] Parse error:',e);
     alert('Parse error: '+e.message);
@@ -6274,13 +6278,18 @@ function renderSignals(){
       <td style="padding:9px 10px">
         <div style="font-weight:600;font-size:12.5px">${escHtml(x.ticker)}</div>
         <div style="font-size:10px;color:var(--muted2)">${escHtml(x.sym||'')}${
+          (x.kind==='index')?' · ดัชนีอ้างอิง':(x.kind==='stable')?' · stablecoin':''}${
           x.stale?` · ข้อมูล ${x.age==null?'ไม่ทราบวัน':x.age+' วันก่อน'}`:''}</div></td>
       <td style="padding:9px 10px">${sigSpark(x.spark, c)}</td>
       <td class="nr" style="padding:9px 10px;font-size:12px">${
         x.rsi==null?'—':`<span style="color:${x.rsi>=70?IA_WARN:x.rsi<=30?IA_GAIN:'var(--text)'}">${x.rsi.toFixed(0)}</span>`}</td>
       <td class="nr" style="padding:9px 10px;font-size:11.5px;color:${
-        x.ma200==='Above'?IA_GAIN:x.ma200==='Below'?IA_LOSS:IA_MUTE}">${
-        x.ma200==='Above'?'เหนือ':x.ma200==='Below'?'ต่ำกว่า':'—'}</td>
+        x.ma200==='Above'?IA_GAIN:x.ma200==='Below'?IA_LOSS:IA_MUTE}">
+        ${x.ma200==='Above'?'เหนือ':x.ma200==='Below'?'ต่ำกว่า':'—'}
+        ${x.trend!=null?`<div style="font-size:10px;color:var(--muted2)">${x.trend>0?'+':''}${x.trend}</div>`:''}</td>
+      <td class="nr" style="padding:9px 10px;font-size:12px;font-weight:600;color:${
+        (x.timing||0)>=3?IA_GAIN:(x.timing||0)>=1?'#4cc9f0':(x.timing||0)<=-2?IA_WARN:IA_MUTE}">${
+        x.timing==null?'—':((x.timing>0?'+':'')+x.timing)}</td>
       <td class="nr" style="padding:9px 10px;font-size:12px;color:${
         x.drawdown!=null&&x.drawdown<=-10?IA_WARN:'var(--muted2)'}">${
         x.drawdown==null?'—':(Math.abs(x.drawdown)<0.5?'0':x.drawdown.toFixed(0))+'%'}</td>
@@ -6295,12 +6304,13 @@ function renderSignals(){
 
   const table = rows => `<div style="background:var(--bg3);border:1px solid var(--border);
       border-radius:12px;overflow-x:auto">
-    <table style="width:100%;border-collapse:collapse;min-width:560px">
+    <table style="width:100%;border-collapse:collapse;min-width:640px">
       <thead><tr style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted2)">
         <th style="text-align:left;padding:9px 10px;font-weight:600">สินทรัพย์</th>
         <th style="text-align:left;padding:9px 10px;font-weight:600">6 เดือน</th>
         <th style="text-align:right;padding:9px 10px;font-weight:600">RSI</th>
-        <th style="text-align:right;padding:9px 10px;font-weight:600">MA200</th>
+        <th style="text-align:right;padding:9px 10px;font-weight:600">เทรนด์</th>
+        <th style="text-align:right;padding:9px 10px;font-weight:600">จังหวะ</th>
         <th style="text-align:right;padding:9px 10px;font-weight:600">ห่างจุดสูง</th>
         <th style="text-align:right;padding:9px 10px;font-weight:600">3 เดือน</th>
         <th style="text-align:right;padding:9px 10px;font-weight:600">สัญญาณ</th>
@@ -6318,19 +6328,31 @@ function renderSignals(){
         <div class="sc-sub">${escHtml(sum.trim.map(x=>x.ticker).slice(0,4).join(', '))||'—'}</div></div>
       <div class="sc"><div class="sc-lbl">อยู่เหนือ MA200</div>
         <div class="sc-val" style="font-size:20px">${sum.breadth==null?'—':sum.breadth+'%'}</div>
-        <div class="sc-sub">จาก ${sum.count} ตัวที่ข้อมูลยังสด</div></div>
+        <div class="sc-sub">จาก ${sum.count} ตัวที่ถือจริง${
+          sum.ref?` · ไม่รวมดัชนี/stablecoin ${sum.ref} ตัว`:''}</div></div>
     </div>` : ''}
     ${fresh.length ? table(fresh) : iaEmptyRow('ไม่มีสัญญาณที่ข้อมูลยังสดพอจะใช้ตัดสินใจ')}
     ${old.length ? `<div class="sl sl-mt">ข้อมูลเก่ากว่า ${SIGNAL_MAX_DAYS} วัน — ไม่นับรวมในสรุป</div>
       ${table(old)}` : ''}
     <div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;
         padding:15px 18px;font-size:11.5px;color:var(--muted2);line-height:1.9;margin-top:18px">
-      <strong style="color:var(--text)">คะแนนนี้อ่านยังไง</strong><br>
-      ตรรกะคือ <strong style="color:var(--text)">ซื้อสวนในขาขึ้น</strong> ไม่ใช่ซื้อของที่ลง —
-      ของที่ตกแรงแต่หลุด MA200 ได้คะแนนติดลบ เพราะอาจกำลังพัง ไม่ใช่ของถูก
-      ส่วนของที่ย่อแต่ยังเหนือ MA200 ได้คะแนนบวก<br>
-      สินทรัพย์ที่มีประวัติไม่ถึง 200 วันจะขึ้น "—" ที่ช่อง MA200 และ
-      <strong style="color:var(--text)">ไม่ถูกหักคะแนน</strong> — ข้อมูลไม่พอไม่เท่ากับสัญญาณลบ<br><br>
+      <strong style="color:var(--text)">สองคอลัมน์นี้อ่านยังไง</strong><br>
+      <strong style="color:var(--text)">เทรนด์</strong> ตอบว่า "ทิศทางระยะยาวยังอยู่ไหม" —
+      เหนือ MA200 = +1 · ต่ำกว่า = −2 · ประวัติไม่ถึง 200 วัน = "—" และ
+      <strong style="color:var(--text)">ไม่ถูกหักคะแนน</strong> (ไม่รู้ ≠ แย่)<br>
+      <strong style="color:var(--text)">จังหวะ</strong> ตอบว่า "ตอนนี้ถูกหรือแพงเทียบตัวเอง" —
+      จาก RSI · ระยะห่างจากจุดสูงสุด 1 ปี · ตำแหน่งในกรอบราคาปี<br><br>
+      <strong style="color:var(--text)">ทำไมไม่รวมเป็นเลขเดียว</strong>
+      เพราะสองอย่างนี้ตอบคนละคำถาม รุ่นก่อนบวกกันแล้วเกิดกรณีที่ขัดกันเอง:
+      หุ้นที่ RSI 29 และย่อ 19% แต่หลุด MA200 ได้ผลรวม +1 แล้วขึ้นว่า
+      "เข้าได้ตามแผน" ทั้งที่กฎเขียนไว้ว่าของที่หลุดเทรนด์ยาวต้องติดลบ —
+      "ของถูก" กลบ "เทรนด์พัง" ได้ ซึ่งเป็นกับดักที่ตั้งใจเลี่ยงตั้งแต่ต้น<br><br>
+      <strong style="color:var(--text)">กฎเหล็ก</strong> เทรนด์ติดลบแล้ว
+      จะไม่มีทางได้ป้ายที่แปลว่า "ซื้อเพิ่มได้" ต่อให้จังหวะดีแค่ไหน
+      อย่างมากที่สุดคือ <strong style="color:var(--text)">"รอสัญญาณกลับตัว"</strong><br><br>
+      ดัชนีอ้างอิง (SP500 · NASDAQ · SET) กับ stablecoin (USDT) แสดงไว้ให้ดูเทียบ
+      แต่<strong style="color:var(--text)">ไม่ถูกนับ</strong>ในการ์ดสรุปและ % เหนือ MA200
+      เพราะดัชนีไม่ใช่สิ่งที่ถืออยู่ และ stablecoin ไม่มีเทรนด์ให้วัด<br><br>
       กองทุนไทยที่ราคามาจากชีตไม่มีในตารางนี้ เพราะไม่มีประวัติราคาให้คำนวณ
       ตัวเลขทั้งหมดเป็นการอธิบายสถานะ ไม่ใช่คำแนะนำการลงทุน
     </div>`;
@@ -6343,7 +6365,12 @@ function renderMarket(){
   const cards = IA_MARKET_KEYS.map(m => {
     const o = md.data[m.k];
     if(!o || o.value == null) return '';
-    const age = o.updated ? Math.floor((today - Date.parse(o.updated+'T00:00:00Z'))/864e5) : null;
+    /* v54 — เดิมต่อ 'T00:00:00Z' ท้ายค่าดิบเสมอ ชีตที่ส่งรูปแบบอื่นมา
+       (เช่น "22-Sep-2026") จะได้สตริงที่อ่านไม่ออก → NaN โผล่บนการ์ดตรง ๆ
+       ใช้ ageDaysOf() จาก shared.js ซึ่งรับ ISO / serial ของชีต / รูปแบบทั่วไป
+       และคืน null เมื่ออ่านไม่ออก — บรรทัดล่างจัดการ null เป็น "ไม่ทราบวันที่" อยู่แล้ว */
+    const age = (typeof ageDaysOf === 'function') ? ageDaysOf(o.updated)
+              : (o.updated ? Math.floor((today - Date.parse(o.updated+'T00:00:00Z'))/864e5) : null);
     const stale = age == null || age > m.d;
     const val = m.str ? String(o.value)
       : Number(o.value).toLocaleString(LOC,{maximumFractionDigits:2});
@@ -6565,7 +6592,12 @@ window.addEventListener('resize', () => {
 
 let renderedPages=new Set();
 
+/* v54 — จำหน้าที่เปิดอยู่ เพื่อให้ sync แล้วกลับมาที่เดิมได้
+   อาการ: ทุกครั้งที่สลับแท็บแล้วกลับมา แอป sync ใหม่แล้วเด้งไปหน้า Overview
+   ผู้ใช้ต้องไล่กดเมนูกลับเข้ามาใหม่ทุกรอบ */
+let curPage = 'overview';
 function switchPage(name){
+  curPage = name;
   document.querySelectorAll('.sb-item').forEach(el=>{el.classList.toggle('active',el.dataset.page===name);});
   // v49 — แถบล่างต้องไฮไลต์ตามหน้าที่เปิดอยู่ (ปุ่ม More ไม่มี data-page จึงไม่โดน)
   document.querySelectorAll('.bnav-item[data-page]').forEach(el=>{el.classList.toggle('active',el.dataset.page===name);});
@@ -7215,7 +7247,12 @@ document.addEventListener('visibilitychange', ()=>{
   if(document.visibilityState!=='visible') return;
   if(localStorage.getItem(GS_EVER)!=='1' || !GS_CONFIG.spreadsheetId) return;
   const last = +(localStorage.getItem('finOS_lastSync')||0);
-  if(Date.now()-last < 60000) return;            // เพิ่ง sync ไม่ถึงนาที — ไม่ต้องซ้ำ
+  /* v54 — เดิมตั้งไว้ 60 วินาที ซึ่งแปลว่าแค่สลับไปแอปอื่นเกินหนึ่งนาที
+     แล้วกลับมาก็ sync ชีตทั้งก้อนใหม่ (4,500 แถว) ทุกครั้ง
+     ทั้งช้าและทำให้หน้าเด้ง — ข้อมูลชุดนี้ไม่ได้เปลี่ยนทุกนาทีอยู่แล้ว
+     ปุ่ม Sync ยังกดเองได้ตลอดเมื่ออยากได้ของสดทันที */
+  const AUTO_SYNC_GAP = 15*60000;                // 15 นาที
+  if(Date.now()-last < AUTO_SYNC_GAP) return;
   if(gsTokenValid()) gsSync();
   else gsSilentRefresh(ok=>{ if(ok) gsSync(); });
 });
