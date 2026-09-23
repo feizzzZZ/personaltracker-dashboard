@@ -1,5 +1,3 @@
-
-Fetch signals · PY
 #!/usr/bin/env python3
 """
 Finance OS — signal pipeline  (v1)
@@ -794,5 +792,3 @@ def main() -> int:
  
 if __name__ == "__main__":
     sys.exit(main())
- 
-
