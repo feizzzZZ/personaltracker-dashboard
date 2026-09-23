@@ -2214,7 +2214,8 @@ function renderOverview(){
   // Average monthly wealth contribution (net cashflow that stays + savings moved to assets)
   const monthsData=availableMonths.map(mk=>computeSummary(txRows.filter(r=>r.month===mk)));
   const avgMonthlyNet = monthsData.length ? monthsData.reduce((s,m)=>s+m.net,0)/monthsData.length : 0;
-  const avgMonthlySavings = monthsData.length ? monthsData.reduce((s,m)=>s+Math.abs(m.savings),0)/monthsData.length : 0;
+  // v54 — savings: ออมเข้า = ลบ · ถอนออก = บวก → ใช้ −savings ไม่ใช่ Math.abs (ดู analystCashflow)
+  const avgMonthlySavings = monthsData.length ? monthsData.reduce((s,m)=>s-(Number(m.savings)||0),0)/monthsData.length : 0;
   const monthlyContrib = Math.max(avgMonthlyNet + avgMonthlySavings, 0);
 
   // Portion of net worth that's invested (grows with market) vs cash (doesn't compound)
@@ -3447,7 +3448,7 @@ const VLOG_PURGED_KEY = 'finOS_valueLogPurged_v44';
 //   ฟังก์ชันหาย  → BLOCK  (แอปคำนวณผิดแน่นอน — นี่คือสิ่งที่ guard มีไว้จับ)
 //   เลขไม่ตรง    → WARN   (แค่ลืม bump — log ไว้ ไม่รบกวนผู้ใช้)
 // ฟังก์ชันที่ต้องมีคือสัญญาจริงระหว่างสองไฟล์ ส่วนสตริงเวอร์ชันเป็นแค่ป้าย
-const EXPECTED_SHARED_BUILD = 'v53';
+const EXPECTED_SHARED_BUILD = 'v54';
 const REQUIRED_SHARED_FNS = [
   'resolvePrices', 'pipelinePricesTHB', 'parseReconcileRows',
   'computeReconciliation', 'splitBalances', 'debtVsInvest', 'buildDebtPlan',
@@ -6484,7 +6485,7 @@ function buildAnalystCtx(){
   // เงินเข้าพอร์ตต่อเดือน = เฉลี่ยจากที่เก็บได้จริง 6 เดือนล่าสุด
   const rec=months.slice(-6);
   const monthlyContrib=rec.length
-    ? rec.reduce((s,x)=>s+Math.abs(x.savings)+Math.max(0,x.net),0)/rec.length : 0;
+    ? Math.max(0, rec.reduce((s,x)=>s-(Number(x.savings)||0)+Math.max(0,x.net),0)/rec.length) : 0;   // v54 — ไม่ใช้ Math.abs
 
   let illiquidPct=0;
   try{
