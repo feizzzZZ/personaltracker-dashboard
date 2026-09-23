@@ -16,7 +16,7 @@ window.LOC = window.LOC || 'th-TH-u-ca-gregory';
 //   • XIRR engine
 // กติกา: ไฟล์นี้ห้ามแตะ DOM ของหน้าใดหน้าหนึ่ง — pure data layer เท่านั้น
 // ═══════════════════════════════════════════════════════════════════
-const APP_BUILD = 'v53';
+const APP_BUILD = 'v54';
 console.log('[Finance OS shared] build', APP_BUILD);
 window.SHARED_BUILD = APP_BUILD;   // v45 — ให้ index.html ตรวจได้ว่าเวอร์ชันตรงกัน
  
@@ -595,6 +595,7 @@ function classifyHoldings(trades, assets, priceSrc){
 // ไม่ว่าถืออยู่ที่ไหน
  
 // คืน { ticker: { platform: qty } } — เฉพาะที่คงเหลือ > 0
+const QBP_SIGN = {'Buy':1,'Split':1,'Recieved':1,'Stake':1,'Sell':-1,'Send':-1,'Used':-1};
 function qtyByPlatform(tracker){
   const acc = {};
   (tracker||[]).forEach(r=>{
@@ -604,9 +605,15 @@ function qtyByPlatform(tracker){
     const q = Number(r.qty)||0;
     if(!q) return;
     (acc[r.ticker] = acc[r.ticker] || {});
-    // Buy/Split เพิ่มหน่วย · Sell ลด · Dividend Payout ไม่กระทบหน่วย
-    if(tt==='Buy' || tt==='Split')      acc[r.ticker][plat] = (acc[r.ticker][plat]||0) + q;
-    else if(tt==='Sell')                acc[r.ticker][plat] = (acc[r.ticker][plat]||0) - q;
+    /* v54 BUGFIX — ต้องใช้ทิศทางเดียวกับ SIGN ใน gsParseAssetTracker ทุกประเภท
+       เดิมนับแค่ Buy/Split/Sell → โอน BTC จาก Binance ไป Ledger (Send + Recieved)
+       ไม่ถูกนับ มูลค่าทั้งหมดยังกองที่ Binance และ Ledger ไม่โผล่ในหน้า Asset Location
+       = ประเมิน counterparty risk ต่อ exchange ผิด (ซึ่งเป็นเหตุผลที่หน้านี้มีอยู่)
+         + : Buy · Split · Recieved · Stake
+         − : Sell · Send · Used
+         0 : Transfer · Dividend Payout */
+    const s = QBP_SIGN[tt] || 0;
+    if(s) acc[r.ticker][plat] = (acc[r.ticker][plat]||0) + s*Math.abs(q);
   });
  
   // ปัดเศษลบเป็น 0 — เกิดได้เมื่อขายจากที่หนึ่งแต่บันทึก platform เป็นอีกที่
@@ -657,6 +664,12 @@ function loadExt(){ try{ return JSON.parse(localStorage.getItem('finOS_ext')||'n
 async function fetchExternalData(force){
   const cached = loadExt();
   if(!force && cached && Date.now()-cached.savedAt < EXT_TTL) return cached;
+  /* v54 BUGFIX — ราคาเก่าถูกประทับเวลาใหม่ทุกครั้งที่ดึงไม่สำเร็จ
+     เดิม savedAt = ตอนนี้เสมอ แม้ CoinGecko ล้ม แล้ว prices เดิมถูกยกมาทั้งก้อน
+     mergeExtIntoMarket ใช้ savedAt เป็นวันของราคา → ราคาอายุ 5 วันกลายเป็น
+     "ราคาวันนี้" และชนะราคา pipeline ที่สดกว่า (ทดสอบจริง: $10,000 ทับ $84,420)
+     แก้: savedAt = เวลาที่ "พยายามดึง" (ใช้คุม TTL อย่างเดียว)
+          แต่ละราคามี t = เวลาที่ดึงได้จริง ซึ่งเปลี่ยนเฉพาะเมื่อดึงสำเร็จ */
   const out = { savedAt: Date.now(), fng: cached?.fng||null, prices: cached?.prices||null };
   try{
     const r = await fetch('https://api.alternative.me/fng/?limit=365');
@@ -669,20 +682,31 @@ async function fetchExternalData(force){
   try{
     const r = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd,thb&include_24hr_change=true');
     const j = await r.json();
-    if(j && j.bitcoin) out.prices = { BTCUSD:{v:j.bitcoin.usd, chg:j.bitcoin.usd_24h_change, thb:j.bitcoin.thb},
-                                      ETHUSD:{v:j.ethereum?.usd, chg:j.ethereum?.usd_24h_change, thb:j.ethereum?.thb} };
+    const tNow = Date.now();
+    if(j && j.bitcoin) out.prices = { BTCUSD:{v:j.bitcoin.usd, chg:j.bitcoin.usd_24h_change, thb:j.bitcoin.thb, t:tNow},
+                                      ETHUSD:{v:j.ethereum?.usd, chg:j.ethereum?.usd_24h_change, thb:j.ethereum?.thb, t:tNow} };
   }catch(e){ console.warn('[Ext] coingecko:', e.message); }
   localStorage.setItem('finOS_ext', JSON.stringify(out));
   return out;
 }
-// ราคา crypto จาก CoinGecko สดกว่าชีต → override ก่อน render (พร้อมระบุที่มา)
+// ราคา crypto จาก CoinGecko → override เฉพาะเมื่อ "สดกว่าจริง" (พร้อมระบุที่มา)
+// v54 — เดิม "ชนะเสมอ" โดยใช้ savedAt เป็นวันของราคา ตอนนี้ต้องผ่าน 2 ด่าน:
+//   1. รู้เวลาที่ดึงได้จริง (p.t) และอายุไม่เกิน EXT_PRICE_MAX_MS
+//      cache รุ่นก่อน v54 ไม่มี p.t → ไม่รู้อายุ = ไม่ใช้ (รอบถัดไปดึงใหม่เอง)
+//   2. ใหม่กว่าค่าที่มีอยู่ (fetched_at ของ pipeline / updated ของชีต)
+const EXT_PRICE_MAX_MS = 6*36e5;     // 6 ชม. — เกินนี้ราคา pipeline รอบล่าสุดน่าเชื่อกว่า
 function mergeExtIntoMarket(md){
   const ext = loadExt();
   if(!ext || !ext.prices || !md || !md.data) return md;
+  const now = Date.now();
   ['BTCUSD','ETHUSD'].forEach(k=>{
     const p = ext.prices[k];
-    if(p && p.v){ md.data[k] = { value:p.v, updated:new Date(ext.savedAt).toISOString(),
-      note:'CoinGecko'+(p.chg!=null?` · ${p.chg>=0?'+':''}${p.chg.toFixed(1)}% 24h`:'') }; }
+    if(!p || !p.v || !(p.t > 0) || now - p.t > EXT_PRICE_MAX_MS) return;
+    const cur = md.data[k];
+    const curT = cur ? Date.parse(cur.fetched_at || cur.updated || '') : NaN;
+    if(isFinite(curT) && curT > p.t) return;         // ของที่มีอยู่สดกว่า
+    md.data[k] = { value:p.v, updated:new Date(p.t).toISOString(), fetched_at:new Date(p.t).toISOString(),
+      note:'CoinGecko'+(p.chg!=null?` · ${p.chg>=0?'+':''}${p.chg.toFixed(1)}% 24h`:'') };
   });
   return md;
 }
@@ -1176,6 +1200,10 @@ function loadRisk(){
   const act = loadActions();
   const r = act && act.risk;
   if(!r || !r.level) return null;
+  /* v54 — pipeline คงบล็อก risk ของรอบก่อนไว้เมื่อ fetch_signals ล้ม
+     ถ้าไม่เช็คอายุ ป้าย "ปกติ" ของเมื่อสัปดาห์ก่อนจะแสดงเหมือนเป็นของวันนี้ */
+  const age = ageDaysOf(r.computed_at);
+  if(age == null || age > SIGNAL_MAX_DAYS) return null;
   // ธงเรียงจากรุนแรงมากไปน้อย — คนอ่านบรรทัดแรกก่อนเสมอ
   const flags = (r.flags||[]).slice().sort((a,b)=>(b.sev||0)-(a.sev||0));
   return { ...r, flags };
@@ -1754,7 +1782,10 @@ function analystCashflow(c){
  
   const recent=m.slice(-6);
   const avgInc=recent.reduce((s,x)=>s+x.income,0)/recent.length;
-  const avgSav=recent.reduce((s,x)=>s+Math.abs(x.savings),0)/recent.length;
+  /* v54 BUGFIX — savings ในชีตเป็นยอดสุทธิที่มีเครื่องหมาย: ออมเข้า = ลบ, ถอนออก = บวก
+     เดิม Math.abs ทำให้เดือนที่ "ถอนเงินออม" ถูกนับเป็นเงินเก็บ → saving rate สูงเกินจริง
+     ใช้ −savings: ออม 10,000 → +10,000 · ถอน 10,000 → −10,000 (หักออกจากค่าเฉลี่ย) */
+  const avgSav=recent.reduce((s,x)=>s+(-(Number(x.savings)||0)),0)/recent.length;
   const sr=avgInc>0?avgSav/avgInc*100:0;
   F.push({ s:sr<10?'r':sr<20?'y':'g', t:`Saving rate เฉลี่ย ${sr.toFixed(0)}% (${recent.length} เดือนล่าสุด)`,
     d:`เก็บได้เดือนละ ${_n(avgSav)} จากรายได้ ${_n(avgInc)} บาท`
