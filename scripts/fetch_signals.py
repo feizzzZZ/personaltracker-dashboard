@@ -1,23 +1,25 @@
+
+Fetch signals · PY
 #!/usr/bin/env python3
 """
 Finance OS — signal pipeline  (v1)
 ────────────────────────────────────────────────────────────────────────
 รันต่อจาก fetch_market_data.py ในงานเดียวกัน อ่าน market-data.json ที่เพิ่งเขียน
 แล้วเติม 3 อย่างที่ยังไม่มี:
-
+ 
   1. macro ที่ตายไปตั้งแต่ v44 ตัด FRED  — เอากลับมาจากแหล่งที่ "พิสูจน์แล้ว"
      ว่าเข้าถึงได้จาก GitHub Actions (probe run #1 · 20 ก.ย. 2026)
   2. สัญญาณรายตัวของทุกสินทรัพย์ที่ถืออยู่ — RSI / MA / drawdown / จังหวะ DCA
   3. ภาพความเสี่ยงระดับตลาด — breadth, credit stress, ความผันผวน
-
+ 
 และเก็บ snapshot รายวันลง signal-history.json ตั้งแต่วันแรก เพื่อให้ backtest
 ได้จริงในอนาคต (ถ้าเริ่มเก็บทีหลัง ย้อนหลังไม่ได้ — ข้อมูลไม่มีใครเก็บให้)
-
+ 
 ทำไมเป็นไฟล์แยก ไม่แก้ fetch_market_data.py:
   pipeline เดิมผ่านมาแล้วหลายสิบรอบ การแทรกโค้ดใหม่เข้าไปกลางไฟล์ 600 บรรทัด
   ทำให้บั๊กใหม่กับบั๊กเก่าแยกกันไม่ออกเวลา run fail — แยกไฟล์แล้ว log บอกชัด
   ว่าขั้นไหนพัง และถ้าขั้นนี้ล้ม market-data.json ที่เขียนไปแล้วยังใช้ได้ปกติ
-
+ 
 รันเอง:  python3 scripts/fetch_signals.py
 stdlib ล้วน ไม่ต้องใช้ API key
 """
@@ -32,16 +34,16 @@ import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
-
+ 
 MD = os.environ.get("MARKET_DATA_OUT", "market-data.json")
 HIST = os.environ.get("SIGNAL_HISTORY_OUT", "signal-history.json")
 HIST_MAX_DAYS = 500          # ~2 ปีทำการ พอสำหรับ backtest สัญญาณระยะกลาง
-
+ 
 # ต้องตรงกับ SIGNAL_MAX_DAYS ใน shared.js เป๊ะ ๆ
 # ถ้าสองที่ไม่ตรงกัน breadth ที่คำนวณใน pipeline จะไม่ตรงกับที่หน้าเว็บคำนวณ
 # จากชุดข้อมูลเดียวกัน — ตัวเลขขัดกันเองโดยไม่มีใครเห็น
 SIGNAL_MAX_DAYS = 7
-
+ 
 UA_BOT = "Mozilla/5.0 (compatible; FinanceOS-signals/1)"
 _CTX = ssl.create_default_context()
 DEADLINE_SEC = int(os.environ.get("SIGNALS_DEADLINE", "300"))
@@ -49,19 +51,19 @@ _T0 = time.monotonic()
 NOW = datetime.now(timezone.utc)
 TODAY = NOW.strftime("%Y-%m-%d")
 FETCHED_AT = NOW.isoformat()
-
+ 
 warnings: list[str] = []
-
-
+ 
+ 
 def warn(msg: str) -> None:
     warnings.append(msg)
     print(f"  ⚠️  {msg}", file=sys.stderr)
-
-
+ 
+ 
 def budget_left() -> float:
     return DEADLINE_SEC - (time.monotonic() - _T0)
-
-
+ 
+ 
 def http_get(url: str, tries: int = 2, timeout: int = 12) -> bytes | None:
     for attempt in range(tries):
         if budget_left() <= 0:
@@ -85,8 +87,8 @@ def http_get(url: str, tries: int = 2, timeout: int = 12) -> bytes | None:
             warn(f"{type(e).__name__}: {e} · {url[:70]}")
             return None
     return None
-
-
+ 
+ 
 def yahoo_chart(symbol: str, rng: str = "1y", interval: str = "1d"):
     """คืน (dates, closes) — กรอง null ที่ Yahoo ใส่มาในวันหยุดตลาด"""
     sym = urllib.parse.quote(symbol, safe="")
@@ -108,8 +110,8 @@ def yahoo_chart(symbol: str, rng: str = "1y", interval: str = "1d"):
         d.append(datetime.fromtimestamp(t, timezone.utc).strftime("%Y-%m-%d"))
         v.append(float(c))
     return d, v
-
-
+ 
+ 
 def parallel_charts(specs, workers: int = 6):
     out: dict[str, tuple[list, list]] = {}
     if budget_left() <= 0:
@@ -124,14 +126,14 @@ def parallel_charts(specs, workers: int = 6):
             except Exception as e:                               # noqa: BLE001
                 warn(f"{type(e).__name__}: {e} · {sym}")
     return out
-
-
+ 
+ 
 # ══════════════════════════════════════════════════════════════════════
 # ตัวชี้วัด — ฟังก์ชันบริสุทธิ์ล้วน ทดสอบได้โดยไม่ต้องต่อเน็ต
 # ══════════════════════════════════════════════════════════════════════
 def rsi14(vals: list[float]) -> float | None:
     """Wilder RSI(14) — smoothing แบบ EMA ตามนิยามดั้งเดิม ไม่ใช่ SMA
-
+ 
     ใช้สูตรเดียวกับ fetch_market_data.py เป๊ะ ๆ ถ้าแก้ที่นี่ต้องแก้ที่นั่นด้วย
     ไม่งั้น SP500_RSI ในหน้า Macro กับ RSI รายตัวจะคำนวณคนละแบบเงียบ ๆ
     """
@@ -150,8 +152,8 @@ def rsi14(vals: list[float]) -> float | None:
     if al == 0:
         return 100.0
     return round(100 - 100 / (1 + ag / al), 1)
-
-
+ 
+ 
 def pct_change(vals: list[float], days: int) -> float | None:
     if len(vals) <= days:
         return None
@@ -159,15 +161,15 @@ def pct_change(vals: list[float], days: int) -> float | None:
     if prev == 0:
         return None
     return round((vals[-1] / prev - 1) * 100, 2)
-
-
+ 
+ 
 def sma(vals: list[float], n: int) -> float | None:
     return sum(vals[-n:]) / n if len(vals) >= n else None
-
-
+ 
+ 
 def vol_annual(vals: list[float], n: int = 30) -> float | None:
     """ความผันผวนรายปี (%) จากผลตอบแทนรายวัน n วันล่าสุด
-
+ 
     ใช้ 252 วันทำการต่อปีตามมาตรฐานตลาดหุ้น — คริปโตเทรด 365 วัน ค่าที่ได้
     จึงต่ำกว่าความจริงเล็กน้อย แต่ใช้ฐานเดียวกันทุกตัวเพื่อให้ "เทียบกันได้"
     สำคัญกว่าความถูกต้องสัมบูรณ์ของแต่ละตัว
@@ -184,11 +186,11 @@ def vol_annual(vals: list[float], n: int = 30) -> float | None:
     m = sum(rets) / len(rets)
     var = sum((r - m) ** 2 for r in rets) / (len(rets) - 1)
     return round(math.sqrt(var) * math.sqrt(252) * 100, 1)
-
-
+ 
+ 
 def _age_days(updated) -> int | None:
     """อายุเป็นจำนวนวันเต็มจากสตริงวันที่ YYYY-MM-DD — ไม่รู้วัน คืน None
-
+ 
     ใช้ floor เหมือน shared.js (v51 แก้บั๊ก round/floor ที่ไม่ตรงกันมาแล้ว)
     ราคาของวันที่ 10 มีอายุ 11 วันจนถึงวันที่ 22 เวลา 00:00Z
     """
@@ -200,8 +202,8 @@ def _age_days(updated) -> int | None:
     except (TypeError, ValueError):
         return None
     return max(0, (NOW - d).days)
-
-
+ 
+ 
 def zscore(vals: list[float], n: int = 252) -> float | None:
     """ค่าล่าสุดอยู่ห่างค่าเฉลี่ย n วันกี่ส่วนเบี่ยงเบนมาตรฐาน"""
     w = vals[-n:]
@@ -213,11 +215,11 @@ def zscore(vals: list[float], n: int = 252) -> float | None:
     if sd == 0:
         return None
     return round((w[-1] - m) / sd, 2)
-
-
+ 
+ 
 def range_pos(vals: list[float], n: int = 252) -> tuple[float, float] | None:
     """คืน (ตำแหน่งในกรอบ 0-100, %ห่างจากจุดสูงสุด)
-
+ 
     0 = จุดต่ำสุดของช่วง · 100 = จุดสูงสุด  ใช้ดูว่าของ "ถูก" หรือ "แพง"
     เทียบกับตัวมันเองในรอบปี ซึ่งเป็นคำถามที่ตรงกับการ DCA มากกว่าราคาดิบ
     """
@@ -228,78 +230,108 @@ def range_pos(vals: list[float], n: int = 252) -> tuple[float, float] | None:
     pos = 50.0 if hi == lo else round((cur - lo) / (hi - lo) * 100, 1)
     dd = 0.0 if hi == 0 else round((cur / hi - 1) * 100, 1)
     return pos, dd
-
-
+ 
+ 
 # ══════════════════════════════════════════════════════════════════════
 # คะแนนรายตัว — แยกเป็นฟังก์ชันบริสุทธิ์เพื่อให้ทดสอบเกณฑ์ได้โดยตรง
 # ══════════════════════════════════════════════════════════════════════
-def score_asset(trend_up, rsi, dd, pos52) -> tuple[int, str, list[str]]:
-    """คืน (คะแนน -4..+4, ป้ายกำกับ, เหตุผลเป็นข้อ ๆ)
-
-    ตรรกะหลักคือ "ซื้อสวนในขาขึ้น" ไม่ใช่ "ซื้อของที่ลง"
-      ของที่ลงแล้วอยู่ใต้ MA200 = อาจกำลังพัง ไม่ใช่ของถูก
-      ของที่ลงแต่ยังเหนือ MA200 = ย่อในเทรนด์ ซึ่งเป็นจังหวะ DCA ที่ดีที่สุด
-    ทุกองค์ประกอบให้คะแนนแยกกัน แล้วบวกกัน — ไม่มีตัวไหน veto ตัวอื่น
-    เพื่อให้ย้อนดูได้ว่าคะแนนมาจากไหน (เก็บ reasons ไว้ด้วย)
+def score_asset(trend_up, rsi, dd, pos52):
+    """คืน (คะแนนเทรนด์, คะแนนจังหวะ, ป้ายกำกับ, เหตุผล)
+ 
+    ══════════════════════════════════════════════════════════════════
+    ทำไมต้องเป็น "สองคะแนน" ไม่ใช่คะแนนเดียว  (v3)
+    ══════════════════════════════════════════════════════════════════
+    รุ่นก่อนรวมทุกอย่างเป็นเลขเดียวแล้วเกิดกรณีที่ขัดกับกฎของตัวเอง:
+      CPALL — RSI 29 (+2) · ย่อ 19% (+1) · แต่หลุด MA200 (−2) → รวม +1
+      แล้วขึ้นป้ายว่า "เข้าได้ตามแผน" ทั้งที่ข้อความใต้ตารางเขียนว่า
+      "ของที่ตกแรงแต่หลุด MA200 ได้คะแนนติดลบ"
+    การบวกกันทำให้ "ของถูก" กลบ "เทรนด์พัง" ได้ ซึ่งเป็นกับดักที่ตั้งใจเลี่ยง
+ 
+    แยกเป็นสองแกนแล้วมองเห็นทันทีว่าเลขมาจากไหน:
+      เทรนด์  — ทิศทางระยะยาวยังอยู่ไหม  (MA200)
+      จังหวะ  — ตอนนี้ถูกหรือแพงเทียบตัวเอง (RSI · ระยะห่างจุดสูงสุด · ตำแหน่งในกรอบปี)
+    สองอย่างนี้ตอบคนละคำถาม การบีบเป็นเลขเดียวคือการทิ้งข้อมูลทิ้งไป
+ 
+    ป้ายกำกับมาจาก "ตาราง 2 แกน" ที่เขียนกฎไว้ตรง ๆ ไม่ใช่จากผลบวก
+    กฎเหล็ก: เทรนด์ติดลบ → ไม่มีทางได้ป้ายที่แปลว่า "ซื้อเพิ่มได้"
+             ต่อให้จังหวะดีแค่ไหน อย่างมากที่สุดคือ "รอสัญญาณกลับตัว"
     """
-    s = 0
     why: list[str] = []
-
+ 
+    # ── แกนที่ 1: เทรนด์ ───────────────────────────────────────────
     if trend_up is True:
-        s += 1
+        trend = 1
         why.append("เหนือ MA200 — เทรนด์ยาวยังไม่หัก")
     elif trend_up is False:
-        s -= 2
+        trend = -2
         why.append("ต่ำกว่า MA200 — เทรนด์ยาวหักแล้ว")
-
+    else:
+        trend = 0            # ข้อมูลไม่ถึง 200 วัน = ไม่รู้ ไม่ใช่แย่
+ 
+    # ── แกนที่ 2: จังหวะ (ถูก/แพงเทียบตัวเอง) ──────────────────────
+    timing = 0
     if rsi is not None:
         if rsi < 30:
-            s += 2
+            timing += 2
             why.append(f"RSI {rsi:.0f} — oversold")
         elif rsi < 45:
-            s += 1
+            timing += 1
             why.append(f"RSI {rsi:.0f} — อ่อนตัว")
         elif rsi > 75:
-            s -= 2
+            timing -= 2
             why.append(f"RSI {rsi:.0f} — overbought")
         elif rsi > 65:
-            s -= 1
+            timing -= 1
             why.append(f"RSI {rsi:.0f} — ร้อน")
-
+ 
     if dd is not None:
         if dd <= -20:
-            s += 2
+            timing += 2
             why.append(f"ต่ำกว่าจุดสูงสุด 1 ปี {abs(dd):.0f}%")
         elif dd <= -10:
-            s += 1
+            timing += 1
             why.append(f"ย่อจากจุดสูงสุด {abs(dd):.0f}%")
         elif dd >= -1:
-            s -= 1
+            timing -= 1
             why.append("อยู่ที่จุดสูงสุดรอบปี")
-
+ 
     if pos52 is not None:
         if pos52 >= 90:
-            s -= 1
+            timing -= 1
         elif pos52 <= 15:
-            s += 1
-
-    s = max(-4, min(4, s))
-    if s >= 3:
-        label = "ทยอยเข้าเพิ่ม"
-    elif s >= 1:
-        label = "เข้าได้ตามแผน"
-    elif s >= -1:
-        label = "ถือ"
-    elif s >= -3:
-        label = "ชะลอเข้าเพิ่ม"
+            timing += 1
+ 
+    timing = max(-4, min(4, timing))
+ 
+    # ── ป้ายกำกับ: ตาราง 2 แกน ─────────────────────────────────────
+    if trend < 0:
+        # เทรนด์หักแล้ว — ห้ามมีป้ายที่ชวนให้ซื้อเพิ่ม ไม่ว่าจังหวะจะดีแค่ไหน
+        if timing >= 3:
+            label = "รอสัญญาณกลับตัว"     # ถูกมาก แต่ยังไม่ใช่จังหวะเข้า
+        elif timing <= -1:
+            label = "ลดน้ำหนัก"           # เทรนด์พัง + ยังแพง = แย่ที่สุด
+        else:
+            label = "ชะลอเข้าเพิ่ม"
+    elif trend > 0:
+        if timing >= 3:
+            label = "ทยอยเข้าเพิ่ม"        # ย่อแรงในเทรนด์ขาขึ้น = จังหวะที่ดีที่สุด
+        elif timing >= 1:
+            label = "เข้าได้ตามแผน"
+        elif timing >= -1:
+            label = "ถือ"
+        else:
+            label = "ชะลอเข้าเพิ่ม"
     else:
-        label = "ลดน้ำหนัก"
-    return s, label, why
-
-
+        # ไม่รู้เทรนด์ (ประวัติไม่ถึง 200 วัน) — ไม่เชียร์ให้เข้าหนัก
+        # เพดานอยู่ที่ "เข้าได้ตามแผน" เพราะยังยืนยันเทรนด์ไม่ได้
+        label = "เข้าได้ตามแผน" if timing >= 1 else (
+            "ถือ" if timing >= -1 else "ชะลอเข้าเพิ่ม")
+    return trend, timing, label, why
+ 
+ 
 def bls_yoy(series_id: str):
     """คืน (YoY %, วันที่สังเกต) จาก BLS public API v1 — ไม่ต้องใช้ key
-
+ 
     v1 GET คืนข้อมูลย้อนหลัง 3 ปี เรียงจากใหม่ไปเก่า พอสำหรับ YoY
     โควตา 25 ครั้ง/วัน/IP — เราเรียกวันละ 3 ครั้ง จึงไม่ชน
     """
@@ -340,8 +372,8 @@ def bls_yoy(series_id: str):
     if prior is None or prior[2] == 0:
         return None, obs
     return round((v / prior[2] - 1) * 100, 2), obs
-
-
+ 
+ 
 def bls_level(series_id: str):
     """คืน (ค่าล่าสุด, วันที่สังเกต) — สำหรับ series ที่เป็น % อยู่แล้ว เช่นอัตราว่างงาน"""
     raw = http_get(f"https://api.bls.gov/publicAPI/v1/timeseries/data/{series_id}",
@@ -366,8 +398,8 @@ def bls_level(series_id: str):
         except (KeyError, TypeError, ValueError):
             continue
     return None, None
-
-
+ 
+ 
 # ══════════════════════════════════════════════════════════════════════
 # ค่า FRED ที่ค้างอยู่ — ต้องล้าง ไม่ใช่ปล่อยให้ merge อุ้มไปเรื่อย ๆ
 # ══════════════════════════════════════════════════════════════════════
@@ -384,8 +416,8 @@ FRED_LEGACY_KEYS = [
     "US_CORE_PCE", "US_GDP", "NFP", "US_UNEMP", "US_REAL10Y",
     "CREDIT_SPREAD", "YIELD_CURVE",
 ]
-
-
+ 
+ 
 def purge_stale(data: dict, fresh_keys: set) -> list[str]:
     """ลบ key ยุค FRED ที่ไม่มีใครเติมค่าใหม่ให้ — คืนรายชื่อที่ลบ"""
     dropped = []
@@ -397,8 +429,8 @@ def purge_stale(data: dict, fresh_keys: set) -> list[str]:
             data.pop(k, None)
             dropped.append(k)
     return dropped
-
-
+ 
+ 
 # ══════════════════════════════════════════════════════════════════════
 def main() -> int:
     if not os.path.exists(MD):
@@ -406,17 +438,17 @@ def main() -> int:
         return 1
     with open(MD, encoding="utf-8") as f:
         payload = json.load(f)
-
+ 
     data = payload.setdefault("data", {})
     prices = payload.get("prices", {})
     fresh: dict = {}
-
+ 
     def put(key, value, observed, note):
         if value is None:
             return
         fresh[key] = {"value": value, "updated": observed,
                       "fetched_at": FETCHED_AT, "note": note}
-
+ 
     # ── 1. Macro จากแหล่งที่ probe พิสูจน์แล้วว่าเข้าถึงได้ ──────────────
     print("── Macro (Yahoo yields) ─────────────────────")
     # probe run #1 (20 ก.ย. 2026) ผ่าน 10/10 รวม 2YY=F ที่ v44 คิดว่าไม่มี
@@ -428,7 +460,7 @@ def main() -> int:
     ETFS = [("HYG", "HYG"), ("LQD", "LQD"), ("IEF", "IEF"), ("TIP", "TIP")]
     macro_charts = parallel_charts(
         [(s, "1y", "1d") for _, s in YIELDS] + [(s, "2y", "1d") for _, s in ETFS])
-
+ 
     ylv: dict[str, float] = {}
     for key, sym in YIELDS:
         d, v = macro_charts.get(sym, ([], []))
@@ -437,7 +469,7 @@ def main() -> int:
         ylv[key] = v[-1]
         put(key, round(v[-1], 3), d[-1], f"Yahoo {sym}")
         print(f"  ✓ {key:<14} {v[-1]:.3f}%")
-
+ 
     if "US10Y" in ylv and "US2Y" in ylv:
         bps = round((ylv["US10Y"] - ylv["US2Y"]) * 100)
         put("YIELD_CURVE", bps, TODAY, "2s10s = ^TNX − 2YY=F (bps)")
@@ -447,7 +479,7 @@ def main() -> int:
         put("YIELD_CURVE_3M10Y", bps3, TODAY,
             "3m10y = ^TNX − ^IRX (bps) · งานวิจัย Fed ชี้ว่าทำนาย recession แม่นกว่า")
         print(f"  ✓ {'3m10y':<14} {bps3:+d} bps")
-
+ 
     # Credit stress — ไม่ใช่ HY OAS ตัวจริง จึงตั้งชื่อ key ใหม่ ไม่ใช้ CREDIT_SPREAD
     # ═══════════════════════════════════════════════════════════════
     # HY OAS ของจริงหาฟรีไม่ได้ (FRED BAMLH0A0HYM2 บล็อกเรา · ICE คิดเงิน)
@@ -468,7 +500,7 @@ def main() -> int:
                 "z-score ของอัตราส่วน HYG/IEF (กลับเครื่องหมาย) · "
                 "บวก = ความเครียดเครดิตสูงกว่าค่าเฉลี่ย 1 ปี · ไม่ใช่ HY OAS")
             print(f"  ✓ {'CREDIT_STRESS':<14} {-z:+.2f} SD")
-
+ 
     print("── Macro (BLS) ──────────────────────────────")
     cpi, cpi_obs = bls_yoy("CUUR0000SA0")
     if cpi is not None:
@@ -483,7 +515,7 @@ def main() -> int:
     if un is not None:
         put("US_UNEMP", un, un_obs, "BLS LNS14000000 · อัตราว่างงาน (ปรับฤดูกาล)")
         print(f"  ✓ {'US_UNEMP':<14} {un}%  ({un_obs})")
-
+ 
     # Real yield แบบ ex-post — ไม่ใช่ TIPS breakeven
     # ═══════════════════════════════════════════════════════════════
     # US_REAL10Y เดิมมาจาก FRED DFII10 (TIPS yield จริง) ซึ่งเราเข้าไม่ถึงแล้ว
@@ -496,7 +528,7 @@ def main() -> int:
         put("US_REAL10Y", rr, cpi_obs,
             "ex-post real yield = ^TNX − CPI YoY · ไม่ใช่ TIPS breakeven")
         print(f"  ✓ {'US_REAL10Y':<14} {rr}%")
-
+ 
     # ── 2. สัญญาณรายตัว ────────────────────────────────────────────
     print("── Per-asset signals ────────────────────────")
     # ดึงรายชื่อจาก prices ที่ pipeline เขียนไว้ — ไม่ทำตาราง HOLDINGS ซ้ำ
@@ -508,7 +540,22 @@ def main() -> int:
             sym_of[tk] = src[6:].strip()
     for tk, sym in [("SP500", "^GSPC"), ("NASDAQ", "^IXIC"), ("SET", "^SET.BK")]:
         sym_of.setdefault(tk, sym)
-
+    # ══════════════════════════════════════════════════════════════
+    # kind — แยก "ของที่ถือจริง" ออกจาก "ของอ้างอิง"
+    # ══════════════════════════════════════════════════════════════
+    # อาการที่ต้องแก้: การ์ด "ควรชะลอ/ลดน้ำหนัก" ขึ้นว่า
+    #   AAPL, JEPI, META, NASDAQ
+    # NASDAQ เป็นดัชนี ไม่ใช่สิ่งที่ถืออยู่ จะ "ลดน้ำหนัก" ไม่ได้
+    #
+    # และดัชนียังไปปน breadth ด้วย: SP500 (ดัชนี) + VOO (ETF ที่ตามดัชนีนั้น)
+    # + NASDAQ นับเป็น 3 เสียง ทั้งที่เป็นความเสี่ยงก้อนเดียวกันเกือบหมด
+    # ทำให้ "% เหนือ MA200" เอียงไปทางตลาดสหรัฐเกินจริง
+    #
+    # USDT เป็น stablecoin ตรึงที่ 1 ดอลลาร์ — RSI/MA200 ของมันไม่มีความหมาย
+    # แต่ถ้านับใน breadth มันจะโหวต "เหนือ MA200" ให้ฟรี ๆ ทุกวัน
+    KIND = {"SP500": "index", "NASDAQ": "index", "SET": "index",
+            "USDT": "stable"}
+ 
     charts = parallel_charts([(s, "1y", "1d") for s in set(sym_of.values())])
     signals: dict = {}
     for tk, sym in sorted(sym_of.items()):
@@ -525,24 +572,31 @@ def main() -> int:
         r = rsi14(v)
         rp = range_pos(v)
         pos52, dd = rp if rp else (None, None)
-        sc, label, why = score_asset(trend, r, dd, pos52)
+        tr, tm, label, why = score_asset(trend, r, dd, pos52)
         e = {
             "sym": sym, "price": round(v[-1], 6), "updated": d[-1],
+            "kind": KIND.get(tk, "holding"),
             "rsi": r,
             "ma50": None if m50 is None else ("Above" if v[-1] > m50 else "Below"),
             "ma200": None if trend is None else ("Above" if trend else "Below"),
             "chg1m": pct_change(v, 21), "chg3m": pct_change(v, 63),
             "chg6m": pct_change(v, 126),
             "pos52w": pos52, "drawdown": dd, "vol30d": vol_annual(v, 30),
-            "score": sc, "action": label, "why": why,
+            # สองแกนแยกกัน — หน้าเว็บแสดงคนละคอลัมน์
+            "trend": tr, "timing": tm,
+            # score = ผลรวม เก็บไว้ใช้ "เรียงลำดับ" อย่างเดียว
+            # ห้ามเอาไปตัดสินป้ายกำกับ — นั่นคือบั๊กที่ v3 เพิ่งแก้
+            "score": max(-4, min(4, tr + tm)),
+            "action": label, "why": why,
             # sparkline รายสัปดาห์ 26 จุด (~6 เดือน) — เก็บเฉพาะราคา ไม่เก็บ
             # history ดิบทั้งปี ไม่งั้น market-data.json บวมเป็นหลาย MB
             "spark": [round(x, 4) for x in v[::-1][::5][::-1][-26:]],
         }
         signals[tk] = e
-        print(f"  ✓ {tk:<10} {label:<14} score {sc:+d}  RSI {r}  "
-              f"MA200 {e['ma200']}  dd {dd}%")
-
+        print(f"  ✓ {tk:<10} {label:<16} เทรนด์ {tr:+d} จังหวะ {tm:+d}  "
+              f"RSI {r}  MA200 {e['ma200']}  dd {dd}%"
+              + ("" if e["kind"] == "holding" else f"  [{e['kind']}]"))
+ 
     # ══════════════════════════════════════════════════════════════
     # รวมกับสัญญาณรอบก่อน — ตัวที่ดึงไม่ได้รอบนี้ต้อง "แก่ลง" ไม่ใช่ "หายไป"
     # ══════════════════════════════════════════════════════════════
@@ -565,7 +619,7 @@ def main() -> int:
         print(f"  ↻ คงสัญญาณรอบก่อนไว้ {len(carried)} ตัว: "
               f"{', '.join(sorted(carried)[:8])}"
               f"{' …' if len(carried) > 8 else ''}")
-
+ 
     # ── 3. ความเสี่ยงระดับตลาด ─────────────────────────────────────
     print("── Market risk ──────────────────────────────")
     def dnum(k):
@@ -574,7 +628,7 @@ def main() -> int:
             return float(e["value"])
         except (KeyError, TypeError, ValueError):
             return None
-
+ 
     sect = (payload.get("history") or {}).get("sectors") or {}
     sect_up = [s for s in sect.values() if isinstance(s.get("vsMA200"), (int, float))]
     breadth = (round(100 * sum(1 for s in sect_up if s["vsMA200"] > 0) / len(sect_up), 1)
@@ -585,10 +639,15 @@ def main() -> int:
     usable = [e for e in merged_signals.values()
               if _age_days(e.get("updated")) is not None
               and _age_days(e.get("updated")) <= SIGNAL_MAX_DAYS]
-    held = [e for e in usable if e.get("ma200") is not None]
+    # breadth ต้องนับเฉพาะ "ของที่ถือจริง" — ไม่รวมดัชนีอ้างอิงกับ stablecoin
+    # (ดูเหตุผลที่ KIND ด้านบน) ถ้านับรวม ตัวเลขจะเอียงไปทางตลาดสหรัฐ
+    # และได้เสียงฟรีจาก USDT ที่ไม่มีเทรนด์ให้วัดตั้งแต่แรก
+    held = [e for e in usable
+            if e.get("ma200") is not None
+            and e.get("kind", "holding") == "holding"]
     port_up = (round(100 * sum(1 for e in held if e["ma200"] == "Above") / len(held), 1)
                if held else None)
-
+ 
     flags: list[dict] = []
     vix = dnum("VIX")
     if vix is not None and vix >= 25:
@@ -608,7 +667,7 @@ def main() -> int:
     if port_up is not None and port_up <= 40:
         flags.append({"k": "port", "sev": 2 if port_up <= 25 else 1,
                       "msg": f"พอร์ต {100-port_up:.0f}% หลุด MA200 แล้ว"})
-
+ 
     sev = sum(f["sev"] for f in flags)
     # ══════════════════════════════════════════════════════════════
     # "ไม่มีข้อมูล" ต้องไม่ถูกรายงานว่า "ปกติ"
@@ -645,7 +704,7 @@ def main() -> int:
           f"· ฐานข้อมูล {len(held)} ตัว")
     for f in flags:
         print(f"    ! {f['msg']}")
-
+ 
     # ── 4. เขียนกลับ + ล้างค่า FRED ที่ค้าง ─────────────────────────
     data.update(fresh)
     dropped = purge_stale(data, set(fresh))
@@ -660,19 +719,19 @@ def main() -> int:
         "macro_keys": sorted(fresh),
         "dropped_stale_fred": dropped,
         "warnings": warnings,
-        "version": "signals v2",
+        "version": "signals v3",
     }
     with open(MD, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, indent=1)
-
+ 
     if dropped:
         print(f"  🗑  ลบค่า FRED ที่ค้างตั้งแต่ ก.ค. {len(dropped)} key: "
               f"{', '.join(dropped)}")
-
+ 
     # ── 5. snapshot รายวันสำหรับ backtest ──────────────────────────
     # เก็บตั้งแต่วันแรก ไม่ใช่ค่อยมาเพิ่มทีหลัง — ข้อมูลย้อนหลังของ "สัญญาณ"
     # ซื้อคืนไม่ได้ ต่อให้ราคาย้อนหลังหาได้ เพราะเกณฑ์อาจเปลี่ยนไปแล้ว
-    hist = {"schema": 1, "days": {}}
+    hist = {"schema": 2, "days": {}}
     if os.path.exists(HIST):
         try:
             with open(HIST, encoding="utf-8") as f:
@@ -681,7 +740,7 @@ def main() -> int:
                 hist = loaded
         except (json.JSONDecodeError, OSError) as e:
             warn(f"อ่าน {HIST} ไม่ได้ ({e}) — เริ่มไฟล์ใหม่")
-
+ 
     hist["days"][TODAY] = {
         "macro": {k: fresh[k]["value"] for k in sorted(fresh)},
         "risk": {"level": level, "severity": sev,
@@ -694,15 +753,25 @@ def main() -> int:
         # จะกลายเป็นการสร้างจุดข้อมูลปลอม แล้ว backtest จะเห็นราคาค้างนิ่ง
         # หลายวันติดกันเหมือนตลาดไม่เคลื่อนไหว ซึ่งบิดเบือนผลทดสอบ
         # วันที่ดึงไม่ได้ควรเป็น "ช่องว่าง" ในประวัติ ไม่ใช่ค่าที่ลอกมา
-        "assets": {k: [v["price"], v["rsi"], v["score"]] for k, v in signals.items()},
+        #
+        # schema 2 — เก็บ [ราคา, RSI, เทรนด์, จังหวะ] แทน [ราคา, RSI, คะแนนรวม]
+        # เพราะ backtest ต้องตอบได้ว่า "กฎไหนได้ผล" ไม่ใช่แค่ "คะแนนรวมได้ผลไหม"
+        # ถ้าเก็บแต่ผลรวม จะแยกไม่ออกว่าที่กำไรเพราะเลือกตามเทรนด์หรือตามจังหวะ
+        # แถวของ schema 1 มี 3 ช่อง แถวใหม่มี 4 — ตัวอ่านต้องดูความยาวก่อน
+        "assets": {k: [v["price"], v["rsi"], v["trend"], v["timing"]]
+                   for k, v in signals.items()},
     }
     if len(hist["days"]) > HIST_MAX_DAYS:
         for old in sorted(hist["days"])[:len(hist["days"]) - HIST_MAX_DAYS]:
             hist["days"].pop(old, None)
+    # ไฟล์เดิมอาจเป็น schema 1 — ยกเลขขึ้นตอนเขียน เพราะตั้งแต่วันนี้ไป
+    # แถวใหม่เป็นรูปแบบ 4 ช่อง แถวเก่าที่มี 3 ช่องยังอยู่ในไฟล์เหมือนเดิม
+    # (ตัวอ่านดูความยาวของแถวเอง ไม่ใช่ดูเลข schema อย่างเดียว)
+    hist["schema"] = 2
     hist["updated_at"] = FETCHED_AT
     with open(HIST, "w", encoding="utf-8") as f:
         json.dump(hist, f, ensure_ascii=False, separators=(",", ":"))
-
+ 
     print("─────────────────────────────────────────────")
     print(f"เขียน {MD}: macro {len(fresh)} keys · signals {len(signals)} ตัว · "
           f"risk {level} · ลบค่าค้าง {len(dropped)} key")
@@ -710,7 +779,7 @@ def main() -> int:
           f"({os.path.getsize(HIST)/1024:.0f} KB)")
     if warnings:
         print(f"  {len(warnings)} warnings")
-
+ 
     # เกณฑ์ fail: ถ้าไม่ได้ macro เลย หรือได้สัญญาณน้อยกว่าครึ่งของที่ควรได้
     # แปลว่ามีอะไรผิดปกติจริง ไม่ใช่แค่ symbol เดียวล่ม — ไฟล์ถูกเขียนไปแล้ว
     # (ของเดิมยังอยู่ครบ) แต่ workflow ต้องไม่รายงานว่าสำเร็จ
@@ -721,7 +790,9 @@ def main() -> int:
         print(f"::error::ได้สัญญาณแค่ {len(signals)}/{len(sym_of)} ตัว")
         return 1
     return 0
-
-
+ 
+ 
 if __name__ == "__main__":
     sys.exit(main())
+ 
+
