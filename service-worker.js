@@ -1,5 +1,3 @@
-
-Service worker · JS
 // Finance OS — Service Worker v2
 // Cache strategy: Cache-first for shell, Network-first for CDN
  
@@ -168,5 +166,3 @@ self.addEventListener('fetch', event => {
 self.addEventListener('message', event => {
   if (event.data === 'SKIP_WAITING') self.skipWaiting();
 });
-
-
