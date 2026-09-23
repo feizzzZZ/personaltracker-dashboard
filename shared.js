@@ -1,5 +1,3 @@
-
-Shared · JS
 /* ── #2 + #5: one locale constant for the whole app ─────────────────────
    'th-TH' alone defaults to the BUDDHIST calendar in ICU, so
    toLocaleDateString('th-TH',{year:'numeric'}) returned "2569" instead of
@@ -1887,5 +1885,3 @@ function analystDesk(ctx){
       return _mk(fn.name,'—','เกิดข้อผิดพลาด','⚠',[{s:'y',t:'วิเคราะห์ไม่สำเร็จ',d:e.message}],[]); }
   });
 }
- 
-
