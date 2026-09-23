@@ -200,7 +200,20 @@ jobs:
             echo "ข้อมูลจริงไม่เปลี่ยน (ต่างแค่ timestamp) — ข้าม commit"
           else
             git commit -m "chore(data): market data + signals $(date -u +'%Y-%m-%d %H:%M UTC')"
-            git push
+            # v54 — ต้อง rebase ก่อน push
+            # line-notify.yml commit notify-state.json เข้ามาได้ระหว่างที่ job นี้รัน
+            # (cron ของ GitHub ล่าช้าได้เป็นชั่วโมง) เดิม push ตรง ๆ → non-fast-forward
+            # → ข้อมูลทั้งรอบไม่ถูกบันทึก  สองไฟล์ไม่ทับกัน rebase จึงไม่มี conflict
+            PUSHED=0
+            for i in 1 2 3; do
+              if git pull --rebase --autostash && git push; then PUSHED=1; break; fi
+              echo "push รอบ $i ไม่ผ่าน — ลองใหม่"
+              sleep 5
+            done
+            if [ "$PUSHED" != "1" ]; then
+              echo "::error::push market-data.json ไม่สำเร็จหลังลอง 3 รอบ"
+              exit 1
+            fi
           fi
 
       # outcome รวมทั้ง 'failure' (exit≠0) และ 'cancelled' (step timeout)
