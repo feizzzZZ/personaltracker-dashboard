@@ -1887,4 +1887,5 @@ function analystDesk(ctx){
       return _mk(fn.name,'—','เกิดข้อผิดพลาด','⚠',[{s:'y',t:'วิเคราะห์ไม่สำเร็จ',d:e.message}],[]); }
   });
 }
+ 
 
