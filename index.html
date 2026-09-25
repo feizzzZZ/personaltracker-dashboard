@@ -869,7 +869,13 @@ button,select,.sb-item,.bnav-item,.tab,.fb-btn,.yr-btn,.tx-editable,
 
 /* เลื่อนสุดขอบแล้วไม่ยางยืดจนเห็นพื้นหลังนอกหน้า */
 html,body{overscroll-behavior:none}
-.sb-nav,.tw,.lscroll{overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.sb-nav{overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+/* v57 BUGFIX — scroll ขึ้นไม่ได้ต้องแตะจอก่อน
+   .tw/.lscroll เป็นกล่องตารางที่เลื่อนแนวนอน แต่ overflow-x:auto ทำให้ overflow-y กลายเป็น auto
+   ไปด้วย พอใส่ overscroll-behavior:contain (ทั้งสองแกน) แล้วเมาส์/นิ้วอยู่บนตาราง
+   ซึ่งมักอยู่ท้ายหน้า การเลื่อนขึ้นจะถูกกล่องตารางกินไว้ ไม่ส่งต่อให้หน้า
+   → คุมเฉพาะแกนนอน แกนตั้งปล่อยให้หน้าเลื่อนตามปกติ */
+.tw,.lscroll{overscroll-behavior-x:contain;overscroll-behavior-y:auto;-webkit-overflow-scrolling:touch}
 
 /* ── แนะนำวิธีติดตั้งเป็นแอป ────────────────────────────────────────
    iOS ไม่มีปุ่ม "ติดตั้งแอป" ให้กดเหมือน Android — ต้องรู้เองว่าอยู่ใน
@@ -1108,7 +1114,7 @@ html.standalone .a2hs{display:none}
         <div class="sc" style="--g:rgba(124,111,236,.08)"><div class="sc-lbl">Savings</div><div class="sc-val" id="cf-sav" style="color:var(--savings)">฿0</div><div class="sc-sub" id="cf-sav-s"></div></div>
         <div class="sc"><div class="sc-lbl">Net cashflow</div><div class="sc-val" id="cf-net">฿0</div><div class="sc-sub" id="cf-net-s"></div></div>
         <div class="sc" style="--g:rgba(255,149,0,.08)"><div class="sc-lbl">Debt</div><div class="sc-val" id="cf-debt" style="color:var(--debt)">฿0</div><div class="sc-sub" id="cf-debt-s"></div></div>
-        <div class="sc"><div class="sc-lbl">Saving rate</div><div class="sc-val" id="cf-savrate">0%</div><div class="sc-sub">savings ÷ income</div></div>
+        <div class="sc"><div class="sc-lbl">Saving rate</div><div class="sc-val" id="cf-savrate">0%</div><div class="sc-sub">(รายได้ − รายจ่าย) ÷ รายได้</div></div>
       </div>
       <div class="cr2">
         <div class="cc">
@@ -1162,7 +1168,7 @@ html.standalone .a2hs{display:none}
           <div class="sc" style="--g:rgba(124,111,236,.08)"><div class="sc-lbl">Savings</div><div class="sc-val" id="yrs-sav" style="color:var(--savings)">฿0</div><div class="sc-sub" id="yrs-sav-s"></div></div>
           <div class="sc"><div class="sc-lbl">Net cashflow</div><div class="sc-val" id="yrs-net">฿0</div><div class="sc-sub" id="yrs-net-s"></div></div>
           <div class="sc" style="--g:rgba(255,149,0,.08)"><div class="sc-lbl">Debt paid</div><div class="sc-val" id="yrs-debt" style="color:var(--debt)">฿0</div><div class="sc-sub" id="yrs-debt-s"></div></div>
-          <div class="sc"><div class="sc-lbl">Saving rate</div><div class="sc-val" id="yrs-savrate">0%</div><div class="sc-sub">savings ÷ income</div></div>
+          <div class="sc"><div class="sc-lbl">Saving rate</div><div class="sc-val" id="yrs-savrate">0%</div><div class="sc-sub">(รายได้ − รายจ่าย) ÷ รายได้</div></div>
         </div>
         <!-- Expense breakdown for selected year -->
         <div class="sl sl-mt orange">Expense breakdown</div>
@@ -2788,7 +2794,29 @@ function computeSummary(rows){
          spend:_sv.spend, saved:_sv.saved};
 }
 
+/* v57 BUGFIX — dropdown เดือนว่างเปล่าเมื่อเปิดแอปจาก cache
+   เดิมเติม <option> เฉพาะในเส้นทาง Sync (gsProcessData) ส่วน restoreDataCache()
+   ตั้ง availableMonths แต่ไม่เคยเติม dropdown → เปิดแอปภายใน 5 นาทีหลัง sync
+   (ใช้ cache ไม่ sync ใหม่) จะเห็นกล่องว่าง เลือกเดือนไม่ได้
+   ตอนนี้ทั้งสองเส้นทางเรียกฟังก์ชันเดียวกัน และ renderCashflow เติมให้เองถ้ายังไม่ครบ */
+function populateMonthSelect(){
+  const sel=document.getElementById('month-select'); if(!sel) return;
+  sel.innerHTML=availableMonths.map(mk=>`<option value="${mk}">${monthLabel(mk)}</option>`).join('');
+  if(availableMonths.length) sel.value=availableMonths[curMonthIdx]||availableMonths[availableMonths.length-1];
+  if(!sel.dataset.init){
+    sel.dataset.init='1';
+    sel.addEventListener('change',()=>{
+      const i=availableMonths.indexOf(sel.value);
+      if(i<0) return;
+      curMonthIdx=i;
+      renderCashflow();
+    });
+  }
+}
+
 function renderCashflow(){
+  const _ms=document.getElementById('month-select');
+  if(_ms && _ms.options.length!==availableMonths.length) populateMonthSelect();
   const mk=availableMonths[curMonthIdx];
   const rows=txRows.filter(r=>r.month===mk);
   const s=computeSummary(rows);
@@ -3492,7 +3520,7 @@ const VLOG_PURGED_KEY = 'finOS_valueLogPurged_v44';
 //   ฟังก์ชันหาย  → BLOCK  (แอปคำนวณผิดแน่นอน — นี่คือสิ่งที่ guard มีไว้จับ)
 //   เลขไม่ตรง    → WARN   (แค่ลืม bump — log ไว้ ไม่รบกวนผู้ใช้)
 // ฟังก์ชันที่ต้องมีคือสัญญาจริงระหว่างสองไฟล์ ส่วนสตริงเวอร์ชันเป็นแค่ป้าย
-const EXPECTED_SHARED_BUILD = 'v56';
+const EXPECTED_SHARED_BUILD = 'v57';
 const REQUIRED_SHARED_FNS = [
   'resolvePrices', 'pipelinePricesTHB', 'parseReconcileRows',
   'computeReconciliation', 'splitBalances', 'debtVsInvest', 'buildDebtPlan',
@@ -4510,19 +4538,7 @@ function gsProcessData(map){
       const ms=new Set(rows.map(r=>r.month));
       availableMonths=Array.from(ms).sort();
       curMonthIdx=availableMonths.length-1;
-      // Populate month dropdown (GS path)
-      const mSelGS=document.getElementById('month-select');
-      if(mSelGS){
-        mSelGS.innerHTML=availableMonths.map(mk=>`<option value="${mk}">${monthLabel(mk)}</option>`).join('');
-        mSelGS.value=availableMonths[curMonthIdx];
-        if(!mSelGS.dataset.init){
-          mSelGS.dataset.init='1';
-          mSelGS.addEventListener('change',()=>{
-            curMonthIdx=availableMonths.indexOf(mSelGS.value);
-            renderCashflow();
-          });
-        }
-      }
+      populateMonthSelect();   // v57 — ใช้ร่วมกับเส้นทางกู้จาก cache
     }
 
     // ─ Asset prices + tracker ─
@@ -5473,6 +5489,7 @@ function restoreDataCache(){
     if(atSheetMeta){ const b=document.getElementById('at-add-btn'); if(b) b.style.display='inline-flex'; }
     availableMonths=[...new Set(txRows.map(r=>r.month))].sort();
     curMonthIdx=availableMonths.length-1;
+    populateMonthSelect();   // v57 — เดิมไม่เติม dropdown ในเส้นทางนี้
     _syncedAt = stamp;
     const ageMin=Math.round((Date.now()-stamp)/60000);
     console.log('[Cache] restored — อายุ', ageMin, 'นาที');
@@ -6558,7 +6575,7 @@ const NAV_GROUPS = [
   {id:'home',      pages:[['overview','ภาพรวม']]},
   {id:'analyst',   pages:[['analyst','บทวิเคราะห์']]},
   {id:'goals',     pages:[['goals','เป้าหมาย']]},
-  {id:'money',     pages:[['cashflow','เดือนนี้'],['yearly','รายปี'],['engine','ออม & ลงทุน'],['budget','งบประมาณ']]},
+  {id:'money',     pages:[['cashflow','รายเดือน'],['yearly','รายปี'],['engine','ออม & ลงทุน'],['budget','งบประมาณ']]},
   {id:'accounts',  pages:[['accounts','บัญชี'],['debt','หนี้']]},
   {id:'insurance', pages:[['insurance','ประกัน']]},
   {id:'invest',    pages:[['portfolio','ภาพรวมพอร์ต'],['flow','รายการซื้อขาย'],['realized','ขายแล้ว'],
