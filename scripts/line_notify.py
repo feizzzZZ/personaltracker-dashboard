@@ -179,6 +179,7 @@ def parse_date(v):
 # "ยังไม่ได้ต่อชีต" แล้วผู้ใช้ต้องไล่เดาเองทีละข้อ ซึ่งเสียเวลามาก
 # ตอนนี้แต่ละสาเหตุมีข้อความของตัวเอง พร้อมบอกว่าต้องไปแก้ที่ไหน
 SHEET_TAB = os.environ.get("GS_SHEET_TAB", "Asset_Tracker")
+TX_TAB = os.environ.get("GS_TX_TAB", "Transaction")          # v57 — Monthly report
 PRICE_TAB = os.environ.get("GS_PRICE_TAB", "Asset_Live_Price_Feed")
 # ค่าเดียวกับ shared.js — ถ้าแก้ที่นั่นต้องแก้ที่นี่ด้วย ไม่งั้นสองที่ตัดสินไม่ตรงกัน
 PRICE_STALE_DAYS = 4     # เกินนี้ = ติดธง stale แต่ยังใช้ได้ถ้าไม่มีอย่างอื่น
@@ -278,9 +279,13 @@ def fetch_asset_tracker_dx() -> tuple[list | None, str]:
     except Exception as e:                                  # noqa: BLE001
         return None, f"ขอ token ไม่สำเร็จ ({type(e).__name__}: {e})"
 
-    def read_tab(tab: str):
+    def read_tab(tab: str, rng: str = "A1:Z10000", raw: bool = False):
+        # raw=True → ตัวเลข/วันที่แบบไม่จัดรูปแบบ (เหมือน Sync ของหน้าเว็บ)
+        # ต้องใช้กับ Transaction: ยอดที่จัดรูปแบบเป็นสกุลเงิน (฿1,234) แปลงเป็นตัวเลขไม่ได้
+        q = ("?valueRenderOption=UNFORMATTED_VALUE&dateTimeRenderOption=SERIAL_NUMBER"
+             if raw else "")
         url = (f"https://sheets.googleapis.com/v4/spreadsheets/{sheet_id}"
-               f"/values/{urllib.parse.quote(tab)}!A1:Z10000")
+               f"/values/{urllib.parse.quote(tab)}!{rng}{q}")
         req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
         with urllib.request.urlopen(req, timeout=30) as r:
             return json.loads(r.read()).get("values", [])
@@ -317,8 +322,21 @@ def fetch_asset_tracker_dx() -> tuple[list | None, str]:
         print(f"⚠️  อ่าน {PRICE_TAB} ไม่ได้ ({type(e).__name__}) — "
               f"กองทุนที่ Yahoo ไม่มีจะไม่มีราคา", file=sys.stderr)
 
+    # v57 — Transaction ใช้เฉพาะ Monthly report · อ่านไม่ได้ก็ยังส่งส่วนพอร์ตได้
+    global _tx_rows
+    if os.environ.get("LN_NEED_TX") == "1":
+        try:
+            _tx_rows = read_tab(TX_TAB, "A1:BZ40000", raw=True)
+        except Exception as e:                              # noqa: BLE001
+            _tx_rows = []
+            print(f"⚠️  อ่าน {TX_TAB} ไม่ได้ ({type(e).__name__}) — "
+                  f"Monthly report จะไม่มีส่วนรายรับ-รายจ่าย", file=sys.stderr)
+
     return rows, "ok"
 
+
+# แถวดิบของแท็บ Transaction — เติมเฉพาะโหมด monthly
+_tx_rows: list = []
 
 # แถวดิบของแท็บราคา — เติมโดย fetch_asset_tracker_dx() เพื่อไม่ต้องยิง API ซ้ำ
 _live_price_rows: list = []
@@ -558,7 +576,7 @@ def daily_message(port, market, prev, reason="") -> str:
             L.append(f"เทียบรอบก่อน {signed(d)} ({pct(d / pt * 100)})")
         if c > 0:
             g = t - c
-            L.append(f"กำไรสะสม {signed(g)} ({pct(g / c * 100)})")
+            L.append(f"กำไรที่ยังไม่ขาย {signed(g)} ({pct(g / c * 100)})")
         if port["dividends"]:
             L.append(f"ปันผลสะสม {money(port['dividends'])}")
 
@@ -670,7 +688,7 @@ def period_message(port, market, base, label) -> str:
         L.append(f"เปลี่ยนแปลง{label} {signed(d)} ({pct(d / bt * 100)})")
     if port["cost"] > 0:
         g = t - port["cost"]
-        L.append(f"กำไรสะสม {signed(g)} ({pct(g / port['cost'] * 100)})")
+        L.append(f"กำไรที่ยังไม่ขาย {signed(g)} ({pct(g / port['cost'] * 100)})")
 
     bp = (base or {}).get("prices", {})
     ch = []
@@ -698,6 +716,170 @@ def period_message(port, market, base, label) -> str:
         if old:
             line += f"  {pct((g['value'] - old) / old * 100)}"
         L.append(line)
+    return "\n".join(L)
+
+
+# ══════════════════════════════════════════════════════════════════════
+# v57 — MONTHLY REPORT: รายรับ-รายจ่ายของเดือนที่เพิ่งจบ + พอร์ต ในข้อความเดียว
+# ══════════════════════════════════════════════════════════════════════
+# port มาจาก gsProcessData() + computeSummary() + generateMonthlyPDF() ใน index.html
+# ถ้าสองที่คำนวณไม่ตรงกัน ตัวเลขใน LINE จะขัดกับ dashboard — แก้ที่หนึ่งต้องแก้อีกที่
+TX_TYPES = ("Expense", "Income", "Transfer", "Savings", "Bills", "Debt")
+SPEND_TYPES = ("Expense", "Bills", "Debt")      # ตรงกับ SPEND_TX_TYPES ใน shared.js
+
+
+def parse_transactions(raw: list) -> list[dict]:
+    """แถวดิบของชีต Transaction → [{date, type, category, details, amount}]
+
+    โครงชีต (เหมือนที่หน้าเว็บอ่าน):
+      แถว 0 = ประเภทบัญชี · แถว 1 = ชื่อบัญชี · แถว 2 = ยอดคงเหลือ
+      หัวตาราง = แถวแรก (ภายใน 40 แถว) ที่มีทั้ง 'Date' และ 'Transactions'
+      คอลัมน์บัญชีเริ่มที่ SCB_Bank (หรือ SCB-Bank, ไม่งั้นคอลัมน์ 6) ไปจนสุดแถว
+      ยอดของรายการ = ผลรวมทุกคอลัมน์บัญชี
+    """
+    if not raw:
+        return []
+    h_row = -1
+    for i in range(min(40, len(raw))):
+        cells = [str(c).strip() for c in (raw[i] or [])]
+        if "Date" in cells and "Transactions" in cells:
+            h_row = i
+            break
+    if h_row < 0:
+        return []
+    head = [str(c).strip() if c is not None else "" for c in raw[h_row]]
+
+    def ti(k):
+        return head.index(k) if k in head else -1
+
+    bank_start = ti("SCB_Bank") if ti("SCB_Bank") >= 0 else (
+        ti("SCB-Bank") if ti("SCB-Bank") >= 0 else 6)
+    name_row = raw[1] if len(raw) > 1 else []
+    scan_end = max(len(head), len(name_row))
+    bank_cols = [i for i in range(bank_start, scan_end)
+                 if (i < len(name_row) and str(name_row[i] or "").strip())
+                 or (i < len(head) and head[i])]
+    if not bank_cols:
+        bank_cols = list(range(bank_start, bank_start + 10))
+    c_date, c_tx, c_type, c_det = ti("Date"), ti("Transactions"), ti("Type"), ti("Details")
+
+    def cell(r, i):
+        return r[i] if 0 <= i < len(r) else None
+
+    out = []
+    for r in raw[h_row + 1:]:
+        r = r or []
+        tx = str(cell(r, c_tx) or "").strip()
+        if tx not in TX_TYPES:
+            continue
+        d = parse_date(cell(r, c_date))
+        if d is None:
+            continue
+        amt, touched = 0.0, 0
+        for ci in bank_cols:
+            v = cell(r, ci)
+            if v in (None, ""):
+                continue
+            x = _f(v)
+            if x == 0:
+                continue
+            amt += x
+            touched += 1
+        if not touched and tx != "Transfer":        # เหมือน BUGFIX v48 #18 ในหน้าเว็บ
+            continue
+        out.append({"date": d, "month": f"{d.year:04d}-{d.month:02d}", "type": tx,
+                    "category": str(cell(r, c_type) or "").strip() or "Other",
+                    "details": str(cell(r, c_det) or "").strip(),
+                    "amount": round(amt, 2)})
+    return out
+
+
+def month_summary(rows: list[dict], mk: str) -> dict:
+    """ตรงกับ computeSummary() + savingFromSummary() ใน index.html/shared.js (v55)"""
+    s = {"income": 0.0, "expense": 0.0, "savings": 0.0, "debt": 0.0, "n": 0}
+    cats: dict[str, float] = {}
+    for r in rows:
+        if r["month"] != mk:
+            continue
+        s["n"] += 1
+        t, a = r["type"], r["amount"]
+        if t == "Income":
+            s["income"] += a
+        elif t in ("Expense", "Bills"):
+            s["expense"] += a
+            # ใช้ยอดมีเครื่องหมาย: เงินคืน (บวก) หักออกจากหมวด ไม่ใช่นับเป็นรายจ่ายเพิ่ม
+            cats[r["category"]] = cats.get(r["category"], 0.0) - a
+        elif t == "Savings":
+            s["savings"] += a
+        elif t == "Debt":
+            s["debt"] += a
+    s["net"] = s["income"] + s["expense"] + s["savings"] + s["debt"]
+    # Saving rate นิยามสากล: (รายได้ − รายจ่าย) ÷ รายได้ · รายจ่าย = Expense+Bills+Debt
+    spend = -(s["expense"] + s["debt"])
+    s["spend"] = spend
+    s["saved"] = s["income"] - spend
+    s["sav_rate"] = (s["saved"] / s["income"] * 100) if s["income"] > 0 else None
+    cats = {k: v for k, v in cats.items() if v > 0}
+    s["top"] = sorted(cats.items(), key=lambda kv: -kv[1])[:5]
+    s["cat_total"] = sum(cats.values())
+    return s
+
+
+def prev_month_key(d: datetime) -> str:
+    first = d.replace(day=1)
+    last = first - timedelta(days=1)
+    return f"{last.year:04d}-{last.month:02d}"
+
+
+def month_label(mk: str) -> str:
+    y, m = mk.split("-")
+    return f"{TH_MON[int(m) - 1]} {y}"
+
+
+def monthly_report(port, market, base, tx_rows) -> str:
+    """Monthly report — ส่งวันที่ 1 เวลา 08:00 สรุปเดือนที่เพิ่งจบ
+
+    แทนการกด Export PDF (ปุ่มบนหน้าเว็บยังอยู่) · ไม่มีส่วนงบประมาณ เพราะงบที่ตั้ง
+    เก็บในเบราว์เซอร์ ตัวส่งบน GitHub อ่านไม่ถึง
+    """
+    mk = prev_month_key(NOW)
+    L = [f"🗓 Monthly report — {month_label(mk)}", ""]
+
+    s = month_summary(tx_rows, mk) if tx_rows else None
+    if s and s["n"]:
+        L.append("💧 รายรับ-รายจ่าย")
+        L.append(f"  รายรับ {money(s['income'])}")
+        L.append(f"  รายจ่าย+บิล {money(abs(s['expense']))}")
+        if s["debt"]:
+            L.append(f"  รูดบัตร/หนี้ {money(abs(s['debt']))}")
+        if s["savings"]:
+            L.append(f"  โอนออม/ลงทุน {money(abs(s['savings']))}")
+        L.append(f"  คงเหลือสุทธิ {signed(s['net'])}")
+        if s["sav_rate"] is not None:
+            L.append(f"  Saving rate {s['sav_rate']:.0f}%  (รายได้ − รายจ่าย) ÷ รายได้")
+        # เทียบเดือนก่อนหน้า — บอกทิศทาง ไม่ใช่แค่ตัวเลขของเดือนเดียว
+        pm = prev_month_key(datetime(int(mk[:4]), int(mk[5:]), 1, tzinfo=TZ))
+        ps = month_summary(tx_rows, pm)
+        if ps["n"] and ps["spend"] > 0:
+            ch = (s["spend"] / ps["spend"] - 1) * 100
+            L.append(f"  รายจ่ายรวม{'เพิ่มขึ้น' if ch >= 0 else 'ลดลง'} "
+                     f"{abs(ch):.0f}% จาก {month_label(pm)}")
+        if s["top"]:
+            L += ["", "💸 ใช้จ่ายสูงสุด 5 หมวด"]
+            for cat, v in s["top"]:
+                share = v / s["cat_total"] * 100 if s["cat_total"] else 0
+                L.append(f"  {cat} {money(v)} ({share:.0f}%)")
+    elif tx_rows:
+        L.append(f"💧 ยังไม่มีรายการของ{month_label(mk)}ในชีต Transaction")
+    else:
+        L.append("💧 อ่านชีต Transaction ไม่ได้ — ส่งเฉพาะส่วนพอร์ต")
+
+    body = period_message(port, market, base, "รายเดือน")
+    if body:
+        # ตัดหัวข้อของ period_message ออก ใช้หัวข้อของรายงานนี้แทน
+        L += ["", "💼 พอร์ตลงทุน"] + body.split("\n")[2:]
+    else:
+        L += ["", "💼 ยังอ่านพอร์ตไม่ได้"]
     return "\n".join(L)
 
 
@@ -751,6 +933,8 @@ def main() -> int:
 
     market = load_market()
     state = load_state()
+    if a.mode in ("monthly", "check"):
+        os.environ["LN_NEED_TX"] = "1"          # อ่านชีต Transaction เฉพาะโหมดที่ใช้
     rows, reason = fetch_asset_tracker_dx()
     port = build_portfolio(rows, market, _live_price_rows) if rows else None
 
@@ -772,6 +956,9 @@ def main() -> int:
             print(f"::error title=ต่อ Google Sheet ไม่ได้::{reason}")
             return 1
         print(f"\n✓ อ่านได้ {len(rows)} แถว · หัวตาราง: {', '.join(str(h) for h in rows[0][:8])}")
+        _txp = parse_transactions(_tx_rows)
+        print(f"✓ {TX_TAB}: {len(_txp)} รายการ" + (f" · เดือนล่าสุด {max(r['month'] for r in _txp)}"
+              if _txp else " — อ่านไม่ได้หรือหาแถวหัวตาราง (Date/Transactions) ไม่เจอ"))
         if not port:
             msg = "อ่านชีตได้ แต่คำนวณพอร์ตไม่ได้ — ตรวจชื่อคอลัมน์ Ticker/Transaction_Type"
             print(f"❌ {msg}")
@@ -808,10 +995,13 @@ def main() -> int:
         sent = broadcast(alert_message(mv, port), a.dry_run) if mv else False
         if not mv:
             print("— ไม่มีตัวไหนขยับเกินเกณฑ์")
-    elif a.mode in ("weekly", "monthly"):
-        label = "รายสัปดาห์" if a.mode == "weekly" else "รายเดือน"
-        base = state.get("week" if a.mode == "weekly" else "month", {})
-        sent = broadcast(period_message(port, market, base, label), a.dry_run)
+    elif a.mode == "weekly":
+        sent = broadcast(period_message(port, market, state.get("week", {}), "รายสัปดาห์"),
+                         a.dry_run)
+    elif a.mode == "monthly":
+        # v57 — Monthly report (รายรับ-รายจ่ายเดือนที่แล้ว + พอร์ต) รวมเป็นข้อความเดียว
+        sent = broadcast(monthly_report(port, market, state.get("month", {}),
+                                        parse_transactions(_tx_rows)), a.dry_run)
     else:
         sent = broadcast(
             daily_message(port, market, state.get("last", {}),
