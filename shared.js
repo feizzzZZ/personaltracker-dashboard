@@ -16,7 +16,7 @@ window.LOC = window.LOC || 'th-TH-u-ca-gregory';
 //   • XIRR engine
 // กติกา: ไฟล์นี้ห้ามแตะ DOM ของหน้าใดหน้าหนึ่ง — pure data layer เท่านั้น
 // ═══════════════════════════════════════════════════════════════════
-const APP_BUILD = 'v54';
+const APP_BUILD = 'v55';
 console.log('[Finance OS shared] build', APP_BUILD);
 window.SHARED_BUILD = APP_BUILD;   // v45 — ให้ index.html ตรวจได้ว่าเวอร์ชันตรงกัน
  
@@ -1256,6 +1256,75 @@ function sectorRating(s){
                   : {label:'Underweight',color:'loss'};
 }
  
+// ══════════════════════════════════════════════════════════════════════
+// v55 — METRIC REGISTRY: ตัวชี้วัดที่หลายหน้าใช้ร่วมกัน คำนวณที่นี่ที่เดียว
+// ══════════════════════════════════════════════════════════════════════
+// กติกา: ชื่อเดียวกัน = สูตรเดียวกันทุกหน้า ถ้าต้องการสูตรอื่นต้องตั้งชื่ออื่น
+// ก่อนหน้านี้ Saving rate มี 3 สูตร · Fee ratio มี 3 ตัวหาร · ความกระจุกตัวมี 2 มุม
+// ทำให้ Overview บอก −18% ขณะที่ Analyst Desk บอก +18% จากข้อมูลชุดเดียวกัน
+
+// ── 1. Saving rate (นิยามสากล) ───────────────────────────────────────
+// saving rate = (รายได้ − รายจ่ายเพื่อการบริโภค) ÷ รายได้
+// เงินที่เหลือนับเป็น "เงินออม" ไม่ว่าจะถูกโอนไปลงทุนหรือยังค้างในบัญชี
+// รายจ่าย = Expense + Bills + Debt (ยอดรูดบัตรเครดิต — แถวบัตรในชีตเป็น Debt ทั้งหมด)
+//   การจ่ายบัตรจากบัญชีธนาคาร (−X ธนาคาร, +X บัตร) หักล้างกันเองในแถวเดียว จึงไม่นับซ้ำ
+// ใช้ยอดที่มีเครื่องหมาย: รายจ่าย = ลบ, เงินคืน/refund = บวก (ลดรายจ่าย)
+// แถว Savings (โอนไปออม/ลงทุน) ไม่ใช่รายจ่าย → ไม่อยู่ในสูตรนี้
+// อัตราที่ "ลงทุนจริง" ดูที่ Invest rate ในหน้า Wealth Engine (จาก Asset_Tracker)
+const SPEND_TX_TYPES = ['Expense','Bills','Debt'];
+function savingFromSummary(s){
+  const income = Number(s && s.income) || 0;
+  const spend  = -((Number(s && s.expense) || 0) + (Number(s && s.debt) || 0));
+  const saved  = income - spend;
+  return { income, spend, saved, rate: income > 0 ? saved / income * 100 : null };
+}
+
+// ── 2. Fee ratio (transaction cost) ─────────────────────────────────
+// ค่าธรรมเนียม+ภาษีของการซื้อและการขาย ÷ มูลค่าซื้อขายรวม (ซื้อ + ขาย)
+// เป็นวิธีเดียวกับที่โบรกและกองทุนวัด transaction cost (% ของ turnover)
+// เดิมนับค่าธรรมเนียมเฉพาะฝั่งซื้อ — ค่าธรรมเนียมตอนขายหายไปทั้งหมด
+const FEE_WARN_PCT = 0.5;      // เกิน 0.5% ของมูลค่าซื้อขาย = แพงเกินควร
+function feeStats(trackerRows){
+  let fees = 0, traded = 0, buyFees = 0, sellFees = 0;
+  (trackerRows || []).forEach(r => {
+    const tt = String(r && r.txType || '').trim();
+    const c = Math.abs(Number(r.commTHB) || 0);
+    if(tt === 'Buy' || tt === 'Split'){ fees += c; buyFees += c; }
+    else if(tt === 'Sell'){ fees += c; sellFees += c; }
+    if(tt === 'Buy' || tt === 'Sell') traded += Math.abs(Number(r.amtTHB) || 0);
+  });
+  const ratio = traded > 0 ? fees / traded * 100 : null;
+  return { fees, buyFees, sellFees, traded, ratio,
+           level: ratio == null ? 'g' : ratio > FEE_WARN_PCT ? 'y' : 'g' };
+}
+
+// ── 3. ความกระจุกตัว (single-position) ────────────────────────────────
+// หลักสากลวัดน้ำหนักของสินทรัพย์ "รายตัว" เทียบทั้งพอร์ต ไม่ใช่รายกลุ่ม
+//   > 10% = เริ่มกระจุก (y) · > 20% = สูง (r)
+// ยกเว้นสิ่งที่กระจายความเสี่ยงในตัวเองอยู่แล้ว: ETF ดัชนี · กองทุนรวม · PF
+// (VOO 30% ไม่ใช่ความเสี่ยงแบบเดียวกับหุ้นตัวเดียว 30%)
+// ทอง/คริปโตรายตัว/หุ้นรายตัว ถูกนับตามปกติ
+const CONC_WARN_PCT = 10, CONC_HIGH_PCT = 20;
+const DIVERSIFIED_TICKERS = new Set(['VOO','VTI','VT','SPY','IVV','QQQ','JEPI','SCHD','VXUS','BND','VEA','VWO']);
+const DIVERSIFIED_GROUPS  = new Set(['Mutual Fund','Provident Fund']);
+function isDiversifiedHolding(a){
+  if(!a) return false;
+  if(DIVERSIFIED_GROUPS.has(a.group)) return true;
+  if(DIVERSIFIED_TICKERS.has(String(a.ticker || '').toUpperCase())) return true;
+  return /\bETF\b|index fund|กองทุน/i.test(String(a.industry || ''));
+}
+function concentrationCheck(assets){
+  const held = (assets || []).filter(a => a && a.val > 0);
+  const total = held.reduce((s, a) => s + a.val, 0);
+  const single = held.filter(a => !isDiversifiedHolding(a)).sort((a, b) => b.val - a.val);
+  if(!(total > 0) || !single.length) return { total, top: null, pct: 0, level: 'g', top3Pct: 0, top3: [] };
+  const top = single[0], pct = top.val / total * 100;
+  const top3 = single.slice(0, 3);
+  return { total, top, pct, top3, top3Pct: top3.reduce((s, a) => s + a.val, 0) / total * 100,
+           level: pct > CONC_HIGH_PCT ? 'r' : pct > CONC_WARN_PCT ? 'y' : 'g',
+           excluded: held.filter(isDiversifiedHolding).map(a => a.ticker) };
+}
+
 // ═══ XIRR engine (validated กับ ground truth ±0.01%) ═══
 function xirrJS(cfs){
   if(!cfs || cfs.length<2) return null;
@@ -1680,9 +1749,12 @@ function analystPortfolio(c){
   if(c.moneyIn>0){
     const gain = c.totalVal + (c.moneyOut||0) - c.moneyIn;
     const gp   = gain/c.moneyIn*100;
+    /* v55 — ตั้งชื่อตามนิยาม: นี่คือ "ผลตอบแทนรวม (Total return)"
+       = มูลค่าวันนี้ + เงินที่ได้คืน (ขาย + ปันผล) − เงินที่ใส่เข้า
+       ต่างจาก "กำไรที่ยังไม่ขาย (Unrealized)" ในหน้า Holdings ที่ดูเฉพาะของที่ยังถือ */
     F.push({ s: gp<0?'r':gp<10?'y':'g',
-      t:`ตลาดสร้างให้ ${gain>=0?'+':'−'}${_n(Math.abs(gain))} บาท (${_pc(gp)})`,
-      d:`เงินตัวเองสุทธิ ${_n(c.moneyIn-(c.moneyOut||0))} บาท`
+      t:`ผลตอบแทนรวม (Total return) ${gain>=0?'+':'−'}${_n(Math.abs(gain))} บาท (${_pc(gp)})`,
+      d:`รวมกำไรที่ขายไปแล้ว + ปันผล + กำไรที่ยังไม่ขาย · เงินตัวเองสุทธิ ${_n(c.moneyIn-(c.moneyOut||0))} บาท`
         + ` — ส่วนที่เกินมานี้คือผลงานของพอร์ตจริงๆ ไม่ใช่ผลของการเติมเงิน`});
   }
   // (2) XIRR เทียบกับสิ่งที่ทำได้แบบไม่ต้องคิด
@@ -1704,11 +1776,12 @@ function analystPortfolio(c){
         + ` (${(drag.reduce((s,d)=>s+d.val,0)/tot*100).toFixed(0)}% ของพอร์ต) ตัวที่ถือเพราะ "รอให้เท่าทุน" คือต้นทุนค่าเสียโอกาส` });
     A.push(`ทบทวน ${d0.tk}: เหตุผลที่ซื้อตอนแรกยังจริงอยู่ไหม ถ้าไม่ ขาดทุนที่ผ่านมาไม่ใช่เหตุผลให้ถือต่อ`);
   }
-  // (4) ต้นทุนที่จ่ายไปโดยไม่รู้ตัว
-  if(c.totalFee>0 && c.moneyIn>0){
-    const fp=c.totalFee/c.moneyIn*100;
-    F.push({ s: fp>1?'y':'g', t:`ค่าธรรมเนียมสะสม ${_n(c.totalFee)} บาท (${fp.toFixed(2)}% ของเงินที่ลงไป)`,
-      d: fp>1?'สูงกว่า 1% — ค่าธรรมเนียมกินผลตอบแทนแบบทบต้นเหมือนกัน':'อยู่ในระดับที่ยอมรับได้' });
+  // (4) ต้นทุนที่จ่ายไปโดยไม่รู้ตัว — v55: ใช้ feeStats() ตัวเดียวกับทุกหน้า
+  const _fs = c.fee || null;
+  if(_fs && _fs.fees>0 && _fs.ratio!=null){
+    F.push({ s:_fs.level, t:`ค่าธรรมเนียมรวม ${_n(_fs.fees)} บาท (${_fs.ratio.toFixed(2)}% ของมูลค่าซื้อขาย)`,
+      d: _fs.level==='y' ? `สูงกว่า ${FEE_WARN_PCT}% — ค่าธรรมเนียมกินผลตอบแทนแบบทบต้นเหมือนกัน`
+                         : 'อยู่ในระดับที่ยอมรับได้' });
   }
   if(c.xirr!=null && c.twrPct!=null && c.twrDays>=30){
     const diff=c.twrPct-c.xirr*100;
@@ -1727,16 +1800,14 @@ function analystRisk(c){
   if(!tot) return _mk('risk','Risk Analyst','จุดที่จะเจ็บถ้าตลาดพัง','🛡',
     [{s:'y',t:'ยังไม่มีพอร์ตให้ประเมินความเสี่ยง',d:''}],[]);
  
-  // (1) กระจุกตัวรายตัว — อันตรายกว่ากระจุกราย asset class
-  const bySym=[...held].sort((a,b)=>b.val-a.val);
-  const t1=bySym[0], p1=t1.val/tot*100;
-  const _p1sev = ALLOC_META[t1.group]?.illiquid ? (p1>25?'y':'g') : (p1>25?'r':p1>15?'y':'g');
-  F.push({ s:_p1sev, t:`ตัวใหญ่สุด ${t1.ticker} ${p1.toFixed(0)}% ของพอร์ต`,
-    d: p1>15 ? `ถ้า ${t1.ticker} ลง 50% พอร์ตหายทันที ${(p1/2).toFixed(0)}% (${_n(t1.val*0.5)} บาท)`
-             : 'ไม่มีตัวไหนใหญ่พอจะทำพอร์ตพังคนเดียว' });
-  const top3=bySym.slice(0,3).reduce((s,a)=>s+a.val,0)/tot*100;
-  if(top3>50) F.push({s:'y',t:`3 ตัวแรกรวมกัน ${top3.toFixed(0)}% ของพอร์ต`,
-    d:`${bySym.slice(0,3).map(a=>a.ticker).join(' · ')} — จำนวนตัวเยอะไม่ได้แปลว่ากระจายความเสี่ยงแล้ว`});
+  // (1) กระจุกตัวรายตัว — v55: ใช้ concentrationCheck() ตัวเดียวกับ Overview
+  const cc = concentrationCheck(held);
+  const t1 = cc.top, p1 = cc.pct;
+  if(t1) F.push({ s:cc.level, t:`ตัวใหญ่สุด ${t1.ticker} ${p1.toFixed(0)}% ของพอร์ต`,
+    d: p1>CONC_WARN_PCT ? `ถ้า ${t1.ticker} ลง 50% พอร์ตหายทันที ${(p1/2).toFixed(0)}% (${_n(t1.val*0.5)} บาท)`
+                        : 'ไม่มีตัวไหนใหญ่พอจะทำพอร์ตพังคนเดียว' });
+  if(cc.top3Pct>50) F.push({s:'y',t:`3 ตัวแรกรวมกัน ${cc.top3Pct.toFixed(0)}% ของพอร์ต`,
+    d:`${cc.top3.map(a=>a.ticker).join(' · ')} — จำนวนตัวเยอะไม่ได้แปลว่ากระจายความเสี่ยงแล้ว`});
  
   // (2) ค่าเงิน — รายจ่ายเป็นบาท 100% แต่สินทรัพย์ไม่ใช่
   const usd=held.filter(a=>a.currency==='USD').reduce((s,a)=>s+a.val,0);
@@ -1765,11 +1836,9 @@ function analystRisk(c){
   /* กองที่ขายไม่ได้ (กองทุนสำรองเลี้ยงชีพ) ห้ามแนะนำให้ "ลดน้ำหนัก"
      — ขายไม่ได้จนกว่าจะออกจากงาน และการหยุดสมทบมักเสียเงินสมทบนายจ้าง
      ซึ่งเป็นผลตอบแทนทันที 100% คำแนะนำที่ทำตามไม่ได้คือคำแนะนำที่ผิด */
-  const t1Illiquid = ALLOC_META[t1.group]?.illiquid;
-  if(p1>25 && !t1Illiquid)
-    A.push(`ลดน้ำหนัก ${t1.ticker} หรือหยุดเติมเข้าตัวนี้จนสัดส่วนกลับมาต่ำกว่า 25%`);
-  else if(p1>25 && t1Illiquid)
-    A.push(`${t1.ticker} ขายไม่ได้จึงลดน้ำหนักตรงๆ ไม่ได้ — ให้เจือจางด้วยการเติมเงินใหม่เข้ากองอื่นแทน`);
+  // v55 — PF/กองทุนไม่อยู่ในการวัดความกระจุกตัวแล้ว (ดู isDiversifiedHolding)
+  if(t1 && p1>CONC_HIGH_PCT)
+    A.push(`ลดน้ำหนัก ${t1.ticker} หรือหยุดเติมเข้าตัวนี้จนสัดส่วนกลับมาต่ำกว่า ${CONC_HIGH_PCT}%`);
   return _mk('risk','Risk Analyst','จุดที่จะเจ็บถ้าตลาดพัง','🛡',F,A);
 }
  
@@ -1782,10 +1851,9 @@ function analystCashflow(c){
  
   const recent=m.slice(-6);
   const avgInc=recent.reduce((s,x)=>s+x.income,0)/recent.length;
-  /* v54 BUGFIX — savings ในชีตเป็นยอดสุทธิที่มีเครื่องหมาย: ออมเข้า = ลบ, ถอนออก = บวก
-     เดิม Math.abs ทำให้เดือนที่ "ถอนเงินออม" ถูกนับเป็นเงินเก็บ → saving rate สูงเกินจริง
-     ใช้ −savings: ออม 10,000 → +10,000 · ถอน 10,000 → −10,000 (หักออกจากค่าเฉลี่ย) */
-  const avgSav=recent.reduce((s,x)=>s+(-(Number(x.savings)||0)),0)/recent.length;
+  /* v55 — ใช้ savingFromSummary() ตัวเดียวกับทุกหน้า (นิยามสากล)
+     เงินที่เก็บได้ = รายได้ − (Expense + Bills + ยอดรูดบัตร) ไม่ใช่ยอดที่โอนไปออม */
+  const avgSav=recent.reduce((s,x)=>s+savingFromSummary(x).saved,0)/recent.length;
   const sr=avgInc>0?avgSav/avgInc*100:0;
   F.push({ s:sr<10?'r':sr<20?'y':'g', t:`Saving rate เฉลี่ย ${sr.toFixed(0)}% (${recent.length} เดือนล่าสุด)`,
     d:`เก็บได้เดือนละ ${_n(avgSav)} จากรายได้ ${_n(avgInc)} บาท`
