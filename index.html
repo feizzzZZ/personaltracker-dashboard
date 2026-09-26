@@ -184,22 +184,6 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 .page.active{display:block}
 
 /* ── Page header ── */
-/* v56 — แท็บในเมนู · ทางลัดบน Overview */
-.grp-tabs{display:flex;gap:2px;overflow-x:auto;margin:0 0 18px;border-bottom:1px solid var(--border);scrollbar-width:none}
-.grp-tabs::-webkit-scrollbar{display:none}
-.grp-tab{background:none;border:none;border-bottom:2px solid transparent;color:var(--muted2);padding:9px 14px;font:inherit;font-size:12.5px;cursor:pointer;white-space:nowrap;margin-bottom:-1px}
-.grp-tab:hover{color:var(--text)}
-.grp-tab.active{color:var(--white);border-bottom-color:var(--income);font-weight:600}
-.grp-tab:focus-visible{outline:2px solid var(--income);outline-offset:-2px}
-.ov-goal-line{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:12px 16px;margin:14px 0;font-size:12.5px;color:var(--muted2);cursor:pointer;line-height:1.7}
-.ov-goal-line strong{color:var(--white)}
-.ov-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
-.ov-tile{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:12px 14px;cursor:pointer;display:flex;flex-direction:column;gap:3px;text-align:left;font:inherit;color:var(--text)}
-.ov-tile:hover{border-color:var(--border2)}
-.ov-tile:focus-visible{outline:2px solid var(--income);outline-offset:2px}
-.ov-tile-lbl{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted2)}
-.ov-tile-val{font-size:18px;font-weight:700;font-variant-numeric:tabular-nums}
-.ov-tile-sub{font-size:11px;color:var(--muted2)}
 .pg-hdr{margin-bottom:20px;display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:10px}
 .pg-title{font-family:var(--f-sans);font-size:22px;font-weight:800;color:var(--white);letter-spacing:-.02em}
 .pg-sub{font-size:12px;color:var(--muted);margin-top:3px}
@@ -308,8 +292,29 @@ select.month-display{text-align-last:center;outline:none}
 .hi-desc{font-size:11px;color:var(--muted2);line-height:1.5}
 
 /* ── Alloc donut ── */
-.dw{position:relative;height:160px;display:flex;align-items:center;justify-content:center}
-.dc{position:absolute;text-align:center;pointer-events:none}
+/* ══ v55 BUGFIX — โดนัทบวมจนล้นการ์ด ═══════════════════════════════
+   อาการ: ดับเบิลคลิกเมนู แล้วโดนัท "Expense breakdown" ขยายจนเส้นผ่าน
+   ศูนย์กลางเท่าความกว้างการ์ด (~790px) ทับทั้งหน้า
+   สาเหตุ: .dw เคยเป็น display:flex โดย canvas เป็น flex item ที่ *อยู่ใน
+   flow* — Chart.js วัดขนาดจาก parent แล้วเขียน inline style กลับลง canvas
+   ซึ่งย้อนกลับไปเปลี่ยนขนาดของ parent ได้ = ลูปป้อนกลับ ยิ่ง render ซ้ำยิ่งโต
+   และ maintainAspectRatio:true สั่งว่า "สูง = กว้าง" จึงระเบิดตามความกว้าง
+   แก้ 3 ชั้น (แต่ละชั้นตัดลูปได้ด้วยตัวเองแม้ชั้นอื่นพัง):
+     1. canvas เป็น position:absolute → หลุดจาก flow → เปลี่ยนขนาด parent
+        ไม่ได้อีกเลย ลูปป้อนกลับจึงเกิดไม่ได้ในเชิงโครงสร้าง
+     2. max-width/max-height:100% → ต่อให้ Chart.js คำนวณผิด ก็โตเกินกล่องไม่ได้
+     3. overflow:hidden → ต่อให้สองชั้นบนพัง ก็ล้นออกนอกกล่องไม่ได้
+   คู่กับ maintainAspectRatio:false ใน mkDonut() — ดูคอมเมนต์ที่นั่น */
+.dw{position:relative;height:160px;overflow:hidden}
+.dw>canvas{position:absolute;top:0;left:0;display:block;max-width:100%;max-height:100%}
+/* .dc เคยอาศัย flex ของ .dw ในการจัดกึ่งกลาง — พอ .dw ไม่ใช่ flex แล้ว
+   ต้องจัดกึ่งกลางด้วยตัวเอง ไม่งั้นตัวเลขกลางโดนัทไปกองที่มุมซ้ายบน */
+.dc{position:absolute;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;text-align:center;pointer-events:none}
+/* กันไว้ทั่วทั้งแอป: canvas ห้ามใหญ่เกินกล่องที่ครอบมันอยู่
+   (max-height:100% มีผลเฉพาะเมื่อ parent มีความสูงที่แน่นอน ซึ่งกล่องกราฟ
+   ทุกอันในแอปนี้กำหนด height ไว้หมด — อันที่ไม่กำหนดจะถูกเพิกเฉย ไม่พัง) */
+.page canvas{max-width:100%;max-height:100%}
 .dc-val{font-size:14px;font-weight:500;color:var(--white)}
 .dc-lbl{font-size:9px;color:var(--muted);letter-spacing:.07em;text-transform:uppercase;margin-top:2px}
 .al{margin-top:10px;display:flex;flex-direction:column;gap:5px}
@@ -661,12 +666,44 @@ select.month-display{text-align-last:center;outline:none}
   text-align:right}
 
 .ins-table-wrap{overflow-x:auto;border-radius:10px;border:1px solid var(--border)}
-.ins-table{width:100%;border-collapse:collapse;font-size:12px}
+/* ══ v55 — คอลัมน์ Surrender Value ถูกตัด ต้องเลื่อนขวาถึงจะเห็น ══════
+   ทุกช่องเคยเป็น white-space:nowrap ความกว้างรวมของตารางจึงถูกกำหนดโดย
+   "ข้อความที่ยาวที่สุดในแต่ละคอลัมน์" ไม่ใช่พื้นที่ที่มีจริง
+   วัดจริงบนข้อมูลของผู้ใช้: ตารางต้องการ 1,140px แต่พื้นที่มีแค่ 750px
+   → คอลัมน์สุดท้าย (Surrender Value) ตกขอบไป 390px
+   แก้: ให้ 4 คอลัมน์ข้อความขึ้นบรรทัดใหม่ได้ พร้อมเพดานความกว้างต่อคอลัมน์
+   และลดขนาดอักษร/ระยะขอบลงเล็กน้อย → เหลือ 750px พอดีที่ความกว้างเดียวกัน
+   คอลัมน์ตัวเลขกับวันที่ยังคง nowrap เพราะการตัดบรรทัดกลางตัวเลขอ่านผิดง่าย */
+.ins-table{width:100%;border-collapse:collapse;font-size:11.5px}
 .ins-table th{background:var(--bg3);color:var(--muted);font-weight:400;letter-spacing:.06em;
-  text-transform:uppercase;font-size:10px;padding:10px 14px;text-align:left;
+  text-transform:uppercase;font-size:10px;padding:9px 8px;text-align:left;
   border-bottom:1px solid var(--border);white-space:nowrap}
-.ins-table td{padding:10px 14px;border-bottom:1px solid var(--border);color:var(--muted2);
+.ins-table td{padding:9px 8px;border-bottom:1px solid var(--border);color:var(--muted2);
   white-space:nowrap}
+/* Policy ID — รหัสยาว (S40TH0017751955-PA) ไม่มีช่องว่างให้ตัด
+   overflow-wrap:anywhere ตัดเฉพาะเมื่อจำเป็นจริง ต่างจาก break-all
+   ที่ตัดทุกบรรทัดจนแถวสูง 159px (วัดแล้ว) */
+.ins-table th:nth-child(2),
+.ins-table td:nth-child(2){white-space:normal;max-width:135px;overflow-wrap:anywhere}
+.ins-table th:nth-child(3),
+.ins-table td:nth-child(3){white-space:normal;max-width:82px}
+.ins-table th:nth-child(4),
+.ins-table td:nth-child(4){white-space:normal;min-width:120px;max-width:165px;line-height:1.5}
+.ins-table th:nth-child(5),
+.ins-table td:nth-child(5){white-space:normal;max-width:88px}
+/* จอแคบกว่า ~900px บีบยังไงก็ไม่พอ (วัดแล้ว: แถวพองเป็น 271px)
+   กลับไปใช้ตารางกะทัดรัด + เลื่อนแนวนอน ซึ่งอ่านง่ายกว่าแถวสูงเท่าจอ */
+@media(max-width:900px){
+  /* ต้องเขียน selector ให้ specificity เท่ากับกฎด้านบน — media query ไม่ได้
+     เพิ่มน้ำหนักให้ selector เอง  ".ins-table td" (0,1,1) แพ้
+     ".ins-table td:nth-child(4)" (0,2,1) ทุกครั้ง ถึงจะอยู่ใน @media ก็ตาม
+     (เคยเขียนแบบสั้นแล้วกฎนี้ไม่ทำงานเลย จับได้ตอนวัดความสูงแถว = 271px) */
+  .ins-table th:nth-child(2),.ins-table td:nth-child(2),
+  .ins-table th:nth-child(3),.ins-table td:nth-child(3),
+  .ins-table th:nth-child(4),.ins-table td:nth-child(4),
+  .ins-table th:nth-child(5),.ins-table td:nth-child(5){
+    white-space:nowrap;max-width:none;min-width:0}
+}
 .ins-table tr:last-child td{border-bottom:none}
 .ins-table tr:hover td{background:rgba(255,255,255,.02)}
 .ins-status-pill{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;
@@ -869,13 +906,7 @@ button,select,.sb-item,.bnav-item,.tab,.fb-btn,.yr-btn,.tx-editable,
 
 /* เลื่อนสุดขอบแล้วไม่ยางยืดจนเห็นพื้นหลังนอกหน้า */
 html,body{overscroll-behavior:none}
-.sb-nav{overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
-/* v57 BUGFIX — scroll ขึ้นไม่ได้ต้องแตะจอก่อน
-   .tw/.lscroll เป็นกล่องตารางที่เลื่อนแนวนอน แต่ overflow-x:auto ทำให้ overflow-y กลายเป็น auto
-   ไปด้วย พอใส่ overscroll-behavior:contain (ทั้งสองแกน) แล้วเมาส์/นิ้วอยู่บนตาราง
-   ซึ่งมักอยู่ท้ายหน้า การเลื่อนขึ้นจะถูกกล่องตารางกินไว้ ไม่ส่งต่อให้หน้า
-   → คุมเฉพาะแกนนอน แกนตั้งปล่อยให้หน้าเลื่อนตามปกติ */
-.tw,.lscroll{overscroll-behavior-x:contain;overscroll-behavior-y:auto;-webkit-overflow-scrolling:touch}
+.sb-nav,.tw,.lscroll{overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 
 /* ── แนะนำวิธีติดตั้งเป็นแอป ────────────────────────────────────────
    iOS ไม่มีปุ่ม "ติดตั้งแอป" ให้กดเหมือน Android — ต้องรู้เองว่าอยู่ใน
@@ -954,42 +985,71 @@ html.standalone .a2hs{display:none}
       <div class="sb-status"><span class="dot-live"></span><span id="sb-status">กำลังโหลด...</span></div>
     </div>
     <div class="sb-nav">
-      <!-- v56 — 19 เมนูเดิมยุบเป็น 9 · เรื่องย่อยของคำถามเดียวกันอยู่เป็นแท็บในหน้า
-           (แถบแท็บ #grp-tabs สร้างจาก NAV_GROUPS ใน JS) · badge id เดิมคงไว้ครบ -->
-      <div class="sb-section">ภาพรวม</div>
-      <div class="sb-item active" data-group="home" onclick="switchGroup('home')">
-        <span class="sb-icon" aria-hidden="true">⌂</span>ภาพรวม
+      <div class="sb-section">Dashboard</div>
+      <div class="sb-item active" data-page="overview" onclick="switchPage('overview')">
+        <span class="sb-icon" aria-hidden="true">⌂</span>Overview
       </div>
-      <div class="sb-item" data-group="analyst" onclick="switchGroup('analyst')">
-        <span class="sb-icon" aria-hidden="true">🧠</span>บทวิเคราะห์
-        <span class="bgt-badge" id="analyst-badge" style="display:none"></span>
-      </div>
-      <div class="sb-item" data-group="goals" onclick="switchGroup('goals')">
-        <span class="sb-icon" aria-hidden="true">◎</span>เป้าหมาย
-        <span class="sb-badge" id="sb-goals-badge" style="display:none">0</span>
-      </div>
-      <div class="sb-section">เงิน</div>
-      <div class="sb-item" data-group="money" onclick="switchGroup('money')">
-        <span class="sb-icon" aria-hidden="true">📊</span>เงินเข้า-ออก
+      <div class="sb-item" data-page="budget" onclick="switchPage('budget')">
+        <span class="sb-icon" aria-hidden="true">฿</span>Budget
         <span class="sb-badge sb-badge-warn" id="sb-budget-badge" style="display:none">0</span>
       </div>
-      <div class="sb-item" data-group="accounts" onclick="switchGroup('accounts')">
-        <span class="sb-icon" aria-hidden="true">🏦</span>บัญชี &amp; หนี้
+      <div class="sb-item" data-page="insurance" onclick="switchPage('insurance')">
+        <span class="sb-icon" aria-hidden="true">🛡</span>Insurance
+      </div>
+      <div class="sb-item" data-page="goals" onclick="switchPage('goals')">
+        <span class="sb-icon" aria-hidden="true">◎</span>Goals
+        <span class="sb-badge" id="sb-goals-badge" style="display:none">0</span>
+      </div>
+      <div class="sb-section">Cash Flow</div>
+      <div class="sb-item" data-page="accounts" onclick="switchPage('accounts')">
+        <span class="sb-icon" aria-hidden="true">🏦</span>Accounts
+      </div>
+      <div class="sb-item" data-page="debt" onclick="switchPage('debt')">
+        <span class="sb-icon" aria-hidden="true">💳</span>Debt
         <span class="bgt-badge" id="debt-badge" style="display:none;margin-left:auto"></span>
       </div>
-      <div class="sb-item" data-group="insurance" onclick="switchGroup('insurance')">
-        <span class="sb-icon" aria-hidden="true">🛡</span>ประกัน
+      <div class="sb-item" data-page="cashflow" onclick="switchPage('cashflow')">
+        <span class="sb-icon" aria-hidden="true">📊</span>Monthly
       </div>
-      <div class="sb-section">ลงทุน</div>
-      <div class="sb-item" data-group="invest" onclick="switchGroup('invest')">
-        <span class="sb-icon" aria-hidden="true">💼</span>พอร์ตลงทุน
+      <div class="sb-item" data-page="yearly" onclick="switchPage('yearly')">
+        <span class="sb-icon" aria-hidden="true">📅</span>Yearly
+      </div>
+      <div class="sb-item" data-page="analyst" onclick="switchPage('analyst')">
+        <span class="sb-icon" aria-hidden="true">🧠</span>Analyst Desk
+        <span class="bgt-badge" id="analyst-badge" style="display:none"></span>
+      </div>
+      <div class="sb-item" data-page="engine" onclick="switchPage('engine')">
+        <span class="sb-icon" aria-hidden="true">💧</span>Wealth Engine
+      </div>
+      <div class="sb-section">Investment</div>
+      <div class="sb-item" data-page="portfolio" onclick="switchPage('portfolio')">
+        <span class="sb-icon" aria-hidden="true">💼</span>Holdings
+      </div>
+      <div class="sb-item" data-page="flow" onclick="switchPage('flow')">
+        <span class="sb-icon" aria-hidden="true">↗</span>Investment Flow
+      </div>
+      <div class="sb-item" data-page="dividends" onclick="switchPage('dividends')">
+        <span class="sb-icon" aria-hidden="true">💵</span>Dividends
+      </div>
+      <div class="sb-item" data-page="realized" onclick="switchPage('realized')">
+        <span class="sb-icon" aria-hidden="true">🧾</span>Realized P&L
+      </div>
+      <div class="sb-section">ต้องตัดสินใจ</div>
+      <div class="sb-item" data-page="dormant" onclick="switchPage('dormant')">
+        <span class="sb-icon" aria-hidden="true">🔴</span>เงินที่ไม่มีใครดูแล
         <span class="sb-badge sb-badge-warn" id="dorm-badge" style="display:none">—</span>
       </div>
-      <div class="sb-item" data-group="dividends" onclick="switchGroup('dividends')">
-        <span class="sb-icon" aria-hidden="true">💵</span>ปันผล
+      <div class="sb-item" data-page="cost" onclick="switchPage('cost')">
+        <span class="sb-icon" aria-hidden="true">💰</span>ต้นทุนที่มองไม่เห็น
       </div>
-      <div class="sb-item" data-group="markets" onclick="switchGroup('markets')">
-        <span class="sb-icon" aria-hidden="true">📡</span>ตลาด &amp; จังหวะ
+      <div class="sb-item" data-page="dca" onclick="switchPage('dca')">
+        <span class="sb-icon" aria-hidden="true">🎯</span>DCA เดือนนี้
+      </div>
+      <div class="sb-item" data-page="signals" onclick="switchPage('signals')">
+        <span class="sb-icon" aria-hidden="true">📡</span>สัญญาณรายตัว
+      </div>
+      <div class="sb-item" data-page="market" onclick="switchPage('market')">
+        <span class="sb-icon" aria-hidden="true">📊</span>ตลาดวันนี้
       </div>
 
     </div>
@@ -1027,14 +1087,15 @@ html.standalone .a2hs{display:none}
 
   <!-- Main content -->
   <div class="main-content">
-    <!-- v56 — แท็บของเมนูที่เปิดอยู่ (ซ่อนเมื่อเมนูมีหน้าเดียว) -->
-    <div class="grp-tabs" id="grp-tabs" role="tablist" hidden></div>
 
     <!-- ══ OVERVIEW ══ -->
     <div class="page active" id="page-overview">
       <div class="pg-hdr">
         <div><div class="pg-title">Overview</div><div class="pg-sub">ภาพรวมทางการเงินทั้งหมด</div></div>
       </div>
+
+      <!-- v44: Action needed — ทุกอย่างที่ต้องลงมือ รวมไว้บนสุด -->
+      <div id="ov-action" style="display:none;margin-bottom:14px"></div>
 
       <!-- Total Wealth 4-part section -->
       <div class="sl" style="margin-bottom:12px">Total Wealth</div>
@@ -1085,14 +1146,85 @@ html.standalone .a2hs{display:none}
         </div>
       </div>
 
-      <!-- v44: Action needed — ทุกอย่างที่ต้องลงมือ รวมไว้บนสุด -->
-      <div id="ov-action" style="display:none;margin:14px 0"></div>
+      <!-- 🎯 Net Worth Goal Progress -->
+      <div id="ov-goal-3m" style="background:linear-gradient(135deg,rgba(0,212,160,.08),rgba(124,111,236,.06));border:1px solid rgba(0,212,160,.25);border-radius:14px;padding:18px 24px;margin-bottom:20px">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:20px">🎯</span>
+            <div>
+              <div style="font-family:var(--f-sans);font-size:15px;font-weight:600;color:var(--white)" id="ov-goal-title">Road to ฿3 Million</div>
+              <div style="font-size:11px;color:var(--muted2)" id="ov-goal-sub">เป้าหมาย Net Worth ฿3,000,000</div>
+            </div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-family:var(--f-sans);font-size:22px;font-weight:700;color:var(--gain)" id="ov-3m-pct">0%</div>
+            <div style="font-size:10px;color:var(--muted2)" id="ov-3m-remain">เหลืออีก ฿3,000,000</div>
+          </div>
+        </div>
+        <!-- Progress bar with milestone markers -->
+        <div style="position:relative;height:12px;background:var(--bg4);border-radius:6px;overflow:visible;border:1px solid var(--border)">
+          <div style="position:absolute;inset:0;border-radius:6px;overflow:hidden">
+            <div id="ov-3m-bar" style="height:100%;width:0%;background:linear-gradient(90deg,var(--income),var(--gain));border-radius:6px;transition:width .8s ease"></div>
+          </div>
+          <!-- Milestone: 1M (33.3%) -->
+          <div style="position:absolute;left:33.33%;top:-3px;bottom:-3px;width:2px;background:var(--muted2);opacity:.5"></div>
+          <!-- Milestone: 2M (66.6%) -->
+          <div style="position:absolute;left:66.66%;top:-3px;bottom:-3px;width:2px;background:var(--muted2);opacity:.5"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:5px;font-size:9px;color:var(--muted2)">
+          <span>฿0</span><span style="margin-left:29%">฿1M</span><span style="margin-left:24%">฿2M</span><span>฿3M</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:10px;flex-wrap:wrap;gap:8px">
+          <div style="font-size:11px;color:var(--muted2)" id="ov-3m-projection">—</div>
+          <div style="font-size:11px;color:var(--muted2)" id="ov-3m-monthly">—</div>
+        </div>
+        <!-- Scenario selector: expected annual return -->
+        <div style="display:flex;align-items:center;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid var(--border);flex-wrap:wrap">
+          <span style="font-size:10px;color:var(--muted2);text-transform:uppercase;letter-spacing:.06em">Expected return</span>
+          <div style="display:flex;gap:4px" id="ov-3m-scenarios">
+            <button class="bm-scenario-btn" data-ret="0"  onclick="setGoalScenario(0,this)">💵 0%</button>
+            <button class="bm-scenario-btn" data-ret="5"  onclick="setGoalScenario(5,this)">🐢 5%</button>
+            <button class="bm-scenario-btn active" data-ret="7" onclick="setGoalScenario(7,this)">📊 7%</button>
+            <button class="bm-scenario-btn" data-ret="10" onclick="setGoalScenario(10,this)">🚀 10%</button>
+          </div>
+          <span style="font-size:10px;color:var(--muted);margin-left:auto" id="ov-3m-compound-note"></span>
+        </div>
+      </div>
 
-      <!-- v56 — เป้าหมายเหลือบรรทัดเดียว รายละเอียด/ฉายภาพย้ายไปหน้าเป้าหมาย -->
-      <div class="ov-goal-line" id="ov-goal-line" role="button" tabindex="0" onclick="switchGroup('goals')">🎯 —</div>
+      <!-- v44: Emergency Fund — ความเสี่ยงอันดับ 1 ต่อเป้าล้านแรก -->
+      <div class="sl sl-mt">Emergency fund</div>
+      <div id="ov-ef" style="background:var(--bg3);border:1px solid var(--cb);border-radius:14px;padding:18px 20px;margin-bottom:14px"></div>
 
-      <!-- v56 — ทางลัดไปหน้าหลักของแต่ละเรื่อง (แทนบล็อกที่เคยคัดลอกมาทั้งก้อน) -->
-      <div class="ov-tiles" id="ov-tiles"></div>
+      <!-- Summary cards -->
+      <div class="sl">This month cashflow</div>
+      <div class="sg">
+        <div class="sc" style="--g:rgba(0,212,160,.1)"><div class="sc-lbl">Income</div><div class="sc-val gain" id="ov-inc">฿0</div><div class="sc-sub" id="ov-inc-sub"></div></div>
+        <div class="sc" style="--g:rgba(255,64,96,.1)"><div class="sc-lbl">Expense + Bills</div><div class="sc-val loss" id="ov-exp">฿0</div><div class="sc-sub" id="ov-exp-sub"></div></div>
+        <div class="sc" style="--g:rgba(124,111,236,.08)"><div class="sc-lbl">Savings</div><div class="sc-val" id="ov-sav" style="color:var(--savings)">฿0</div><div class="sc-sub" id="ov-sav-sub">จาก Transaction sheet</div></div>
+        <div class="sc" style="--g:rgba(255,149,0,.08)"><div class="sc-lbl">Debt payment</div><div class="sc-val" id="ov-debt" style="color:var(--debt)">฿0</div><div class="sc-sub" id="ov-debt-sub"></div></div>
+        <div class="sc"><div class="sc-lbl">Net cashflow</div><div class="sc-val" id="ov-net">฿0</div><div class="sc-delta" id="ov-net-lbl" style="font-size:11px;margin-top:5px"></div></div>
+        <div class="sc" style="--g:rgba(0,212,160,.06)"><div class="sc-lbl">Saving rate</div><div class="sc-val" id="ov-savrate">0%</div><div class="sc-sub">savings ÷ income</div></div>
+        <div class="sc" style="--g:rgba(0,212,160,.06)"><div class="sc-lbl">Dividend (all time)</div><div class="sc-val gain" id="ov-div">฿0</div><div class="sc-sub">ผลตอบแทนสะสม</div></div>
+      </div>
+
+      <!-- Portfolio health -->
+      <div class="sl sl-mt">Portfolio health</div>
+      <div class="health-grid" id="ov-health" style="margin-bottom:0"></div>
+
+      <!-- Overview charts -->
+      <div class="sl sl-mt purple">Portfolio allocation</div>
+      <div class="cr3">
+        <div class="cc">
+          <div class="ct">Allocation</div>
+          <div class="dw"><canvas id="ov-alloc-chart" width="160" height="160"></canvas>
+            <div class="dc"><div class="dc-val" id="ov-donut-val">฿0</div><div class="dc-lbl">total</div></div></div>
+          <div class="al" id="ov-alloc-legend"></div>
+        </div>
+        <div class="cc">
+          <div class="ct">P&L by asset class</div>
+          <div class="gl" id="ov-group-list"></div>
+        </div>
+      </div>
 
     </div>
 
@@ -1114,7 +1246,7 @@ html.standalone .a2hs{display:none}
         <div class="sc" style="--g:rgba(124,111,236,.08)"><div class="sc-lbl">Savings</div><div class="sc-val" id="cf-sav" style="color:var(--savings)">฿0</div><div class="sc-sub" id="cf-sav-s"></div></div>
         <div class="sc"><div class="sc-lbl">Net cashflow</div><div class="sc-val" id="cf-net">฿0</div><div class="sc-sub" id="cf-net-s"></div></div>
         <div class="sc" style="--g:rgba(255,149,0,.08)"><div class="sc-lbl">Debt</div><div class="sc-val" id="cf-debt" style="color:var(--debt)">฿0</div><div class="sc-sub" id="cf-debt-s"></div></div>
-        <div class="sc"><div class="sc-lbl">Saving rate</div><div class="sc-val" id="cf-savrate">0%</div><div class="sc-sub">(รายได้ − รายจ่าย) ÷ รายได้</div></div>
+        <div class="sc"><div class="sc-lbl">Saving rate</div><div class="sc-val" id="cf-savrate">0%</div><div class="sc-sub">savings ÷ income</div></div>
       </div>
       <div class="cr2">
         <div class="cc">
@@ -1168,7 +1300,7 @@ html.standalone .a2hs{display:none}
           <div class="sc" style="--g:rgba(124,111,236,.08)"><div class="sc-lbl">Savings</div><div class="sc-val" id="yrs-sav" style="color:var(--savings)">฿0</div><div class="sc-sub" id="yrs-sav-s"></div></div>
           <div class="sc"><div class="sc-lbl">Net cashflow</div><div class="sc-val" id="yrs-net">฿0</div><div class="sc-sub" id="yrs-net-s"></div></div>
           <div class="sc" style="--g:rgba(255,149,0,.08)"><div class="sc-lbl">Debt paid</div><div class="sc-val" id="yrs-debt" style="color:var(--debt)">฿0</div><div class="sc-sub" id="yrs-debt-s"></div></div>
-          <div class="sc"><div class="sc-lbl">Saving rate</div><div class="sc-val" id="yrs-savrate">0%</div><div class="sc-sub">(รายได้ − รายจ่าย) ÷ รายได้</div></div>
+          <div class="sc"><div class="sc-lbl">Saving rate</div><div class="sc-val" id="yrs-savrate">0%</div><div class="sc-sub">savings ÷ income</div></div>
         </div>
         <!-- Expense breakdown for selected year -->
         <div class="sl sl-mt orange">Expense breakdown</div>
@@ -1200,11 +1332,6 @@ html.standalone .a2hs{display:none}
     <!-- ══ ACCOUNTS ══ -->
     <div class="page" id="page-accounts">
       <div class="pg-hdr"><div><div class="pg-title">Accounts</div><div class="pg-sub">ยอดคงเหลือแยกบัญชี</div></div></div>
-      <!-- v56 — ย้ายมาจาก Overview: เงินสำรองฉุกเฉินคือเรื่องของเงินสดในบัญชี -->
-      <!-- v44: Emergency Fund — ความเสี่ยงอันดับ 1 ต่อเป้าล้านแรก -->
-      <div class="sl">Emergency fund</div>
-      <div id="ov-ef" style="background:var(--bg3);border:1px solid var(--cb);border-radius:14px;padding:18px 20px;margin-bottom:14px"></div>
-
 
       <!-- All Cash total bar -->
       <div class="bank-total" style="margin-bottom:16px">
@@ -1251,26 +1378,10 @@ html.standalone .a2hs{display:none}
       <div class="sg">
         <div class="sc" style="--g:rgba(124,111,236,.1)"><div class="sc-lbl">Total value</div><div class="sc-val" id="pf-val" style="color:var(--white)">฿0</div><div class="sc-sub" id="pf-assets"></div></div>
         <div class="sc"><div class="sc-lbl">True cost (incl. fee)</div><div class="sc-val" id="pf-cost" style="color:var(--muted2)">฿0</div><div class="sc-sub" id="pf-fee-sub"></div></div>
-        <div class="sc"><div class="sc-lbl">กำไรที่ยังไม่ขาย (Unrealized)</div><div class="sc-val" id="pf-upnl">฿0</div><div class="sc-sub" id="pf-upnl-pct"></div></div>
+        <div class="sc"><div class="sc-lbl">Unrealized P&L</div><div class="sc-val" id="pf-upnl">฿0</div><div class="sc-sub" id="pf-upnl-pct"></div></div>
         <div class="sc"><div class="sc-lbl">Realized P&L</div><div class="sc-val" id="pf-rpnl">฿0</div><div class="sc-sub" id="pf-rpnl-s"></div></div>
         <div class="sc"><div class="sc-lbl">Best performer</div><div class="sc-val gain" id="pf-best" style="font-size:16px">—</div><div class="sc-sub" id="pf-best-pct"></div></div>
         <div class="sc"><div class="sc-lbl">Worst performer</div><div class="sc-val loss" id="pf-worst" style="font-size:16px">—</div><div class="sc-sub" id="pf-worst-pct"></div></div>
-      </div>
-
-      <!-- v56 — ย้ายมาจาก Overview: สัดส่วนพอร์ตอยู่ที่หน้าพอร์ตที่เดียว -->
-      <!-- Overview charts -->
-      <div class="sl sl-mt purple">Portfolio allocation</div>
-      <div class="cr3">
-        <div class="cc">
-          <div class="ct">Allocation</div>
-          <div class="dw"><canvas id="ov-alloc-chart" width="160" height="160"></canvas>
-            <div class="dc"><div class="dc-val" id="ov-donut-val">฿0</div><div class="dc-lbl">total</div></div></div>
-          <div class="al" id="ov-alloc-legend"></div>
-        </div>
-        <div class="cc">
-          <div class="ct">Unrealized P&amp;L by asset class</div>
-          <div class="gl" id="ov-group-list"></div>
-        </div>
       </div>
 
       <div id="pf-dq-warn" style="display:none"></div>
@@ -1354,7 +1465,21 @@ html.standalone .a2hs{display:none}
         <div class="tx-pag"><span id="at-tx-count">0 รายการ</span>
           <div class="pg-btns"><button class="pg-btn" id="at-prev-pg" disabled>‹</button><button class="pg-btn" id="at-next-pg" disabled>›</button></div></div>
       </div>
-      <!-- v56 — ปันผลรายปี/รายตัว ย้ายไปหน้าปันผลที่เดียว -->
+
+      <div class="sl sl-mt">Dividend income by year</div>
+      <div class="cc" style="margin-bottom:18px"><div class="ct">Dividend payout summary</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-top:4px" id="flow-div-grid"></div></div>
+
+      <div class="sl sl-mt">Dividend detail — source breakdown</div>
+      <div class="cc" style="padding:0;overflow:hidden">
+        <table class="at" id="flow-div-table">
+          <thead><tr>
+            <th>Ticker</th><th>Type</th><th>Platform</th>
+            <th class="r">2024</th><th class="r">2025</th><th class="r">2026</th><th class="r">Total</th>
+          </tr></thead>
+          <tbody id="flow-div-body"></tbody>
+        </table>
+      </div>
     </div>
 
     <!-- ══ BUDGET ══ -->
@@ -1548,16 +1673,10 @@ html.standalone .a2hs{display:none}
             <div class="sc-val" id="dbt-int" style="color:var(--debt)">฿0</div>
             <div class="sc-sub" id="dbt-int-s">ต่อเดือน</div>
           </div>
-          <div class="sc" style="--g:rgba(124,111,236,.08)">
-            <div class="sc-lbl">ปลดหนี้หมดใน</div>
-            <div class="sc-val" id="dbt-months" style="color:var(--savings)">—</div>
-            <div class="sc-sub" id="dbt-months-s"></div>
-          </div>
-          <div class="sc" style="--g:rgba(0,212,160,.08)">
-            <div class="sc-lbl">ดอกเบี้ยรวมจนหมดหนี้</div>
-            <div class="sc-val" id="dbt-totint" style="color:var(--gain)">฿0</div>
-            <div class="sc-sub" id="dbt-totint-s"></div>
-          </div>
+          <!-- v55 — การ์ด "ปลดหนี้หมดใน" และ "ดอกเบี้ยรวมจนหมดหนี้" ถูกถอดออก
+               พร้อมบล็อกแผนปลดหนี้ ทั้งสองใบเป็นผลลัพธ์ของ buildDebtPlan()
+               ซึ่งไม่ได้ใช้แล้ว การเก็บไว้โดยไม่มีช่องกลยุทธ์/จ่ายเพิ่มให้ปรับ
+               เท่ากับโชว์ผลการจำลองที่ผู้ใช้แก้สมมติฐานไม่ได้ -->
         </div>
 
         <!-- การตัดสินใจหลัก: จ่ายหนี้ vs ลงทุน -->
@@ -1567,33 +1686,17 @@ html.standalone .a2hs{display:none}
         <div class="sl orange" style="margin-bottom:10px">ดอกเบี้ยแต่ละใบ · ต้องกรอกเอง (ชีตไม่มีข้อมูลนี้) — แยกยอดผ่อน 0% ออกจากยอดที่คิดดอกได้</div>
         <div class="tw" style="margin-bottom:18px"><table class="at"><thead><tr>
           <th>บัญชี</th><th class="r">ยอดค้าง</th><th class="r">ปลอดดอกเบี้ย</th><th class="r">คิดดอกจริง</th><th class="r">ดอกเบี้ย %/ปี</th>
-          <th class="r">ดอกเบี้ย/เดือน</th><th class="r">ขั้นต่ำ/เดือน</th><th>ปลดหนี้เดือนที่</th>
+          <th class="r">ดอกเบี้ย/เดือน</th><th class="r">ขั้นต่ำ/เดือน</th>
         </tr></thead><tbody id="dbt-body"></tbody></table></div>
 
         <!-- v48 — หนี้ก้อนนี้ประกอบด้วยอะไร -->
         <div class="sl" style="margin-bottom:10px">หนี้ก้อนนี้มาจากอะไร · แยกตามประเภทธุรกรรมที่โพสต์เข้าบัญชีนั้นจริง</div>
         <div id="dbt-composition" style="margin-bottom:18px"></div>
 
-        <!-- แผนจ่าย -->
-        <div class="sl" style="margin-bottom:10px">แผนปลดหนี้</div>
-        <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:16px 18px;margin-bottom:16px">
-          <div style="display:flex;gap:18px;flex-wrap:wrap;align-items:flex-end">
-            <div>
-              <div style="font-size:10px;color:var(--muted2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.08em">กลยุทธ์</div>
-              <select id="dbt-strategy" onchange="dbtSaveCfg()" style="background:var(--bg4);color:var(--text);border:1px solid var(--border2);border-radius:7px;padding:7px 10px;font-family:inherit;font-size:12px">
-                <option value="avalanche">Avalanche — ดอกสูงสุดก่อน (ประหยัดที่สุด)</option>
-                <option value="snowball">Snowball — ยอดน้อยสุดก่อน (เห็นผลเร็ว)</option>
-              </select>
-            </div>
-            <div>
-              <div style="font-size:10px;color:var(--muted2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.08em">จ่ายเพิ่มจากขั้นต่ำ (฿/เดือน)</div>
-              <input type="number" id="dbt-extra" onchange="dbtSaveCfg()" step="500" min="0"
-                style="background:var(--bg4);color:var(--text);border:1px solid var(--border2);border-radius:7px;padding:7px 10px;width:130px;font-family:inherit;font-size:12px">
-            </div>
-            <div style="flex:1;min-width:200px;font-size:11.5px;color:var(--muted2);line-height:1.7" id="dbt-plan-note"></div>
-          </div>
-        </div>
-        <div class="cw" style="height:220px;margin-bottom:8px"><canvas id="dbt-chart"></canvas></div>
+        <!-- v55 — บล็อก "แผนปลดหนี้" ถูกถอดออกตามที่ผู้ใช้แจ้งว่าไม่ได้ใช้
+             (เลือกกลยุทธ์ Avalanche/Snowball · ช่องจ่ายเพิ่มต่อเดือน · กราฟเส้น
+             ยอดหนี้คงเหลือ) หน้า Debt เหลือเฉพาะสิ่งที่เป็นข้อเท็จจริงวันนี้:
+             ยอดหนี้จริง ดอกเบี้ยที่กำลังจ่าย และการตัดสินใจโปะ vs ลงทุน -->
       </div>
     </div>
 
@@ -1678,16 +1781,18 @@ html.standalone .a2hs{display:none}
           <div class="sc-val" id="dv-yield" style="font-size:22px;color:var(--savings)">—</div>
           <div class="sc-sub">ปันผล 12 เดือน ÷ มูลค่าพอร์ตปัจจุบัน</div>
         </div>
+        <div class="sc" style="--g:rgba(255,209,102,.1)">
+          <div class="sc-lbl">🔥 FIRE Progress</div>
+          <div class="sc-val" id="dv-fire" style="font-size:22px;color:var(--debt)">—</div>
+          <div class="sc-sub" id="dv-fire-s">ปันผลครอบคลุมรายจ่ายกี่ %</div>
+        </div>
       </div>
       <div class="sl sl-mt">ปันผลรายเดือน</div>
       <div class="cw" style="height:280px"><canvas id="dv-chart"></canvas></div>
-      <!-- v56 — ย้ายมาจาก Investment Flow -->
-      <div class="sl sl-mt">ปันผลรายปี</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px" id="dv-year-grid"></div>
       <div class="sl sl-mt">ผู้จ่ายปันผล — เรียงตามยอดรวม</div>
       <div class="tw"><table class="at"><thead><tr>
         <th>Ticker</th><th>ประเภท</th><th class="r">จำนวนครั้ง</th>
-        <th>Platform</th><th class="r">ปันผลรวม</th><th class="r">Yield on cost</th><th class="r">ล่าสุด</th><th class="r">% ของปันผลทั้งหมด</th>
+        <th class="r">ปันผลรวม</th><th class="r">ล่าสุด</th><th class="r">% ของปันผลทั้งหมด</th>
       </tr></thead><tbody id="dv-body"></tbody></table></div>
     </div>
 
@@ -1699,61 +1804,6 @@ html.standalone .a2hs{display:none}
           <button class="gf-submit" onclick="toggleGoalForm()" style="padding:7px 16px;font-size:12px;display:flex;align-items:center;gap:6px">
             <span style="font-size:15px;line-height:1">+</span> Add goal
           </button>
-        </div>
-      </div>
-
-      <!-- v56 — ย้ายมาจาก Overview: เป้า Net Worth + การฉายภาพ -->
-      <!-- 🎯 Net Worth Goal Progress -->
-      <div id="ov-goal-3m" style="background:linear-gradient(135deg,rgba(0,212,160,.08),rgba(124,111,236,.06));border:1px solid rgba(0,212,160,.25);border-radius:14px;padding:18px 24px;margin-bottom:20px">
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">
-          <div style="display:flex;align-items:center;gap:10px">
-            <span style="font-size:20px">🎯</span>
-            <div>
-              <div style="font-family:var(--f-sans);font-size:15px;font-weight:600;color:var(--white)" id="ov-goal-title">Road to ฿3 Million</div>
-              <div style="font-size:11px;color:var(--muted2)" id="ov-goal-sub">เป้าหมาย Net Worth ฿3,000,000</div>
-            </div>
-          </div>
-          <div style="text-align:right">
-            <div style="font-family:var(--f-sans);font-size:22px;font-weight:700;color:var(--gain)" id="ov-3m-pct">0%</div>
-            <div style="font-size:10px;color:var(--muted2)" id="ov-3m-remain">เหลืออีก ฿3,000,000</div>
-          </div>
-        </div>
-        <!-- Progress bar with milestone markers -->
-        <div style="position:relative;height:12px;background:var(--bg4);border-radius:6px;overflow:visible;border:1px solid var(--border)">
-          <div style="position:absolute;inset:0;border-radius:6px;overflow:hidden">
-            <div id="ov-3m-bar" style="height:100%;width:0%;background:linear-gradient(90deg,var(--income),var(--gain));border-radius:6px;transition:width .8s ease"></div>
-          </div>
-          <!-- Milestone: 1M (33.3%) -->
-          <div style="position:absolute;left:33.33%;top:-3px;bottom:-3px;width:2px;background:var(--muted2);opacity:.5"></div>
-          <!-- Milestone: 2M (66.6%) -->
-          <div style="position:absolute;left:66.66%;top:-3px;bottom:-3px;width:2px;background:var(--muted2);opacity:.5"></div>
-        </div>
-        <div style="display:flex;justify-content:space-between;margin-top:5px;font-size:9px;color:var(--muted2)">
-          <span>฿0</span><span style="margin-left:29%">฿1M</span><span style="margin-left:24%">฿2M</span><span>฿3M</span>
-        </div>
-        <div style="display:flex;justify-content:space-between;margin-top:10px;flex-wrap:wrap;gap:8px">
-          <div style="font-size:11px;color:var(--muted2)" id="ov-3m-projection">—</div>
-          <div style="font-size:11px;color:var(--muted2)" id="ov-3m-monthly">—</div>
-        </div>
-        <!-- Scenario selector: expected annual return -->
-        <div style="display:flex;align-items:center;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid var(--border);flex-wrap:wrap">
-          <span style="font-size:10px;color:var(--muted2);text-transform:uppercase;letter-spacing:.06em">Expected return</span>
-          <div style="display:flex;gap:4px" id="ov-3m-scenarios">
-            <button class="bm-scenario-btn" data-ret="0"  onclick="setGoalScenario(0,this)">💵 0%</button>
-            <button class="bm-scenario-btn" data-ret="5"  onclick="setGoalScenario(5,this)">🐢 5%</button>
-            <button class="bm-scenario-btn active" data-ret="7" onclick="setGoalScenario(7,this)">📊 7%</button>
-            <button class="bm-scenario-btn" data-ret="10" onclick="setGoalScenario(10,this)">🚀 10%</button>
-          </div>
-          <span style="font-size:10px;color:var(--muted);margin-left:auto" id="ov-3m-compound-note"></span>
-        </div>
-      </div>
-
-      <!-- v56 — ย้ายมาจากหน้าปันผล: ความคืบหน้า FIRE -->
-      <div class="sg" style="margin-bottom:20px">
-        <div class="sc" style="--g:rgba(255,209,102,.1)">
-          <div class="sc-lbl">🔥 FIRE Progress</div>
-          <div class="sc-val" id="dv-fire" style="font-size:22px;color:var(--debt)">—</div>
-          <div class="sc-sub" id="dv-fire-s">ปันผลครอบคลุมรายจ่ายกี่ %</div>
         </div>
       </div>
 
@@ -1835,7 +1885,7 @@ html.standalone .a2hs{display:none}
     <!-- ══ COST ══ -->
     <div class="page" id="page-cost">
       <div class="pg-hdr"><div><div class="pg-title">ต้นทุนที่มองไม่เห็น</div>
-        <div class="pg-sub">ค่าธรรมเนียม ภาษี และความเสี่ยงค่าเงิน</div></div></div>
+        <div class="pg-sub">ค่าธรรมเนียม ภาษี ปันผล และความเสี่ยงค่าเงิน</div></div></div>
       <div id="cost-body"></div>
     </div>
 
@@ -1865,16 +1915,16 @@ html.standalone .a2hs{display:none}
 
   <!-- v49 — แถบเมนูล่างสำหรับมือถือ -->
   <nav class="bnav" id="bnav" aria-label="เมนูหลัก">
-    <button class="bnav-item active" data-group="home" onclick="switchGroup('home')">
-      <span class="bnav-ic" aria-hidden="true">⌂</span><span class="bnav-lb">ภาพรวม</span></button>
-    <button class="bnav-item" data-group="money" onclick="switchGroup('money')">
-      <span class="bnav-ic" aria-hidden="true">📊</span><span class="bnav-lb">เงิน</span></button>
-    <button class="bnav-item" data-group="invest" onclick="switchGroup('invest')">
-      <span class="bnav-ic" aria-hidden="true">💼</span><span class="bnav-lb">พอร์ต</span></button>
-    <button class="bnav-item" data-group="markets" onclick="switchGroup('markets')">
-      <span class="bnav-ic" aria-hidden="true">📡</span><span class="bnav-lb">ตลาด</span></button>
+    <button class="bnav-item active" data-page="overview" onclick="switchPage('overview')">
+      <span class="bnav-ic" aria-hidden="true">⌂</span><span class="bnav-lb">Overview</span></button>
+    <button class="bnav-item" data-page="cashflow" onclick="switchPage('cashflow')">
+      <span class="bnav-ic" aria-hidden="true">📊</span><span class="bnav-lb">Monthly</span></button>
+    <button class="bnav-item" data-page="accounts" onclick="switchPage('accounts')">
+      <span class="bnav-ic" aria-hidden="true">🏦</span><span class="bnav-lb">Accounts</span></button>
+    <button class="bnav-item" data-page="portfolio" onclick="switchPage('portfolio')">
+      <span class="bnav-ic" aria-hidden="true">💼</span><span class="bnav-lb">Holdings</span></button>
     <button class="bnav-item" onclick="toggleSidebar()" aria-label="เมนูทั้งหมด">
-      <span class="bnav-ic" aria-hidden="true">☰</span><span class="bnav-lb">อื่น ๆ</span></button>
+      <span class="bnav-ic" aria-hidden="true">☰</span><span class="bnav-lb">More</span></button>
   </nav>
   <div class="sb-backdrop" id="sb-backdrop" onclick="toggleSidebar()" aria-hidden="true"></div>
 </div><!-- /app -->
@@ -2049,7 +2099,11 @@ function mkDonut(id,labels,values,colors){
   if(charts[id])charts[id].destroy();
   charts[id]=new Chart(ctx,{
     type:'doughnut',data:{labels,datasets:[{data:values,backgroundColor:colors,borderWidth:0,hoverOffset:4}]},
-    options:{cutout:'70%',responsive:true,maintainAspectRatio:true,
+    /* v55 — maintainAspectRatio:true แปลว่า "ไม่สนความสูงของกล่อง ใช้ความกว้าง
+       หารด้วยอัตราส่วนแทน" บนการ์ดที่กว้าง 790px จึงได้โดนัทสูง 790px
+       ทะลุกล่องที่สูงแค่ 150px  false = ใช้กล่องตามจริงทั้งกว้างและสูง
+       โดนัทยังกลมอยู่เสมอ เพราะ Chart.js ใช้ min(กว้าง,สูง) เป็นรัศมี */
+    options:{cutout:'70%',responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},tooltip:{backgroundColor:'#12121a',borderColor:'#1e1e35',borderWidth:1,
         titleColor:'#e2e2f0',bodyColor:'#9090c0',titleFont:{family:CHART_FONT},bodyFont:{family:CHART_FONT,size:11},
         callbacks:{label:c=>{const t=values.reduce((a,b)=>a+b,0);return `฿${Math.round(c.raw).toLocaleString(LOC)} (${(c.raw/t*100).toFixed(1)}%)`;}}}}
@@ -2094,10 +2148,10 @@ function renderOverview(){
   }
   document.getElementById('ov-portval').textContent=fmt(portVal);
   const ppEl=document.getElementById('ov-portpnl-sub');
-  ppEl.textContent=fmtSign(portPnl)+' unrealized';   // v56 — ชื่อตามนิยาม (v55 #3)ppEl.style.color=portPnl>=0?'var(--gain)':'var(--loss)';
+  ppEl.textContent=fmtSign(portPnl)+' P&L';ppEl.style.color=portPnl>=0?'var(--gain)':'var(--loss)';
   const insEl=document.getElementById('ov-inscv');
   if(insEl) insEl.textContent=fmt(insCV);
-  _ovEl('ov-div').textContent=fmt(totalDiv);
+  document.getElementById('ov-div').textContent=fmt(totalDiv);
 
   /* ══ PART 2 — Total Wealth ═══════════════════════════════════════════
      P2-5 Net Worth ต้อง reconcile ได้ด้วยตา: เดิมเขียนสูตรเป็นข้อความ
@@ -2172,11 +2226,6 @@ function renderOverview(){
   if(_sEl) _sEl.innerHTML=`ขาดอีก <strong style="color:var(--text)">${fmt(Math.max(_next-netWorth,0))}</strong>`+
     ` จะถึงหมุด ${fmtC(_next)}`;
 
-  // v56 — Overview แสดงเป้าบรรทัดเดียว (การ์ดเต็มย้ายไปหน้าเป้าหมาย)
-  const _gl=document.getElementById('ov-goal-line');
-  if(_gl) _gl.innerHTML=`🎯 ต่อไป <strong>${fmtC(_next)}</strong> · ขาดอีก ${fmt(Math.max(_next-netWorth,0))}`+
-    ` · ปลายทาง ${fmtC(GOAL)} <strong>${pct.toFixed(1)}%</strong> <span style="float:right">เป้าหมาย ›</span>`;
-
   // บรรทัดล่างพูดถึงเป้าปลายทางแยกกันคนละบรรทัด ไม่ปนกับหมุด
   const remEl=document.getElementById('ov-3m-remain');
   remEl.innerHTML=_passed
@@ -2200,8 +2249,7 @@ function renderOverview(){
   // Average monthly wealth contribution (net cashflow that stays + savings moved to assets)
   const monthsData=availableMonths.map(mk=>computeSummary(txRows.filter(r=>r.month===mk)));
   const avgMonthlyNet = monthsData.length ? monthsData.reduce((s,m)=>s+m.net,0)/monthsData.length : 0;
-  // v54 — savings: ออมเข้า = ลบ · ถอนออก = บวก → ใช้ −savings ไม่ใช่ Math.abs (ดู analystCashflow)
-  const avgMonthlySavings = monthsData.length ? monthsData.reduce((s,m)=>s-(Number(m.savings)||0),0)/monthsData.length : 0;
+  const avgMonthlySavings = monthsData.length ? monthsData.reduce((s,m)=>s+Math.abs(m.savings),0)/monthsData.length : 0;
   const monthlyContrib = Math.max(avgMonthlyNet + avgMonthlySavings, 0);
 
   // Portion of net worth that's invested (grows with market) vs cash (doesn't compound)
@@ -2286,11 +2334,6 @@ function setGoalScenario(retPct, btn){
   computeGoalProjection(retPct);
 }
 
-/* v56 — บล็อก "This month cashflow" · "Dividend (all time)" · "Portfolio health"
-   ถูกตัดออกจาก Overview (ซ้ำกับหน้าหลักของแต่ละเรื่อง) โค้ดที่ยังเขียนค่าลง id เหล่านั้น
-   ได้ element ลอยแทน null → ไม่พังและไม่ต้องรื้อตรรกะเดิม */
-function _ovEl(id){ return document.getElementById(id) || document.createElement('div'); }
-
 function _renderOverviewRest(){
   const allCash=bankBals.reduce((s,b)=>s+b.balance,0);
   const portVal=assets.reduce((s,a)=>s+a.val,0);
@@ -2299,37 +2342,35 @@ function _renderOverviewRest(){
   const curMk=availableMonths[curMonthIdx];
   const curRows=txRows.filter(r=>r.month===curMk);
   const s=computeSummary(curRows);
-  _ovEl('ov-inc').textContent=fmt(s.income);
-  _ovEl('ov-inc-sub').textContent=`${s.incomeCount} tx · ${monthLabel(curMk)}`;
-  _ovEl('ov-exp').textContent=fmt(s.expense);
-  _ovEl('ov-exp-sub').textContent=`${s.expenseCount} tx`;
-  _ovEl('ov-sav').textContent=fmt(s.savings);
-  _ovEl('ov-sav-sub').textContent=`${s.savingsCount} tx`;
-  const netEl=_ovEl('ov-net');
+  document.getElementById('ov-inc').textContent=fmt(s.income);
+  document.getElementById('ov-inc-sub').textContent=`${s.incomeCount} tx · ${monthLabel(curMk)}`;
+  document.getElementById('ov-exp').textContent=fmt(s.expense);
+  document.getElementById('ov-exp-sub').textContent=`${s.expenseCount} tx`;
+  document.getElementById('ov-sav').textContent=fmt(s.savings);
+  document.getElementById('ov-sav-sub').textContent=`${s.savingsCount} tx`;
+  const netEl=document.getElementById('ov-net');
   netEl.textContent=fmtSign(s.net);netEl.className='sc-val '+(s.net>=0?'gain':'loss');
-  const nlEl=_ovEl('ov-net-lbl');
+  const nlEl=document.getElementById('ov-net-lbl');
   nlEl.textContent=s.net>=0?'▲ surplus':'▼ deficit';nlEl.style.color=s.net>=0?'var(--gain)':'var(--loss)';
   /* P2-1 — การ์ด Debt payment: สูตรคือ net = income+expense+savings+debt
      แต่หน้า Overview ไม่เคยแสดงพจน์ debt -> ผู้ใช้บวก 3 ตัวบนจอแล้วไม่มีทาง
      ตรงกับ Net เลย (จริง: 0−6,993−1,000 = −7,993 แต่ Net โชว์ −9,377
      หายไป −1,384 คือหนี้ที่ซ่อนอยู่) ตัวเลขบนแดชบอร์ดการเงินต้อง
      reconcile ได้ด้วยตา ไม่งั้นความเชื่อถือในทุกตัวเลขที่เหลือพังไปด้วย */
-  const dbEl=_ovEl('ov-debt');
+  const dbEl=document.getElementById('ov-debt');
   if(dbEl){
     dbEl.textContent=fmt(s.debt);
-    const dbSub=_ovEl('ov-debt-sub');
+    const dbSub=document.getElementById('ov-debt-sub');
     if(dbSub) dbSub.textContent=`${s.debtCount} tx`;
   }
 
   /* P2-2 — savings ÷ income เมื่อ income = 0 คือ "ไม่นิยาม" ไม่ใช่ "0%" */
-  const srEl=_ovEl('ov-savrate');
-  const rate=fmtRate(s.saved, s.income);   // v55 — นิยามสากล (computeSummary)
+  const srEl=document.getElementById('ov-savrate');
+  const rate=fmtRate(s.savings, s.income);
   srEl.textContent=rate.text; srEl.style.color=rate.color;
   srEl.title=rate.undef?'เดือนนี้ไม่มีรายรับ จึงคำนวณอัตราการออมไม่ได้':'';
   const srSub=srEl.parentElement && srEl.parentElement.querySelector('.sc-sub');
-  if(srSub) srSub.textContent=rate.undef?'ไม่มีรายรับเดือนนี้':'(รายได้ − รายจ่าย) ÷ รายได้';
-
-  try{ renderOverviewTiles(s, curMk, portVal); }catch(e){ console.warn('[v56] tiles:', e.message); }
+  if(srSub) srSub.textContent=rate.undef?'ไม่มีรายรับเดือนนี้':'savings ÷ income';
 
   /* v44 — เงินสำรองฉุกเฉิน + สรุปสิ่งที่ต้องลงมือ */
   try{ renderActionNeeded(renderEmergencyFund()); }
@@ -2388,15 +2429,10 @@ function _renderOverviewRest(){
      หยุดวาดทั้งบล็อกโดยไม่มีอะไรบอก — หน้า Overview ดูเหมือนโหลดไม่เสร็จ */
   const topGrp=Object.entries(gm).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1])[0];
   const topPct=(topGrp && tv>0)?(topGrp[1]/tv*100):0;
-  /* v55 — ความกระจุกตัววัดรายตัว (single-position) ด้วย concentrationCheck() ใน shared.js
-     ตัวเดียวกับ Analyst Desk · เดิมวัดรายกลุ่ม (Crypto 45% = "ปานกลาง") ขณะที่ Analyst
-     วัดรายตัว (BTC 39% = "ต้องแก้") — พอร์ตเดียวกันได้ระดับความรุนแรงคนละระดับ */
-  const _cc=concentrationCheck(assets);
   if(!topGrp) healthItems.push({s:'y',title:'ยังไม่มีสินทรัพย์ในพอร์ต',desc:'เพิ่มรายการในชีต Asset_Tracker แล้ว sync ใหม่'});
-  else if(_cc.top && _cc.level!=='g')
-    healthItems.push({s:_cc.level,title:`Concentration: ${_cc.top.ticker} ${_cc.pct.toFixed(0)}%`,
-      desc:_cc.level==='r'?`ตัวเดียวเกิน ${CONC_HIGH_PCT}% ของพอร์ต — ควรกระจายเพิ่ม`:`ตัวเดียวเกิน ${CONC_WARN_PCT}% ของพอร์ต — ควรติดตาม`});
-  else healthItems.push({s:'g',title:'Diversification: Good',desc:`ไม่มีสินทรัพย์รายตัวไหนเกิน ${CONC_WARN_PCT}% (ไม่นับ ETF/กองทุน)`});
+  else if(topPct>50)healthItems.push({s:'r',title:`Concentration: ${topGrp[0]} ${topPct.toFixed(0)}%`,desc:'เกิน 50% ควรกระจายเพิ่ม'});
+  else if(topPct>35)healthItems.push({s:'y',title:`Concentration: ${topGrp[0]} ${topPct.toFixed(0)}%`,desc:'ระดับปานกลาง ควรติดตาม'});
+  else healthItems.push({s:'g',title:'Diversification: Good',desc:'ไม่มี class ไหนเกิน 35%'});
   const stale=assets.filter(a=>!a.hasPrice&&a.val===0);
   if(stale.length)healthItems.push({s:'y',title:`${stale.length} assets ไม่มีราคา`,desc:'อัปเดต Current_Price_THB ใน Asset_Live_Price_Feed'});
   else healthItems.push({s:'g',title:'ราคาครบทุก asset',desc:'Current price อัปเดตแล้ว'});
@@ -2404,15 +2440,15 @@ function _renderOverviewRest(){
   if(realPnl<-5000)healthItems.push({s:'r',title:`Realized loss: ${fmtSign(realPnl)}`,desc:'ขาดทุน realized เกิน ฿5,000'});
   else if(realPnl<0)healthItems.push({s:'y',title:`Realized loss: ${fmtSign(realPnl)}`,desc:'ขาดทุน realized แต่ยังควบคุมได้'});
   else healthItems.push({s:'g',title:`Realized gain: ${fmtSign(realPnl)}`,desc:'Sell transactions ทั้งหมดให้ผลบวก'});
-  // v55 — feeStats() ใน shared.js: ค่าธรรมเนียมซื้อ+ขาย ÷ มูลค่าซื้อขายรวม
-  const _fs=feeStats(tracker);
-  healthItems.push({s:_fs.level,title:`Fee ratio: ${_fs.ratio==null?'—':_fs.ratio.toFixed(2)+'%'}`,
-    desc:`ค่าธรรมเนียมรวม ${fmt(_fs.fees)} ÷ มูลค่าซื้อขาย ${fmt(_fs.traded)}`});
+  const inv=tracker.filter(r=>TX_BUY.includes(r.txType));
+  const feeR=inv.reduce((s,r)=>s+r.amtTHB,0);
+  const feeRatio=feeR>0?totalFee/feeR*100:0;
+  healthItems.push({s:feeRatio>0.5?'y':'g',title:`Fee ratio: ${feeRatio.toFixed(3)}%`,desc:`จ่าย fee รวม ${fmt(totalFee)}`});
   /* #4 — was Math.abs(s.savings): a month that overspent (savings −10,000 on
      income 50,000) reported a POSITIVE 20% savings rate instead of −20%. */
-  const sr=s.savRate;   // v55 — นิยามสากลจาก computeSummary
+  const sr=s.income>0?Math.round(s.savings/s.income*100):0;
   healthItems.push({s:sr>=20?'g':sr>=10?'y':'r',title:`Saving rate: ${sr}%`,desc:sr>=20?'ดีเยี่ยม':sr>=10?'พอใช้':'ต่ำกว่าเป้าหมาย'});
-  _ovEl('ov-health').innerHTML=healthItems.map(it=>`
+  document.getElementById('ov-health').innerHTML=healthItems.map(it=>`
     <div class="hi"><div class="hs ${it.s}"></div>
     <div><div class="hi-title">${escHtml(it.title)}</div><div class="hi-desc">${escHtml(it.desc)}</div></div></div>`).join('');
 }
@@ -2584,29 +2620,6 @@ function renderEmergencyFund(){
 // ══════════════════════════════════════════════════════════════════════
 // เดิม Overview ตอบได้แค่ "รวยขึ้นหรือจนลง" แต่ไม่ตอบ "วันนี้ต้องทำอะไร"
 // และคำเตือนกระจายอยู่คนละหน้า (ราคาขาดอยู่หน้า Holdings เท่านั้น)
-/* v56 — ทางลัด 3 ใบบน Overview: ตัวเลขสรุปบรรทัดเดียว + กดไปหน้าหลัก
-   แทนการคัดลอกบล็อกทั้งก้อนมาไว้ที่ Overview (ต้นเหตุของข้อมูลซ้ำ) */
-function renderOverviewTiles(s, mk, portVal){
-  const el=document.getElementById('ov-tiles'); if(!el) return;
-  const cost=(assets||[]).reduce((t,a)=>t+(a.cost||0),0);
-  const upnl=portVal-cost;
-  const R=(typeof loadRisk==='function')?loadRisk():null;
-  const RL={normal:['ปกติ','var(--gain)'],elevated:['เริ่มเสี่ยง','var(--debt)'],
-            high:['เสี่ยงสูง','var(--loss)'],unknown:['ไม่มีข้อมูล','var(--muted2)']};
-  const r=R?(RL[R.level]||[R.level,'var(--text)']):['ไม่มีข้อมูล','var(--muted2)'];
-  const age=(typeof marketDataAge==='function')?marketDataAge():null;
-  const tile=(page,lbl,val,col,sub)=>`<button type="button" class="ov-tile" onclick="switchPage('${page}')">
-      <span class="ov-tile-lbl">${lbl}</span>
-      <span class="ov-tile-val" style="color:${col}">${val}</span>
-      <span class="ov-tile-sub">${sub} ›</span></button>`;
-  el.innerHTML=
-    tile('cashflow',`เดือนนี้ · ${mk?monthLabel(mk):'—'}`, fmtSign(s.net), s.net>=0?'var(--gain)':'var(--loss)',
-         s.income>0?`Saving rate ${s.savRate}%`:'ยังไม่มีรายรับเดือนนี้')+
-    tile('portfolio','พอร์ตลงทุน', fmt(portVal), 'var(--white)',
-         `Unrealized ${fmtSign(upnl)}${cost>0?` (${fmtPct(upnl/cost*100)})`:''}`)+
-    tile('market','ตลาด', r[0], r[1], age?`ข้อมูล ${age.label}`:'ยังไม่มีข้อมูล pipeline');
-}
-
 function renderActionNeeded(ef){
   const el = document.getElementById('ov-action');
   if(!el) return;
@@ -2721,30 +2734,6 @@ function renderActionNeeded(ef){
       go:'portfolio'});
   }catch(e){}
 
-  /* ⑩–⑫ v56 — ย้ายมาจากบล็อก "Portfolio health" ที่ถูกตัดออก
-     เอาเฉพาะข้อที่ต้องลงมือ (ไม่ใช่สีเขียว) · สูตรเดียวกับ Analyst Desk (shared.js) */
-  try{
-    const cc = concentrationCheck(assets);
-    if(cc.top && cc.level!=='g') items.push({lv: cc.level==='r'?'alert':'warn',
-      t:`${cc.top.ticker} ${cc.pct.toFixed(0)}% ของพอร์ต — กระจุกตัว${cc.level==='r'?'สูง':''}`,
-      d:`ถือตัวเดียวเกิน ${cc.level==='r'?CONC_HIGH_PCT:CONC_WARN_PCT}% ของพอร์ต (ไม่นับ ETF/กองทุน) — ถ้าตัวนี้ลง 50% พอร์ตหาย ${(cc.pct/2).toFixed(0)}%`,
-      go:'portfolio'});
-  }catch(e){}
-  try{
-    const fs = feeStats(tracker);
-    if(fs.level!=='g') items.push({lv:'warn',
-      t:`ค่าธรรมเนียม ${fs.ratio.toFixed(2)}% ของมูลค่าซื้อขาย`,
-      d:`สูงกว่า ${FEE_WARN_PCT}% — รวม ${fmt(fs.fees)}`, go:'cost'});
-  }catch(e){}
-  try{
-    const mk = availableMonths[curMonthIdx];
-    const sm = computeSummary(txRows.filter(r=>r.month===mk));
-    if(sm.income>0 && sm.savRate<10) items.push({lv: sm.savRate<0?'alert':'warn',
-      t:`Saving rate เดือนนี้ ${sm.savRate}%`,
-      d: sm.savRate<0 ? 'ใช้จ่ายเกินรายได้ — กำลังกินเงินเก็บ' : 'ต่ำกว่า 10% ของรายได้',
-      go:'cashflow'});
-  }catch(e){}
-
   // ⑨ อายุข้อมูล pipeline
   try{
     const a = marketDataAge();
@@ -2764,8 +2753,8 @@ function renderActionNeeded(ef){
       <div style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:${C[worst].c};margin-bottom:10px">
         ⚡ ต้องลงมือ · ${items.length} เรื่อง</div>
       ${items.map(it=>`
-        <div ${it.go?`onclick="switchPage('${it.go}')"`:''}
-             style="display:flex;gap:9px;padding:7px 0;border-top:1px solid var(--border);align-items:flex-start${it.go?';cursor:pointer':''}">
+        <div ${it.go?`onclick="switchPage('${it.go}')" style="cursor:pointer"`:''}
+             style="display:flex;gap:9px;padding:7px 0;border-top:1px solid var(--border);align-items:flex-start">
           <span style="color:${C[it.lv].c};font-size:9px;line-height:1.7;flex-shrink:0">${C[it.lv].i}</span>
           <div style="min-width:0">
             <div style="font-size:12px;font-weight:600;color:var(--text)">${escHtml(it.t)}</div>
@@ -2785,38 +2774,11 @@ function computeSummary(rows){
     if(r.type==='Debt'){debt+=r.amount;debtCount++;}
   });
   const net=income+expense+savings+debt;
-  /* v55 — Saving rate นิยามสากล (ดู savingFromSummary ใน shared.js)
-     เดิม savings ÷ income = ยอดที่ "โอนไปออม" ซึ่งติดลบเพราะเงินออกจากบัญชี (−18%)
-     และไม่นับเงินที่เหลืออยู่ในบัญชีเป็นเงินออม */
-  const _sv=savingFromSummary({income,expense,debt});
-  const savRate=_sv.rate==null?0:Math.round(_sv.rate);
-  return{income,incomeCount,expense,expenseCount,savings,savingsCount,debt,debtCount,net,savRate,
-         spend:_sv.spend, saved:_sv.saved};
-}
-
-/* v57 BUGFIX — dropdown เดือนว่างเปล่าเมื่อเปิดแอปจาก cache
-   เดิมเติม <option> เฉพาะในเส้นทาง Sync (gsProcessData) ส่วน restoreDataCache()
-   ตั้ง availableMonths แต่ไม่เคยเติม dropdown → เปิดแอปภายใน 5 นาทีหลัง sync
-   (ใช้ cache ไม่ sync ใหม่) จะเห็นกล่องว่าง เลือกเดือนไม่ได้
-   ตอนนี้ทั้งสองเส้นทางเรียกฟังก์ชันเดียวกัน และ renderCashflow เติมให้เองถ้ายังไม่ครบ */
-function populateMonthSelect(){
-  const sel=document.getElementById('month-select'); if(!sel) return;
-  sel.innerHTML=availableMonths.map(mk=>`<option value="${mk}">${monthLabel(mk)}</option>`).join('');
-  if(availableMonths.length) sel.value=availableMonths[curMonthIdx]||availableMonths[availableMonths.length-1];
-  if(!sel.dataset.init){
-    sel.dataset.init='1';
-    sel.addEventListener('change',()=>{
-      const i=availableMonths.indexOf(sel.value);
-      if(i<0) return;
-      curMonthIdx=i;
-      renderCashflow();
-    });
-  }
+  const savRate=income>0?Math.round(savings/income*100):0;   // #4 — see above, no Math.abs
+  return{income,incomeCount,expense,expenseCount,savings,savingsCount,debt,debtCount,net,savRate};
 }
 
 function renderCashflow(){
-  const _ms=document.getElementById('month-select');
-  if(_ms && _ms.options.length!==availableMonths.length) populateMonthSelect();
   const mk=availableMonths[curMonthIdx];
   const rows=txRows.filter(r=>r.month===mk);
   const s=computeSummary(rows);
@@ -3520,7 +3482,7 @@ const VLOG_PURGED_KEY = 'finOS_valueLogPurged_v44';
 //   ฟังก์ชันหาย  → BLOCK  (แอปคำนวณผิดแน่นอน — นี่คือสิ่งที่ guard มีไว้จับ)
 //   เลขไม่ตรง    → WARN   (แค่ลืม bump — log ไว้ ไม่รบกวนผู้ใช้)
 // ฟังก์ชันที่ต้องมีคือสัญญาจริงระหว่างสองไฟล์ ส่วนสตริงเวอร์ชันเป็นแค่ป้าย
-const EXPECTED_SHARED_BUILD = 'v57';
+const EXPECTED_SHARED_BUILD = 'v53';
 const REQUIRED_SHARED_FNS = [
   'resolvePrices', 'pipelinePricesTHB', 'parseReconcileRows',
   'computeReconciliation', 'splitBalances', 'debtVsInvest', 'buildDebtPlan',
@@ -3726,7 +3688,7 @@ function renderPortfolio(){
   document.getElementById('pf-val').textContent=fmt(totalVal);
   document.getElementById('pf-assets').textContent=`${assets.length} assets`;
   document.getElementById('pf-cost').textContent=fmt(totalCost);
-  document.getElementById('pf-fee-sub').textContent=`ค่าธรรมเนียมฝั่งซื้อ ${fmt(feeStats(tracker).buyFees)}`;
+  document.getElementById('pf-fee-sub').textContent=`fee paid ${fmt(totalFee)}`;
   const upEl=document.getElementById('pf-upnl');upEl.textContent=fmtSign(unrealPnl);upEl.className='sc-val '+(unrealPnl>=0?'gain':'loss');
   document.getElementById('pf-upnl-pct').textContent=fmtPct(totalCost?unrealPnl/totalCost*100:0);
   const rpEl=document.getElementById('pf-rpnl');rpEl.textContent=fmtSign(realPnl);rpEl.className='sc-val '+(realPnl>=0?'gain':'loss');
@@ -3821,9 +3783,7 @@ function buildEngineMonths(){
   txRows.forEach(r=>{
     const m=touch(r.month);
     if(r.type==='Income') m.inc+=r.amount;
-    // v55 — รายจ่าย = Expense + Bills + Debt (ยอดรูดบัตร) แบบมีเครื่องหมาย ตามนิยามสากล
-    // (เดิม Math.abs เฉพาะ Expense/Bills → ไม่นับยอดรูดบัตร และนับเงินคืนเป็นรายจ่าย)
-    else if(SPEND_TX_TYPES.includes(r.type)) m.exp+=-r.amount;
+    else if(r.type==='Expense'||r.type==='Bills') m.exp+=Math.abs(r.amount);
   });
   tracker.filter(r=>TX_BUY.includes(r.txType)).forEach(r=>{
     if(!r.date) return;
@@ -3966,27 +3926,59 @@ function renderDividends(){
     t.n++; t.amt+=Math.abs(r.amtTHB);
     if(r.date>t.last) t.last=r.date;
   });
-  /* v56 — ตารางเดียวของปันผลรายตัว: รวมคอลัมน์ Platform (เดิมอยู่ Investment Flow)
-     และ Yield on cost (เดิมอยู่หน้าต้นทุนที่มองไม่เห็น) · ต้นทุน = WACC × จำนวนที่ถืออยู่ */
-  const costOf=tk=>{ const a=(assets||[]).find(x=>x.ticker===tk); return a&&a.cost>0?a.cost:0; };
   const tb=document.getElementById('dv-body');
-  if(tb) tb.innerHTML=Object.entries(byTk).sort((a,b)=>b[1].amt-a[1].amt).map(([tk,d])=>{
-    const c=costOf(tk);
-    return `<tr><td><strong>${escHtml(tk)}</strong></td><td>${escHtml(d.group||'—')}</td>
-     <td class="r">${d.n}</td><td style="font-size:11px;color:var(--muted2)">${escHtml((platMap||{})[tk]||'—')}</td>
-     <td class="r gain">${fmt(d.amt)}</td>
-     <td class="r">${c>0?(d.amt/c*100).toFixed(1)+'%':'<span style="color:var(--muted2)">ขายหมดแล้ว</span>'}</td>
+  if(tb) tb.innerHTML=Object.entries(byTk).sort((a,b)=>b[1].amt-a[1].amt).map(([tk,d])=>
+    `<tr><td><strong>${tk}</strong></td><td>${d.group||'—'}</td>
+     <td class="r">${d.n}</td><td class="r gain">${fmt(d.amt)}</td>
      <td class="r" style="color:var(--muted2)">${d.last.toISOString().slice(0,10)}</td>
-     <td class="r">${(d.amt/total*100).toFixed(1)}%</td></tr>`;}).join('');
+     <td class="r">${(d.amt/total*100).toFixed(1)}%</td></tr>`).join('');
+}
 
-  // v56 — ปันผลรายปี (ย้ายมาจาก Investment Flow)
-  const divByYr={};
-  rows.forEach(r=>{ divByYr[r.year]=(divByYr[r.year]||0)+Math.abs(r.amtTHB); });
-  const yg=document.getElementById('dv-year-grid');
-  if(yg) yg.innerHTML=Object.keys(divByYr).sort().map(y=>
-    `<div style="background:var(--bg4);border:1px solid var(--border);border-radius:8px;padding:10px 12px;text-align:center">
-      <div style="font-size:10px;color:var(--muted2);margin-bottom:3px">${y}</div>
-      <div style="font-size:14px;font-weight:500;color:var(--gain)">+${fmt(divByYr[y])}</div></div>`).join('');
+// ── Dividend detail table ─────────────────────────────────────────────
+function renderDividendTable(){
+  const divRows=tracker.filter(r=>TX_DIV.includes(r.txType));
+  const years=[...new Set(divRows.map(r=>r.year))].sort();
+
+  // Per-ticker totals by year
+  const byTicker={};
+  divRows.forEach(r=>{
+    if(!byTicker[r.ticker]) byTicker[r.ticker]={group:r.group,platform:r.platform,byYear:{}};
+    byTicker[r.ticker].byYear[r.year]=(byTicker[r.ticker].byYear[r.year]||0)+r.amtTHB;
+  });
+
+  // Update table headers dynamically based on available years
+  const thead=document.querySelector('#flow-div-table thead tr');
+  thead.innerHTML=`<th>Ticker</th><th>Type</th><th>Platform</th>`+
+    years.map(y=>`<th class="r">${y}</th>`).join('')+`<th class="r">Total</th>`;
+
+  const sorted=Object.entries(byTicker).sort((a,b)=>{
+    const totA=Object.values(a[1].byYear).reduce((s,v)=>s+v,0);
+    const totB=Object.values(b[1].byYear).reduce((s,v)=>s+v,0);
+    return totB-totA;
+  });
+
+  // Totals row per year
+  const yearTotals={};years.forEach(y=>{yearTotals[y]=0;});
+  sorted.forEach(([,v])=>years.forEach(y=>{yearTotals[y]+=(v.byYear[y]||0);}));
+  const grandTotal=Object.values(yearTotals).reduce((s,v)=>s+v,0);
+
+  document.getElementById('flow-div-body').innerHTML=
+    sorted.map(([ticker,v])=>{
+      const total=Object.values(v.byYear).reduce((s,x)=>s+x,0);
+      const badge=BADGE[v.group]||'badge-other';
+      return `<tr>
+        <td class="tk">${ticker}</td>
+        <td><span class="tp ${badge}">${escHtml(v.group)}</span></td>
+        <td style="font-size:11px;color:var(--muted2)">${v.platform}</td>
+        ${years.map(y=>`<td class="nr" style="color:var(--gain)">${v.byYear[y]?'+'+fmt(v.byYear[y]):'—'}</td>`).join('')}
+        <td class="nr gain" style="font-weight:500">+${fmt(total)}</td>
+      </tr>`;
+    }).join('')+
+    `<tr style="background:var(--bg3)">
+      <td colspan="3" style="font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--white);padding:9px 12px">Total dividend</td>
+      ${years.map(y=>`<td class="nr gain" style="font-weight:500">+${fmt(yearTotals[y])}</td>`).join('')}
+      <td class="nr gain" style="font-weight:500">+${fmt(grandTotal)}</td>
+    </tr>`;
 }
 
 // ── Flow chart ────────────────────────────────────────────────────────
@@ -4020,7 +4012,13 @@ function renderFlow(){
     mkBarChart('flow-chart',allYrs.map(String),datasets,true);
   }
 
-  // v56 — ปันผลรายปี/รายตัวย้ายไป renderDividends() (หน้าปันผลที่เดียว)
+  const divByYr={};
+  tracker.filter(r=>TX_DIV.includes(r.txType)).forEach(r=>{divByYr[r.year]=(divByYr[r.year]||0)+r.amtTHB;});
+  document.getElementById('flow-div-grid').innerHTML=Object.keys(divByYr).sort().map(y=>
+    `<div style="background:var(--bg4);border:1px solid var(--border);border-radius:8px;padding:10px 12px;text-align:center">
+      <div style="font-size:10px;color:var(--muted2);margin-bottom:3px">${y}</div>
+      <div style="font-size:14px;font-weight:500;color:var(--gain)">+${fmt(divByYr[y])}</div></div>`).join('');
+  renderDividendTable();
   renderAtTxTable();
 }
 
@@ -4538,7 +4536,19 @@ function gsProcessData(map){
       const ms=new Set(rows.map(r=>r.month));
       availableMonths=Array.from(ms).sort();
       curMonthIdx=availableMonths.length-1;
-      populateMonthSelect();   // v57 — ใช้ร่วมกับเส้นทางกู้จาก cache
+      // Populate month dropdown (GS path)
+      const mSelGS=document.getElementById('month-select');
+      if(mSelGS){
+        mSelGS.innerHTML=availableMonths.map(mk=>`<option value="${mk}">${monthLabel(mk)}</option>`).join('');
+        mSelGS.value=availableMonths[curMonthIdx];
+        if(!mSelGS.dataset.init){
+          mSelGS.dataset.init='1';
+          mSelGS.addEventListener('change',()=>{
+            curMonthIdx=availableMonths.indexOf(mSelGS.value);
+            renderCashflow();
+          });
+        }
+      }
     }
 
     // ─ Asset prices + tracker ─
@@ -4672,7 +4682,7 @@ function gsParseAssetTracker(rows){
       platMap[tk]=best;
     });
   }
-  totalFee=feeStats(trackerRows2).fees;   // v55 — รวมค่าธรรมเนียมตอนขายด้วย (เดิมนับแค่ Buy/Split)
+  totalFee=trackerRows2.filter(r=>['Buy','Split'].includes(r.txType)).reduce((s,r)=>s+r.commTHB,0);
   // Realized P&L — running-WACC ต่อ ticker (กัน look-ahead bias) — ดู shared.js
   realized=computeRunningWaccRealized(trackerRows2, IS_COST, TX_SELL);
   // v44: เส้นทาง Sync ต้องผ่าน resolvePrices เหมือนเส้นทางอัปโหลดไฟล์
@@ -5489,7 +5499,6 @@ function restoreDataCache(){
     if(atSheetMeta){ const b=document.getElementById('at-add-btn'); if(b) b.style.display='inline-flex'; }
     availableMonths=[...new Set(txRows.map(r=>r.month))].sort();
     curMonthIdx=availableMonths.length-1;
-    populateMonthSelect();   // v57 — เดิมไม่เติม dropdown ในเส้นทางนี้
     _syncedAt = stamp;
     const ageMin=Math.round((Date.now()-stamp)/60000);
     console.log('[Cache] restored — อายุ', ageMin, 'นาที');
@@ -5565,12 +5574,10 @@ function savePortfolioToStorage(){
 // ── Debt (v40) ────────────────────────────────────────────────────────
 // หนี้บัตรเครดิตที่มีดอกเบี้ยเดิน = การลงทุนที่ให้ผลตอบแทนรับประกันเท่ากับ APR
 // ปลอดภาษี ปลอดความผันผวน — ต้องเทียบตรงๆ กับผลตอบแทนคาดหวังของพอร์ต
-function dbtSaveCfg(){
-  const st=document.getElementById('dbt-strategy'), ex=document.getElementById('dbt-extra');
-  saveDebtCfg({ strategy: st?st.value:'avalanche',
-                extraPerMonth: ex?(parseFloat(ex.value)||0):0 });
-  renderDebt();
-}
+/* v55 — dbtSaveCfg() ถูกลบ: ผู้เรียกทั้งสองคน (select กลยุทธ์ และ input
+   จ่ายเพิ่ม/เดือน) ถูกถอดออกพร้อมบล็อกแผนปลดหนี้ ค่า strategy/extraPerMonth
+   ที่เคยบันทึกไว้ใน localStorage ยังอยู่ครบ ไม่ได้ถูกล้าง — ถ้าวันหนึ่ง
+   เอาแผนกลับมา ค่าเดิมจะกลับมาเองโดยไม่ต้องตั้งใหม่ */
 // escape สำหรับค่าที่ไปอยู่ใน HTML attribute — ชื่อบัญชีมาจากชีต ควบคุมไม่ได้
 function escAttr(s){
   return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;')
@@ -5725,7 +5732,8 @@ function renderDebt(){
 
   const cfg=getDebtCfg();
   const di=debtVsInvest(sb.liabAccounts,cfg);
-  const plan=buildDebtPlan(sb.liabAccounts,cfg);
+  /* v55 — ไม่เรียก buildDebtPlan() ในหน้านี้แล้ว (แผนปลดหนี้ถูกถอดออก)
+     ตัวฟังก์ชันยังอยู่ใน shared.js เพราะ Analyst Desk ยังใช้อยู่ */
   const anyApr=di.rows.some(r=>r.apr>0);
 
   // ── แถบที่มาของยอด ──────────────────────────────────────────────────
@@ -5754,31 +5762,13 @@ function renderDebt(){
   try{ renderDebtComposition(sb.liabAccounts); }
   catch(e){ console.warn('[v48] debt composition:', e.message); }
 
-  // ควบคุมฟอร์ม
-  const stEl=document.getElementById('dbt-strategy'); if(stEl) stEl.value=cfg.strategy;
-  const exEl=document.getElementById('dbt-extra');    if(exEl && document.activeElement!==exEl) exEl.value=cfg.extraPerMonth||0;
-
   // การ์ดสรุป
   document.getElementById('dbt-total').textContent=fmt(sb.liabilities);
   document.getElementById('dbt-total-s').textContent=`${di.rows.length} บัญชี · ${(sb.cash>0?(sb.liabilities/sb.cash*100).toFixed(0):'∞')}% ของเงินสด`;
   document.getElementById('dbt-int').textContent=anyApr?fmt(Math.round(di.monthlyInterest)):'—';
   document.getElementById('dbt-int-s').textContent=anyApr?`${fmt(Math.round(di.yearlyInterest))}/ปี`:'ใส่ดอกเบี้ยด้านล่างก่อน';
-  const mEl=document.getElementById('dbt-months');
-  // BUGFIX v48 #8 — สาขา else ตั้ง style.color เป็น --loss แต่ไม่มีใครล้าง
-  // พอผู้ใช้ใส่ "จ่ายเพิ่ม/เดือน" จนแผนกลับมาจบได้ ตัวเลขเดือนยังแดงค้าง
-  // (บั๊กคลาสเดียวกับที่การ์ด benchmark เคยแก้ไว้)
-  mEl.style.color='';
-  if(plan && isFinite(plan.months)){
-    mEl.textContent=plan.months+' เดือน';
-    const d=new Date(); d.setMonth(d.getMonth()+plan.months);
-    document.getElementById('dbt-months-s').textContent='ราว '+d.toLocaleDateString(LOC,{month:'short',year:'numeric'});
-  }else{
-    mEl.textContent='ไม่มีวันหมด'; mEl.style.color='var(--loss)';
-    document.getElementById('dbt-months-s').textContent='จ่ายไม่พอดอกเบี้ย — หนี้โตขึ้นเรื่อยๆ';
-  }
-  document.getElementById('dbt-totint').textContent=plan?fmt(Math.round(plan.totalInterest)):'—';
-  document.getElementById('dbt-totint-s').textContent=plan&&plan.totalStart>0
-    ? `= ${(plan.totalInterest/plan.totalStart*100).toFixed(1)}% ของเงินต้น`:'';
+  /* v55 — การ์ด "ปลดหนี้หมดใน" / "ดอกเบี้ยรวมจนหมดหนี้" ถูกถอดออกพร้อม
+     บล็อกแผนปลดหนี้ จึงไม่มีอะไรต้องเขียนลงตรงนี้แล้ว */
 
   // ── บทสรุปการตัดสินใจ ──
   const vEl=document.getElementById('dbt-verdict');
@@ -5821,7 +5811,6 @@ function renderDebt(){
        (ดอกเกินจริง) หรือใส่ 0 (ดอกหายไปเลย) ผิดทั้งสองทาง */
     const monthlyInt=r.intBal*r.apr/100/12;
     const minPay=Math.min(r.bal,Math.max(cfg.minFloor,r.bal*cfg.minPct/100));
-    const pm=plan&&plan.payoffMonth[r.name];
     return `<tr>
       <td>${escHtml(r.name)}</td>
       <td class="r" style="color:var(--loss)">${fmt(r.bal)}</td>
@@ -5841,33 +5830,11 @@ function renderDebt(){
         ><span style="color:var(--muted2);font-size:11px">%</span></span></td>
       <td class="r" style="color:var(--debt)">${r.apr>0?fmt(Math.round(monthlyInt)):'—'}</td>
       <td class="r" style="color:var(--muted2)">${fmt(Math.round(minPay))}</td>
-      <td style="color:var(--muted2)">${pm?('เดือนที่ '+pm):(plan?'—':'')}</td>
     </tr>`;
   }).join('');
 
   dbtBindInputs();
-
-  // ── โน้ตแผน + กราฟ ──
-  const noteEl=document.getElementById('dbt-plan-note');
-  if(plan && noteEl){
-    // เทียบกับการจ่ายขั้นต่ำอย่างเดียว เพื่อบอกว่าจ่ายเพิ่มคุ้มแค่ไหน
-    const basePlan=buildDebtPlan(sb.liabAccounts,{...cfg,extraPerMonth:0});
-    let cmp='';
-    if(cfg.extraPerMonth>0 && basePlan && isFinite(basePlan.months) && isFinite(plan.months)){
-      const saveM=basePlan.months-plan.months, saveB=basePlan.totalInterest-plan.totalInterest;
-      if(saveM>0||saveB>0) cmp=`<br><span style="color:var(--gain)">จ่ายเพิ่ม ${fmt(cfg.extraPerMonth)}/เดือน
-        → หมดเร็วขึ้น ${saveM} เดือน ประหยัดดอกเบี้ย ${fmt(Math.round(saveB))}</span>`;
-    }
-    noteEl.innerHTML=`งบจ่ายหนี้รวม <strong style="color:var(--white)">${fmt(Math.round(plan.budget))}/เดือน</strong>
-      (ขั้นต่ำ ${fmt(Math.round(plan.baseMin))} + เพิ่ม ${fmt(cfg.extraPerMonth||0)})
-      · ลำดับโจมตี: ${plan.order.filter(o=>o.bal>0).map(o=>escHtml(o.name)).join(' → ')}${cmp}`;
-  }
-  if(plan && plan.timeline.length){
-    mkLineChart('dbt-chart',plan.timeline.map(p=>'เดือน '+p.m),[
-      {label:'ยอดหนี้คงเหลือ',data:plan.timeline.map(p=>Math.round(p.total)),
-       borderColor:'#ff4060',backgroundColor:'rgba(255,64,96,.07)',tension:.25,pointRadius:0,borderWidth:2,fill:true}
-    ]);
-  }
+  /* v55 — โน้ตแผน + กราฟไทม์ไลน์ถูกถอดออกพร้อมบล็อกแผนปลดหนี้ */
 }
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -6039,8 +6006,7 @@ function renderCost(){
   const totalVal = S.active.val + S.dormant.val + S.intentional.val;
   const totalPricedCost = S.active.pricedCost + S.dormant.pricedCost + S.intentional.pricedCost;
   const pl = totalVal - totalPricedCost;
-  const _fsC = feeStats(tracker);          // v55 — ตัวเดียวกับ Overview/Analyst
-  const fees = nz(_fsC.fees);
+  const fees = nz(PORT.totalFees);
 
   const USD_TYPES = /US_Stock|US Stock|Crypto|Gold/i;
   let usdVal = 0, thbVal = 0;
@@ -6053,12 +6019,15 @@ function renderCost(){
 
   document.getElementById('cost-body').innerHTML = `
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:20px">
-      <div class="sc"><div class="sc-lbl">กำไรที่ยังไม่ขาย (Unrealized)</div>
+      <div class="sc"><div class="sc-lbl">กำไร/ขาดทุนรวม</div>
         <div class="sc-val" style="color:${pl>=0?IA_GAIN:IA_LOSS}">${fmtSign(pl)}</div>
         <div class="sc-sub">${fmt(totalPricedCost)} → ${fmt(totalVal)}</div></div>
+      <div class="sc"><div class="sc-lbl">ปันผลสะสม</div>
+        <div class="sc-val" style="color:${IA_GAIN}">${fmt(totalDiv)}</div>
+        <div class="sc-sub">${pl>0?`= ${(totalDiv/pl*100).toFixed(0)}% ของกำไรทั้งหมด`:'รับจริงเป็นเงินสด'}</div></div>
       ${fees>0?`<div class="sc"><div class="sc-lbl">ค่าธรรมเนียม+ภาษีสะสม</div>
         <div class="sc-val" style="color:${IA_LOSS}">${fmt(fees)}</div>
-        <div class="sc-sub">${_fsC.ratio!=null?`${_fsC.ratio.toFixed(2)}% ของมูลค่าซื้อขาย (ซื้อ+ขาย)`:'ต้นทุนที่จ่ายแน่นอน'}</div></div>`:''}
+        <div class="sc-sub">${pl>0?`กินกำไรไป ${(fees/(pl+fees)*100).toFixed(0)}%`:'ต้นทุนที่จ่ายแน่นอน'}</div></div>`:''}
       <div class="sc"><div class="sc-lbl">สัดส่วนอิงดอลลาร์</div>
         <div class="sc-val" style="color:${usdPct>70?IA_WARN:'var(--white)'}">${usdPct.toFixed(0)}%</div>
         <div class="sc-sub">${fmt(usdVal)} จาก ${fmt(tot)}</div></div>
@@ -6081,7 +6050,24 @@ function renderCost(){
       </div>
     </div>
 
-    <!-- v56 — ปันผลรายตัวย้ายไปหน้าปันผล (รวมคอลัมน์ Yield on cost) -->`;
+    <div class="sl">ปันผลรายตัว</div>
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:420px">
+        <thead><tr style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted2)">
+          <th style="text-align:left;padding:9px 10px;font-weight:600">สินทรัพย์</th>
+          <th style="text-align:right;padding:9px 10px;font-weight:600">ปันผลรับ</th>
+          <th style="text-align:right;padding:9px 10px;font-weight:600">ต้นทุน</th>
+          <th style="text-align:right;padding:9px 10px;font-weight:600">yield สะสม</th>
+        </tr></thead><tbody>
+        ${[...CLS.active,...CLS.dormant,...CLS.intentional].filter(r=>r.div>0)
+          .sort((a,b)=>b.div-a.div).map(r=>`
+          <tr style="border-top:1px solid var(--border)">
+            <td style="padding:8px 10px;font-weight:600">${escHtml(r.ticker)}</td>
+            <td class="nr" style="padding:8px 10px;color:${IA_GAIN}">${fmt(r.div)}</td>
+            <td class="nr" style="padding:8px 10px">${fmt(r.cost)}</td>
+            <td class="nr" style="padding:8px 10px">${r.cost>0?(r.div/r.cost*100).toFixed(1)+'%':'—'}</td>
+          </tr>`).join('') || '<tr><td colspan="4" style="padding:14px;text-align:center;color:var(--muted2)">ยังไม่มีปันผล</td></tr>'}
+        </tbody></table></div>`;
 }
 
 /* ═══ 3. DCA ═══════════════════════════════════════════════════════════
@@ -6128,7 +6114,45 @@ function renderDCA(){
       สัดส่วนคำนวณจากระยะห่างเป้าเทียบกัน — ไม่ใช่คำแนะนำการลงทุน
       คุณ DCA อัตโนมัติอยู่แล้ว ตัวเลขนี้ใช้ตอนมีเงินก้อนพิเศษเท่านั้น
     </div>`}
-`;   // v55 — ตัด "จังหวะรายตัว" ออก: ข้อมูลชุดเดียวกับหน้าสัญญาณรายตัว
+    ${dcaTimingBlock()}`;
+}
+
+/* v53 — จังหวะเข้าซื้อรายตัว บนหน้า DCA
+   แยกจาก "กลุ่มไหนต่ำกว่าเป้า" คนละคำถามกัน:
+     ส่วนบนตอบ "เงินควรไปกลุ่มไหน" (จากสัดส่วนพอร์ต)
+     ส่วนนี้ตอบ "ในกลุ่มนั้น ตัวไหนอยู่ในจังหวะที่ดีกว่า" (จากราคา)
+   ไม่รวมสองอย่างเข้าด้วยกันโดยเจตนา — ถ้ารวมแล้วให้คะแนนเดียว จะแยกไม่ออกว่า
+   ตัวเลขที่เห็นมาจากความเบี่ยงเบนของพอร์ตหรือจากราคาตลาด                     */
+function dcaTimingBlock(){
+  const L = (typeof loadSignals === 'function') ? loadSignals() : null;
+  if(!L) return '';
+  const sum = signalSummary(L);
+  if(!sum || !sum.count) return '';
+  const best = sum.buy.slice(0, 6);
+  const hold = sum.trim.slice(0, 6);
+  if(!best.length && !hold.length) return `
+    <div style="font-size:11px;color:var(--muted2);line-height:1.8;margin-top:16px">
+      สัญญาณรายตัวตอนนี้ไม่มีตัวไหนเด่นทั้งด้านบวกและลบ — เดินตามแผนเดิมได้เลย</div>`;
+  const chip = (x, col) => `<div style="display:flex;justify-content:space-between;
+      gap:10px;padding:8px 0;border-top:1px solid var(--border);font-size:12px">
+    <span style="font-weight:600">${escHtml(x.ticker)}</span>
+    <span style="color:var(--muted2);font-size:11px;text-align:right">
+      ${escHtml((x.why||[]).slice(0,2).join(' · ')) || escHtml(x.action||'')}</span>
+    <span style="color:${col};font-weight:600;font-size:11.5px;white-space:nowrap">
+      ${x.score>0?'+':''}${x.score}</span></div>`;
+  return `
+    <div class="sl sl-mt">จังหวะรายตัว</div>
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:6px 16px 14px">
+      ${best.length?`<div style="font-size:11px;color:${IA_GAIN};margin-top:10px;font-weight:600">
+        อยู่ในจังหวะที่ดี</div>${best.map(x=>chip(x,IA_GAIN)).join('')}`:''}
+      ${hold.length?`<div style="font-size:11px;color:${IA_WARN};margin-top:14px;font-weight:600">
+        ควรรอ</div>${hold.map(x=>chip(x,IA_WARN)).join('')}`:''}
+      <div style="font-size:10.5px;color:var(--muted2);line-height:1.8;margin-top:12px;
+        border-top:1px solid var(--border);padding-top:10px">
+        ดูเฉพาะราคา ไม่ได้ดูสัดส่วนพอร์ต — ถ้าตัวที่ "อยู่ในจังหวะดี" อยู่ในกลุ่มที่เกินเป้าแล้ว
+        การเติมเพิ่มจะยิ่งทำให้พอร์ตเอียง ใช้คู่กับตารางด้านบนเสมอ
+      </div>
+    </div>`;
 }
 
 /* ═══ 4. MARKET ════════════════════════════════════════════════════════
@@ -6453,7 +6477,7 @@ function buildAnalystCtx(){
   // เงินเข้าพอร์ตต่อเดือน = เฉลี่ยจากที่เก็บได้จริง 6 เดือนล่าสุด
   const rec=months.slice(-6);
   const monthlyContrib=rec.length
-    ? Math.max(0, rec.reduce((s,x)=>s-(Number(x.savings)||0)+Math.max(0,x.net),0)/rec.length) : 0;   // v54 — ไม่ใช้ Math.abs
+    ? rec.reduce((s,x)=>s+Math.abs(x.savings)+Math.max(0,x.net),0)/rec.length : 0;
 
   let illiquidPct=0;
   try{
@@ -6472,7 +6496,6 @@ function buildAnalystCtx(){
     // v52 — asset object ไม่มี field `fee` (ดู assetList.push)
     // ค่าจริงอยู่ในตัวแปร global totalFee ที่ gsParseAssetTracker คำนวณไว้
     totalFee: Math.round(Number(totalFee)||0),
-    fee: feeStats(tracker),                  // v55 — ให้ Analyst ใช้สูตรเดียวกับทุกหน้า
     expectedReturn:gcfg.expectedReturn||7,
     usdthb:mdNum('USDTHB'), vix:mdNum('VIX'), cpi:mdNum('TH_CPI'),
     // ปีของข้อมูล CPI — pipeline ส่ง observation date เป็นสิ้นปีของข้อมูลจริง
@@ -6566,65 +6589,16 @@ let renderedPages=new Set();
    อาการ: ทุกครั้งที่สลับแท็บแล้วกลับมา แอป sync ใหม่แล้วเด้งไปหน้า Overview
    ผู้ใช้ต้องไล่กดเมนูกลับเข้ามาใหม่ทุกรอบ */
 let curPage = 'overview';
-/* ══ v56 — เมนู 9 กลุ่ม ═══════════════════════════════════════════════
-   หน้าเดิมทั้ง 19 หน้า (id page-*) ยังอยู่ครบ switchPage('debt') จากทุกที่ยังใช้ได้
-   แค่ถูกจัดเป็นแท็บภายใต้เมนูเดียวกัน — แท็บแรกคือหน้าที่เปิดเมื่อกดเมนู
-   PAGE_DEPS: หน้าที่รับบล็อกที่ย้ายมาจากหน้าอื่น ต้อง render หน้าต้นทางก่อน
-   (ตัววาดยังอยู่ในฟังก์ชันเดิม เขียนค่าผ่าน id ได้แม้หน้าต้นทางถูกซ่อน)          */
-const NAV_GROUPS = [
-  {id:'home',      pages:[['overview','ภาพรวม']]},
-  {id:'analyst',   pages:[['analyst','บทวิเคราะห์']]},
-  {id:'goals',     pages:[['goals','เป้าหมาย']]},
-  {id:'money',     pages:[['cashflow','รายเดือน'],['yearly','รายปี'],['engine','ออม & ลงทุน'],['budget','งบประมาณ']]},
-  {id:'accounts',  pages:[['accounts','บัญชี'],['debt','หนี้']]},
-  {id:'insurance', pages:[['insurance','ประกัน']]},
-  {id:'invest',    pages:[['portfolio','ภาพรวมพอร์ต'],['flow','รายการซื้อขาย'],['realized','ขายแล้ว'],
-                          ['dormant','ไม่มีใครดูแล'],['cost','ต้นทุน & ค่าเงิน']]},
-  {id:'dividends', pages:[['dividends','ปันผล']]},
-  {id:'markets',   pages:[['dca','DCA เดือนนี้'],['signals','สัญญาณรายตัว'],['market','ตลาดวันนี้']]},
-];
-const PAGE_DEPS = { portfolio:['overview'], accounts:['overview'], goals:['overview','dividends'] };
-const _lastTab = {};
-function groupOfPage(name){ return NAV_GROUPS.find(g=>g.pages.some(p=>p[0]===name)) || NAV_GROUPS[0]; }
-function switchGroup(gid){
-  const g = NAV_GROUPS.find(x=>x.id===gid) || NAV_GROUPS[0];
-  switchPage(_lastTab[g.id] || g.pages[0][0]);
-}
-function renderGroupTabs(g, name){
-  const bar = document.getElementById('grp-tabs'); if(!bar) return;
-  if(g.pages.length < 2){ bar.hidden = true; bar.innerHTML = ''; return; }
-  bar.hidden = false;
-  bar.innerHTML = g.pages.map(([id,lbl])=>
-    `<button type="button" role="tab" class="grp-tab${id===name?' active':''}" aria-selected="${id===name}"
-      onclick="switchPage('${id}')">${escHtml(lbl)}</button>`).join('');
-}
-
 function switchPage(name){
-  if(!document.getElementById('page-'+name)) name = 'overview';
   curPage = name;
-  const _g = groupOfPage(name);
-  _lastTab[_g.id] = name;
-  document.querySelectorAll('.sb-item').forEach(el=>{el.classList.toggle('active',el.dataset.group===_g.id);});
-  // v49/v56 — แถบล่างไฮไลต์ตามกลุ่มที่เปิดอยู่ (ปุ่ม More ไม่มี data-group จึงไม่โดน)
-  document.querySelectorAll('.bnav-item[data-group]').forEach(el=>{el.classList.toggle('active',el.dataset.group===_g.id);});
-  renderGroupTabs(_g, name);
+  document.querySelectorAll('.sb-item').forEach(el=>{el.classList.toggle('active',el.dataset.page===name);});
+  // v49 — แถบล่างต้องไฮไลต์ตามหน้าที่เปิดอยู่ (ปุ่ม More ไม่มี data-page จึงไม่โดน)
+  document.querySelectorAll('.bnav-item[data-page]').forEach(el=>{el.classList.toggle('active',el.dataset.page===name);});
   document.querySelectorAll('.page').forEach(el=>{el.classList.toggle('active',el.id===`page-${name}`);});
-  (PAGE_DEPS[name]||[]).forEach(dep=>{
-    if(renderedPages.has(dep) || !pageRenderFns[dep]) return;
-    try{ pageRenderFns[dep](); renderedPages.add(dep); }
-    catch(e){ console.error('[Page] dep render failed:',dep,e); }
-  });
   if(!renderedPages.has(name)&&pageRenderFns[name]){
     try{ pageRenderFns[name](); renderedPages.add(name); updateBudgetBadge(); try{updateDebtBadge();}catch(e){} }
     catch(e){ console.error('[Page] render failed:',name,e); }
   }
-  /* v56 — กราฟที่ถูกวาดตอนหน้ายังซ่อน (เช่น donut ที่ย้ายจาก Overview มาหน้าพอร์ต
-     วาดโดย renderOverview) มีขนาด 0 — สั่งให้ Chart.js วัดขนาดใหม่เมื่อหน้าแสดงจริง */
-  try{
-    const _pg=document.getElementById('page-'+name);
-    if(_pg && window.Chart && Chart.getChart) requestAnimationFrame(()=>
-      _pg.querySelectorAll('canvas').forEach(c=>{ const ch=Chart.getChart(c); if(ch) ch.resize(); }));
-  }catch(e){}
   // v49 — 768 ให้ตรงกับ breakpoint ของ CSS (เดิม 700 ทำให้ช่วง 701–768px
   // เมนูค้างเปิดทับเนื้อหาหลังกดเลือกหน้า)
   if(window.innerWidth<=768){document.getElementById('sidebar').classList.remove('open');}
@@ -7201,10 +7175,10 @@ function renderInsurance(){
     const daysLeft=rd?Math.ceil((rd-now)/86400000):null;
     const renewalCls=(daysLeft!==null&&daysLeft<=30&&daysLeft>=0)?'ins-renewal-soon':'';
     return `<tr>
-      <td><span class="ins-status-pill ${stCls}">${p.status||'—'}</span></td>
-      <td>${p.policyId}</td>
-      <td>${p.provider}</td>
-      <td>${p.planName}</td>
+      <td><span class="ins-status-pill ${stCls}">${escHtml(p.status||'—')}</span></td>
+      <td>${escHtml(p.policyId)}</td>
+      <td>${escHtml(p.provider)}</td>
+      <td>${escHtml(p.planName)}</td>
       <td>${escHtml(p.category)}</td>
       <td style="text-align:right">${p.premium>0?fmt(p.premium):'—'}</td>
       <td class="${renewalCls}">${renewalStr}${renewalCls?` (${daysLeft}d)`:''}</td>
