@@ -22,8 +22,9 @@ jobs:
     # เพดานรวมของ job — เป็นตาข่ายชั้นนอกเท่านั้น ไม่ใช่ตัวคุมเวลาจริง
     # ตัวคุมจริงคือ timeout-minutes ของแต่ละ step + DEADLINE ในสคริปต์
     # ต้องมากกว่าผลรวมของ step อย่างชัดเจน เผื่อเวลา checkout/setup-python/commit
-    #   fetch (10m) + signals (7m) + งานประกอบ ≈ 18m  →  ตั้ง 25m
-    timeout-minutes: 25
+    #   fetch (10m) + signals (9m) + bot (3m) + งานประกอบ ≈ 24m  →  ตั้ง 30m
+    # v59 — signals ขยับจาก 7m เป็น 9m เพราะ watchlist เพิ่มอีก ~25 symbol
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
@@ -72,14 +73,30 @@ jobs:
       #
       # แยก step ไม่รวมกับข้างบน เพื่อให้ log บอกได้ว่าขั้นไหนพัง
       # และถ้าขั้นนี้ล้ม market-data.json ที่เขียนไปแล้วยังใช้ได้ปกติ
-      # ลำดับตัวเลข: SIGNALS_DEADLINE(5m) < step timeout(7m)
+      # ลำดับตัวเลข: SIGNALS_DEADLINE(7m) < step timeout(9m)
+      # v59 — ขั้นนี้ดึงเพิ่มอีก ~25 symbol สำหรับ watchlist หน้า "ภาพรวมตลาด"
+      # จึงต้องขยายงบเวลา  ตัวที่ดึงไม่ทันจะถูก carry จากรอบก่อนอยู่แล้ว
+      # ไฟล์จึงไม่เคยว่าง แต่ถ้างบแคบเกินจะได้ของเก่าทุกรอบโดยไม่มีใครสังเกต
       - name: Compute signals
         id: signals
         continue-on-error: true
-        timeout-minutes: 7
+        timeout-minutes: 9
         env:
-          SIGNALS_DEADLINE: '300'       # 5 นาที
+          SIGNALS_DEADLINE: '420'       # 7 นาที
         run: python3 scripts/fetch_signals.py
+
+      # ── ขั้นที่ 3: พอร์ตจำลอง (paper) ───────────────────────────────
+      # ⚠️ ไม่มีการส่งคำสั่งซื้อขายจริง ไม่มี secret ของ exchange ในไฟล์นี้
+      # สคริปต์อ่าน market-data.json แล้วเขียน bot-paper.json อย่างเดียว
+      #
+      # ไม่ต่อเน็ตเลย จึงเร็วและไม่มีทาง timeout จากปลายทาง — 3 นาทีคือตาข่าย
+      # เผื่อไฟล์ใหญ่ผิดปกติเท่านั้น  ถ้าขั้นนี้ล้ม market-data.json ที่เขียนไป
+      # แล้วยังใช้ได้ปกติ (เหตุผลเดียวกับที่ signals แยกจาก fetch)
+      - name: Run paper bot
+        id: bot
+        continue-on-error: true
+        timeout-minutes: 3
+        run: python3 scripts/bot_paper.py
 
       # if: always() — ต้องเห็น summary โดยเฉพาะรอบที่ fetch พัง
       # และต้องไม่ crash เองถ้าไฟล์หาย ไม่งั้นมันจะบัง Commit step ข้างล่าง
@@ -171,6 +188,7 @@ jobs:
           # เพราะ exit status ของสคริปต์จะเป็น 1 — if...fi ไม่มีกับดักนี้
           git add market-data.json
           if [ -f signal-history.json ]; then git add signal-history.json; fi
+          if [ -f bot-paper.json ];      then git add bot-paper.json;      fi
 
           # เทียบข้อมูลจริงโดยตัด timestamp ออกก่อน — timestamp เปลี่ยนทุกรัน
           # แม้ข้อมูลจริงจะเหมือนเดิม ทำให้ git diff --quiet ไม่เคยว่างเลย
@@ -189,6 +207,17 @@ jobs:
           # HIST_MAX_DAYS (500) วันเก่าถูกตัดทิ้งพร้อมกับวันใหม่ที่เพิ่มเข้ามา
           # จำนวนจึงเท่าเดิมทั้งที่เนื้อหาเปลี่ยน ถ้าเทียบด้วยจำนวน วันใหม่
           # ในรอบที่ราคาไม่ขยับเลย (วันหยุดตลาด) จะหายจาก backtest ถาวร
+          # bot-paper.json เปลี่ยนทุกรอบเพราะ computed_at — ต้องตัดออกก่อนเทียบ
+          # แบบเดียวกับ market-data.json ไม่งั้น commit เปล่าทุก 12 ชม.ตลอดไป
+          # ส่วนที่เหลือ (NAV ที่ตีมูลค่าใหม่ · คำสั่งที่เพิ่ง execute) คือข้อมูลจริง
+          # ที่ต้องถูกบันทึก — ประวัติพอร์ตจำลองซื้อคืนย้อนหลังไม่ได้เหมือนกัน
+          BOT_CHANGED=0
+          if [ -f bot-paper.json ]; then
+            OLD_BOT=$(git show HEAD:bot-paper.json 2>/dev/null | jq -S 'del(.computed_at)' 2>/dev/null || echo 'none')
+            NEW_BOT=$(jq -S 'del(.computed_at)' bot-paper.json)
+            if [ "$OLD_BOT" != "$NEW_BOT" ]; then BOT_CHANGED=1; fi
+          fi
+
           HIST_CHANGED=0
           if [ -f signal-history.json ]; then
             OLD_DAYS=$(git show HEAD:signal-history.json 2>/dev/null | jq -Sc '.days | keys' 2>/dev/null || echo 'none')
@@ -196,10 +225,11 @@ jobs:
             if [ "$OLD_DAYS" != "$NEW_DAYS" ]; then HIST_CHANGED=1; fi
           fi
 
-          if [ "$OLD_HASH" = "$NEW_HASH" ] && [ "$HIST_CHANGED" = "0" ]; then
+          if [ "$OLD_HASH" = "$NEW_HASH" ] && [ "$HIST_CHANGED" = "0" ] \
+             && [ "$BOT_CHANGED" = "0" ]; then
             echo "ข้อมูลจริงไม่เปลี่ยน (ต่างแค่ timestamp) — ข้าม commit"
           else
-            git commit -m "chore(data): market data + signals $(date -u +'%Y-%m-%d %H:%M UTC')"
+            git commit -m "chore(data): market data + signals + paper bot $(date -u +'%Y-%m-%d %H:%M UTC')"
             # v54 — ต้อง rebase ก่อน push
             # line-notify.yml commit notify-state.json เข้ามาได้ระหว่างที่ job นี้รัน
             # (cron ของ GitHub ล่าช้าได้เป็นชั่วโมง) เดิม push ตรง ๆ → non-fast-forward
@@ -218,7 +248,7 @@ jobs:
 
       # outcome รวมทั้ง 'failure' (exit≠0) และ 'cancelled' (step timeout)
       - name: Fail job if a step was degraded
-        if: always() && (steps.fetch.outcome != 'success' || steps.signals.outcome != 'success')
+        if: always() && (steps.fetch.outcome != 'success' || steps.signals.outcome != 'success' || steps.bot.outcome != 'success')
         run: |
-          echo "::error::fetch=${{ steps.fetch.outcome }} · signals=${{ steps.signals.outcome }} — ข้อมูลที่ merge ไว้อาจถูก commit ไปแล้ว แต่ต้องตรวจ warnings ในขั้นตอนด้านบน"
+          echo "::error::fetch=${{ steps.fetch.outcome }} · signals=${{ steps.signals.outcome }} · bot=${{ steps.bot.outcome }} — ข้อมูลที่ merge ไว้อาจถูก commit ไปแล้ว แต่ต้องตรวจ warnings ในขั้นตอนด้านบน"
           exit 1
