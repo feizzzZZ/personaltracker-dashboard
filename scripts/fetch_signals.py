@@ -327,6 +327,101 @@ def score_asset(trend_up, rsi, dd, pos52):
     return trend, timing, label, why
  
  
+def build_signal(sym, dates, vals, kind="holding"):
+    """สร้าง entry สัญญาณหนึ่งตัวจากซีรีส์ราคา — ใช้ร่วมกันทั้งพอร์ตและ watchlist
+
+    แยกออกมาเป็นฟังก์ชันเดียวโดยเจตนา: ถ้าสองหน้าคำนวณคนละที่ วันหนึ่งสูตร
+    จะต่างกันโดยไม่มีใครรู้ (เคยเกิดกับ RSI มาแล้ว — ดูคอมเมนต์ที่ rsi14)
+    หน้า "สัญญาณรายตัว" กับ "ภาพรวมตลาด" จึงต้องอ่านเลขจากเครื่องเดียวกัน
+    """
+    m200 = sma(vals, 200)
+    m50 = sma(vals, 50)
+    # ไม่มีข้อมูลพอสำหรับ MA200 ≠ อยู่ต่ำกว่า MA200 — ต้องเป็น None
+    # ไม่งั้นสินทรัพย์ที่เพิ่ง list จะถูกตีว่า "เทรนด์หัก" ทั้งที่ยังไม่รู้
+    trend = None if m200 is None else vals[-1] > m200
+    r = rsi14(vals)
+    rp = range_pos(vals)
+    pos52, dd = rp if rp else (None, None)
+    tr, tm, label, why = score_asset(trend, r, dd, pos52)
+    return {
+        "sym": sym, "price": round(vals[-1], 6), "updated": dates[-1],
+        "kind": kind,
+        "rsi": r,
+        "ma50": None if m50 is None else ("Above" if vals[-1] > m50 else "Below"),
+        "ma200": None if trend is None else ("Above" if trend else "Below"),
+        "chg1m": pct_change(vals, 21), "chg3m": pct_change(vals, 63),
+        "chg6m": pct_change(vals, 126),
+        "pos52w": pos52, "drawdown": dd, "vol30d": vol_annual(vals, 30),
+        # สองแกนแยกกัน — หน้าเว็บแสดงคนละคอลัมน์
+        "trend": tr, "timing": tm,
+        # score = ผลรวม เก็บไว้ใช้ "เรียงลำดับ" อย่างเดียว
+        # ห้ามเอาไปตัดสินป้ายกำกับ — นั่นคือบั๊กที่ v3 เพิ่งแก้
+        "score": max(-4, min(4, tr + tm)),
+        "action": label, "why": why,
+        # sparkline รายสัปดาห์ 26 จุด (~6 เดือน) — เก็บเฉพาะราคา ไม่เก็บ
+        # history ดิบทั้งปี ไม่งั้น market-data.json บวมเป็นหลาย MB
+        "spark": [round(x, 4) for x in vals[::-1][::5][::-1][-26:]],
+    }
+
+
+# ══════════════════════════════════════════════════════════════════════
+# WATCHLIST (v4) — "ภาพรวมตลาด" 25 ตัวที่ไม่ได้ถืออยู่
+# ══════════════════════════════════════════════════════════════════════
+# ต่างจากบล็อก signals ตรงที่ signals มาจาก "ของที่ถือจริง" (อ่านจาก prices
+# ที่ fetch_market_data.py เขียน) ส่วนนี้คือรายการเฝ้าดูที่ตั้งไว้ตายตัว
+# เพื่อตอบคำถามคนละข้อ: signals ตอบ "ของที่มีอยู่ควรทำยังไง"
+#                        watchlist ตอบ "ตอนนี้ตลาดมีอะไรน่าเข้า"
+#
+# เก็บแยก key ไม่ปนกับ signals โดยเจตนา — ถ้าปนกัน breadth ของพอร์ตกับ
+# การ์ด "ควรลดน้ำหนัก" จะนับของที่ไม่ได้ถือเข้าไปด้วย ซึ่งเป็นบั๊กเดียวกับ
+# ที่ KIND แก้ไปแล้วใน v53 (NASDAQ โผล่ในรายการ "ลดน้ำหนัก")
+#
+# กองทุนรวมไทยไม่อยู่ในนี้เพราะ NAV ไม่มีใน Yahoo — ใช้ ETF ดัชนีที่กองทุน
+# ไทยส่วนใหญ่ไปลงทุนต่ออีกทีเป็นตัวแทน (VOO/QQQ/VXUS/VWO) และ THD สำหรับ
+# หุ้นไทยทั้งตลาด  ตัวแทนไม่ใช่ของจริง — หน้าเว็บต้องเขียนกำกับไว้ให้ชัด
+WATCH_CATS = {
+    "us":     "หุ้นสหรัฐ",
+    "th":     "หุ้นไทย",
+    "fund":   "กองทุน / ETF",
+    "gold":   "ทองคำ",
+    "crypto": "คริปโต",
+}
+WATCHLIST = [
+    # (key, Yahoo symbol, ชื่อที่แสดง, หมวด)
+    ("AAPL",   "AAPL",      "Apple",                    "us"),
+    ("MSFT",   "MSFT",      "Microsoft",                "us"),
+    ("NVDA",   "NVDA",      "NVIDIA",                   "us"),
+    ("GOOGL",  "GOOGL",     "Alphabet",                 "us"),
+    ("AMZN",   "AMZN",      "Amazon",                   "us"),
+    ("META",   "META",      "Meta",                     "us"),
+    ("BRK-B",  "BRK-B",     "Berkshire Hathaway B",     "us"),
+
+    ("VOO",    "VOO",       "S&P 500 (VOO)",            "fund"),
+    ("VTI",    "VTI",       "US ทั้งตลาด (VTI)",         "fund"),
+    ("QQQ",    "QQQ",       "Nasdaq 100 (QQQ)",         "fund"),
+    ("VXUS",   "VXUS",      "นอกสหรัฐ (VXUS)",           "fund"),
+    ("VWO",    "VWO",       "ตลาดเกิดใหม่ (VWO)",         "fund"),
+    ("SCHD",   "SCHD",      "หุ้นปันผล US (SCHD)",        "fund"),
+    ("BND",    "BND",       "พันธบัตร US (BND)",         "fund"),
+    ("THD",    "THD",       "หุ้นไทยทั้งตลาด (THD)",      "fund"),
+
+    ("PTT",    "PTT.BK",    "ปตท.",                      "th"),
+    ("AOT",    "AOT.BK",    "ท่าอากาศยานไทย",             "th"),
+    ("ADVANC", "ADVANC.BK", "แอดวานซ์ อินโฟร์",           "th"),
+    ("CPALL",  "CPALL.BK",  "ซีพี ออลล์",                 "th"),
+    ("KBANK",  "KBANK.BK",  "กสิกรไทย",                   "th"),
+    ("BDMS",   "BDMS.BK",   "กรุงเทพดุสิตเวชการ",          "th"),
+
+    ("GLD",    "GLD",       "ทองคำ (GLD)",               "gold"),
+    ("IAU",    "IAU",       "ทองคำ (IAU)",               "gold"),
+    ("GDX",    "GDX",       "หุ้นเหมืองทอง (GDX)",         "gold"),
+
+    ("BTC-USD", "BTC-USD",  "Bitcoin",                   "crypto"),
+]
+assert len(WATCHLIST) == 25, "watchlist ต้องมี 25 ตัวพอดี"
+assert len({k for k, *_ in WATCHLIST}) == 25, "key ซ้ำใน WATCHLIST"
+
+
 def bls_yoy(series_id: str):
     """คืน (YoY %, วันที่สังเกต) จาก BLS public API v1 — ไม่ต้องใช้ key
  
@@ -562,37 +657,11 @@ def main() -> int:
             if sym not in charts:
                 warn(f"signal: {tk} ({sym}) ไม่มีข้อมูล")
             continue
-        m200 = sma(v, 200)
-        m50 = sma(v, 50)
-        # ไม่มีข้อมูลพอสำหรับ MA200 ≠ อยู่ต่ำกว่า MA200 — ต้องเป็น None
-        # ไม่งั้นสินทรัพย์ที่เพิ่ง list จะถูกตีว่า "เทรนด์หัก" ทั้งที่ยังไม่รู้
-        trend = None if m200 is None else v[-1] > m200
-        r = rsi14(v)
-        rp = range_pos(v)
-        pos52, dd = rp if rp else (None, None)
-        tr, tm, label, why = score_asset(trend, r, dd, pos52)
-        e = {
-            "sym": sym, "price": round(v[-1], 6), "updated": d[-1],
-            "kind": KIND.get(tk, "holding"),
-            "rsi": r,
-            "ma50": None if m50 is None else ("Above" if v[-1] > m50 else "Below"),
-            "ma200": None if trend is None else ("Above" if trend else "Below"),
-            "chg1m": pct_change(v, 21), "chg3m": pct_change(v, 63),
-            "chg6m": pct_change(v, 126),
-            "pos52w": pos52, "drawdown": dd, "vol30d": vol_annual(v, 30),
-            # สองแกนแยกกัน — หน้าเว็บแสดงคนละคอลัมน์
-            "trend": tr, "timing": tm,
-            # score = ผลรวม เก็บไว้ใช้ "เรียงลำดับ" อย่างเดียว
-            # ห้ามเอาไปตัดสินป้ายกำกับ — นั่นคือบั๊กที่ v3 เพิ่งแก้
-            "score": max(-4, min(4, tr + tm)),
-            "action": label, "why": why,
-            # sparkline รายสัปดาห์ 26 จุด (~6 เดือน) — เก็บเฉพาะราคา ไม่เก็บ
-            # history ดิบทั้งปี ไม่งั้น market-data.json บวมเป็นหลาย MB
-            "spark": [round(x, 4) for x in v[::-1][::5][::-1][-26:]],
-        }
+        e = build_signal(sym, d, v, KIND.get(tk, "holding"))
         signals[tk] = e
-        print(f"  ✓ {tk:<10} {label:<16} เทรนด์ {tr:+d} จังหวะ {tm:+d}  "
-              f"RSI {r}  MA200 {e['ma200']}  dd {dd}%"
+        print(f"  ✓ {tk:<10} {e['action']:<16} เทรนด์ {e['trend']:+d} "
+              f"จังหวะ {e['timing']:+d}  RSI {e['rsi']}  MA200 {e['ma200']}  "
+              f"dd {e['drawdown']}%"
               + ("" if e["kind"] == "holding" else f"  [{e['kind']}]"))
  
     # ══════════════════════════════════════════════════════════════
@@ -618,6 +687,42 @@ def main() -> int:
               f"{', '.join(sorted(carried)[:8])}"
               f"{' …' if len(carried) > 8 else ''}")
  
+    # ── 2b. Watchlist — "ภาพรวมตลาด" 25 ตัว ────────────────────────
+    print("── Watchlist (25 assets) ────────────────────")
+    # ใช้ชาร์ตที่ดึงไปแล้วในขั้นสัญญาณซ้ำได้ (BTC-USD / VOO ฯลฯ ที่ถืออยู่
+    # ก็อยู่ใน watchlist ด้วย) — ยิงซ้ำคือเสียงบเวลาฟรี ๆ กับ Yahoo
+    need = sorted({sym for _, sym, _, _ in WATCHLIST if sym not in charts})
+    wl_charts = parallel_charts([(s_, "1y", "1d") for s_ in need], workers=8)
+    wl_charts.update({k: v for k, v in charts.items()})
+
+    watch: dict = {}
+    for key, sym, name, cat in WATCHLIST:
+        d, v = wl_charts.get(sym, ([], []))
+        if len(v) < 30:
+            if sym not in wl_charts:
+                warn(f"watchlist: {key} ({sym}) ไม่มีข้อมูล")
+            continue
+        e = build_signal(sym, d, v, "watch")
+        e["name"] = name
+        e["cat"] = cat
+        watch[key] = e
+        print(f"  ✓ {key:<9} {e['action']:<16} เทรนด์ {e['trend']:+d} "
+              f"จังหวะ {e['timing']:+d}  RSI {e['rsi']}  MA200 {e['ma200']}"
+              f"  [{cat}]")
+
+    # carry รอบก่อนแบบเดียวกับ signals — ตัวที่ดึงไม่ได้ต้อง "แก่ลง" ไม่ใช่ "หายไป"
+    # แต่ต้องทิ้ง key ที่ถูกถอดออกจาก WATCHLIST แล้ว ไม่งั้นของเก่าจะค้างในไฟล์
+    # ตลอดไปแบบเดียวกับค่า FRED ที่ purge_stale ต้องมาตามเก็บทีหลัง
+    wl_keys = {k for k, *_ in WATCHLIST}
+    prev_watch = {k: v for k, v in (payload.get("watchlist") or {}).items()
+                  if k in wl_keys}
+    wl_carried = [k for k in prev_watch if k not in watch]
+    merged_watch = {**prev_watch, **watch}
+    if wl_carried:
+        print(f"  ↻ คงรายการเฝ้าดูรอบก่อนไว้ {len(wl_carried)} ตัว: "
+              f"{', '.join(sorted(wl_carried)[:8])}"
+              f"{' …' if len(wl_carried) > 8 else ''}")
+
     # ── 3. ความเสี่ยงระดับตลาด ─────────────────────────────────────
     print("── Market risk ──────────────────────────────")
     def dnum(k):
@@ -708,6 +813,15 @@ def main() -> int:
     dropped = purge_stale(data, set(fresh))
     payload["data"] = data
     payload["signals"] = merged_signals
+    payload["watchlist"] = merged_watch
+    payload["watchlist_meta"] = {
+        "generated_at": FETCHED_AT,
+        "count": len(merged_watch),
+        "fresh_this_run": len(watch),
+        "carried_over": len(wl_carried),
+        "cats": WATCH_CATS,
+        "version": "watchlist v1",
+    }
     payload["risk"] = risk
     payload["signals_meta"] = {
         "generated_at": FETCHED_AT,
@@ -772,6 +886,7 @@ def main() -> int:
  
     print("─────────────────────────────────────────────")
     print(f"เขียน {MD}: macro {len(fresh)} keys · signals {len(signals)} ตัว · "
+          f"watchlist {len(watch)}/{len(WATCHLIST)} ตัว · "
           f"risk {level} · ลบค่าค้าง {len(dropped)} key")
     print(f"เขียน {HIST}: {len(hist['days'])} วัน "
           f"({os.path.getsize(HIST)/1024:.0f} KB)")
@@ -787,6 +902,10 @@ def main() -> int:
     if sym_of and len(signals) < len(sym_of) / 2:
         print(f"::error::ได้สัญญาณแค่ {len(signals)}/{len(sym_of)} ตัว")
         return 1
+    # watchlist ไม่ทำให้ job แดง ถ้ายังมีของรอบก่อน carry มาครบ — หน้าเว็บ
+    # ตรวจอายุรายตัวอยู่แล้ว และการทำให้ job แดงจะกลบปัญหาจริงของขั้นอื่น
+    if len(merged_watch) < len(WATCHLIST) / 2:
+        print(f"::warning::watchlist ใช้ได้แค่ {len(merged_watch)}/{len(WATCHLIST)} ตัว")
     return 0
  
  
