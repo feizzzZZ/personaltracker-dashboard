@@ -16,7 +16,7 @@ window.LOC = window.LOC || 'th-TH-u-ca-gregory';
 //   • XIRR engine
 // กติกา: ไฟล์นี้ห้ามแตะ DOM ของหน้าใดหน้าหนึ่ง — pure data layer เท่านั้น
 // ═══════════════════════════════════════════════════════════════════
-const APP_BUILD = 'v59';
+const APP_BUILD = 'v60';
 console.log('[Finance OS shared] build', APP_BUILD);
 window.SHARED_BUILD = APP_BUILD;   // v45 — ให้ index.html ตรวจได้ว่าเวอร์ชันตรงกัน
  
@@ -1178,6 +1178,60 @@ function computeRegime(){
 // เหตุผล: ถ้าคำนวณสองที่ วันหนึ่งสูตรจะต่างกันโดยไม่มีใครรู้ (เคยเกิดกับ RSI มาแล้ว)
 // หน้าที่ของฟังก์ชันพวกนี้คือ "อ่าน + ตรวจอายุ" เท่านั้น
 const SIGNAL_MAX_DAYS = 7;          // สัญญาณเก่ากว่านี้ = ไม่ใช้ตัดสินใจ
+
+/* ══ v60 — เกณฑ์ 3 ชั้น: ประตู · อันดับ · ขนาดไม้ ═══════════════════════
+   เลิกใช้ score = trend + timing ทั้งระบบ เหตุผลเต็มอยู่ใน fetch_signals.py
+   ย่อ: trend เป็น trend-following (ช่วง −2..+1) · timing เป็น mean-reversion
+   (ช่วง −4..+4) การบวกกันให้น้ำหนัก mean-reversion มากกว่าเท่าตัว ระบบจึง
+   สั่งลดน้ำหนักของที่แข็งที่สุด (AAPL ที่จุดสูงสุด ได้ score −2 = กล่อง
+   "ควรลดน้ำหนัก") และให้ป้ายเดียวกันกับของที่หลุดเทรนด์ไปแล้ว
+
+   ตอนนี้ pipeline ส่ง gate/rank/size มาให้พร้อมใช้ ฝั่งนี้ไม่คำนวณซ้ำ
+   — กติกาเดิมของไฟล์นี้: อ่าน + ตรวจอายุ เท่านั้น                        */
+const GATE_LABEL = { pass:'ผ่าน', fail:'ไม่ผ่าน', unknown:'ยังไม่รู้' };
+
+// แถวที่ carry มาจาก pipeline รุ่นก่อน v60 ไม่มีฟิลด์ gate — ต้องนับเป็น
+// "ยังไม่รู้" ไม่ใช่ "ไม่ผ่าน"  ของเก่าไม่ได้แปลว่าแย่ แปลว่ายังไม่ได้วัด
+function sigGate(x){ return (x && x.gate) || 'unknown'; }
+function sigLegacy(x){ return !x || x.gate == null; }
+
+// เรียงลำดับมาตรฐานของทั้งระบบ: ผ่านประตูก่อน → อันดับสูงก่อน → ชื่อ
+// (เรียงด้วยชื่อท้ายสุดเสมอ เพื่อให้ลำดับคงที่เมื่อค่าเท่ากัน — ลำดับที่
+//  สลับไปมาระหว่างรีเฟรชทำให้คนอ่านสับสนว่าอะไรเปลี่ยนจริง)
+const GATE_ORD = { pass:0, unknown:1, fail:2 };
+function byGateThenRank(a, b){
+  return (GATE_ORD[sigGate(a)] - GATE_ORD[sigGate(b)])
+      || ((b.rank ?? -99) - (a.rank ?? -99))
+      || String(a.ticker).localeCompare(String(b.ticker));
+}
+
+/* สรุปชุดสัญญาณด้วยเกณฑ์เดียวกันทั้งสองหน้า
+   opts.own = true  → นับเฉพาะของที่ถือจริง (หน้าสัญญาณรายตัว)
+   opts.own = false → นับทุกตัว (หน้าภาพรวมตลาด)
+   คืน null เมื่อไม่มีข้อมูลเลย                                            */
+function gateSummary(list, opts){
+  const L = list || [];
+  if(!L.length) return null;
+  const fresh = L.filter(x=>!x.stale);
+  const base  = (opts && opts.own) ? fresh.filter(x=>(x.kind||'holding')==='holding') : fresh;
+  const pass  = base.filter(x=>sigGate(x)==='pass').sort(byGateThenRank);
+  const fail  = base.filter(x=>sigGate(x)==='fail').sort(byGateThenRank);
+  const unk   = base.filter(x=>sigGate(x)==='unknown');
+  const withTrend = base.filter(x=>x.ma200);
+  return {
+    count: base.length,
+    stale: L.length - fresh.length,
+    ref:   fresh.length - base.length,
+    pass, fail, unknown: unk,
+    legacy: base.filter(sigLegacy).length,
+    passPct: base.length ? Math.round(100*pass.length/base.length) : null,
+    breadth: withTrend.length
+      ? Math.round(100 * withTrend.filter(x=>x.ma200==='Above').length / withTrend.length)
+      : null,
+    // ของที่ผ่านประตูแล้วยัง "ถูก" ด้วย — จังหวะที่ดีที่สุดตามนิยามของระบบนี้
+    best: pass.filter(x=>(x.size ?? 1) >= 1.25),
+  };
+}
  
 function loadSignals(){
   const act = loadActions();
@@ -1190,9 +1244,7 @@ function loadSignals(){
     const age = ageDaysOf(d.updated);   // v52 — อ่านได้ทุกรูปแบบ ไม่ใช่แค่ ISO
     out.push({ ticker: tk, ...d, age, stale: age == null || age > SIGNAL_MAX_DAYS });
   });
-  // เรียงตามคะแนน มาก→น้อย แล้วตามชื่อ เพื่อให้ลำดับคงที่เมื่อคะแนนเท่ากัน
-  // (ลำดับที่เปลี่ยนไปมาระหว่างรีเฟรชทำให้คนอ่านสับสนว่าอะไรเปลี่ยนจริง)
-  out.sort((a,b)=> (b.score||0)-(a.score||0) || a.ticker.localeCompare(b.ticker));
+  out.sort(byGateThenRank);   // v60 — ผ่านประตูก่อน แล้วค่อยอันดับ
   return out;
 }
  
@@ -1209,32 +1261,16 @@ function loadRisk(){
   return { ...r, flags };
 }
  
-// สรุปสัญญาณทั้งพอร์ตเป็นประโยคเดียว — ใช้บนการ์ดสรุปและใน LINE
+// สรุปสัญญาณทั้งพอร์ต — v60 ใช้ "ประตู" ไม่ใช่คะแนนรวม
+/* v53 ยังใช้อยู่: สรุปต้องนับเฉพาะ "ของที่ถือจริง"
+   อาการเดิม: การ์ด "ควรลดน้ำหนัก" ขึ้นว่า AAPL, JEPI, META, NASDAQ
+   NASDAQ เป็นดัชนีอ้างอิง ไม่ใช่สิ่งที่ถืออยู่ — จะ "ลดน้ำหนัก" ไม่ได้
+   ส่วน USDT เป็น stablecoin ไม่มีเทรนด์ให้วัดตั้งแต่แรก
+   pipeline ติดป้าย kind มาให้แล้ว ที่นี่แค่กรอง */
 function signalSummary(list){
-  const L = list || loadSignals();
-  if(!L || !L.length) return null;
-  const usable = L.filter(x=>!x.stale);
-  if(!usable.length) return { count:0, stale:L.length, buy:[], trim:[],
-                              breadth:null, ref:0 };
-  /* v53 — สรุปต้องนับเฉพาะ "ของที่ถือจริง"
-     อาการเดิม: การ์ด "ควรชะลอ/ลดน้ำหนัก" ขึ้นว่า AAPL, JEPI, META, NASDAQ
-     NASDAQ เป็นดัชนีอ้างอิง ไม่ใช่สิ่งที่ถืออยู่ — จะ "ลดน้ำหนัก" ไม่ได้
-     และ SP500 (ดัชนี) + VOO (ETF ที่ตามดัชนีนั้น) + NASDAQ นับเป็น 3 เสียง
-     ใน breadth ทั้งที่เป็นความเสี่ยงก้อนเดียวกันเกือบหมด
-     ส่วน USDT เป็น stablecoin ตรึงที่ 1 ดอลลาร์ ไม่มีเทรนด์ให้วัดตั้งแต่แรก
-     pipeline ติดป้าย kind มาให้แล้ว ที่นี่แค่กรอง */
-  const own = usable.filter(x=>(x.kind||'holding')==='holding');
-  const buy  = own.filter(x=>(x.score||0) >= 3);
-  const trim = own.filter(x=>(x.score||0) <= -2);
-  const withTrend = own.filter(x=>x.ma200);
-  const breadth = withTrend.length
-    ? Math.round(100 * withTrend.filter(x=>x.ma200==='Above').length / withTrend.length)
-    : null;
-  return { count: own.length, stale: L.length - usable.length,
-           ref: usable.length - own.length,   // ดัชนี/stablecoin ที่ไม่นับ
-           buy, trim, breadth };
+  return gateSummary(list || loadSignals(), {own:true});
 }
- 
+
 // ══════════════════════════════════════════════════════════════════════
 // v59 — WATCHLIST: "ภาพรวมตลาด" 25 ตัวที่ยังไม่ได้ถือ
 // ══════════════════════════════════════════════════════════════════════
@@ -1272,44 +1308,33 @@ function loadWatchlist(){
                stale: age == null || age > SIGNAL_MAX_DAYS,
                held: heldSyms.has(String(d.sym||'').toUpperCase()) });
   });
-  // เรียงด้วยคะแนนรวมแล้วตามชื่อ เพื่อให้ลำดับคงที่เมื่อคะแนนเท่ากัน
-  out.sort((a,b)=> (b.score||0)-(a.score||0) || a.ticker.localeCompare(b.ticker));
+  out.sort(byGateThenRank);   // v60 — ผ่านประตูก่อน แล้วค่อยอันดับ
   return out;
 }
 
-// สรุป watchlist — เกณฑ์ "น่าเข้า" ต้องผ่านสองด่าน ไม่ใช่คะแนนรวมอย่างเดียว
-// (1) เทรนด์ต้องไม่ติดลบ — กฎเหล็กเดียวกับ score_asset() ใน pipeline
-// (2) จังหวะต้อง ≥ +2 — ย่อจริง ไม่ใช่แค่ "ไม่แพง"
-// ใช้คะแนนรวมคัดไม่ได้ เพราะของที่หลุด MA200 แต่ถูกมาก ได้คะแนนรวมบวกได้
+/* สรุป watchlist — "น่าเข้า" = ผ่านประตู แล้วเรียงด้วยอันดับ
+   เกณฑ์เดียวกับหน้าสัญญาณรายตัวเป๊ะ ๆ ต่างกันแค่ฐานข้อมูล
+   เพิ่มสรุปรายหมวดไว้ตอบคำถามก่อนหน้า: "เงินควรไปทางไหน" ก่อน "ตัวไหน" */
 function watchSummary(list){
   const L = list || loadWatchlist();
   if(!L || !L.length) return null;
-  const fresh = L.filter(x=>!x.stale);
-  if(!fresh.length) return { count:0, stale:L.length, buy:[], avoid:[],
-                             breadth:null, byCat:{} };
-  const buy = fresh.filter(x=>(x.trend||0) >= 0 && (x.timing||0) >= 2)
-    .sort((a,b)=> (b.timing||0)-(a.timing||0) || (b.trend||0)-(a.trend||0)
-               || a.ticker.localeCompare(b.ticker));
-  const avoid = fresh.filter(x=>(x.trend||0) < 0 && (x.timing||0) <= 0)
-    .sort((a,b)=> (a.score||0)-(b.score||0) || a.ticker.localeCompare(b.ticker));
-  const withTrend = fresh.filter(x=>x.ma200);
-  const breadth = withTrend.length
-    ? Math.round(100 * withTrend.filter(x=>x.ma200==='Above').length / withTrend.length)
-    : null;
+  const sum = gateSummary(L, {own:false});
+  if(!sum) return null;
   const byCat = {};
-  fresh.forEach(x=>{
+  L.filter(x=>!x.stale).forEach(x=>{
     const c = x.cat || 'other';
-    const o = (byCat[c] = byCat[c] || { n:0, up:0, known:0, sumT:0, buy:0 });
-    o.n++; o.sumT += (x.timing||0);
+    const o = (byCat[c] = byCat[c] || { n:0, pass:0, known:0, up:0, sumRank:0, nRank:0 });
+    o.n++;
+    if(sigGate(x)==='pass') o.pass++;
     if(x.ma200){ o.known++; if(x.ma200==='Above') o.up++; }
-    if((x.trend||0) >= 0 && (x.timing||0) >= 2) o.buy++;
+    if(x.rank != null){ o.sumRank += x.rank; o.nRank++; }
   });
   Object.values(byCat).forEach(o=>{
-    o.breadth   = o.known ? Math.round(100*o.up/o.known) : null;
-    o.avgTiming = o.n ? o.sumT/o.n : null;
+    o.passPct  = o.n ? Math.round(100*o.pass/o.n) : null;
+    o.breadth  = o.known ? Math.round(100*o.up/o.known) : null;
+    o.avgRank  = o.nRank ? o.sumRank/o.nRank : null;
   });
-  return { count: fresh.length, stale: L.length - fresh.length,
-           buy, avoid, breadth, byCat };
+  return { ...sum, byCat };
 }
 
 // ══════════════════════════════════════════════════════════════════════
