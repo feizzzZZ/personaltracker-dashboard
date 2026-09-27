@@ -16,7 +16,7 @@ window.LOC = window.LOC || 'th-TH-u-ca-gregory';
 //   • XIRR engine
 // กติกา: ไฟล์นี้ห้ามแตะ DOM ของหน้าใดหน้าหนึ่ง — pure data layer เท่านั้น
 // ═══════════════════════════════════════════════════════════════════
-const APP_BUILD = 'v57';
+const APP_BUILD = 'v59';
 console.log('[Finance OS shared] build', APP_BUILD);
 window.SHARED_BUILD = APP_BUILD;   // v45 — ให้ index.html ตรวจได้ว่าเวอร์ชันตรงกัน
  
@@ -1235,6 +1235,123 @@ function signalSummary(list){
            buy, trim, breadth };
 }
  
+// ══════════════════════════════════════════════════════════════════════
+// v59 — WATCHLIST: "ภาพรวมตลาด" 25 ตัวที่ยังไม่ได้ถือ
+// ══════════════════════════════════════════════════════════════════════
+// อ่านบล็อก watchlist ที่ fetch_signals.py เขียน — กติกาเดียวกับ loadSignals()
+// คือ "อ่าน + ตรวจอายุ" เท่านั้น ห้ามคำนวณ RSI/MA/คะแนนซ้ำที่นี่เด็ดขาด
+//
+// ทำไมต้องแยกจาก loadSignals(): สองชุดนี้ตอบคนละคำถามและมีฐานคนละอัน
+//   signals   = ของที่ถืออยู่จริง → ใช้คิด breadth ของพอร์ตและ "ควรลดน้ำหนัก"
+//   watchlist = ของที่ยังไม่ถือ   → ใช้คิด "ตลาดมีอะไรน่าเข้า"
+// ถ้ารวมกันเป็นชุดเดียว จะกลับไปเป็นบั๊ก v53 ที่การ์ด "ควรลดน้ำหนัก" ขึ้นชื่อ
+// ของที่ไม่ได้ถือ (NASDAQ) — คำแนะนำที่ทำตามไม่ได้คือคำแนะนำที่ผิด
+const WATCH_CAT_ORDER = ['fund','us','th','gold','crypto'];
+const WATCH_CAT_LABEL = { fund:'กองทุน / ETF', us:'หุ้นสหรัฐ', th:'หุ้นไทย',
+                          gold:'ทองคำ', crypto:'คริปโต', other:'อื่น ๆ' };
+
+function loadWatchlist(){
+  const act = loadActions();
+  const w = act && act.watchlist;
+  if(!w || !Object.keys(w).length) return null;
+  /* ติดธง "ถืออยู่แล้ว" ด้วยสัญลักษณ์ Yahoo ไม่ใช่ชื่อ key
+     key ของพอร์ตมาจากชีต (BTC · VOO) ส่วน key ของ watchlist ตั้งในสคริปต์
+     (BTC-USD · VOO) — เทียบด้วย key ตรง ๆ จะพลาด BTC ทุกครั้ง
+     ประโยชน์: หน้าเว็บจะได้ไม่เชียร์ให้ "เข้าใหม่" ในสิ่งที่ถืออยู่แล้ว
+     ซึ่งคำถามจริงของมันคือ "ควรเติมเพิ่มไหม" — นั่นคือหน้าสัญญาณรายตัว */
+  const heldSyms = new Set();
+  Object.values((act && act.signals) || {}).forEach(d=>{
+    if(d && d.sym && (d.kind||'holding')==='holding')
+      heldSyms.add(String(d.sym).toUpperCase());
+  });
+  const out = [];
+  Object.entries(w).forEach(([tk, d])=>{
+    if(!d || typeof d !== 'object') return;
+    const age = ageDaysOf(d.updated);
+    out.push({ ticker: tk, ...d, age,
+               stale: age == null || age > SIGNAL_MAX_DAYS,
+               held: heldSyms.has(String(d.sym||'').toUpperCase()) });
+  });
+  // เรียงด้วยคะแนนรวมแล้วตามชื่อ เพื่อให้ลำดับคงที่เมื่อคะแนนเท่ากัน
+  out.sort((a,b)=> (b.score||0)-(a.score||0) || a.ticker.localeCompare(b.ticker));
+  return out;
+}
+
+// สรุป watchlist — เกณฑ์ "น่าเข้า" ต้องผ่านสองด่าน ไม่ใช่คะแนนรวมอย่างเดียว
+// (1) เทรนด์ต้องไม่ติดลบ — กฎเหล็กเดียวกับ score_asset() ใน pipeline
+// (2) จังหวะต้อง ≥ +2 — ย่อจริง ไม่ใช่แค่ "ไม่แพง"
+// ใช้คะแนนรวมคัดไม่ได้ เพราะของที่หลุด MA200 แต่ถูกมาก ได้คะแนนรวมบวกได้
+function watchSummary(list){
+  const L = list || loadWatchlist();
+  if(!L || !L.length) return null;
+  const fresh = L.filter(x=>!x.stale);
+  if(!fresh.length) return { count:0, stale:L.length, buy:[], avoid:[],
+                             breadth:null, byCat:{} };
+  const buy = fresh.filter(x=>(x.trend||0) >= 0 && (x.timing||0) >= 2)
+    .sort((a,b)=> (b.timing||0)-(a.timing||0) || (b.trend||0)-(a.trend||0)
+               || a.ticker.localeCompare(b.ticker));
+  const avoid = fresh.filter(x=>(x.trend||0) < 0 && (x.timing||0) <= 0)
+    .sort((a,b)=> (a.score||0)-(b.score||0) || a.ticker.localeCompare(b.ticker));
+  const withTrend = fresh.filter(x=>x.ma200);
+  const breadth = withTrend.length
+    ? Math.round(100 * withTrend.filter(x=>x.ma200==='Above').length / withTrend.length)
+    : null;
+  const byCat = {};
+  fresh.forEach(x=>{
+    const c = x.cat || 'other';
+    const o = (byCat[c] = byCat[c] || { n:0, up:0, known:0, sumT:0, buy:0 });
+    o.n++; o.sumT += (x.timing||0);
+    if(x.ma200){ o.known++; if(x.ma200==='Above') o.up++; }
+    if((x.trend||0) >= 0 && (x.timing||0) >= 2) o.buy++;
+  });
+  Object.values(byCat).forEach(o=>{
+    o.breadth   = o.known ? Math.round(100*o.up/o.known) : null;
+    o.avgTiming = o.n ? o.sumT/o.n : null;
+  });
+  return { count: fresh.length, stale: L.length - fresh.length,
+           buy, avoid, breadth, byCat };
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// v59 — PAPER BOT: พอร์ตจำลองจาก scripts/bot_paper.py
+// ══════════════════════════════════════════════════════════════════════
+// ⚠️ พอร์ตนี้ไม่ใช่เงินจริง และไม่มีจุดไหนในระบบที่ส่งคำสั่งซื้อขายออกไป
+// bot_paper.py เขียนไฟล์ JSON อย่างเดียว ไม่มี API key ของ exchange ที่ไหน
+//
+// bot-paper.json เป็นไฟล์แยกจาก market-data.json โดยเจตนา: ถ้าอยู่ไฟล์เดียวกัน
+// รอบที่ bot พังจะทำให้ราคาทั้งพอร์ตของผู้ใช้หายไปด้วย — ความเสียหายต้องจำกัด
+// อยู่ในขอบเขตของสิ่งที่พัง เหมือนที่ fetch_signals.py แยกจาก fetch_market_data.py
+const BOT_MAX_DAYS = 3;            // bot รันทุกรอบ pipeline (2 ครั้ง/วัน)
+function loadBotPaper(){
+  try{ return JSON.parse(localStorage.getItem('finOS_bot')||'null'); }
+  catch(e){ return null; }
+}
+async function fetchBotPaper(){
+  try{
+    // cache-bust ถังละชั่วโมง + no-store — เหตุผลเดียวกับ fetchActionsData()
+    const bucket = Math.floor(Date.now()/36e5);
+    const r = await fetch('bot-paper.json?t='+bucket, {cache:'no-store'});
+    if(!r.ok){
+      // 404 = ยังไม่เคยรัน bot เลย ไม่ใช่ error ที่ต้องตะโกน
+      if(r.status !== 404) console.warn('[bot] bot-paper.json HTTP '+r.status);
+      return null;
+    }
+    const j = await r.json();
+    if(j && j.stats){ localStorage.setItem('finOS_bot', JSON.stringify(j)); return j; }
+    console.warn('[bot] bot-paper.json ไม่มีคีย์ stats — รูปแบบไฟล์เปลี่ยน?');
+  }catch(e){ console.warn('[bot] ดึง bot-paper.json ไม่สำเร็จ:', e.message); }
+  return null;
+}
+// คืน {state, age, stale} หรือ null — ต้องตรวจอายุเสมอ ด้วยเหตุผลเดียวกับ
+// loadRisk(): พอร์ตจำลองที่หยุดเดินไปแล้ว 3 วัน แต่แสดงเหมือนเป็นของวันนี้
+// คือการรายงานผลการทดลองที่ไม่ได้ทำ
+function botStatus(){
+  const b = loadBotPaper();
+  if(!b || !b.stats) return null;
+  const age = ageDaysOf(b.computed_at);
+  return { state: b, age, stale: age == null || age > BOT_MAX_DAYS };
+}
+
 // ═══ SECTOR DATA จาก pipeline (สำหรับหน้า Sectors) ═══════════════════
 function loadSectors(){
   const act = loadActions();
