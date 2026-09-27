@@ -1325,6 +1325,7 @@ html.standalone .a2hs{display:none}
         </div>
       </div>
 
+      <div id="pf-type-warn" style="display:none"></div>
       <div id="pf-dq-warn" style="display:none"></div>
       <div class="sl sl-mt">True Performance — ผลตอบแทนที่แท้จริง</div>
       <div class="sg sg-perf">
@@ -1947,11 +1948,56 @@ function toSheetAssetType(v){
 // silently polluting the Crypto bucket.
 const CRYPTO_TICKERS = new Set(['BTC','ETH','BNB','USDT','USDC','KUB','DOGE','XRP','ADA','SOL','DOT','MATIC','AVAX','LINK','NEAR','ATOM','OP','ARB','SAND','GALA','JFIN','SIX','BUSD']);
 const CRYPTO_PLATFORM_RE = /binance|okx|bitkub|bitazza|coinbase|kraken|bybit|kucoin|upbit|satang|zipmex|metamask|ledger|wallet/i;
+/* ══ v59 — "Gold หายไปอยู่ Other" ══════════════════════════════════════
+   เดิมการจับกลุ่มใช้ `TM[t]` ซึ่งเทียบสตริงแบบตรงเป๊ะทุกตัวอักษร
+   Asset_Type ที่ต่างจากคีย์แม้แต่นิดเดียว — ตัวพิมพ์ ('gold'), ช่องว่างท้าย
+   ('Gold '), ขีดล่างกับเว้นวรรค ('Thai Stock' vs 'Thai_Stock') — จะตกลง
+   'Other' ทันที โดยยอดรวมพอร์ตยังถูกต้อง จึงไม่มีอะไรบนจอบอกว่าผิด
+   (คอมเมนต์ v52 ด้านบนเตือนบั๊กคลาสนี้ไว้แล้ว แต่แก้เฉพาะขา "เขียนกลับ
+   ลงชีต" ยังไม่ได้แก้ขา "อ่านจากชีต" ซึ่งเป็นทางที่ทองหลุดไป)
+
+   normKey: ตัดตัวพิมพ์ ช่องว่าง ขีดล่าง ขีดกลาง จุด ออกให้หมดก่อนเทียบ
+   ทำให้ 'Gold' 'gold' 'GOLD' 'Gold_' 'Thai Stock' 'thai_stock' เข้ากลุ่ม
+   เดียวกันหมด — เป็นการ "ผ่อนเกณฑ์" อย่างเดียว ไม่มีทางทำให้ค่าที่เคย
+   จับคู่ถูกอยู่แล้วเปลี่ยนกลุ่ม */
+const normKey = v => String(v == null ? '' : v).toLowerCase().replace(/[\s_\-.]+/g, '');
+
+/* ตารางค้นหาแบบ normalize — ใส่ทั้งค่าดิบของชีต ('Thai_Stock') และชื่อที่
+   แสดง ('Thai Stock') เพราะแถวที่เคยถูกฟอร์มเขียนกลับด้วยชื่อที่แสดง
+   ก่อนแพตช์ v52 ยังค้างอยู่ในชีต */
+const TM_NORM = {};
+Object.entries(TM).forEach(([raw, disp]) => { TM_NORM[normKey(raw)] = disp;
+                                              TM_NORM[normKey(disp)] = disp; });
+
+/* คำเรียกอื่นที่คนกรอกจริง — ตั้งใจให้แคบและชัดเจน
+   ไม่ใส่คำกว้างอย่าง 'commodity' เพราะอาจเป็นน้ำมัน/เงิน ไม่ใช่ทองเสมอ
+   การเดาผิดที่ทำให้ของไปกองผิดกลุ่ม แย่กว่าการปล่อยให้เห็นใน Other */
+const TYPE_ALIASES = {
+  gold:'Gold', goldspot:'Gold', goldbar:'Gold', goldetf:'Gold',
+  goldfutures:'Gold', goldsaving:'Gold', physicalgold:'Gold',
+  xau:'Gold', xauusd:'Gold',
+  'ทอง':'Gold', 'ทองคำ':'Gold', 'ทองคํา':'Gold',
+  'ทองคำแท่ง':'Gold', 'ทองแท่ง':'Gold', 'ทองรูปพรรณ':'Gold', 'ออมทอง':'Gold',
+  usstocks:'US Stock', usequity:'US Stock',
+  thaistocks:'Thai Stock', setstock:'Thai Stock',
+  crypto:'Crypto', cryptocurrencies:'Crypto', digitalasset:'Crypto', coin:'Crypto',
+  mutualfunds:'Mutual Fund', fund:'Mutual Fund',
+  pvd:'Provident Fund', providentfunds:'Provident Fund',
+};
+
+/* ticker ที่บอกได้เองว่าเป็นทอง — ด่านสุดท้ายเมื่อ Asset_Type ว่างหรือพัง
+   (เคสจริง: สูตร lookup ในชีตขึ้น #N/A → Asset_Type ว่าง) */
+const GOLD_TICKERS = new Set(['GOLD','XAU','XAUUSD','GC=F','GLD','ทอง','ทองคำ']);
+
 function resolveGroup(assetType, ticker, platform){
   const t = assetType ? String(assetType).trim() : '';
-  if(TM[t]) return TM[t];
+  if(TM[t]) return TM[t];                 // ทางเดิม — เร็วสุด พฤติกรรมไม่เปลี่ยน
+  const n = t ? normKey(t) : '';
+  if(n && TM_NORM[n])      return TM_NORM[n];
+  if(n && TYPE_ALIASES[n]) return TYPE_ALIASES[n];
   const tk = ticker ? String(ticker).trim().toUpperCase() : '';
   if(CRYPTO_TICKERS.has(tk)) return 'Crypto';
+  if(GOLD_TICKERS.has(tk))   return 'Gold';
   if(platform && CRYPTO_PLATFORM_RE.test(String(platform))) return 'Crypto';
   return 'Other';
 }
@@ -3767,6 +3813,7 @@ function renderPortfolio(){
   document.getElementById('pf-rpnl-s').textContent=`${realized.length} sell tx`;
   try{ renderPerformance(totalVal); }catch(e){ console.error('[Perf]', e); }
   try{ renderDataQuality(); }catch(e){ console.error('[DQ]', e); }
+  try{ renderTypeQuality(); }catch(e){ console.error('[TypeDQ]', e); }
   const known=assets.filter(a=>a.cost>0&&a.val>0);
   if(known.length){
     const best=known.reduce((a,b)=>b.pnlPct>a.pnlPct?b:a);
@@ -3827,6 +3874,58 @@ function renderAssetTable(){
 function findUnpricedAssets(){
   return assets.filter(a => a.qty > 1e-8 && (!a.val || a.val <= 0));
 }
+/* ══ v59 — บอกให้เห็นว่ามีอะไรตกลง 'Other' และตกเพราะค่าอะไร ═══════════
+   ทองหลุดไป Other ได้เป็นเดือนโดยไม่มีอะไรเตือน เพราะยอดรวมพอร์ตยังถูก
+   มีแต่ "ชื่อกลุ่ม" ที่ผิด ซึ่งไม่มีตัวเลขไหนขัดกันเองให้จับได้
+   แถบนี้จึงไล่ดูทุกแถวที่ลงเอยใน Other แล้วรายงาน *ค่าดิบใน Asset_Type*
+   ที่ทำให้มันตก พร้อมมูลค่ารวม — เพื่อให้แก้ที่ต้นทาง (ชีต) ได้ตรงจุด
+   หมายเหตุ: ไม่เตือนถ้ามูลค่ารวมเป็น 0 (เช่นแถวที่ขายหมดแล้ว) */
+function unknownAssetTypes(){
+  const byRaw = {};
+  (tracker || []).forEach(r => {
+    if(!r || r.group !== 'Other') return;
+    const raw = (r.assetTypeRaw == null || String(r.assetTypeRaw).trim() === '')
+              ? '(ว่าง)' : String(r.assetTypeRaw).trim();
+    if(!byRaw[raw]) byRaw[raw] = { raw, tickers:new Set(), rows:0 };
+    byRaw[raw].tickers.add(r.ticker);
+    byRaw[raw].rows++;
+  });
+  // จับคู่มูลค่าที่ถืออยู่จริงเข้ากับแต่ละค่าดิบ ผ่าน ticker
+  const valOf = {};
+  (assets || []).forEach(a => { if(a.qty > 1e-8) valOf[a.ticker] = a.val || 0; });
+  return Object.values(byRaw).map(g => ({
+    raw: g.raw,
+    tickers: [...g.tickers],
+    rows: g.rows,
+    value: [...g.tickers].reduce((s,tk) => s + (valOf[tk] || 0), 0),
+    held:  [...g.tickers].filter(tk => valOf[tk] !== undefined),
+  })).filter(g => g.held.length)          // เหลือเฉพาะที่ยังถืออยู่จริง
+    .sort((a,b) => b.value - a.value);
+}
+
+function renderTypeQuality(){
+  const el = document.getElementById('pf-type-warn');
+  if(!el) return;
+  let bad = [];
+  try{ bad = unknownAssetTypes(); }catch(e){ console.warn('[TypeQuality]', e.message); }
+  if(!bad.length){ el.style.display='none'; el.innerHTML=''; return; }
+  const total = bad.reduce((s,g) => s + g.value, 0);
+  el.style.display='block';
+  el.innerHTML = `<div style="background:rgba(124,111,236,.08);border:1px solid rgba(124,111,236,.4);
+      border-radius:10px;padding:12px 14px;margin-top:14px;font-size:12px;line-height:1.9">
+    <div style="font-weight:600;color:var(--savings);margin-bottom:4px">
+      ⚠ มี ${bad.length} ค่าใน Asset_Type ที่ระบบไม่รู้จัก — สินทรัพย์ถูกจัดเข้ากลุ่ม
+      <strong>Other</strong> รวม ${fmt(Math.round(total))}</div>
+    ${bad.map(g=>`<div style="color:var(--muted)">• Asset_Type = <strong style="color:var(--white)">${escHtml(g.raw)}</strong>
+       → ${escHtml(g.held.join(', '))} · ${fmt(Math.round(g.value))}</div>`).join('')}
+    <div style="color:var(--muted2);font-size:11px;margin-top:6px">
+      ยอดรวมพอร์ต<strong>ถูกต้อง</strong> ผิดแค่ "ชื่อกลุ่ม" — แต่ Allocation กับเป้าหมาย
+      แต่ละกลุ่มจะเพี้ยนตาม → แก้คอลัมน์ <strong>Asset_Type</strong> ในชีต Asset_Tracker
+      ให้เป็นค่าใดค่าหนึ่งนี้ แล้ว Sync ใหม่:
+      <span style="color:var(--muted2)">${Object.keys(TM).map(k=>escHtml(k)).join(' · ')}</span></div>
+  </div>`;
+}
+
 function renderDataQuality(){
   const el = document.getElementById('pf-dq-warn');
   if(!el) return;
