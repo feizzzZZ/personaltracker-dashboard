@@ -98,51 +98,106 @@ def main():
         ck(any(k == need for k, *_ in fs.WATCHLIST),
            f"{need} ต้องอยู่ใน WATCHLIST — bot อ่านราคาจากบล็อกนี้")
 
-    # build_signal ต้องให้ผลเหมือน score_asset เป๊ะ (สองที่ต้องไม่หลุดจากกัน)
     v = SERIES["GLD"]
     e = fs.build_signal("GLD", DATES, v, "watch")
-    m200 = fs.sma(v, 200)
-    tr, tm, lab, _ = fs.score_asset(v[-1] > m200, fs.rsi14(v), *reversed(fs.range_pos(v)))
-    ck(e["trend"] == tr and e["timing"] == tm and e["action"] == lab,
-       "build_signal ต้องให้ผลตรงกับ score_asset ที่เรียกตรง ๆ")
-    ck(e["score"] == max(-4, min(4, tr + tm)), "score = เทรนด์ + จังหวะ (clamp ±4)")
+    ck("score" not in e, "ต้องไม่มี field `score` แล้ว — คะแนนรวมคือบั๊กที่ v60 ถอดทิ้ง")
+    for f in ("mom12_1", "gate", "gate_why", "rank", "size", "size_why"):
+        ck(f in e, f"build_signal ต้องส่ง {f}")
+    ck(e["gate"] == fs.gate_of(v[-1] > fs.sma(v, 200), fs.mom12_1(v))[0],
+       "gate ใน build_signal ต้องตรงกับ gate_of() ที่เรียกตรง ๆ")
+    ck(0.5 <= e["size"] <= 1.5, f"ขนาดไม้ต้องอยู่ใน 0.5–1.5 — ได้ {e['size']}")
     ck(len(e["spark"]) <= 26, "spark ต้องไม่เกิน 26 จุด")
 
-    # กฎเหล็ก: เทรนด์ติดลบ ห้ามได้ป้ายที่ชวนซื้อ — ไล่ทุกคู่ที่เป็นไปได้
-    bad = []
-    for rsi in (5, 25, 29, 50, 70, 80, 95):
-        for dd in (0, -5, -12, -25, -60):
-            for pos in (0, 10, 50, 95, 100):
-                _, _, lb, _ = fs.score_asset(False, rsi, dd, pos)
-                if lb in ("ทยอยเข้าเพิ่ม", "เข้าได้ตามแผน"):
-                    bad.append((rsi, dd, pos, lb))
-    ck(not bad, f"หลุด MA200 แล้วยังได้ป้ายชวนซื้อ {len(bad)} กรณี เช่น {bad[:2]}")
+    # โมเมนตัม 12-1 ต้องตัดเดือนล่าสุดจริง ๆ
+    ck(fs.mom12_1(v[:252]) is None, "ประวัติไม่ถึง 253 วัน ต้องคืน None")
+    up = [100 * (1.001 ** i) for i in range(300)]
+    ck(fs.mom12_1(up) > 0, "ราคาขึ้นตลอด โมเมนตัมต้องเป็นบวก")
+    spike = up[:]; spike[-21:] = [1e6] * 21      # พุ่งเฉพาะเดือนล่าสุด
+    ck(abs(fs.mom12_1(spike) - fs.mom12_1(up)) < 1e-9,
+       "ราคาที่พุ่งเฉพาะเดือนล่าสุด ต้องไม่กระทบโมเมนตัม 12-1 เลย")
+
+    print("── 1b. ประตู · อันดับ · ขนาดไม้ ─────────────")
+    BUY = {"ทยอยเข้าเพิ่ม", "เข้าได้ตามแผน", "เข้าได้ ลดขนาดไม้"}
+    NOBUY = {"ไม่เข้า — รอเทรนด์กลับ", "ข้อมูลไม่พอตัดสิน"}
+    ck(not (BUY & NOBUY), "ชุดป้าย \"ซื้อได้\" กับ \"ไม่ซื้อ\" ต้องไม่ทับกันเลย")
+
+    # ไล่ทุกคู่ที่เป็นไปได้: ป้ายต้องเป็นฟังก์ชันของ (ประตู, ขนาดไม้) เท่านั้น
+    # และของที่ไม่ผ่านประตู ห้ามได้ป้ายที่แปลว่าซื้อได้ ไม่ว่าจะถูกแค่ไหน
+    leak, seen = [], {}
+    for tu in (True, False, None):
+        for mom in (-50, -0.1, 0, 0.1, 30, None):
+            for rsi in (5, 25, 29, 44, 50, 61, 70, 80, 95, None):
+                for dd in (0, -0.5, -5, -12, -25, -60, None):
+                    for pos in (0, 10, 15, 50, 94, 95, 100, None):
+                        g, _ = fs.gate_of(tu, mom)
+                        sz, _ = fs.size_mult(rsi, dd, pos)
+                        lb = fs.label_of(g, sz)
+                        if g != "pass" and lb in BUY:
+                            leak.append((tu, mom, rsi, dd, pos, lb))
+                        ck2 = seen.setdefault(lb, set())
+                        ck2.add(g)
+                        if not (0.5 <= sz <= 1.5):
+                            leak.append(("size", rsi, dd, pos, sz))
+    ck(not leak, f"ไม่ผ่านประตูแต่ได้ป้ายซื้อได้ {len(leak)} กรณี เช่น {leak[:2]}")
+    shared = {lb: gs for lb, gs in seen.items() if len(gs) > 1}
+    ck(not shared, f"ป้ายที่ใช้ร่วมกันข้ามสถานะประตู (ห้ามมี): {shared}")
+
+    # ── regression ตรงกับอาการที่ผู้ใช้รายงานจริง (ข้อมูล 27 ก.ย. 2026) ──
+    # AAPL อยู่ที่จุดสูงสุดรอบปี +20.2% ใน 3 เดือน  vs  MINT หลุด MA200 −12.6%
+    # รุ่นเก่าให้ป้ายเดียวกันทั้งคู่ ("ชะลอเข้าเพิ่ม") และ AAPL ได้คะแนนแย่กว่า
+    g_a, _ = fs.gate_of(True, 25.0)
+    s_a, _ = fs.size_mult(65.7, 0.0, 100.0)
+    lab_a = fs.label_of(g_a, s_a)
+    g_m, _ = fs.gate_of(False, -15.0)
+    s_m, _ = fs.size_mult(40.5, -19.3, 25.9)
+    lab_m = fs.label_of(g_m, s_m)
+    ck(g_a == "pass" and g_m == "fail",
+       f"AAPL ต้องผ่านประตู · MINT ต้องไม่ผ่าน — ได้ {g_a}/{g_m}")
+    ck(lab_a != lab_m, f"สองเคสนี้ต้องไม่ได้ป้ายเดียวกันอีก — ได้ {lab_a!r} กับ {lab_m!r}")
+    ck(lab_a in BUY, f"ของที่จุดสูงสุดในเทรนด์ขาขึ้นต้องซื้อได้ — ได้ {lab_a!r}")
+    ck(s_a < 1.0, f"แต่ขนาดไม้ต้องเล็กลงเพราะแพง — ได้ ×{s_a}")
+
+    # อันดับต้องปรับด้วยความผันผวน
+    ck(fs.rank_of(40, 10) > fs.rank_of(60, 30),
+       "ขึ้น 40% แบบนิ่ง ต้องได้อันดับดีกว่าขึ้น 60% แบบเหวี่ยง")
+    ck(fs.rank_of(None, 10) is None and fs.rank_of(10, None) is None,
+       "ข้อมูลไม่ครบ อันดับต้องเป็น None ไม่ใช่ 0")
 
     print("── 2. กฎการตัดสินใจของ bot (pure) ──────────")
     import bot_paper as bp
 
-    A = bp.CFG["aggression"]
     cases = [
-        ({"ma200": "Below", "timing": 3}, 100, 500, "hold", "ต่ำกว่า MA200 + จังหวะดีมาก ต้องไม่ซื้อ"),
-        ({"ma200": "Below", "timing": 4}, 0, 500, "hold", "ต่ำกว่า MA200 + ไม่ได้ถือ ต้องอยู่เฉย"),
-        ({"ma200": "Below", "timing": -2}, 400, 500, "sell", "ต่ำกว่า MA200 + จังหวะแพง ต้องลดน้ำหนัก"),
-        ({"ma200": "Above", "timing": 3}, 100, 500, "buy", "เหนือ MA200 + ย่อแรง ต้องซื้อ"),
-        ({"ma200": "Above", "timing": 0}, 100, 500, "buy", "เหนือ MA200 + กลาง ๆ ต้องซื้อตามปกติ"),
-        ({"ma200": "Above", "timing": -3}, 100, 500, "buy", "เหนือ MA200 + ร้อน ยังซื้อได้แต่น้อย"),
-        ({"ma200": "Above", "timing": 0}, 500, 500, "hold", "อยู่ที่เป้าพอดี ไม่ต้องทำอะไร"),
-        ({"ma200": "Above", "timing": -3}, 700, 500, "sell", "เกินเป้า 40% + ร้อน ต้องขายกลับมาที่เป้า"),
-        ({"ma200": None, "timing": 2}, 0, 500, "buy", "ไม่รู้เทรนด์ ยังซื้อได้ (ไม่รู้ ≠ แย่)"),
+        ({"gate": "fail", "size": 1.5}, 100, 500, "hold", "ไม่ผ่านประตู + ไม้ใหญ่สุด ต้องไม่ซื้อ"),
+        ({"gate": "fail", "size": 1.5}, 0, 500, "hold", "ไม่ผ่านประตู + ไม่ได้ถือ ต้องอยู่เฉย"),
+        ({"gate": "fail", "size": 0.7}, 400, 500, "sell", "ไม่ผ่านประตู + ยังแพง ต้องลดน้ำหนัก"),
+        ({"gate": "fail", "size": 1.4}, 400, 500, "hold", "ไม่ผ่านประตูแต่ถูกมากแล้ว ต้องไม่ขายที่จุดต่ำ"),
+        ({"gate": "pass", "size": 1.4}, 100, 500, "buy", "ผ่านประตู + ย่อ ต้องซื้อ"),
+        ({"gate": "pass", "size": 1.0}, 100, 500, "buy", "ผ่านประตู + กลาง ๆ ต้องซื้อตามปกติ"),
+        ({"gate": "pass", "size": 0.5}, 100, 500, "buy", "ผ่านประตู + แพง ยังซื้อได้แต่น้อย"),
+        ({"gate": "pass", "size": 1.0}, 500, 500, "hold", "อยู่ที่เป้าพอดี ไม่ต้องทำอะไร"),
+        ({"gate": "pass", "size": 0.6}, 700, 500, "sell", "เกินเป้า 40% + แพง ต้องขายกลับมาที่เป้า"),
+        ({"gate": "pass", "size": 1.4}, 700, 500, "hold", "เกินเป้าแต่ยังถูก ไม่ต้องรีบขาย"),
+        ({"gate": "unknown", "size": 1.0}, 0, 500, "buy", "ยังไม่รู้เทรนด์ ยังซื้อได้ (ไม่รู้ ≠ แย่)"),
     ]
     for sig, cur, tgt, want, msg in cases:
         act, frac, _ = bp.decide(sig, cur, tgt)
         ck(act == want, f"{msg} — ได้ {act}")
         ck(0.0 <= frac <= 1.0, f"fraction ต้องอยู่ใน 0..1 ({msg}) — ได้ {frac}")
-    ck(bp.decide({"ma200": "Above", "timing": 4}, 0, 500)[1] > bp.decide(
-        {"ma200": "Above", "timing": 0}, 0, 500)[1],
-       "ย่อแรงต้องซื้อแรงกว่าจังหวะกลาง ๆ")
-    ck(bp.decide({"ma200": "Above", "timing": -3}, 0, 500)[1] < bp.decide(
-        {"ma200": "Above", "timing": 0}, 0, 500)[1],
-       "ตอนร้อนต้องซื้อน้อยกว่าจังหวะกลาง ๆ")
+    ck(bp.decide({"gate": "pass", "size": 1.5}, 0, 500)[1] > bp.decide(
+        {"gate": "pass", "size": 1.0}, 0, 500)[1], "ไม้ใหญ่ต้องซื้อแรงกว่าไม้ปกติ")
+    ck(bp.decide({"gate": "pass", "size": 0.5}, 0, 500)[1] < bp.decide(
+        {"gate": "pass", "size": 1.0}, 0, 500)[1], "ไม้เล็กต้องซื้อน้อยกว่าไม้ปกติ")
+    ck(bp.decide({"gate": "unknown", "size": 1.0}, 0, 500)[1] < bp.decide(
+        {"gate": "pass", "size": 1.0}, 0, 500)[1],
+       "ยังไม่รู้เทรนด์ ต้องเข้าน้อยกว่าตัวที่ผ่านประตูแล้ว")
+    # ขนาดไม้ต้องพลิกประตูไม่ได้ ไม่ว่าจะยัดค่าอะไรเข้าไป
+    for bad_size in (0, -5, 99, None, "1.5"):
+        act, _, _ = bp.decide({"gate": "fail", "size": bad_size}, 0, 500)
+        ck(act != "buy", f"ไม่ผ่านประตูแต่ซื้อ เมื่อ size={bad_size!r}")
+    # ไม่มี gate เลย (แถว carry จาก pipeline รุ่นเก่า) ต้องไม่ถูกตีเป็น pass
+    ck(bp.decide({}, 0, 500)[0] == "buy", "ไม่มี gate ถือเป็น unknown — ซื้อได้ครึ่งไม้")
+    ck(bp.decide({}, 0, 500)[1] <= bp.CFG["aggression"]["unknown"] * 1.5 + 1e-9,
+       "ไม่มี gate ต้องใช้ระดับ unknown ไม่ใช่ระดับ pass")
     ck(bp.fee_for(10, "etf") == bp.CFG["fee_min_usd_etf"],
        "คำสั่ง ETF เล็ก ๆ ต้องโดนค่าคอมขั้นต่ำ")
     ck(bp.fee_for(10, "crypto") < 0.1, "คริปโตไม่มีค่าคอมขั้นต่ำ")
@@ -155,7 +210,9 @@ def main():
     bp.MD, bp.OUT = md_p, out_p
 
     buys_below, sells_bench, neg_cash, drift = [], 0, [], []
-    start = 250                       # ต้องมีอย่างน้อย 200 จุดก่อนถึงจะมี MA200
+    # 253 วันคือขั้นต่ำของโมเมนตัม 12-1 — เริ่มที่ 300 เพื่อให้ประตูทำงานจริง
+    # ถ้าเริ่มเร็วกว่านี้ ทุกตัวจะเป็น "ยังไม่รู้" แล้วกฎที่สำคัญที่สุดไม่ถูกทดสอบเลย
+    start = 300
     for i in range(start, DAYS):
         day = DATES[i]
         with open(md_p, "w", encoding="utf-8") as f:
@@ -182,12 +239,12 @@ def main():
             if st[b]["cash"] < -1e-6:
                 neg_cash.append((day, b, st[b]["cash"]))
 
-        # (b) กฎเหล็ก: ห้ามซื้อตอนต่ำกว่า MA200
+        # (b) กฎเหล็ก: ห้ามซื้อตอนไม่ผ่านประตู
         wl = json.load(open(md_p, encoding="utf-8"))["watchlist"]
         for t in st["trades"]:
             if t["d"] == day and t["book"] == "bot" and t["side"] == "buy":
-                if (wl.get(t["k"]) or {}).get("ma200") == "Below":
-                    buys_below.append((day, t["k"]))
+                if (wl.get(t["k"]) or {}).get("gate") == "fail":
+                    buys_below.append((day, t["k"], (wl.get(t["k"]) or {}).get("gate_why")))
 
         # (c) พอร์ต DCA ต้องไม่ขายเลยตลอดกาล — มันคือ "การไม่ตัดสินใจ"
         sells_bench = sum(1 for t in st["trades"] if t["book"] == "dca" and t["side"] == "sell")
@@ -202,7 +259,18 @@ def main():
     st = json.load(open(out_p, encoding="utf-8"))
     s = st["stats"]
     ck(not neg_cash, f"เงินสดติดลบ {len(neg_cash)} วัน เช่น {neg_cash[:2]}")
-    ck(not buys_below, f"ซื้อตอนหลุด MA200 {len(buys_below)} ครั้ง เช่น {buys_below[:3]}")
+    ck(not buys_below, f"ซื้อตอนไม่ผ่านประตู {len(buys_below)} ครั้ง เช่น {buys_below[:2]}")
+    # สนามทดสอบต้องเคยมีทั้งช่วงผ่านและไม่ผ่าน ไม่งั้นข้อบนไม่ได้ทดสอบอะไร
+    gates_seen = set()
+    for i2 in range(start, DAYS, 37):
+        for _k, (sym, nm, cat) in UNI.items():
+            vv = SERIES[_k][: i2 + 1]
+            if len(vv) >= 30:
+                gates_seen.add(fs.gate_of(
+                    None if fs.sma(vv, 200) is None else vv[-1] > fs.sma(vv, 200),
+                    fs.mom12_1(vv))[0])
+    ck({"pass", "fail"} <= gates_seen,
+       f"ราคาทดสอบต้องผ่านทั้งช่วงที่ประตูเปิดและปิด — เจอแค่ {gates_seen}")
     ck(sells_bench == 0, f"พอร์ต DCA ขาย {sells_bench} ครั้ง — ต้องเป็น 0")
     ck(not drift, f"มูลค่าที่รายงานไม่ตรงกับที่คำนวณ {len(drift)} วัน เช่น {drift[:2]}")
 
@@ -256,6 +324,11 @@ def main():
     json.dump(md, open(md_p, "w", encoding="utf-8"))
     st3 = json.load(open(out_p, encoding="utf-8"))
     st3["last_trade_day"] = None
+    # นับคำสั่ง GLD ของวันนี้ที่ "มีอยู่ก่อนแล้ว" จากรอบปกติ — ต้องเทียบส่วนต่าง
+    # ไม่ใช่เทียบว่ามีหรือไม่มี ไม่งั้นคำสั่งของรอบก่อนหน้าจะถูกนับเป็นความผิด
+    # ของรอบนี้ (การทดสอบที่ fail เพราะตัวเองตั้งคำถามผิด แย่กว่าไม่ทดสอบ)
+    gld_before = sum(1 for t in st3["trades"]
+                     if t["d"] == bp.TODAY and t["k"] == "GLD" and t["book"] == "bot")
     json.dump(st3, open(out_p, "w", encoding="utf-8"))
     sys.stdout = open(os.devnull, "w")
     try:
@@ -266,8 +339,10 @@ def main():
     st4 = json.load(open(out_p, encoding="utf-8"))
     skipped = [x["k"] for x in st4["today"]["skipped"]]
     ck("GLD" in skipped, "ราคาเก่า 6 ปี ต้องถูกข้าม ไม่ใช่เอามาตัดสินใจ")
-    ck(not any(t["d"] == bp.TODAY and t["k"] == "GLD" and t["book"] == "bot"
-               for t in st4["trades"]), "ห้ามเทรดตัวที่ราคาเก่าเกิน")
+    gld_after = sum(1 for t in st4["trades"]
+                    if t["d"] == bp.TODAY and t["k"] == "GLD" and t["book"] == "bot")
+    ck(gld_after == gld_before,
+       f"ห้ามเทรดตัวที่ราคาเก่าเกิน — คำสั่ง GLD เพิ่มจาก {gld_before} เป็น {gld_after}")
     ck(st4["stats"]["bot"]["equity"] > 0,
        "ราคาเก่ายังใช้ตีมูลค่าได้ — ห้ามนับเป็น 0 (บทเรียน last-known-price)")
 
