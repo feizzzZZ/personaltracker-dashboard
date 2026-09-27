@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-09-26T15:04:38.346294+00:00",
+ "generated_at": "2026-09-27T01:36:16.711436+00:00",
  "source": "github-actions pipeline v54 (Yahoo + World Bank TH_CPI)",
  "stats": {
   "keys_this_run": 17,
@@ -8,7 +8,7 @@
   "prices_this_run": 29,
   "prices_total": 29,
   "prices_missing": [],
-  "runtime_sec": 3.6,
+  "runtime_sec": 1.9,
   "budget_sec": 480,
   "budget_exhausted": false,
   "host_stats": {
@@ -26,109 +26,109 @@
   "US10Y": {
    "value": 5.184,
    "updated": "2026-09-25",
-   "fetched_at": "2026-09-26T15:04:42.057404+00:00",
+   "fetched_at": "2026-09-27T01:36:18.687610+00:00",
    "note": "Yahoo ^TNX"
   },
   "US2Y": {
    "value": 4.5,
    "updated": "2026-09-25",
-   "fetched_at": "2026-09-26T15:04:42.057404+00:00",
+   "fetched_at": "2026-09-27T01:36:18.687610+00:00",
    "note": "Yahoo 2YY=F"
   },
   "VIX": {
    "value": 14.87,
    "updated": "2026-09-25",
-   "fetched_at": "2026-09-26T15:04:38.346294+00:00",
+   "fetched_at": "2026-09-27T01:36:16.711436+00:00",
    "note": "Yahoo ^VIX"
   },
   "US_UNEMP": {
    "value": 4.1,
    "updated": "2026-08-01",
-   "fetched_at": "2026-09-26T15:04:42.057404+00:00",
+   "fetched_at": "2026-09-27T01:36:18.687610+00:00",
    "note": "BLS LNS14000000 · อัตราว่างงาน (ปรับฤดูกาล)"
   },
   "US_REAL10Y": {
    "value": 1.78,
    "updated": "2026-08-01",
-   "fetched_at": "2026-09-26T15:04:42.057404+00:00",
+   "fetched_at": "2026-09-27T01:36:18.687610+00:00",
    "note": "ex-post real yield = ^TNX − CPI YoY · ไม่ใช่ TIPS breakeven"
   },
   "OIL_WTI": {
    "value": 92.41,
    "updated": "2026-09-25",
-   "fetched_at": "2026-09-26T15:04:38.346294+00:00",
+   "fetched_at": "2026-09-27T01:36:16.711436+00:00",
    "note": "Yahoo CL=F"
   },
   "US_CPI": {
    "value": 3.4,
    "updated": "2026-08-01",
-   "fetched_at": "2026-09-26T15:04:42.057404+00:00",
+   "fetched_at": "2026-09-27T01:36:18.687610+00:00",
    "note": "BLS CUUR0000SA0 · CPI-U YoY (ไม่ปรับฤดูกาล)"
   },
   "US_CORE_CPI": {
    "value": 2.45,
    "updated": "2026-08-01",
-   "fetched_at": "2026-09-26T15:04:42.057404+00:00",
+   "fetched_at": "2026-09-27T01:36:18.687610+00:00",
    "note": "BLS CUUR0000SA0L1E · Core CPI YoY (ไม่รวมอาหารและพลังงาน)"
   },
   "YIELD_CURVE": {
    "value": 68,
-   "updated": "2026-09-26",
-   "fetched_at": "2026-09-26T15:04:42.057404+00:00",
+   "updated": "2026-09-27",
+   "fetched_at": "2026-09-27T01:36:18.687610+00:00",
    "note": "2s10s = ^TNX − 2YY=F (bps)"
   },
   "SP500": {
    "value": 7743.0,
    "updated": "2026-09-25",
-   "fetched_at": "2026-09-26T15:04:38.346294+00:00",
+   "fetched_at": "2026-09-27T01:36:16.711436+00:00",
    "note": "Yahoo ^GSPC"
   },
   "SP500_CHG": {
    "value": 0.51,
    "updated": "2026-09-25",
-   "fetched_at": "2026-09-26T15:04:38.346294+00:00",
+   "fetched_at": "2026-09-27T01:36:16.711436+00:00",
    "note": "Yahoo ^GSPC daily change"
   },
   "NASDAQ": {
    "value": 27069.0,
    "updated": "2026-09-25",
-   "fetched_at": "2026-09-26T15:04:38.346294+00:00",
+   "fetched_at": "2026-09-27T01:36:16.711436+00:00",
    "note": "Yahoo ^IXIC"
   },
   "SET_INDEX": {
    "value": 1607.63,
    "updated": "2026-09-25",
-   "fetched_at": "2026-09-26T15:04:38.346294+00:00",
+   "fetched_at": "2026-09-27T01:36:16.711436+00:00",
    "note": "Yahoo ^SET.BK"
   },
   "GOLD_XAU": {
    "value": 4321.2,
    "updated": "2026-09-25",
-   "fetched_at": "2026-09-26T15:04:38.346294+00:00",
+   "fetched_at": "2026-09-27T01:36:16.711436+00:00",
    "note": "Yahoo GC=F"
   },
   "USDTHB": {
    "value": 33.37,
    "updated": "2026-09-25",
-   "fetched_at": "2026-09-26T15:04:38.346294+00:00",
+   "fetched_at": "2026-09-27T01:36:16.711436+00:00",
    "note": "Yahoo THB=X"
   },
   "DXY": {
    "value": 100.97,
    "updated": "2026-09-25",
-   "fetched_at": "2026-09-26T15:04:38.346294+00:00",
+   "fetched_at": "2026-09-27T01:36:16.711436+00:00",
    "note": "Yahoo DXY"
   },
   "SP500_RSI": {
    "value": 56.7,
    "updated": "2026-09-25",
-   "fetched_at": "2026-09-26T15:04:38.346294+00:00",
+   "fetched_at": "2026-09-27T01:36:16.711436+00:00",
    "note": "Yahoo ^GSPC RSI(14)"
   },
   "SP500_MA200": {
    "value": "Above",
    "updated": "2026-09-25",
-   "fetched_at": "2026-09-26T15:04:38.346294+00:00",
+   "fetched_at": "2026-09-27T01:36:16.711436+00:00",
    "note": "close 7,743 vs MA200 7,205"
   },
   "SET_RSI": {
@@ -146,67 +146,67 @@
   "NDX_RSI": {
    "value": 61.1,
    "updated": "2026-09-25",
-   "fetched_at": "2026-09-26T15:04:38.346294+00:00",
+   "fetched_at": "2026-09-27T01:36:16.711436+00:00",
    "note": "Yahoo ^IXIC RSI(14)"
   },
   "NDX_MA200": {
    "value": "Above",
    "updated": "2026-09-25",
-   "fetched_at": "2026-09-26T15:04:38.346294+00:00",
+   "fetched_at": "2026-09-27T01:36:16.711436+00:00",
    "note": "close 27,069 vs MA200 24,642"
   },
   "GOLD_GLD": {
    "value": 393.41,
    "updated": "2026-09-25",
-   "fetched_at": "2026-09-26T15:04:38.346294+00:00",
+   "fetched_at": "2026-09-27T01:36:16.711436+00:00",
    "note": "Yahoo GLD"
   },
   "BTCUSD": {
-   "value": 84032.0,
-   "updated": "2026-09-26",
-   "fetched_at": "2026-09-26T15:04:38.346294+00:00",
+   "value": 84299.0,
+   "updated": "2026-09-27",
+   "fetched_at": "2026-09-27T01:36:16.711436+00:00",
    "note": "Yahoo BTC-USD"
   },
   "ETHUSD": {
-   "value": 2689.0,
-   "updated": "2026-09-26",
-   "fetched_at": "2026-09-26T15:04:38.346294+00:00",
+   "value": 2692.0,
+   "updated": "2026-09-27",
+   "fetched_at": "2026-09-27T01:36:16.711436+00:00",
    "note": "Yahoo ETH-USD"
   },
   "TH_CPI": {
    "value": -0.13,
    "updated": "2025-12-31",
-   "fetched_at": "2026-09-26T15:04:38.346294+00:00",
+   "fetched_at": "2026-09-27T01:36:16.711436+00:00",
    "note": "World Bank FP.CPI.TOTL.ZG · เงินเฟ้อเฉลี่ยทั้งปี 2025"
   },
   "US3M": {
    "value": 4.07,
    "updated": "2026-09-25",
-   "fetched_at": "2026-09-26T15:04:42.057404+00:00",
+   "fetched_at": "2026-09-27T01:36:18.687610+00:00",
    "note": "Yahoo ^IRX"
   },
   "US5Y": {
    "value": 5.007,
    "updated": "2026-09-25",
-   "fetched_at": "2026-09-26T15:04:42.057404+00:00",
+   "fetched_at": "2026-09-27T01:36:18.687610+00:00",
    "note": "Yahoo ^FVX"
   },
   "US30Y": {
    "value": 5.504,
    "updated": "2026-09-25",
-   "fetched_at": "2026-09-26T15:04:42.057404+00:00",
+   "fetched_at": "2026-09-27T01:36:18.687610+00:00",
    "note": "Yahoo ^TYX"
   },
   "YIELD_CURVE_3M10Y": {
    "value": 111,
-   "updated": "2026-09-26",
-   "fetched_at": "2026-09-26T15:04:42.057404+00:00",
+   "updated": "2026-09-27",
+   "fetched_at": "2026-09-27T01:36:18.687610+00:00",
    "note": "3m10y = ^TNX − ^IRX (bps) · งานวิจัย Fed ชี้ว่าทำนาย recession แม่นกว่า"
   },
   "CREDIT_STRESS": {
    "value": -2.21,
    "updated": "2026-09-25",
-   "fetched_at": "2026-09-26T15:04:42.057404+00:00",
+   "fetched_at": "2026-09-27T01:36:18.687610+00:00",
    "note": "z-score ของอัตราส่วน HYG/IEF (กลับเครื่องหมาย) · บวก = ความเครียดเครดิตสูงกว่าค่าเฉลี่ย 1 ปี · ไม่ใช่ HY OAS"
   }
  },
@@ -315,8 +315,8 @@
   },
   "SP500": [
    [
-    "2021-09-27",
-    4443.1099
+    "2021-09-28",
+    4352.6299
    ],
    [
     "2021-10-04",
@@ -1361,8 +1361,8 @@
   ],
   "USDTHB": [
    [
-    "2021-09-27",
-    33.58
+    "2021-09-28",
+    33.84
    ],
    [
     "2021-10-04",
@@ -2558,21 +2558,21 @@
    "src": "Yahoo TU.BK"
   },
   "BTC": {
-   "price": 84031.976562,
+   "price": 84298.65625,
    "ccy": "USD",
-   "updated": "2026-09-26",
+   "updated": "2026-09-27",
    "src": "Yahoo BTC-USD"
   },
   "BNB": {
-   "price": 773.900024,
+   "price": 772.099976,
    "ccy": "USD",
-   "updated": "2026-09-26",
+   "updated": "2026-09-27",
    "src": "Yahoo BNB-USD"
   },
   "USDT": {
-   "price": 0.99981,
+   "price": 0.99978,
    "ccy": "USD",
-   "updated": "2026-09-26",
+   "updated": "2026-09-27",
    "src": "Yahoo USDT-USD"
   },
   "Gold": {
@@ -2789,17 +2789,17 @@
   },
   "BNB": {
    "sym": "BNB-USD",
-   "price": 773.900024,
-   "updated": "2026-09-26",
+   "price": 772.099976,
+   "updated": "2026-09-27",
    "kind": "holding",
-   "rsi": 61.4,
+   "rsi": 60.7,
    "ma50": "Above",
    "ma200": "Above",
-   "chg1m": 0.91,
-   "chg3m": 36.14,
-   "chg6m": 18.02,
-   "pos52w": 59.0,
-   "drawdown": -17.0,
+   "chg1m": 0.68,
+   "chg3m": 35.82,
+   "chg6m": 17.75,
+   "pos52w": 58.5,
+   "drawdown": -17.2,
    "vol30d": 37.1,
    "trend": 1,
    "timing": 1,
@@ -2835,22 +2835,22 @@
     726.9684,
     725.5759,
     798.8901,
-    773.9
+    772.1
    ]
   },
   "BTC": {
    "sym": "BTC-USD",
-   "price": 84026.257812,
-   "updated": "2026-09-26",
+   "price": 84298.65625,
+   "updated": "2026-09-27",
    "kind": "holding",
-   "rsi": 64.1,
+   "rsi": 64.7,
    "ma50": "Above",
    "ma200": "Above",
-   "chg1m": 5.26,
-   "chg3m": 30.65,
-   "chg6m": 9.59,
-   "pos52w": 72.6,
-   "drawdown": -10.3,
+   "chg1m": 5.61,
+   "chg3m": 31.08,
+   "chg6m": 9.95,
+   "pos52w": 73.4,
+   "drawdown": -10.0,
    "vol30d": 36.2,
    "trend": 1,
    "timing": 1,
@@ -2886,7 +2886,7 @@
     77173.7969,
     76150.3203,
     86602.9141,
-    84026.2578
+    84298.6562
    ]
   },
   "COKE": {
@@ -3959,16 +3959,16 @@
   },
   "USDT": {
    "sym": "USDT-USD",
-   "price": 0.99976,
-   "updated": "2026-09-26",
+   "price": 0.99978,
+   "updated": "2026-09-27",
    "kind": "stable",
-   "rsi": 52.2,
+   "rsi": 52.8,
    "ma50": "Above",
    "ma200": "Above",
    "chg1m": -0.03,
    "chg3m": 0.07,
    "chg6m": 0.09,
-   "pos52w": 73.7,
+   "pos52w": 74.5,
    "drawdown": -0.1,
    "vol30d": 0.3,
    "trend": 1,
@@ -4168,10 +4168,10 @@
   "breadth_sectors": 40.0,
   "breadth_portfolio": 71.4,
   "basis_count": 28,
-  "computed_at": "2026-09-26T15:04:42.057404+00:00"
+  "computed_at": "2026-09-27T01:36:18.687610+00:00"
  },
  "signals_meta": {
-  "generated_at": "2026-09-26T15:04:42.057404+00:00",
+  "generated_at": "2026-09-27T01:36:18.687610+00:00",
   "count": 31,
   "fresh_this_run": 31,
   "carried_over": 0,
