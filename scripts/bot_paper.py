@@ -65,11 +65,13 @@ CFG = {
     "slippage_bps": 5,              # 0.05% — ราคาที่ได้จริงแย่กว่าราคาปิดเสมอ
     "min_trade_usd": 25.0,          # เล็กกว่านี้ ค่าธรรมเนียมกินหมด
     "stale_days": 7,                # ราคาเก่ากว่านี้ = ไม่เทรดตัวนั้นวันนั้น
-    # ระดับความแรงของการซื้อ ตามคะแนน "จังหวะ" (timing) จาก fetch_signals.py
-    # ตัวเลขคือ "ซื้อกี่ % ของช่องว่างที่ห่างจากน้ำหนักเป้า"
-    "aggression": {"hot": 0.05, "base": 0.20, "dip1": 0.30, "dip2": 0.40, "dip3": 0.60},
-    "trim_over_target": 1.25,       # ถือเกินเป้า 25% + จังหวะร้อน → ขายกลับมาที่เป้า
-    "derisk_frac": 0.25,            # หลุด MA200 + จังหวะร้อน → ขายทิ้ง 25%
+    # v60 — ซื้อกี่ % ของช่องว่างที่ห่างจากน้ำหนักเป้า ต่อหนึ่งวัน
+    # ตัวเลขนี้ถูกคูณด้วย "ขนาดไม้" (0.5–1.5) ที่ fetch_signals.py คำนวณมา
+    # base 0.30 × ไม้ 0.5–1.5 → เข้าจริง 15–45% ของช่องว่าง
+    "aggression": {"base": 0.30, "unknown": 0.15},
+    "trim_over_target": 1.25,       # ถือเกินเป้า 25% + ของแพง → ขายกลับมาที่เป้า
+    "derisk_frac": 0.25,            # ไม่ผ่านประตู + ของยังแพง → ขายทิ้ง 25%
+    "expensive_size": 0.90,         # ขนาดไม้ต่ำกว่านี้ = "ยังแพง" ในสายตาชั้น 3
     "max_trades_keep": 300,
     "max_equity_days": 730,
 }
@@ -160,40 +162,48 @@ def decide(sig: dict, cur_val: float, target_val: float) -> tuple[str, float, st
       fraction = สัดส่วนของช่องว่าง (buy) หรือของจำนวนที่ถือ (sell)
 
     ══════════════════════════════════════════════════════════════════
-    กฎเหล็กข้อเดียว: ต่ำกว่า MA200 = ห้ามซื้อ ไม่ว่าจังหวะจะดูถูกแค่ไหน
+    เกณฑ์ 3 ชั้น — bot อ่านผลจาก fetch_signals.py ไม่คิดเกณฑ์ของตัวเอง
     ══════════════════════════════════════════════════════════════════
-    เป็นกฎเดียวกับที่ score_asset() ใช้ตัดสินป้ายกำกับ (เทรนด์ติดลบแล้ว
-    ห้ามได้ป้ายที่แปลว่า "ซื้อเพิ่มได้") ถ้า bot ทำต่างจากที่หน้าเว็บบอก
-    ผู้ใช้จะเชื่ออันไหนไม่ถูก — และอันที่ผิดคือ bot เสมอ เพราะกฎถูกเขียน
-    ไว้ที่ score_asset ก่อน
+      ชั้น 1 ประตู (gate)  — ตัดสินว่าซื้อได้ไหม   pass / fail / unknown
+      ชั้น 3 ขนาดไม้ (size) — ตัดสินว่าเท่าไหร่      0.5 – 1.5
+    (ชั้น 2 อันดับ ใช้ตอนเลือกว่าจะเทรดตัวไหนก่อนเมื่อเงินสดจำกัด)
+
+    กฎเหล็กข้อเดียว: **ไม่ผ่านประตู = ห้ามซื้อ** ไม่ว่าขนาดไม้จะใหญ่แค่ไหน
+    ขนาดไม้ถูกบีบไว้ที่ 0.5–1.5 จึงไม่มีทางพลิกประตูได้ในทางคณิตศาสตร์
+    ต่อให้ RSI 15 พร้อมย่อ 40% — มันคูณกับศูนย์
+
+    นี่คือเหตุผลทั้งหมดที่ v60 รื้อเกณฑ์: รุ่นก่อนใช้ ma200 เป็นประตูแต่หน้าเว็บ
+    ใช้ score = trend + timing ตัดสิน สองที่จึงพูดไม่ตรงกัน  ตอนนี้ทั้ง bot
+    และทั้งสองหน้าอ่าน gate/size ตัวเดียวกันจาก pipeline — เถียงกันเองไม่ได้อีก
     """
-    ma = sig.get("ma200")
-    tm = sig.get("timing")
-    tm = 0 if tm is None else int(tm)
+    gate = sig.get("gate")
+    size = sig.get("size")
+    size = 1.0 if size is None else max(0.5, min(1.5, float(size)))
+    expensive = size <= CFG["expensive_size"]
     A = CFG["aggression"]
 
-    if ma == "Below":
-        if cur_val > 0 and tm <= -1:
+    if gate == "fail":
+        why = sig.get("gate_why") or "ไม่ผ่านประตูเทรนด์"
+        if cur_val > 0 and expensive:
             return ("sell", CFG["derisk_frac"],
-                    f"หลุด MA200 และจังหวะยังแพง (จังหวะ {tm:+d}) — ลดน้ำหนัก")
-        return ("hold", 0.0, "หลุด MA200 — หยุดซื้อจนกว่าเทรนด์ยาวจะกลับมา")
+                    f"{why} และยังไม่ถูกพอ (ไม้ ×{size:.2f}) — ลดน้ำหนัก")
+        # ไม่ผ่านประตูแต่ของถูกมากแล้ว: หยุดซื้อ แต่ไม่ขายตรงจุดต่ำ
+        return ("hold", 0.0, f"{why} — หยุดซื้อจนกว่าเทรนด์ยาวจะกลับมา")
 
     gap = target_val - cur_val
     if gap > 0:
-        if tm >= 3:
-            return ("buy", A["dip3"], f"ในเทรนด์ขาขึ้นและย่อแรง (จังหวะ {tm:+d}) — เข้าหนัก")
-        if tm >= 2:
-            return ("buy", A["dip2"], f"ย่อในเทรนด์ขาขึ้น (จังหวะ {tm:+d}) — เข้าเพิ่ม")
-        if tm >= 1:
-            return ("buy", A["dip1"], f"จังหวะเอื้อเล็กน้อย (จังหวะ {tm:+d}) — เข้าตามแผน")
-        if tm <= -2:
-            return ("buy", A["hot"], f"ร้อนเกิน (จังหวะ {tm:+d}) — เข้าน้อยที่สุด ไม่หยุดสนิท")
-        return ("buy", A["base"], f"เทรนด์ยังอยู่ จังหวะกลาง ๆ (จังหวะ {tm:+d}) — เข้าตามปกติ")
+        base = A["base"] if gate == "pass" else A["unknown"]
+        note = ("" if gate == "pass"
+                else " · ยังยืนยันเทรนด์ไม่ได้ จึงเข้าครึ่งเดียวของปกติ")
+        return ("buy", round(min(1.0, base * size), 4),
+                f"{sig.get('gate_why') or 'ผ่านประตู'} · ขนาดไม้ ×{size:.2f}{note}")
 
-    if target_val > 0 and cur_val > target_val * CFG["trim_over_target"] and tm <= -2:
+    if (target_val > 0 and cur_val > target_val * CFG["trim_over_target"]
+            and expensive):
         over = cur_val - target_val
         return ("sell", min(1.0, over / cur_val),
-                f"เกินน้ำหนักเป้า {cur_val / target_val - 1:.0%} และจังหวะร้อน — ขายกลับมาที่เป้า")
+                f"เกินน้ำหนักเป้า {cur_val / target_val - 1:.0%} และยังแพง "
+                f"(ไม้ ×{size:.2f}) — ขายกลับมาที่เป้า")
     return ("hold", 0.0, "อยู่ที่น้ำหนักเป้าแล้ว — ไม่มีอะไรต้องทำ")
 
 
@@ -315,10 +325,12 @@ def main() -> int:
         decisions = st.get("today", {}).get("decisions", [])
     else:
         eq = book_equity(bot, px)
-        # เรียงตาม "จังหวะ" ดีสุดก่อน — เงินสดมีจำกัด ตัวที่จังหวะดีที่สุด
-        # ควรได้เลือกก่อน ไม่ใช่ตัวที่บังเอิญอยู่ต้นลิสต์
+        # v60 — เรียงด้วย "อันดับ" (ชั้น 2: โมเมนตัมหารความผันผวน) ไม่ใช่จังหวะ
+        # เงินสดมีจำกัด ตัวที่เทรนด์แข็งที่สุดต่อหนึ่งหน่วยความเสี่ยงควรได้เลือกก่อน
+        # เดิมเรียงด้วย timing = ให้ของที่ตกแรงที่สุดได้เงินก่อน ซึ่งเป็น
+        # mean-reversion ที่แอบเข้ามาตัดสินใจอีกชั้น ทั้งที่ควรอยู่แค่ขนาดไม้
         order = sorted(CFG["universe"],
-                       key=lambda u: -(sigs.get(u["k"], {}).get("timing") or -9))
+                       key=lambda u: -(sigs.get(u["k"], {}).get("rank") or -99))
         for u in order:
             k, p = u["k"], px.get(u["k"])
             sig = sigs.get(k)
@@ -354,7 +366,8 @@ def main() -> int:
                     add_trade("bot", k, "sell", qty, p, paid, why)
             decisions.append({"k": k, "name": u["name"], "act": act,
                               "why": why, "usd": round(usd, 2),
-                              "timing": sig.get("timing"), "trend": sig.get("trend"),
+                              "gate": sig.get("gate"), "size": sig.get("size"),
+                              "rank": sig.get("rank"), "mom12_1": sig.get("mom12_1"),
                               "ma200": sig.get("ma200"), "rsi": sig.get("rsi"),
                               "price": p})
             print(f"  {'▲' if act=='buy' else '▼' if act=='sell' else '·'} "
