@@ -16,7 +16,7 @@ window.LOC = window.LOC || 'th-TH-u-ca-gregory';
 //   • XIRR engine
 // กติกา: ไฟล์นี้ห้ามแตะ DOM ของหน้าใดหน้าหนึ่ง — pure data layer เท่านั้น
 // ═══════════════════════════════════════════════════════════════════
-const APP_BUILD = 'v62';
+const APP_BUILD = 'v63';
 console.log('[Finance OS shared] build', APP_BUILD);
 window.SHARED_BUILD = APP_BUILD;   // v45 — ให้ index.html ตรวจได้ว่าเวอร์ชันตรงกัน
  
@@ -1539,6 +1539,34 @@ function debtSplit(rows, bals){
     else { loan += a; nLoan++; }
   });
   return { card, loan, nCard, nLoan };
+}
+
+// ── 6b. ยอดใช้จ่ายรายหมวดสำหรับงบประมาณ (v63) ────────────────────────
+// เดิมงบนับแค่ Expense/Bills — รายจ่ายที่รูดบัตร (แถว Debt) ไม่เข้างบเลย งบจึงดู "เหลือ" เกินจริง
+// เกณฑ์เดียวกับ debtSplit(): แถว Debt ที่แตะบัญชีเครดิต = รูดบัตร → นับเข้าหมวดในคอลัมน์ Type
+//   · เฉพาะ amount < 0 (เงินออก) — แถวจ่ายบัตร (−ธนาคาร +บัตร) รวมเป็น 0 · คืนเงิน/ยอดบวก ไม่นับ
+//   · แถว Debt ที่ไม่แตะบัตร (ค่างวด/ใช้หนี้) ไม่ใช่การใช้จ่ายตามหมวด → ไม่นับ
+// ไม่เปลี่ยนยอดบัตร/ยอดหนี้/saving rate — ใช้เฉพาะหน้างบและป้ายงบเกิน
+function budgetSpendMap(rows, bals){
+  const credit = new Set((bals || []).filter(isCreditAccount).map(b => b.name));
+  const map = {}, card = {};
+  let cardTotal = 0;
+  (rows || []).forEach(r => {
+    if(!r) return;
+    const cat = r.category || 'Other';
+    if(r.type === 'Expense' || r.type === 'Bills'){
+      map[cat] = (map[cat] || 0) + Math.abs(Number(r.amount) || 0);
+      return;
+    }
+    if(r.type !== 'Debt') return;
+    const a = Number(r.amount) || 0;
+    if(a >= 0) return;
+    if(!Object.keys(r.acct || {}).some(k => credit.has(k))) return;
+    map[cat]  = (map[cat]  || 0) - a;
+    card[cat] = (card[cat] || 0) - a;
+    cardTotal -= a;
+  });
+  return { map, card, cardTotal };
 }
 
 // ═══ isoLocal — วันที่ YYYY-MM-DD จาก Date "ตามปฏิทินท้องถิ่น" (v61) ═══
