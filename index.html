@@ -2773,9 +2773,7 @@ function renderActionNeeded(ef){
   try{
     const mk = availableMonths[curMonthIdx];
     const budgets = bgtLoad();
-    const expMap = {};
-    txRows.filter(r=>r.month===mk && (r.type==='Expense'||r.type==='Bills'))
-      .forEach(r=>{ const c=r.category||'Other'; expMap[c]=(expMap[c]||0)+Math.abs(r.amount); });
+    const expMap = budgetSpendMap(txRows.filter(r=>r.month===mk), bankBals).map;   // v63 — รวมรูดบัตร
     const over = [];
     Object.keys(expMap).forEach(cat=>{
       const lim = parseFloat(budgets['exp_'+cat]) || BGT_DEFAULTS[cat] || 0;
@@ -3635,7 +3633,7 @@ const VLOG_PURGED_KEY = 'finOS_valueLogPurged_v44';
 //   ฟังก์ชันหาย  → BLOCK  (แอปคำนวณผิดแน่นอน — นี่คือสิ่งที่ guard มีไว้จับ)
 //   เลขไม่ตรง    → WARN   (แค่ลืม bump — log ไว้ ไม่รบกวนผู้ใช้)
 // ฟังก์ชันที่ต้องมีคือสัญญาจริงระหว่างสองไฟล์ ส่วนสตริงเวอร์ชันเป็นแค่ป้าย
-const EXPECTED_SHARED_BUILD = 'v62';
+const EXPECTED_SHARED_BUILD = 'v63';
 const REQUIRED_SHARED_FNS = [
   'resolvePrices', 'pipelinePricesTHB', 'parseReconcileRows',
   'computeReconciliation', 'splitBalances', 'debtVsInvest', 'buildDebtPlan',
@@ -3647,6 +3645,7 @@ const REQUIRED_SHARED_FNS = [
   'gateSummary', 'sigGate', 'sigLegacy', 'byGateThenRank',   // v60 — เกณฑ์ 3 ชั้น
   'isoLocal', 'saveGoalCfg', 'getGoalCfg',                    // v61 — วันที่ท้องถิ่น · ผลตอบแทนคาดหวัง
   'monthlyWealthContrib', 'monthsToGoal', 'usdExposure', 'debtSplit',   // v62 — นิยามเดียวข้ามหน้า
+  'budgetSpendMap',                                           // v63 — งบนับรายจ่ายรูดบัตร
   'valueLogJumps', 'cleanSheetSpikesV62',                     // v62 — ด่านคุณภาพ Value_Log
   'loadBotPaper', 'fetchBotPaper', 'botStatus',   // v59 — หน้าบอทจำลอง
 ];
@@ -5184,9 +5183,7 @@ function generateMonthlyPDF(){
   const totalExp=Object.values(catMap).reduce((s,v)=>s+v,0);
 
   // Budget status
-  const expRows=rows.filter(r=>r.type==='Expense'||r.type==='Bills');
-  const expMap={};
-  expRows.forEach(r=>{const cat=r.category||'Other';expMap[cat]=(expMap[cat]||0)+Math.abs(r.amount);});
+  const expMap=budgetSpendMap(rows,bankBals).map;   // v63 — เกณฑ์เดียวกับหน้างบ (รวมรูดบัตร)
   const budgetAlerts=[];
   Object.keys({...expMap,...BGT_DEFAULTS}).forEach(cat=>{
     const spent=expMap[cat]||0;
@@ -5403,9 +5400,7 @@ function updateBudgetBadge(){
   const budgets = bgtLoad();
 
   // Count expense categories that are ≥80% used
-  const expRows = txRows.filter(r=>r.month===mk&&(r.type==='Expense'||r.type==='Bills'));
-  const expMap  = {};
-  expRows.forEach(r=>{ const cat=r.category||'Other'; expMap[cat]=(expMap[cat]||0)+Math.abs(r.amount); });
+  const expMap  = budgetSpendMap(txRows.filter(r=>r.month===mk), bankBals).map;   // v63 — รวมรูดบัตร
 
   let overCount=0, warnCount=0;
   const allExpCats=[...new Set([...Object.keys(expMap),...Object.keys(BGT_DEFAULTS)])];
@@ -5471,12 +5466,9 @@ function renderBudget(){
   const budgets = bgtLoad();
 
   // ── Expense data ──
-  const expRows = txRows.filter(r=>r.month===mk&&(r.type==='Expense'||r.type==='Bills'));
-  const expMap  = {};
-  expRows.forEach(r=>{
-    const cat=r.category||'Other';
-    expMap[cat]=(expMap[cat]||0)+Math.abs(r.amount);
-  });
+  // v63 — budgetSpendMap() รวมรายจ่ายที่รูดบัตร (แถว Debt ที่แตะบัตรเครดิต) เข้าหมวดด้วย
+  const spend   = budgetSpendMap(txRows.filter(r=>r.month===mk), bankBals);
+  const expMap  = spend.map;
   const expCats=[...new Set([...Object.keys(expMap),...Object.keys(BGT_DEFAULTS)])].sort();
 
   // ── Savings data (exclude Social Security) ──
@@ -5505,7 +5497,8 @@ function renderBudget(){
   document.getElementById('bgt-exp-bar').style.background = bgtColor(expPct);
   const expRem = totalExpBgt - totalSpent;
   document.getElementById('bgt-exp-remain').textContent =
-    expRem>=0 ? 'เหลือ '+fmt(expRem) : 'เกิน '+fmt(Math.abs(expRem));
+    (expRem>=0 ? 'เหลือ '+fmt(expRem) : 'เกิน '+fmt(Math.abs(expRem)))
+    + (spend.cardTotal>0 ? ' · รวมรูดบัตร '+fmt(spend.cardTotal) : '');
   document.getElementById('bgt-exp-remain').style.color = expRem>=0?'var(--muted2)':'var(--expense)';
 
   // Savings overview (ยิ่งมากยิ่งดี)
@@ -5532,7 +5525,9 @@ function renderBudget(){
     const st     = bgtAmt>0?bgtStatus(pct):{label:'ยังไม่ตั้ง',cls:'unset'};
     const barW   = bgtAmt>0?clampPct(pct):0;   // #11
     const key    = 'exp_'+cat;
-    return bgtCardHTML(cat, spent, bgtAmt, pct, st, barW, key, 'ใช้ไป', '/ ');
+    const fromCard = spend.card[cat]||0;   // v63 — บอกว่ายอดในหมวดมาจากบัตรเท่าไร
+    return bgtCardHTML(cat, spent, bgtAmt, pct, st, barW, key, 'ใช้ไป', '/ ', undefined,
+      fromCard>0 ? 'รวมรูดบัตร '+fmt(fromCard) : '');
   }).join('');
 
   // ── Savings cards (ยิ่งมากยิ่งดี) ──
@@ -5552,7 +5547,7 @@ function renderBudget(){
   updateBudgetBadge(); try{updateDebtBadge();}catch(e){}
 }
 
-function bgtCardHTML(cat, amount, limit, pct, st, barW, key, spentLabel, limitPrefix, barCol){
+function bgtCardHTML(cat, amount, limit, pct, st, barW, key, spentLabel, limitPrefix, barCol, note){
   const col = barCol||bgtColor(pct);
   // #12 — ชื่อหมวดมาจากชีต ควบคุมเนื้อหาไม่ได้ ต้อง escape ให้ครบทุกบริบทที่มันไปโผล่:
   //  1) id attribute — CSS.escape() ทำเพื่อ CSS selector เท่านั้น มันคืน \" (มี " ดิบอยู่)
@@ -5574,7 +5569,7 @@ function bgtCardHTML(cat, amount, limit, pct, st, barW, key, spentLabel, limitPr
       </div>
     </div>
     <div class="bgt-amounts">
-      <span class="bgt-spent">${spentLabel} ${fmt(amount)}</span>
+      <span class="bgt-spent"${note?` title="${escAttr(note)}"`:''}>${spentLabel} ${fmt(amount)}${note?' 💳':''}</span>
       <span class="bgt-limit">${limit>0?limitPrefix+fmt(limit):'ยังไม่ตั้ง'}</span>
     </div>
     <div class="bgt-bar2"><div class="bgt-bar2-fill" style="width:${barW}%;background:${col}"></div></div>
@@ -6956,9 +6951,8 @@ function buildAnalystCtx(){
   // ── งบที่เกินในเดือนที่กำลังดู ──
   const overBudget=[];
   try{
-    const mk=availableMonths[curMonthIdx], b=bgtLoad(), em={};
-    txRows.filter(r=>r.month===mk&&(r.type==='Expense'||r.type==='Bills'))
-      .forEach(r=>{const c=r.category||'Other';em[c]=(em[c]||0)+Math.abs(r.amount);});
+    const mk=availableMonths[curMonthIdx], b=bgtLoad();
+    const em=budgetSpendMap(txRows.filter(r=>r.month===mk),bankBals).map;   // v63 — รวมรูดบัตร
     Object.keys(em).forEach(cat=>{
       const lim=parseFloat(b['exp_'+cat])||BGT_DEFAULTS[cat]||0;
       if(lim>0&&em[cat]>lim) overBudget.push({cat,spent:em[cat],lim});
