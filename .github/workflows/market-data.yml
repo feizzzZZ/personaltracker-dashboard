@@ -8,6 +8,14 @@ on:
     - cron: '30 23 * * *'   # 06:30 ไทย (UTC+7)
     - cron: '30 11 * * *'   # 18:30 ไทย
   workflow_dispatch:         # ปุ่ม "Run workflow" กดเองได้ทันทีจากหน้า Actions
+    inputs:
+      # v61 — ล้างพอร์ตจำลองเริ่มใหม่จากหน้า Actions ได้เลย ไม่ต้องแก้โค้ด
+      # ใช้เมื่อเปลี่ยนเกณฑ์การตัดสินใจ แล้วไม่อยากให้ประวัติเก่าปนกับกฎใหม่
+      # (รอบตามตารางเวลาไม่มี input นี้ → ค่าว่าง → ไม่ reset)
+      reset_bot:
+        description: "ล้างพอร์ตจำลอง (bot-paper.json) แล้วเริ่มใหม่"
+        type: boolean
+        default: false
 
 permissions:
   contents: write            # ต้องมี ไม่งั้น push กลับเข้า repo ไม่ได้
@@ -96,6 +104,8 @@ jobs:
         id: bot
         continue-on-error: true
         timeout-minutes: 3
+        env:
+          BOT_RESET: ${{ inputs.reset_bot && '1' || '' }}
         run: python3 scripts/bot_paper.py
 
       # if: always() — ต้องเห็น summary โดยเฉพาะรอบที่ fetch พัง
