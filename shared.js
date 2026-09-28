@@ -16,7 +16,7 @@ window.LOC = window.LOC || 'th-TH-u-ca-gregory';
 //   • XIRR engine
 // กติกา: ไฟล์นี้ห้ามแตะ DOM ของหน้าใดหน้าหนึ่ง — pure data layer เท่านั้น
 // ═══════════════════════════════════════════════════════════════════
-const APP_BUILD = 'v60';
+const APP_BUILD = 'v62';
 console.log('[Finance OS shared] build', APP_BUILD);
 window.SHARED_BUILD = APP_BUILD;   // v45 — ให้ index.html ตรวจได้ว่าเวอร์ชันตรงกัน
  
@@ -324,19 +324,6 @@ function resolvePrices(sheetPriceMap){
   saveLastKnownPrices(lkp);
  
   return { priceMap, srcMap, ageMap };
-}
- 
-// สรุปคุณภาพราคาให้ UI ใช้ — ไม่ต้องคำนวณซ้ำหลายที่
-function priceQuality(srcMap, tickersHeld){
-  const q = { pipeline:0, sheet:0, stale:0, cached:0, missing:[] };
-  (tickersHeld||[]).forEach(tk=>{
-    const s = srcMap[tk];
-    if(s) q[s]++; else q.missing.push(tk);
-  });
-  q.degraded = q.stale + q.cached;      // ใช้ได้ แต่ไม่ใช่ราคาสด
-  // v50 — พอร์ตที่ทุกตัวใช้ราคาค้าง/ราคาที่จำไว้ ไม่ควรถูกเรียกว่า trustworthy
-  q.trustworthy = q.missing.length === 0 && q.degraded === 0;
-  return q;
 }
  
 // ══════════════════════════════════════════════════════════════════════
@@ -650,14 +637,6 @@ function allocateByPlatform(tracker, assets){
   return out;
 }
  
-// platform ที่ถือมากที่สุดของ ticker — ใช้แทน platMap เดิมในที่ที่ต้องการค่าเดียว
-function dominantPlatform(tracker, ticker){
-  const per = (qtyByPlatform(tracker)[ticker])||{};
-  let best=null, bq=-1;
-  Object.entries(per).forEach(([p,q])=>{ if(q>bq){ bq=q; best=p; } });
-  return best;
-}
- 
 // ═══ Method 2 — external API layer (alternative.me + CoinGecko) ═══
 const EXT_TTL = 10*60e3;
 function loadExt(){ try{ return JSON.parse(localStorage.getItem('finOS_ext')||'null'); }catch(e){ return null; } }
@@ -837,8 +816,28 @@ function saveMarketData(rows){
  
 // ═══ Value_Log — ประวัติมูลค่าพอร์ตรายวันจากชีต (Apps Script เขียนทุกเช้า) ═══
 // merge เข้า finOS_valueLog: ชีตอุดวันที่โหว่ / วันซ้ำค่าในเครื่องชนะ (convention เดียวกับ restore)
+// v62 — นับจุดที่มูลค่ากระโดดเกิน 8% ภายใน ≤2 วัน (เกณฑ์เดียวกับ purgeCorruptValueLog v44)
+// พอร์ตที่กระจายตัวแทบไม่มีวันขยับ 8% แล้วกลับที่เดิมในวันถัดไป — นั่นคือราคาหลุด ไม่ใช่ตลาด
+const VLOG_JUMP_PCT = 0.08, VLOG_MAX_JUMPS = 2;
+function valueLogJumps(points){
+  const p = (points || []).filter(x => x && x.d && x.v > 0).slice().sort((a, b) => a.d.localeCompare(b.d));
+  let jumps = 0;
+  for(let i = 1; i < p.length; i++){
+    const gap = (Date.parse(p[i].d) - Date.parse(p[i-1].d)) / 864e5;
+    if(gap <= 2 && Math.abs(p[i].v / p[i-1].v - 1) > VLOG_JUMP_PCT) jumps++;
+  }
+  return jumps;
+}
+/* v62 — ด่านคุณภาพก่อน merge Value_Log จากชีต
+   ข้อมูลจริง: Apps Script เขียนค่าเสาร์-อาทิตย์สูงกว่าวันธรรมดา ~15% ทุกสัปดาห์
+   (≈ มูลค่าหุ้นไทย + ทอง → วันธรรมดาราคาชุดนี้หลุดเป็น 0 แบบเดียวกับที่ v44 เจอ)
+   v44 ล้างประวัติในเครื่องครั้งเดียว แต่ sync ทุกครั้งยัง merge แถวที่กระโดดจากชีตกลับเข้ามา
+   ทำให้ TWR และกราฟความมั่งคั่งเอาข้อมูลเสียกลับมาใช้เงียบๆ
+   กฎ: ชีตทั้งชุดมีจุดกระโดดเกิน VLOG_MAX_JUMPS → ไม่ merge เลย (ไม่รู้ว่าฝั่งไหนถูก)
+   แล้วบอกเหตุผลผ่าน window._vlogSheetReject ให้หน้า Holdings แสดง */
 function mergeValueLogFromSheet(rows){
   try{
+    window._vlogSheetReject = null;
     if(!rows || rows.length < 2) return 0;
     const h = (rows[0]||[]).map(x=>x?String(x).trim():'');
     const di = h.indexOf('Date'), vi = h.indexOf('Portfolio_Value');
@@ -850,6 +849,15 @@ function mergeValueLogFromSheet(rows){
       const v = parseFloat(r[vi]); if(!(v > 0)) return;
       byDate[String(iso).slice(0,10)] = { d: String(iso).slice(0,10), v: Math.round(v) };
     });
+    const fromSheet = Object.values(byDate);
+    const jumps = valueLogJumps(fromSheet);
+    if(jumps > VLOG_MAX_JUMPS){
+      const ds = fromSheet.map(x=>x.d).sort();
+      window._vlogSheetReject = { jumps, rows: fromSheet.length, first: ds[0], last: ds[ds.length-1] };
+      console.warn('[ValueLog] ไม่ merge Value_Log จากชีต — ค่ากระโดดเกิน 8% ถึง '+jumps+' ครั้งใน '
+                   +fromSheet.length+' แถว (ราคาบางตัวหลุดเป็นช่วงๆ)');
+      return JSON.parse(localStorage.getItem('finOS_valueLog')||'[]').length;
+    }
     const cur = JSON.parse(localStorage.getItem('finOS_valueLog')||'[]');
     cur.forEach(e=>{ if(e && e.d) byDate[e.d] = e; });   // local ชนะวันซ้ำ
     const merged = Object.values(byDate).sort((a,b)=>a.d.localeCompare(b.d)).slice(-730);
@@ -859,6 +867,26 @@ function mergeValueLogFromSheet(rows){
   }catch(e){ console.warn('[ValueLog] merge failed:', e.message); return 0; }
 }
  
+// v62 — ล้างแถวที่เคย merge มาจากชีตก่อนมีด่านคุณภาพ (ทำครั้งเดียว)
+// แยกออกได้แม่น: snapshot ที่แอปบันทึกเอง (logValueSnapshot) มีฟิลด์ nw ตั้งแต่ v48
+// และผ่านด่าน "ราคาครบทุกตัว" แล้ว ส่วนแถวจากชีตมีแค่ {d, v}
+// ลบเฉพาะแถว {d, v} และเฉพาะเมื่อประวัติในเครื่องมีจุดกระโดดเกินเกณฑ์จริง
+const VLOG_CLEAN_KEY = 'finOS_valueLogClean_v62';
+function cleanSheetSpikesV62(){
+  try{
+    if(localStorage.getItem(VLOG_CLEAN_KEY)) return null;
+    localStorage.setItem(VLOG_CLEAN_KEY, '1');
+    const log = JSON.parse(localStorage.getItem('finOS_valueLog')||'[]');
+    const jumps = valueLogJumps(log);
+    if(jumps <= VLOG_MAX_JUMPS) return null;
+    const keep = log.filter(e => e && e.nw != null);
+    localStorage.setItem('finOS_valueLog', JSON.stringify(keep));
+    console.warn('[valueLog] v62 ล้างแถวจากชีต '+(log.length-keep.length)+' แถว (จุดกระโดด '+jumps
+                 +' ครั้ง) · เก็บ snapshot ของแอปไว้ '+keep.length+' แถว');
+    return { removed: log.length - keep.length, kept: keep.length, jumps };
+  }catch(e){ return null; }
+}
+
 // ═══ Benchmark simulation — "ถ้าเงินก้อนเดียวกันเข้า S&P 500 แทน" ═══
 // จำลอง cashflow เดิมทุกรายการซื้อ/ขาย ^GSPC ณ ราคาสัปดาห์นั้น (แปลงเป็นบาทด้วย
 // USD/THB ณ วันเดียวกัน — FX คือส่วนหนึ่งของผลตอบแทนจริงของนักลงทุนไทย)
@@ -1377,27 +1405,6 @@ function botStatus(){
   return { state: b, age, stale: age == null || age > BOT_MAX_DAYS };
 }
 
-// ═══ SECTOR DATA จาก pipeline (สำหรับหน้า Sectors) ═══════════════════
-function loadSectors(){
-  const act = loadActions();
-  const s = act && act.history && act.history.sectors;
-  if(!s || !Object.keys(s).length) return null;
-  return Object.entries(s).map(([sym,d])=>({sym, ...d}))
-    .sort((a,b)=>(b.rs3m??b.chg3m??0)-(a.rs3m??a.chg3m??0));   // เรียงตาม relative strength
-}
-function sectorRating(s){
-  // rating จากตัวเลขจริง: relative strength + trend + RSI
-  let score = 0;
-  if(s.rs3m!=null) score += s.rs3m>5?2 : s.rs3m>0?1 : s.rs3m>-5?0 : -1;
-  if(s.rs1m!=null) score += s.rs1m>3?1 : s.rs1m>-3?0 : -1;
-  if(s.vsMA200!=null) score += s.vsMA200>0?1:-1;
-  if(s.rsi!=null && s.rsi>78) score -= 1;      // overbought
-  return score>=3 ? {label:'Overweight', color:'gain'}
-       : score>=1 ? {label:'Neutral+',   color:'gain'}
-       : score>=-1? {label:'Neutral',    color:'debt'}
-                  : {label:'Underweight',color:'loss'};
-}
- 
 // ══════════════════════════════════════════════════════════════════════
 // v55 — METRIC REGISTRY: ตัวชี้วัดที่หลายหน้าใช้ร่วมกัน คำนวณที่นี่ที่เดียว
 // ══════════════════════════════════════════════════════════════════════
@@ -1408,7 +1415,7 @@ function sectorRating(s){
 // ── 1. Saving rate (นิยามสากล) ───────────────────────────────────────
 // saving rate = (รายได้ − รายจ่ายเพื่อการบริโภค) ÷ รายได้
 // เงินที่เหลือนับเป็น "เงินออม" ไม่ว่าจะถูกโอนไปลงทุนหรือยังค้างในบัญชี
-// รายจ่าย = Expense + Bills + Debt (ยอดรูดบัตรเครดิต — แถวบัตรในชีตเป็น Debt ทั้งหมด)
+// รายจ่าย = Expense + Bills + Debt (ยอดรูดบัตร + ค่างวด/ใช้หนี้จากบัญชีธนาคาร — แยกดูได้ด้วย debtSplit)
 //   การจ่ายบัตรจากบัญชีธนาคาร (−X ธนาคาร, +X บัตร) หักล้างกันเองในแถวเดียว จึงไม่นับซ้ำ
 // ใช้ยอดที่มีเครื่องหมาย: รายจ่าย = ลบ, เงินคืน/refund = บวก (ลดรายจ่าย)
 // แถว Savings (โอนไปออม/ลงทุน) ไม่ใช่รายจ่าย → ไม่อยู่ในสูตรนี้
@@ -1465,6 +1472,86 @@ function concentrationCheck(assets){
   return { total, top, pct, top3, top3Pct: top3.reduce((s, a) => s + a.val, 0) / total * 100,
            level: pct > CONC_HIGH_PCT ? 'r' : pct > CONC_WARN_PCT ? 'y' : 'g',
            excluded: held.filter(isDiversifiedHolding).map(a => a.ticker) };
+}
+
+// ── 4. เงินเข้าความมั่งคั่งต่อเดือน (v62) ────────────────────────────
+// เดิมคำถามเดียว "เดือนละเท่าไรที่ทำให้รวยขึ้น" มี 2 สูตร:
+//   หน้าเป้าหมาย = เฉลี่ยทุกเดือนตั้งแต่เริ่มบันทึก ของ (รายได้ − รายจ่าย)
+//   FIRE Analyst = เฉลี่ย 6 เดือน ของ (ยอดโอนไปลงทุน + ส่วนเกินเฉพาะเดือนที่เป็นบวก)
+//     เดือนที่ใช้เกินรายได้ถูกปัดเป็น 0 แทนที่จะหัก → ดูเก็บได้มากกว่าจริง
+// ข้อมูลจริงรอบทดสอบ: สองหน้าได้ ETA ถึงเป้าเดียวกันต่างกันราว 3.5 ปี
+// นิยามเดียว: saved ของ savingFromSummary() เฉลี่ย 12 เดือนล่าสุด — เดือนติดลบหักจริง
+//   ยอดโอนไปลงทุน (Savings) ไม่ใช่เงินเพิ่ม มันคือการย้ายเงินสดเข้าพอร์ต
+//   12 เดือน = รอบปีเต็ม เบี้ยประกันรายปีและโบนัสอยู่ในค่าเฉลี่ยพอดีหนึ่งครั้ง
+const CONTRIB_MONTHS = 12;
+function monthlyWealthContrib(months, n){
+  const rec = (months || []).slice(-(n || CONTRIB_MONTHS));
+  if(!rec.length) return { avg: 0, n: 0 };
+  const tot = rec.reduce((s, x) => s + savingFromSummary(x).saved, 0);
+  return { avg: tot / rec.length, n: rec.length };
+}
+// ฉายจำนวนเดือนถึงเป้า — สูตรเดียวของหน้าเป้าหมายและ FIRE Analyst (v62)
+// ผลตอบแทนคิดเฉพาะส่วนที่ลงทุน (investedShare) · อัตรารายเดือนแบบ effective (1+r)^(1/12)−1
+// เดิม FIRE Analyst ใช้ r/12 และทบต้นทั้งก้อนรวมเงินสด → เร็วกว่าหน้าเป้าหมายเสมอ
+// คืน 0 ถ้าถึงแล้ว · null ถ้าเกิน max เดือน
+function monthsToGoal(o){
+  const goal = Number(o && o.goal) || 0, pmt = Number(o && o.contrib) || 0;
+  let nw = Number(o && o.netWorth) || 0;
+  if(nw >= goal) return 0;
+  const share = (o.investedShare == null || !isFinite(o.investedShare)) ? 1
+              : Math.max(0, Math.min(1, Number(o.investedShare)));
+  const rM = Math.pow(1 + (Number(o.annualPct) || 0) / 100, 1/12) - 1;
+  const MAX = o.max || 1200;
+  let m = 0;
+  while(nw < goal && m < MAX){ nw += nw * share * rM; nw += pmt; m++; }
+  return m >= MAX ? null : m;
+}
+
+// ── 5. สัดส่วนอิงดอลลาร์ (v62) ───────────────────────────────────────
+// เดิม 3 จุดใช้ 2 เกณฑ์: Overview + Risk Analyst ดู a.currency (FX_Rate ในชีต > 1)
+// ส่วนหน้าต้นทุนดูประเภทสินทรัพย์ — คริปโตที่ซื้อผ่าน Bitkub/Binance TH บันทึก FX 1
+// จึงถูกนับเป็นบาท ทั้งที่ราคาอ้างอิงดอลลาร์ (บาทแข็ง = มูลค่าเป็นบาทลดจริง)
+// ข้อมูลจริงรอบทดสอบ: Risk Analyst กับหน้าต้นทุนต่างกันกว่า 2 เท่าจากพอร์ตเดียวกัน
+const USD_LINKED_GROUPS = /US.?Stock|Crypto|Gold/i;
+function isUsdLinked(a){
+  return !!a && (a.currency === 'USD' || USD_LINKED_GROUPS.test(String(a.group || a.type || '')));
+}
+function usdExposure(list){
+  const held = (list || []).filter(a => a && a.val > 0);
+  const total = held.reduce((s, a) => s + a.val, 0);
+  const usd = held.filter(isUsdLinked).reduce((s, a) => s + a.val, 0);
+  return { usd, thb: total - usd, total, pct: total > 0 ? usd / total * 100 : 0 };
+}
+
+// ── 6. แยกแถว Debt เป็น "รูดบัตร" กับ "ผ่อนหนี้" (v62) ───────────────
+// v61 เปลี่ยนป้าย Debt เป็น "รูดบัตร" จากข้อมูลจำลองที่ทุกแถว Debt แตะบัตรเครดิต
+// ข้อมูลจริง: ราว 1/3–1/2 ของยอด Debt เป็นค่างวด/ใช้หนี้ที่จ่ายจากบัญชีธนาคาร ไม่ใช่การรูดบัตร
+// เกณฑ์: แถวที่แตะบัญชีเครดิต (isCreditAccount) = รูดบัตร · ที่เหลือ = ผ่อนหนี้
+// แถวจ่ายบัตร (−ธนาคาร +บัตร) ยอดรวมเป็น 0 อยู่แล้ว ไม่กระทบฝั่งไหน
+function debtSplit(rows, bals){
+  const credit = new Set((bals || []).filter(isCreditAccount).map(b => b.name));
+  let card = 0, loan = 0, nCard = 0, nLoan = 0;
+  (rows || []).forEach(r => {
+    if(!r || r.type !== 'Debt') return;
+    const a = Number(r.amount) || 0;
+    if(!a) return;
+    if(Object.keys(r.acct || {}).some(k => credit.has(k))){ card += a; nCard++; }
+    else { loan += a; nLoan++; }
+  });
+  return { card, loan, nCard, nLoan };
+}
+
+// ═══ isoLocal — วันที่ YYYY-MM-DD จาก Date "ตามปฏิทินท้องถิ่น" (v61) ═══
+// อาการ: ขาย TSLA วันที่ 10 มี.ค. → หน้า Realized ขึ้น 9 มี.ค. · ปันผล 1 เม.ย. → 31 มี.ค.
+// ต้นเหตุ: parseDate() คืน Date ที่ "เที่ยงคืนเวลาท้องถิ่น" แล้วมีคนเรียก toISOString()
+// ซึ่งแปลงเป็น UTC — ในไทย (UTC+7) เที่ยงคืนวันที่ 10 คือ 17:00 ของวันที่ 9 ใน UTC
+// ธุรกรรมในชีต Transaction ไม่โดนเพราะสร้าง dateStr ด้วย getFullYear/getMonth/getDate
+// อยู่แล้ว ฟังก์ชันนี้ทำแบบเดียวกัน — ใช้กับ Date ที่มาจาก parseDate() เท่านั้น
+// (Date ที่สร้างจากสตริง 'YYYY-MM-DDT00:00:00Z' เป็นเวลา UTC อยู่แล้ว ใช้ toISOString ได้ตามเดิม)
+function isoLocal(d){
+  if(!(d instanceof Date) || isNaN(d)) return '';
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0')
+       + '-' + String(d.getDate()).padStart(2,'0');
 }
 
 // ═══ XIRR engine (validated กับ ground truth ±0.01%) ═══
@@ -1678,7 +1765,7 @@ function computeRunningWaccRealized(trackerRows, isCostTx, sellTxTypes){
         const wacc = runQty>0 ? runCost/runQty : 0;
         const costBasis = r.qty*wacc;
         realized.push({
-          date: r.date.toISOString().slice(0,10), ticker:r.ticker, group:r.group,
+          date: isoLocal(r.date), ticker:r.ticker, group:r.group,   // v61 — ไม่ใช่ toISOString (UTC)
           qty:r.qty, wacc,
           proceeds: Math.abs(r.amtTHB),
           costBasis,
@@ -1808,7 +1895,7 @@ function totalStartOf(liabAccounts, name){
 // ต้องเทียบกับผลตอบแทนคาดหวังของพอร์ต (getGoalCfg().expectedReturn)
 function debtVsInvest(liabAccounts, cfg){
   cfg = cfg || getDebtCfg();
-  const exp = getGoalCfg().expectedReturn || 7;
+  const exp = getGoalCfg().expectedReturn ?? 7;   // v61 — ?? ไม่ใช่ || (0% ต้องเป็น 0)
   /* ══ ข้อ 3 — บัตรเครดิตใบเดียวมักมีทั้งยอดที่คิดดอกและยอดที่ไม่คิด ══════
      เช่น SCB Up2ME: ยอดผ่อน 0% กับยอด revolving 16% อยู่ในใบเดียวกัน
      เดิมโมเดลมี apr เดียวต่อบัญชี -> ต้องเลือกว่าจะคิด 16% ทั้งก้อน
@@ -1901,7 +1988,7 @@ function analystPortfolio(c){
   }
   // (2) XIRR เทียบกับสิ่งที่ทำได้แบบไม่ต้องคิด
   if(c.xirr!=null){
-    const x=c.xirr*100, hurdle=c.expectedReturn||7;
+    const x=c.xirr*100, hurdle=c.expectedReturn ?? 7;
     F.push({ s: x<0?'r':x<hurdle?'y':'g',
       t:`XIRR ${_pc(x)}/ปี เทียบเป้า ${hurdle}%`,
       d: x<hurdle
@@ -1952,8 +2039,9 @@ function analystRisk(c){
     d:`${cc.top3.map(a=>a.ticker).join(' · ')} — จำนวนตัวเยอะไม่ได้แปลว่ากระจายความเสี่ยงแล้ว`});
  
   // (2) ค่าเงิน — รายจ่ายเป็นบาท 100% แต่สินทรัพย์ไม่ใช่
-  const usd=held.filter(a=>a.currency==='USD').reduce((s,a)=>s+a.val,0);
-  const up=usd/tot*100;
+  // v62 — usdExposure() ตัวเดียวกับ Overview และหน้าต้นทุน (รวมคริปโต/ทองที่ราคาอ้างอิงดอลลาร์)
+  const _ux=usdExposure(held), usd=_ux.usd;
+  const up=_ux.pct;
   if(up>0) F.push({ s:up>60?'y':'g', t:`อิงค่าเงินดอลลาร์ ${up.toFixed(0)}% (${_n(usd)} บาท)`,
     d:`USD/THB แข็ง/อ่อน 1 บาท ≈ ${_n(usd/(c.usdthb||34))} บาทในมูลค่าพอร์ต`
       + (up>60?' — รายจ่ายคุณเป็นบาททั้งหมด ความเสี่ยงนี้ไม่มีอะไรหักล้าง':'') });
@@ -2001,8 +2089,10 @@ function analystCashflow(c){
     d:`เก็บได้เดือนละ ${_n(avgSav)} จากรายได้ ${_n(avgInc)} บาท`
       + (sr<20?' — ทุก 1% ที่เพิ่มได้ มีผลต่อวันเกษียณมากกว่าการหาผลตอบแทนเพิ่ม 1%':'') });
  
-  // เดือนที่ติดลบ = เดือนที่กินเงินเก็บ
-  const neg=recent.filter(x=>x.net<0);
+  // เดือนที่ใช้เกินรายได้ = saved < 0 (นิยามเดียวกับ saving rate ด้านบน)
+  // v62 — เดิมใช้ x.net < 0 ซึ่งหักยอดโอนไปลงทุนด้วย เดือนที่ลงทุนมากกว่าเงินที่เหลือ
+  // จึงถูกนับว่า "ใช้เกินรายได้" ทั้งที่รายจ่ายต่ำกว่ารายได้ (ข้อมูลจริง: ขึ้น 4 เดือน จริงแค่ 2)
+  const neg=recent.filter(x=>savingFromSummary(x).saved<0);
   if(neg.length) F.push({ s:neg.length>=3?'r':'y', t:`${neg.length} ใน ${recent.length} เดือนล่าสุดใช้เกินรายได้`,
     d:`${neg.map(x=>x.mk).join(' · ')} — เดือนที่ติดลบคือเดือนที่กินเงินเก็บหรือก่อหนี้เพิ่ม` });
  
@@ -2016,8 +2106,15 @@ function analystCashflow(c){
             :'ค่อนข้างคงที่ วางแผนงบได้แม่น' });
  
   // เก็บได้แต่ไม่ได้ลงทุน — เงินนอนอยู่เฉยๆ คือขาดทุนจากเงินเฟ้อ
-  if(c.investGap>1000) F.push({ s:'y', t:`เก็บได้แต่ยังไม่ลงทุน ${_n(c.investGap)} บาท/เดือน`,
-    d:'เงินสดส่วนเกินจากเงินสำรองที่จำเป็น แพ้เงินเฟ้อทุกเดือนที่ปล่อยไว้เฉยๆ' });
+  /* v61 — เดิมเขียนว่า "เก็บได้แต่ยังไม่ลงทุน X บาท/เดือน" ซึ่งผิดสองชั้น
+     1) investGap = เงินสด − เงินสำรอง 6 เดือน = "ยอดคงค้างก้อนเดียว" ไม่ใช่ต่อเดือน
+        ทดสอบจริงขึ้น ฿262,158/เดือน ทั้งที่รายได้ทั้งเดือนราว ฿59,000
+     2) หน้า Wealth Engine ใช้วลีเดียวกันกับอีกสูตร (flow รายเดือน ฿18,809/เดือน)
+        ชื่อเดียวกันแต่สองสูตร = ผิดกติกา metric registry ของ v55
+     จึงตั้งชื่อใหม่ให้ตรงกับสิ่งที่วัด และไม่มีคำว่า /เดือน */
+  if(c.investGap>1000) F.push({ s:'y', t:`เงินสดเกินเงินสำรอง 6 เดือน ${_n(c.investGap)} บาท`,
+    d:'ยอดคงค้างในบัญชีที่เกินเงินสำรองฉุกเฉินที่ควรมี — แพ้เงินเฟ้อทุกเดือนที่ปล่อยไว้เฉยๆ'
+      + ' (คนละตัวกับ "เก็บได้แต่ยังไม่ลงทุน/เดือน" ในหน้า ออม & ลงทุน ซึ่งวัดเงินที่ไหลเข้าแต่ละเดือน)' });
  
   if(c.overBudget && c.overBudget.length){
     const o=c.overBudget;
@@ -2045,9 +2142,19 @@ function analystDebt(c){
     F.push({ s: c.monthlyInterest>2000?'r':'y', t:`ดอกเบี้ย ${_n(c.monthlyInterest)} บาท/เดือน (${_n(yr)}/ปี)`,
       d:`เท่ากับต้องหาผลตอบแทน ${_n(yr)} บาทจากพอร์ตทุกปีแค่เพื่อเสมอตัว` });
   }
-  // โปะ vs ลงทุน — ตัดสินด้วย effApr ไม่ใช่ apr ดิบ
+  /* v62 — บัญชีที่ยังไม่ได้ใส่ดอกเบี้ย ห้ามถือว่าเป็น 0%
+     เดิม effApr = 0 → "ดอกเบี้ยที่มีผลจริงสูงสุด 0.0% · จ่ายขั้นต่ำแล้วเอาเงินไปลงทุนได้เปรียบกว่า"
+     กับบัตรเครดิตที่ยังไม่ได้กรอก APR (ข้อมูลจริงรอบทดสอบ) — ถ้าจ่ายขั้นต่ำจริง ยอดทั้งก้อนคิดดอก ~16%
+     คำแนะนำนี้จึงกลับด้านกับความจริง ต้องบอกว่าตัดสินไม่ได้แทน */
+  const _noApr=c.aprMissing||[];
+  if(_noApr.length){
+    F.push({ s:'y', t:`ยังไม่ได้ใส่ดอกเบี้ย ${_noApr.length} บัญชี — ยังตัดสินไม่ได้ว่าควรโปะหนี้หรือลงทุน`,
+      d:`${_noApr.join(', ')} · ถ้าจ่ายเต็มยอดทุกเดือน ดอกเบี้ยเป็น 0 จริง แต่ถ้าจ่ายขั้นต่ำ ยอดทั้งก้อนคิดดอก (บัตรเครดิตไทยส่วนใหญ่ 16%/ปี)` });
+    A.push(`ใส่ดอกเบี้ย %/ปี ของ ${_noApr.join(', ')} ในหน้าหนี้ (ผ่อน 0% ใส่ยอดในช่อง "ปลอดดอกเบี้ย")`);
+  }
+  // โปะ vs ลงทุน — ตัดสินด้วย effApr ไม่ใช่ apr ดิบ · v62: เฉพาะบัญชีที่ใส่ดอกเบี้ยแล้ว
   if(c.topEffApr!=null){
-    const hurdle=c.expectedReturn||7, win=c.topEffApr>hurdle;
+    const hurdle=c.expectedReturn ?? 7, win=c.topEffApr>hurdle;
     F.push({ s: win?'r':'g', t:`ดอกเบี้ยที่มีผลจริงสูงสุด ${c.topEffApr.toFixed(1)}% vs ผลตอบแทนคาดหวัง ${hurdle}%`,
       d: win ? `โปะหนี้ให้ผล ${c.topEffApr.toFixed(1)}% แบบรับประกัน ปลอดภาษี ปลอดความผันผวน — ชนะการลงทุน ${(c.topEffApr-hurdle).toFixed(1)}pp`
              : 'ดอกเบี้ยต่ำกว่าผลตอบแทนคาดหวัง — จ่ายขั้นต่ำแล้วเอาเงินไปลงทุนได้เปรียบกว่า' });
@@ -2064,7 +2171,8 @@ function analystDebt(c){
   });
   if(c.payoffMonths!=null && isFinite(c.payoffMonths))
     F.push({ s:'g', t:`ปลดหนี้หมดใน ${c.payoffMonths} เดือน ถ้าจ่ายเท่าเดิม`,
-      d:`ดอกเบี้ยรวมตลอดแผน ${_n(c.payoffInterest||0)} บาท` });
+      d: _noApr.length ? `ดอกเบี้ยรวม — ยังคำนวณไม่ได้ (${_noApr.length} บัญชีไม่มีดอกเบี้ย แผนนี้จึงนับเป็น 0%)`
+                       : `ดอกเบี้ยรวมตลอดแผน ${_n(c.payoffInterest||0)} บาท` });
   else if(c.payoffMonths!=null)
     F.push({ s:'r', t:'ด้วยยอดจ่ายปัจจุบัน หนี้ก้อนนี้ไม่มีวันหมด',
       d:'ยอดที่จ่ายไม่พอกลบดอกเบี้ยที่เกิดใหม่ — ต้องเพิ่มยอดจ่ายต่อเดือน' });
@@ -2093,16 +2201,16 @@ function analystFire(c){
   }
   // ปีที่ต้องใช้ + ตัวแปรไหนขยับแล้วได้ผลสุด
   if(c.monthlyContrib>0 && goal>nw){
-    const r=(c.expectedReturn||7)/100/12;
+    // v62 — สูตรเดียวกับหน้าเป้าหมาย (monthsToGoal) · เดิมใช้ r/12 และทบต้นรวมเงินสด
     const yrs = v => {
-      let b=nw, m=0;
-      while(b<goal && m<1200){ b=b*(1+r)+v; m++; }
-      return m>=1200?null:m/12;
+      const m=monthsToGoal({netWorth:nw, goal, contrib:v, annualPct:c.expectedReturn ?? 7,
+                            investedShare:c.investedShare});
+      return m==null?null:m/12;
     };
     const base=yrs(c.monthlyContrib);
     if(base!=null){
       F.push({ s: base>20?'y':'g', t:`ถึงเป้าใน ${base.toFixed(1)} ปี ถ้าไม่เปลี่ยนอะไรเลย`,
-        d:`เติมเดือนละ ${_n(c.monthlyContrib)} บาท ผลตอบแทน ${c.expectedReturn||7}%/ปี` });
+        d:`เก็บได้เฉลี่ย ${_n(c.monthlyContrib)} บาท/เดือน (${c.contribMonths||12} เดือนล่าสุด) · ผลตอบแทน ${c.expectedReturn ?? 7}%/ปี กับส่วนที่ลงทุน` });
       const plus=yrs(c.monthlyContrib*1.2);
       if(plus!=null && base-plus>0.3)
         F.push({ s:'g', t:`เติมเพิ่ม 20% (${_n(c.monthlyContrib*0.2)} บาท/เดือน) → เร็วขึ้น ${(base-plus).toFixed(1)} ปี`,
@@ -2110,7 +2218,8 @@ function analystFire(c){
     } else F.push({ s:'r', t:'ด้วยอัตราปัจจุบัน ยังไปไม่ถึงเป้าใน 100 ปี',
       d:'ต้องเพิ่มเงินที่เก็บต่อเดือน หรือทบทวนเป้าให้สมจริง' });
   } else if(goal>nw)
-    F.push({ s:'r', t:'ยังไม่มีเงินเข้าพอร์ตสม่ำเสมอ', d:'ไม่มีอัตราการเติมเงิน = คำนวณเวลาถึงเป้าไม่ได้' });
+    F.push({ s:'r', t:`${c.contribMonths||12} เดือนล่าสุดเก็บเงินไม่ได้สุทธิ`,
+      d:'รายจ่ายรวมหนี้เท่ากับหรือเกินรายได้ — ความมั่งคั่งโตได้จากผลตอบแทนพอร์ตอย่างเดียว คำนวณเวลาถึงเป้าไม่ได้' });
  
   if(c.safeWithdraw>0) F.push({ s:'g', t:`ตอนนี้ถอนได้ ${_n(c.safeWithdraw)} บาท/เดือน ตามกฎ 4%`,
     d: c.burn>0 ? `รายจ่ายจริงของคุณ ${_n(c.burn)} บาท/เดือน — ครอบคลุม ${(c.safeWithdraw/c.burn*100).toFixed(0)}%`
