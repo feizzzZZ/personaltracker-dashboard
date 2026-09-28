@@ -111,7 +111,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 .logo-mark{font-family:var(--f-sans);font-size:11px;font-weight:700;letter-spacing:.4em;color:var(--muted);text-transform:uppercase;margin-bottom:8px}
 .upload-title{font-family:var(--f-sans);font-size:clamp(26px,5vw,48px);font-weight:800;line-height:1.1;text-align:center;letter-spacing:-.02em}
 .upload-title span{color:var(--income)}
-.upload-error{color:var(--expense);font-size:12px;display:none;margin-top:8px}
+
 
 /* ── App shell ── */
 #app{display:none;position:relative;z-index:1;width:100%;min-height:100vh;flex-direction:row}
@@ -175,8 +175,8 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 .sb-badge-warn{background:rgba(255,64,96,.2);color:var(--expense)}
 .sb-badge-alert{background:var(--expense);color:#fff}
 .sb-bottom{padding:12px 8px;border-top:1px solid var(--border)}
-.sb-upload-btn{display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:8px;cursor:pointer;transition:all .15s;color:var(--muted2);font-size:12px;border:1px solid var(--border);background:transparent;width:100%;font-family:var(--f-mono)}
-.sb-upload-btn:hover{border-color:var(--income);color:var(--income)}
+
+
 
 /* ── Main content ── */
 .main-content{margin-left:var(--sidebar-w);flex:1;min-width:0;min-height:100vh;position:relative;z-index:1}
@@ -232,16 +232,16 @@ select.month-display{text-align-last:center;outline:none}
 .loss{color:var(--loss)}
 
 /* ── Net worth hero ── */
-.nw-hero{background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:20px 24px;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
-.nw-main{display:flex;flex-direction:column;gap:4px}
-.nw-label{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2)}
-.nw-val{font-family:var(--f-sans);font-size:clamp(28px,4vw,42px);font-weight:800;color:var(--white);letter-spacing:-.03em}
-.nw-sub{font-size:12px;color:var(--muted)}
-.nw-breakdown{display:flex;gap:24px;flex-wrap:wrap}
-.nw-part{display:flex;flex-direction:column;gap:3px}
-.nw-part-lbl{font-size:10px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
-.nw-part-val{font-size:16px;font-weight:500}
-.nw-divider{width:1px;background:var(--border);align-self:stretch}
+
+
+
+
+
+
+
+
+
+
 
 /* ── Chart cards ── */
 .cc{background:var(--bg3);border:1px solid var(--cb);border-radius:12px;padding:18px}
@@ -298,7 +298,7 @@ select.month-display{text-align-last:center;outline:none}
 }
 
 /* ── Health items ── */
-.health-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;margin-bottom:18px}
+
 .hi{background:var(--bg4);border:1px solid var(--border);border-radius:10px;padding:11px 13px;display:flex;align-items:flex-start;gap:10px}
 .hs{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:3px}
 .hs.g{background:var(--gain)}
@@ -387,8 +387,8 @@ select.month-display{text-align-last:center;outline:none}
    Right-alignment alone does not align digits in a proportional font.
    tabular-nums forces equal advance width so columns of ฿ amounts line up
    on the decimal; lining-nums stops old-style (descending) figures. */
-.nr,td,th,.nw-val,.ct span,.bgt-ov-val,.bgt-ov-stat-val,.ins-ov-val,
-.ins-cov-amount,.ins-detail-right,.gc-pct,.bm-return,.bm-class-return-val,
+.nr,td,th,.ct span,.bgt-ov-stat-val,.ins-ov-val,
+.ins-cov-amount,.ins-detail-right,.gc-pct,
 .al-pct,.savrate-bar,[class*="-val"],[class*="-amount"],[class*="-pct"]{
   font-variant-numeric:tabular-nums lining-nums;
   font-feature-settings:"tnum" 1,"lnum" 1;
@@ -431,6 +431,20 @@ select.month-display{text-align-last:center;outline:none}
 .yt tr:last-child td{border-bottom:none}
 .yt tr:hover td{background:rgba(255,255,255,.02)}
 .savrate-bar{width:100%;height:3px;background:var(--border);border-radius:2px;margin-top:3px;overflow:hidden}
+/* v61 — คลาสเหล่านี้ถูกสร้างใน JS แต่ไม่เคยมีกฎ CSS
+   อาการ: แถบสัดส่วนใต้ Net Worth มองไม่เห็น (span ว่างไม่มีความสูง)
+   และข้อความ "หนี้ ฿X = Y% ของสินทรัพย์รวม" ขึ้นฟอนต์ใหญ่ผิดขนาด (เห็นชัดบนมือถือ) */
+.nw-mix{margin-top:12px}
+.nw-mix-bar{display:flex;height:6px;border-radius:3px;overflow:hidden;background:var(--bg4)}
+.nw-mix-bar>span{display:block;height:100%;min-width:2px}
+.nw-mix-lbl{font-size:11px;line-height:1.6;color:var(--muted2);margin-top:6px;font-family:var(--f-mono)}
+/* v61 — หมุดบนแถบเป้าหมาย (฿1M · ฿2M) ใช้ style="left:X%" แต่ไม่เคยมี position:absolute
+   หมุดจึงไหลเป็นข้อความต่อกัน "✓฿1M฿2M" แทนที่จะวางตรงตำแหน่งบนแถบ */
+.goal-mks{position:relative;height:16px;margin-top:5px}
+.goal-mk{position:absolute;top:0;transform:translateX(-50%);font-size:9.5px;line-height:16px;
+  color:var(--muted);font-family:var(--f-mono);white-space:nowrap}
+.goal-mk.done{color:var(--gain)}
+.goal-mk.next{color:var(--text);font-weight:700}
 .savrate-fill{height:3px;border-radius:2px;background:var(--savings)}
 .nd{text-align:center;padding:40px;color:var(--muted);font-size:13px}
 
@@ -471,7 +485,7 @@ select.month-display{text-align-last:center;outline:none}
 .gc-icon{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
 .gc-name{font-size:15px;font-weight:600;color:var(--white);font-family:var(--f-sans);margin-bottom:3px}
 .gc-meta{font-size:11px;color:var(--muted2)}
-.gc-actions{margin-left:auto;display:flex;gap:5px;flex-shrink:0}
+
 .gc-btn{width:30px;height:30px;border-radius:8px;background:var(--bg4);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted2);transition:all .15s}
 .gc-btn:hover{border-color:var(--border2);color:var(--text)}
 .gc-btn.del:hover{border-color:var(--expense);color:var(--expense)}
@@ -516,53 +530,49 @@ select.month-display{text-align-last:center;outline:none}
 
 
 /* Benchmark */
-.bm-hero{background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:20px 24px;margin-bottom:18px}
-.bm-hero-title{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2);margin-bottom:14px;display:flex;align-items:center;justify-content:space-between}
-.bm-hero-note{font-size:10px;color:var(--muted);background:var(--bg4);padding:3px 8px;border-radius:6px;border:1px solid var(--border)}
-.bm-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
-@media(max-width:768px){.bm-row{grid-template-columns:1fr}}
-.bm-row .bm-card[style*="grid-column"]{grid-column:1/-1}
-.bm-card{background:var(--bg4);border:1px solid var(--border);border-radius:12px;padding:14px 16px;position:relative;overflow:hidden}
-.bm-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:12px 12px 0 0;background:var(--bm-color,var(--muted))}
-.bm-label{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted2);margin-bottom:8px}
-.bm-return{font-size:28px;font-weight:600;font-family:var(--f-sans);line-height:1;margin-bottom:4px}
-.bm-period{font-size:11px;color:var(--muted2);margin-bottom:12px}
-.bm-detail-row{display:flex;justify-content:space-between;font-size:11px;padding:4px 0;border-bottom:1px solid var(--border)}
-.bm-detail-row:last-child{border-bottom:none}
-.bm-detail-lbl{color:var(--muted2)}
-.bm-detail-val{color:var(--text);font-weight:500}
-.bm-winner{font-size:10px;padding:2px 8px;border-radius:20px;background:rgba(0,212,160,.12);color:var(--gain);border:1px solid rgba(0,212,160,.3);margin-left:6px}
-.bm-vs-section{margin-bottom:20px}
-.bm-bar-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
-.bm-bar-label{font-size:12px;color:var(--text);min-width:120px;font-weight:500}
-.bm-bar-track{flex:1;height:10px;background:var(--border);border-radius:5px;overflow:hidden}
-.bm-bar-fill{height:10px;border-radius:5px;transition:width .6s ease}
-.bm-bar-pct{font-size:12px;font-weight:500;min-width:52px;text-align:right}
-.bm-class-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px}
-@media(max-width:768px){.bm-class-grid{grid-template-columns:1fr}}
-.bm-class-card{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
-.bm-class-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.bm-class-name{font-size:13px;font-weight:600;color:var(--white);font-family:var(--f-sans)}
-.bm-class-vs{font-size:11px;color:var(--muted2)}
-.bm-class-returns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.bm-class-return-item{background:var(--bg4);border-radius:8px;padding:8px 10px;text-align:center}
-.bm-class-return-lbl{font-size:10px;color:var(--muted2);margin-bottom:3px}
-.bm-class-return-val{font-size:16px;font-weight:600;font-family:var(--f-sans)}
-.bm-data-note{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-size:11px;color:var(--muted2);line-height:1.6;margin-top:16px}
-.bm-data-note b{color:var(--text)}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /* ── Budget page ─────────────────────────────────── */
-.bgt-overview{background:var(--bg3);border:1px solid var(--border2);border-radius:14px;
-  padding:18px 22px;margin-bottom:18px;display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:16px}
-@media(max-width:768px){.bgt-overview{grid-template-columns:1fr 1fr}}
-.bgt-ov-item{text-align:center}
-.bgt-ov-lbl{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
-.bgt-ov-val{font-size:22px;font-weight:600;font-family:var(--f-sans);line-height:1}
-.bgt-ov-sub{font-size:11px;color:var(--muted2);margin-top:4px}
-.bgt-bar-wrap{margin-top:12px;height:8px;background:var(--border);border-radius:4px;overflow:hidden;grid-column:1/-1}
-.bgt-bar-fill{height:8px;border-radius:4px;transition:width .5s ease}
 
-.bgt-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;margin-bottom:18px}
+
+
+
+
+
+
+
+
 .bgt-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;
   padding:14px 16px;transition:border-color .2s;position:relative}
 .bgt-card:hover{border-color:var(--border2)}
@@ -593,14 +603,11 @@ select.month-display{text-align-last:center;outline:none}
 .bgt-edit-btn{background:transparent;border:1px solid var(--border);color:var(--muted2);
   padding:3px 8px;border-radius:6px;cursor:pointer;font-size:10px;transition:all .15s}
 .bgt-edit-btn:hover{border-color:var(--border2);color:var(--text)}
-.bgt-no-data{color:var(--muted);font-size:12px;text-align:center;padding:30px 0}
-.bgt-total-budget-row{display:flex;align-items:center;gap:10px;margin-bottom:18px;
-  background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:12px 16px}
-.bgt-total-budget-row label{font-size:12px;color:var(--muted2);white-space:nowrap}
-.bgt-total-input{background:var(--bg4);border:1px solid var(--border2);color:var(--text);
-  padding:6px 10px;border-radius:8px;font-family:var(--f-mono);font-size:13px;
-  flex:1;outline:none;max-width:160px}
-.bgt-total-input:focus{border-color:var(--income)}
+
+
+
+
+
 
 /* Budget 2-column layout */
 .bgt-two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
@@ -653,7 +660,7 @@ select.month-display{text-align-last:center;outline:none}
   padding:16px;text-align:center;cursor:pointer;transition:all .2s}
 .ins-cov-card:hover{border-color:var(--border2);transform:translateY(-2px)}
 .ins-cov-card.selected{border-color:var(--income);background:rgba(0,212,160,.04)}
-.ins-cov-icon{font-size:22px;margin-bottom:8px}
+
 .ins-cov-name{font-size:11px;color:var(--muted2);letter-spacing:.04em;margin-bottom:10px;
   text-transform:uppercase}
 .ins-cov-ring-wrap{position:relative;width:84px;height:84px;margin:0 auto 10px}
@@ -737,18 +744,15 @@ select.month-display{text-align-last:center;outline:none}
 .btn-pdf:hover{background:rgba(124,111,236,.25);border-color:var(--savings)}
 
 /* ── Google Sheets Sync ──────────────────────────────── */
-.gs-btn{display:flex;align-items:center;gap:8px;background:rgba(66,133,244,.12);
-  border:1px solid rgba(66,133,244,.35);color:#4285f4;padding:7px 14px;
-  border-radius:8px;cursor:pointer;font-family:var(--f-mono);
-  font-size:11px;font-weight:500;transition:all .15s;white-space:nowrap}
-.gs-btn:hover{background:rgba(66,133,244,.22)}
-.gs-btn.connected{background:rgba(0,212,160,.08);border-color:rgba(0,212,160,.3);color:var(--income)}
-.gs-btn.syncing{opacity:.7;cursor:wait}
+
+
+
+
 .gs-dot{display:inline-block;flex:0 0 auto;width:6px;height:6px;border-radius:50%;background:currentColor}
 .gs-dot.pulse{animation:pulse 1.2s infinite}
-.gs-sync-time{font-size:10px;color:var(--muted);margin-left:4px}
+
 /* Upload screen Google option */
-.gs-upload-divider::before,.gs-upload-connect{display:flex;align-items:center;gap:10px;background:rgba(66,133,244,.08);
+.gs-upload-connect{display:flex;align-items:center;gap:10px;background:rgba(66,133,244,.08);
   border:1px solid rgba(66,133,244,.25);border-radius:12px;padding:14px 20px;
   cursor:pointer;max-width:480px;width:100%;transition:all .2s;color:var(--text)}
 .gs-upload-connect:hover{background:rgba(66,133,244,.15);border-color:rgba(66,133,244,.5)}
@@ -912,7 +916,7 @@ select.month-display{text-align-last:center;outline:none}
 /* แตะแล้วไม่มีกล่องเทากะพริบ · ไม่มีเมนูเด้งตอนกดค้าง · ไม่ซูมตอนแตะสองที */
 *{-webkit-tap-highlight-color:transparent}
 button,select,.sb-item,.bnav-item,.tab,.fb-btn,.yr-btn,.tx-editable,
-.sc,.bank-card,.fab-opt,.tx-fab,.sb-upload-btn{
+.sc,.bank-card,.fab-opt,.tx-fab{
   touch-action:manipulation;
   -webkit-touch-callout:none;
   -webkit-user-select:none;user-select:none;
@@ -927,7 +931,7 @@ html,body{overscroll-behavior:none}
    ไปด้วย พอใส่ overscroll-behavior:contain (ทั้งสองแกน) แล้วเมาส์/นิ้วอยู่บนตาราง
    ซึ่งมักอยู่ท้ายหน้า การเลื่อนขึ้นจะถูกกล่องตารางกินไว้ ไม่ส่งต่อให้หน้า
    → คุมเฉพาะแกนนอน แกนตั้งปล่อยให้หน้าเลื่อนตามปกติ */
-.tw,.lscroll{overscroll-behavior-x:contain;overscroll-behavior-y:auto;-webkit-overflow-scrolling:touch}
+.tw{overscroll-behavior-x:contain;overscroll-behavior-y:auto;-webkit-overflow-scrolling:touch}
 
 /* ── แนะนำวิธีติดตั้งเป็นแอป ────────────────────────────────────────
    iOS ไม่มีปุ่ม "ติดตั้งแอป" ให้กดเหมือน Android — ต้องรู้เองว่าอยู่ใน
@@ -1219,7 +1223,7 @@ html.standalone .a2hs{display:none}
           <div class="sc" style="--g:rgba(255,64,96,.1)"><div class="sc-lbl">Expense + Bills</div><div class="sc-val loss" id="yrs-exp">฿0</div><div class="sc-sub" id="yrs-exp-s"></div></div>
           <div class="sc" style="--g:rgba(124,111,236,.08)"><div class="sc-lbl">Savings</div><div class="sc-val" id="yrs-sav" style="color:var(--savings)">฿0</div><div class="sc-sub" id="yrs-sav-s"></div></div>
           <div class="sc"><div class="sc-lbl">Net cashflow</div><div class="sc-val" id="yrs-net">฿0</div><div class="sc-sub" id="yrs-net-s"></div></div>
-          <div class="sc" style="--g:rgba(255,149,0,.08)"><div class="sc-lbl">Debt paid</div><div class="sc-val" id="yrs-debt" style="color:var(--debt)">฿0</div><div class="sc-sub" id="yrs-debt-s"></div></div>
+          <div class="sc" style="--g:rgba(255,149,0,.08)"><div class="sc-lbl" title="ผลรวมแถวประเภท Debt = ยอดรูดบัตร (แถวที่แตะบัญชีบัตรเครดิต) + ค่างวด/ใช้หนี้ที่จ่ายจากบัญชีธนาคาร · การจ่ายบัตรจากธนาคารหักล้างกันเองในแถวเดียว ไม่นับซ้ำ">หนี้ &amp; บัตร (Debt)</div><div class="sc-val" id="yrs-debt" style="color:var(--debt)">฿0</div><div class="sc-sub" id="yrs-debt-s"></div></div>
           <div class="sc"><div class="sc-lbl">Saving rate</div><div class="sc-val" id="yrs-savrate">0%</div><div class="sc-sub">(รายได้ − รายจ่าย) ÷ รายได้</div></div>
         </div>
         <!-- Expense breakdown for selected year -->
@@ -1241,7 +1245,7 @@ html.standalone .a2hs{display:none}
       <div class="sl sl-mt">All years overview</div>
       <div class="cc" style="margin-bottom:18px;padding:0;overflow:hidden">
         <table class="yt"><thead><tr>
-          <th>Year</th><th>Income</th><th>Expense</th><th>Savings</th><th>Debt paid</th><th>Net</th><th>Save rate</th>
+          <th>Year</th><th>Income</th><th>Expense</th><th>Savings</th><th title="ผลรวมแถวประเภท Debt = ยอดรูดบัตร + ค่างวด/ใช้หนี้จากบัญชีธนาคาร · ชี้ที่ตัวเลขเพื่อดูแยก">หนี้ &amp; บัตร</th><th>Net</th><th>Save rate</th>
         </tr></thead><tbody id="yr-body"></tbody></table>
       </div>
       <div class="sl sl-mt">Monthly trend (12 months)</div>
@@ -1718,7 +1722,7 @@ html.standalone .a2hs{display:none}
       <div class="sl sl-mt">ผู้จ่ายปันผล — เรียงตามยอดรวม</div>
       <div class="tw"><table class="at"><thead><tr>
         <th>Ticker</th><th>ประเภท</th><th class="r">จำนวนครั้ง</th>
-        <th>Platform</th><th class="r">ปันผลรวม</th><th class="r">Yield on cost</th><th class="r">ล่าสุด</th><th class="r">% ของปันผลทั้งหมด</th>
+        <th>Platform</th><th class="r">ปันผลรวม</th><th class="r" title="ปันผล 12 เดือนล่าสุด ÷ ต้นทุนที่ถืออยู่ (ต่อปี) · ชี้ที่ตัวเลขเพื่อดูยอดสะสม">Yield on cost /ปี</th><th class="r">ล่าสุด</th><th class="r">% ของปันผลทั้งหมด</th>
       </tr></thead><tbody id="dv-body"></tbody></table></div>
     </div>
 
@@ -2286,19 +2290,24 @@ function renderOverview(){
     }
   }catch(e){ console.warn('[goal] markers:', e.message); }
 
-  // Average monthly wealth contribution (net cashflow that stays + savings moved to assets)
+  // v62 — monthlyWealthContrib() ตัวเดียวกับ FIRE Analyst (เฉลี่ย 12 เดือนล่าสุด เดือนติดลบหักจริง)
+  // เดิมเฉลี่ยทุกเดือนตั้งแต่เริ่มบันทึก ขณะที่ Analyst ใช้อีกสูตร → เป้าเดียวกันได้ ETA ต่างกัน 3.5 ปี
   const monthsData=availableMonths.map(mk=>computeSummary(txRows.filter(r=>r.month===mk)));
-  const avgMonthlyNet = monthsData.length ? monthsData.reduce((s,m)=>s+m.net,0)/monthsData.length : 0;
-  // v54 — savings: ออมเข้า = ลบ · ถอนออก = บวก → ใช้ −savings ไม่ใช่ Math.abs (ดู analystCashflow)
-  const avgMonthlySavings = monthsData.length ? monthsData.reduce((s,m)=>s-(Number(m.savings)||0),0)/monthsData.length : 0;
-  const monthlyContrib = Math.max(avgMonthlyNet + avgMonthlySavings, 0);
+  const _wc = monthlyWealthContrib(monthsData);
+  const monthlyContrib = Math.max(_wc.avg, 0);
+  const contribMonths = _wc.n;
 
   // Portion of net worth that's invested (grows with market) vs cash (doesn't compound)
   const investedShare = netWorth>0 ? portVal/netWorth : 0;
 
   // Store state for scenario recompute
-  window._goalState={netWorth,remain,GOAL,monthlyContrib,investedShare,portVal};
-  computeGoalProjection(window._goalReturn ?? 7);
+  window._goalState={netWorth,remain,GOAL,monthlyContrib,contribMonths,investedShare,portVal};
+  /* v61 — อ่านจาก getGoalCfg() ที่เดียวกับ Analyst · หน้าหนี้ · Engine
+     เดิม default 7 ตายตัว ค่าที่เคยเลือกหายทุกครั้งที่ reload */
+  const _ret = window._goalReturn ?? getGoalCfg().expectedReturn;
+  document.querySelectorAll('#ov-3m-scenarios .bm-scenario-btn').forEach(b=>
+    b.classList.toggle('active', Number(b.dataset.ret) === Number(_ret)));
+  computeGoalProjection(_ret);
 
   _renderOverviewRest();
 }
@@ -2318,26 +2327,24 @@ function computeGoalProjection(annualRetPct){
     projEl.innerHTML=`🎉 <span style="color:var(--gain);font-weight:600">ถึงเป้า ${fmtC(st.GOAL)} แล้ว!</span>`;
     monEl.textContent=''; if(noteEl) noteEl.textContent=''; return;
   }
+  const _cm = st.contribMonths ? ` <span style="color:var(--muted2)">(${st.contribMonths} เดือนล่าสุด)</span>` : '';
   if(st.monthlyContrib<=0){
-    projEl.innerHTML=`<span style="color:var(--muted)">ยังไม่มีข้อมูลพอสำหรับ projection</span>`;
+    // v62 — แยก "ข้อมูลไม่พอ" กับ "เก็บเงินไม่ได้สุทธิ" ออกจากกัน (ค่าเฉลี่ย 12 เดือนติดลบได้จริง)
+    projEl.innerHTML = st.contribMonths
+      ? `<span style="color:var(--muted)">${st.contribMonths} เดือนล่าสุดรายจ่ายรวมหนี้ ≥ รายได้ — ฉายเวลาถึงเป้าไม่ได้</span>`
+      : `<span style="color:var(--muted)">ยังไม่มีข้อมูลพอสำหรับ projection</span>`;
     monEl.textContent=''; if(noteEl) noteEl.textContent=''; return;
   }
 
-  // Monthly return applied to the invested share of wealth
-  const rMonthly=Math.pow(1+annualRetPct/100, 1/12)-1;
-  let nw=st.netWorth;
-  let months=0;
+  // v62 — monthsToGoal() สูตรเดียวกับ FIRE Analyst (ผลตอบแทนคิดเฉพาะส่วนที่ลงทุน)
   const MAX=1200; // 100yr safety cap
-  while(nw<st.GOAL && months<MAX){
-    const investedBal=nw*st.investedShare;
-    nw += investedBal*rMonthly;   // compound growth on invested portion
-    nw += st.monthlyContrib;      // monthly contribution
-    months++;
-  }
+  const _m=monthsToGoal({netWorth:st.netWorth, goal:st.GOAL, contrib:st.monthlyContrib,
+                         annualPct:annualRetPct, investedShare:st.investedShare, max:MAX});
+  const months=_m==null?MAX:_m;
 
   if(months>=MAX){
     projEl.innerHTML=`<span style="color:var(--muted)">เกิน 100 ปี — ปรับ contribution หรือ return</span>`;
-    monEl.innerHTML=`💰 เก็บเฉลี่ย <span style="color:var(--gain);font-weight:600">${fmt(st.monthlyContrib)}</span>/เดือน`;
+    monEl.innerHTML=`💰 เก็บเฉลี่ย <span style="color:var(--gain);font-weight:600">${fmt(st.monthlyContrib)}</span>/เดือน${_cm}`;
     return;
   }
 
@@ -2351,7 +2358,7 @@ function computeGoalProjection(annualRetPct){
   const saved=baselineMonths-months;
 
   projEl.innerHTML=`📈 คาดถึงเป้าใน <span style="color:var(--white);font-weight:600">${yrs>0?yrs+' ปี ':''}${mos} เดือน</span> (~${dateStr})`;
-  monEl.innerHTML=`💰 เก็บเฉลี่ย <span style="color:var(--gain);font-weight:600">${fmt(st.monthlyContrib)}</span>/เดือน`;
+  monEl.innerHTML=`💰 เก็บเฉลี่ย <span style="color:var(--gain);font-weight:600">${fmt(st.monthlyContrib)}</span>/เดือน${_cm}`;
   if(noteEl){
     if(annualRetPct>0 && saved>0){
       /* ข้อ 2.4 — "~237 เดือน" คือ 19.8 ปี หน่วยเดือนใหญ่ขนาดนี้สมองแปลงไม่ทัน
@@ -2372,6 +2379,13 @@ function computeGoalProjection(annualRetPct){
 function setGoalScenario(retPct, btn){
   document.querySelectorAll('#ov-3m-scenarios .bm-scenario-btn').forEach(b=>b.classList.remove('active'));
   if(btn) btn.classList.add('active');
+  /* v61 BUGFIX — เดิมเปลี่ยนแค่ตัวแปรของหน้านี้ (window._goalReturn)
+     ขณะที่ Analyst · "จ่ายหนี้ vs ลงทุน" · Wealth Engine อ่าน getGoalCfg().expectedReturn
+     ทดสอบ: กด 10% → หน้าเป้าหมายใช้ 10 แต่ Analyst ยังขึ้น 7% และ reload แล้วกลับเป็น 7
+     saveGoalCfg() มีอยู่แล้วแต่ไม่มีใครเรียกเลย — ตอนนี้บันทึกที่เดียว ทุกหน้าอ่านที่เดียว */
+  if(typeof saveGoalCfg === 'function') saveGoalCfg({ expectedReturn: retPct });
+  // หน้าที่ render ไปแล้วด้วยค่าเก่าต้องวาดใหม่ตอนเปิดครั้งถัดไป ไม่งั้นยังโชว์ค่าเดิม
+  ['analyst','debt','engine'].forEach(p=>renderedPages.delete(p));
   computeGoalProjection(retPct);
 }
 
@@ -2787,6 +2801,9 @@ function renderActionNeeded(ef){
       const nx = new Date(now.getFullYear(), d.getMonth(), d.getDate());
       if(nx < now) nx.setFullYear(nx.getFullYear()+1);
       const days = Math.round((nx-now)/864e5);
+      // v62 — กรมธรรม์ที่เบี้ย ฿0 (เช่น ประกันกลุ่มที่บริษัทจ่าย) ไม่มีอะไรต้องลงมือ
+      // ข้อมูลจริง: ขึ้น "ต้องลงมือ · เบี้ยประกันครบกำหนด 1 ฉบับ · ฿0" เพราะ Group Insurance
+      if(!((pl.premium||0) > 0)) return null;
       return days<=30 ? {name: pl.planName||pl.policyId, days, premium: pl.premium||0} : null;
     }).filter(Boolean).sort((a,b)=>a.days-b.days);
     if(soon.length){
@@ -2800,10 +2817,9 @@ function renderActionNeeded(ef){
 
   // ⑧ สัดส่วนพอร์ตที่อิง USD — ความเสี่ยงค่าเงินที่ไม่เคยถูกแสดงเป็นตัวเลข
   try{
-    const held = (assets||[]).filter(a=>a.val>0);
-    const tot  = held.reduce((s,a)=>s+a.val, 0);
-    const usd  = held.filter(a=>a.currency==='USD').reduce((s,a)=>s+a.val, 0);
-    const share = tot>0 ? usd/tot*100 : 0;
+    // v62 — usdExposure() ตัวเดียวกับ Risk Analyst และหน้าต้นทุน (รวมคริปโต/ทอง)
+    const _ux  = usdExposure(assets);
+    const usd  = _ux.usd, share = _ux.pct;
     if(share >= 55) items.push({lv:'warn',
       t:`พอร์ต ${share.toFixed(0)}% อิงค่าเงินดอลลาร์ (${fmt(usd)})`,
       d:`รายจ่ายคุณเป็นบาททั้งหมด — USD/THB เคลื่อน 1 บาท ≈ ${fmt(usd/ (mdNum('USDTHB')||34))} ในมูลค่าพอร์ต`,
@@ -3018,7 +3034,8 @@ function renderYearly(){
       <td style="color:var(--gain)">${fmt(s.income)}</td>
       <td style="color:var(--loss)">${fmt(Math.abs(s.expense))}</td>
       <td style="color:var(--savings)">${fmt(Math.abs(s.savings))}</td>
-      <td style="color:var(--debt)">${fmt(Math.abs(s.debt))}</td>
+      <td style="color:var(--debt)" title="${(()=>{const d=debtSplit(txRows.filter(r=>r.year===yr),bankBals);
+        return `รูดบัตร ${fmt(Math.abs(d.card))} · ผ่อน/ใช้หนี้ ${fmt(Math.abs(d.loan))}`;})()}">${fmt(Math.abs(s.debt))}</td>
       <td class="${s.net>=0?'pp':'pn'}">${fmtSign(s.net)}</td>
       <td><div style="color:${rc}">${s.savRate}%</div><div class="savrate-bar"><div class="savrate-fill" style="width:${bw}%"></div></div></td>
     </tr>`;
@@ -3046,7 +3063,11 @@ function renderYearlySelected(yr){
   document.getElementById('yrs-sav').textContent=fmt(Math.abs(s.savings));document.getElementById('yrs-sav-s').textContent=`${s.savingsCount} transactions`;
   const netEl=document.getElementById('yrs-net');netEl.textContent=fmtSign(s.net);netEl.className='sc-val '+(s.net>=0?'gain':'loss');
   document.getElementById('yrs-net-s').textContent=s.net>=0?'surplus':'deficit';
-  document.getElementById('yrs-debt').textContent=fmt(Math.abs(s.debt));document.getElementById('yrs-debt-s').textContent=`${s.debtCount} transactions`;
+  document.getElementById('yrs-debt').textContent=fmt(Math.abs(s.debt));
+  // v62 — แยกให้เห็นว่ายอด Debt มาจากรูดบัตรเท่าไร ผ่อน/ใช้หนี้เท่าไร (ข้อมูลจริง: ค่างวด/ใช้หนี้ราว 1/3–1/2 ของยอด Debt)
+  { const d=debtSplit(rows,bankBals);
+    document.getElementById('yrs-debt-s').textContent=
+      `รูดบัตร ${fmt(Math.abs(d.card))} · ผ่อน/ใช้หนี้ ${fmt(Math.abs(d.loan))}`; }
   const srEl=document.getElementById('yrs-savrate');srEl.textContent=s.savRate+'%';
   srEl.style.color=s.savRate>=20?'var(--gain)':s.savRate>=10?'var(--debt)':'var(--loss)';
 
@@ -3181,12 +3202,17 @@ function renderAccounts(){
     'Credit Card':   {color:'#ff6b6b', badge:'background:rgba(255,107,107,.15);color:#ff6b6b;border:1px solid rgba(255,107,107,.3)', icon:'💳'},
     'E-Wallet':      {color:'#ffd166', badge:'background:rgba(255,209,102,.15);color:#ffd166;border:1px solid rgba(255,209,102,.3)', icon:'👛'},
     'Travel Card':   {color:'#a0c4ff', badge:'background:rgba(160,196,255,.15);color:#a0c4ff;border:1px solid rgba(160,196,255,.3)', icon:'✈️'},
+    'Loan':          {color:'#ff9f43', badge:'background:rgba(255,159,67,.15);color:#ff9f43;border:1px solid rgba(255,159,67,.3)', icon:'🧾'},
   };
+  /* v62 — เดิมเช็ค t.includes('Card') ก่อน Travel → "Travel Card #" (Rabbit Card)
+     ขึ้นป้าย CREDIT CARD ทั้งที่เป็นบัตรเติมเงิน และกิ่ง Travel ไม่เคยถูกใช้เลย
+     ตอนนี้ใช้ isCreditAccount() ตัวเดียวกับการจัดหนี้ + รองรับคอลัมน์ประเภท Loan */
   const getAccType=b=>{
     const t=b.type||'';
-    if(t.includes('Credit')||t.includes('Card'))return 'Credit Card';
-    if(t.includes('Wallet')||t.includes('E-Wallet'))return 'E-Wallet';
-    if(t.includes('Travel'))return 'Travel Card';
+    if(/travel/i.test(t))return 'Travel Card';
+    if(/wallet/i.test(t))return 'E-Wallet';
+    if(/loan|สินเชื่อ|เงินกู้/i.test(t))return 'Loan';
+    if(isCreditAccount(b))return 'Credit Card';
     return 'Bank Account';
   };
 
@@ -3213,7 +3239,7 @@ function renderAccounts(){
     return `<div class="bank-card" style="--bank-accent:${meta.color}">
       <div class="bank-card-header">
         <div class="bank-name" title="${escHtml(b.name)}">${escHtml(b.name)}</div>
-        <span class="bank-type-badge" style="${meta.badge}">${accType==='Bank Account'?'BANK':accType==='Credit Card'?'CREDIT':accType==='E-Wallet'?'WALLET':'TRAVEL'}</span>
+        <span class="bank-type-badge" style="${meta.badge}">${accType==='Bank Account'?'BANK':accType==='Credit Card'?'CREDIT':accType==='E-Wallet'?'WALLET':accType==='Loan'?'LOAN':'TRAVEL'}</span>
       </div>
       <div class="bank-val" style="color:${valColor}">${fmt(b.balance)}</div>
       <div class="bank-type" style="color:${meta.color};opacity:.7">${meta.icon} ${accType}</div>
@@ -3609,7 +3635,7 @@ const VLOG_PURGED_KEY = 'finOS_valueLogPurged_v44';
 //   ฟังก์ชันหาย  → BLOCK  (แอปคำนวณผิดแน่นอน — นี่คือสิ่งที่ guard มีไว้จับ)
 //   เลขไม่ตรง    → WARN   (แค่ลืม bump — log ไว้ ไม่รบกวนผู้ใช้)
 // ฟังก์ชันที่ต้องมีคือสัญญาจริงระหว่างสองไฟล์ ส่วนสตริงเวอร์ชันเป็นแค่ป้าย
-const EXPECTED_SHARED_BUILD = 'v60';
+const EXPECTED_SHARED_BUILD = 'v62';
 const REQUIRED_SHARED_FNS = [
   'resolvePrices', 'pipelinePricesTHB', 'parseReconcileRows',
   'computeReconciliation', 'splitBalances', 'debtVsInvest', 'buildDebtPlan',
@@ -3619,6 +3645,9 @@ const REQUIRED_SHARED_FNS = [
   'analystDesk',                              // v49 — หน้า Analyst Desk — หน้า Debt พังทั้งหน้าถ้าไม่มี
   'loadWatchlist', 'watchSummary',            // v59 — หน้าภาพรวมตลาด
   'gateSummary', 'sigGate', 'sigLegacy', 'byGateThenRank',   // v60 — เกณฑ์ 3 ชั้น
+  'isoLocal', 'saveGoalCfg', 'getGoalCfg',                    // v61 — วันที่ท้องถิ่น · ผลตอบแทนคาดหวัง
+  'monthlyWealthContrib', 'monthsToGoal', 'usdExposure', 'debtSplit',   // v62 — นิยามเดียวข้ามหน้า
+  'valueLogJumps', 'cleanSheetSpikesV62',                     // v62 — ด่านคุณภาพ Value_Log
   'loadBotPaper', 'fetchBotPaper', 'botStatus',   // v59 — หน้าบอทจำลอง
 ];
 function checkSharedVersion(){
@@ -3786,7 +3815,12 @@ function renderPerformance(totalVal){
 
   // TWR — เริ่มเก็บประวัติมูลค่าวันนี้
   purgeCorruptValueLog();          // v44: ล้างประวัติเสียก่อน (ทำครั้งเดียว)
+  cleanSheetSpikesV62();           // v62: ล้างแถวจากชีตที่เคย merge ก่อนมีด่านคุณภาพ (ทำครั้งเดียว)
   const log = logValueSnapshot(totalVal);
+  // v62 — ถ้า Value_Log ในชีตถูกข้าม ต้องบอกเหตุผล ไม่งั้นผู้ใช้เห็น "สะสมข้อมูล" ทั้งที่ชีตมีหลายสิบวัน
+  const _vr = window._vlogSheetReject;
+  const _vrNote = _vr ? ` · ⚠ Value_Log ในชีต ${_vr.rows} แถว (${_vr.first} → ${_vr.last}) ไม่ถูกนำมาใช้:`
+    + ` มูลค่ากระโดดเกิน 8% ถึง ${_vr.jumps} ครั้ง (ราคาบางตัวหลุดเป็นช่วงๆ) — TWR ใช้เฉพาะ snapshot ที่แอปบันทึกเองตอนราคาครบ` : '';
   const twr = computeTWR(log, flows);
   const tEl=document.getElementById('perf-twr'), tsEl=document.getElementById('perf-twr-sub');
   if(tEl && tsEl){
@@ -3796,16 +3830,16 @@ function renderPerformance(totalVal){
         // แสดงผลตอบแทนสะสมตามจริงแทน กันอ่านผิดแล้วตัดสินใจพลาด
         tEl.textContent=(twr.total>=0?'+':'')+(twr.total*100).toFixed(2)+'% สะสม';
         tEl.style.color=twr.total>=0?'var(--gain)':'var(--loss)';
-        tsEl.textContent=`ช่วง ${twr.days} วัน (snapshot ${log.length} วัน) — สั้นเกินกว่าจะคิดเป็น %ต่อปี รอครบ 30 วันจึงแสดง annualized`;
+        tsEl.textContent=`ช่วง ${twr.days} วัน (snapshot ${log.length} วัน) — สั้นเกินกว่าจะคิดเป็น %ต่อปี รอครบ 30 วันจึงแสดง annualized`+_vrNote;
       } else {
         tEl.textContent=(twr.annual>=0?'+':'')+(twr.annual*100).toFixed(2)+'% /ปี';
         tEl.style.color=twr.annual>=0?'var(--gain)':'var(--loss)';
-        tsEl.textContent=`จาก snapshot ${log.length} วัน (${twr.days} วันปฏิทิน) — ใช้เทียบ benchmark ได้`;
+        tsEl.textContent=`จาก snapshot ${log.length} วัน (${twr.days} วันปฏิทิน) — ใช้เทียบ benchmark ได้`+_vrNote;
       }
     } else {
       tEl.textContent='⏳ สะสมข้อมูล';
       tEl.style.color='var(--muted2)';
-      tsEl.textContent=`TWR ต้องมีมูลค่าพอร์ตรายวันย้อนหลัง — เริ่มบันทึกแล้ววันนี้ (${log.length}/2 วันขั้นต่ำ) เปิดแอปวันหลังจะเริ่มคำนวณให้`;
+      tsEl.textContent=`TWR ต้องมีมูลค่าพอร์ตรายวันย้อนหลัง — เริ่มบันทึกแล้ววันนี้ (${log.length}/2 วันขั้นต่ำ) เปิดแอปวันหลังจะเริ่มคำนวณให้`+_vrNote;
     }
   }
 }
@@ -4037,10 +4071,24 @@ function renderEngine(){
   const el=document.getElementById('we-insight');
   if(el){
     const saved=mNow-mDeploy;
+    /* v62 — สองบรรทัดแรกเดิมเป็นข้อความตายตัว: "ระดับดี · สูงกว่าค่าเฉลี่ยอย่างชัดเจน" ไม่ว่า savings rate
+       จะเท่าไร และ "แต่ invest rate เพียง…" แม้ลงทุนมากกว่าที่เก็บได้ (ข้อมูลจริง: rate ในช่วง 10–20% ถูกเรียกว่า
+       "สูงกว่าอย่างชัดเจน" · ส่วนต่างติดลบถูกเรียกว่า "นอนอยู่ในบัญชี" ขัดกับบรรทัด 🚀 ด้านล่าง) */
+    const _savLine = savR>=20
+      ? `💧 <strong>วินัยการเก็บเงินอยู่ระดับดี</strong> — savings rate ${savR.toFixed(1)}% สูงกว่าช่วงทั่วไป (10-20%)`
+      : savR>=10
+      ? `💧 savings rate ${savR.toFixed(1)}% <strong>อยู่ในช่วงทั่วไป (10-20%)</strong> — ขยับเกิน 20% จะเห็นผลต่อเป้าชัดขึ้น`
+      : savR>=0
+      ? `💧 savings rate ${savR.toFixed(1)}% <strong style="color:var(--debt)">ต่ำกว่าช่วงทั่วไป (10-20%)</strong> — จุดที่ให้ผลมากที่สุดตอนนี้คือฝั่งรายจ่าย`
+      : `⚠️ <strong style="color:var(--loss)">12 เดือนล่าสุดใช้เกินรายได้</strong> (savings rate ${savR.toFixed(1)}%) — เงินลงทุนมาจากเงินเก่าหรือหนี้`;
+    const _invLine = idle12>0
+      ? `⚠️ แต่ <strong>invest rate เพียง ${invR.toFixed(1)}%</strong> — ส่วนต่าง ${(savR-invR).toFixed(1)}pp `+
+        `หรือราว <strong style="color:var(--debt)">${fmt(idle12/L12.length)}/เดือน</strong> นอนอยู่ในบัญชีโดยไม่ได้ทำงาน`
+      : `✅ ลงทุน ${invR.toFixed(1)}% ของรายได้ — มากกว่าที่เก็บได้ (${savR.toFixed(1)}%) `+
+        `ส่วนเกิน ${fmt(-idle12)} ใน 12 เดือนมาจากเงินเก่า/โบนัส ไม่มีเงินนอนเฉยในรอบนี้`;
     el.innerHTML =
-      `💧 <strong>วินัยการเก็บเงินของคุณอยู่ระดับดี</strong> — savings rate ${savR.toFixed(1)}% สูงกว่าค่าเฉลี่ยคนทั่วไป (10-20%) อย่างชัดเจน<br>`+
-      `⚠️ แต่ <strong>invest rate เพียง ${invR.toFixed(1)}%</strong> — ส่วนต่าง ${(savR-invR).toFixed(1)}pp ` +
-      `หรือราว <strong style="color:var(--debt)">${fmt(Math.max(0,idle12/L12.length))}/เดือน</strong> นอนอยู่ในบัญชีโดยไม่ได้ทำงาน<br>`+
+      _savLine+'<br>'+
+      _invLine+'<br>'+
       (isFinite(mNow)
         ? `🎯 ที่อัตราลงทุนปัจจุบัน (${fmt(monthlyNow)}/เดือน, ผลตอบแทน ${cfg.expectedReturn}%/ปี) จะถึง ${fmt(goalAmt)} ใน <strong>${mNow} เดือน (${(mNow/12).toFixed(1)} ปี)</strong><br>`
         : `🎯 ที่อัตราลงทุนปัจจุบันยังไปไม่ถึงเป้า<br>`)+
@@ -4107,12 +4155,15 @@ function renderDividends(){
   // per-ticker table
   const byTk={};
   rows.forEach(r=>{
-    const t=byTk[r.ticker]=byTk[r.ticker]||{group:r.group, n:0, amt:0, last:r.date};
+    const t=byTk[r.ticker]=byTk[r.ticker]||{group:r.group, n:0, amt:0, amt12:0, last:r.date};
     t.n++; t.amt+=Math.abs(r.amtTHB);
+    if(r.date.getTime()>=cut) t.amt12+=Math.abs(r.amtTHB);   // v62 — ปันผล 12 เดือนล่าสุด
     if(r.date>t.last) t.last=r.date;
   });
   /* v56 — ตารางเดียวของปันผลรายตัว: รวมคอลัมน์ Platform (เดิมอยู่ Investment Flow)
-     และ Yield on cost (เดิมอยู่หน้าต้นทุนที่มองไม่เห็น) · ต้นทุน = WACC × จำนวนที่ถืออยู่ */
+     และ Yield on cost (เดิมอยู่หน้าต้นทุนที่มองไม่เห็น) · ต้นทุน = WACC × จำนวนที่ถืออยู่
+     v62 — Yield on cost = ปันผล 12 เดือนล่าสุด ÷ ต้นทุน (ต่อปี ตามนิยามสากล)
+     เดิมใช้ปันผลสะสมทั้งหมด ÷ ต้นทุน → ถือนาน % ยิ่งสูง (ข้อมูลจริง: หุ้นปันผลไทยขึ้น 15–20% ทั้งที่เป็นยอดสะสมกว่าปี) */
   const costOf=tk=>{ const a=(assets||[]).find(x=>x.ticker===tk); return a&&a.cost>0?a.cost:0; };
   const tb=document.getElementById('dv-body');
   if(tb) tb.innerHTML=Object.entries(byTk).sort((a,b)=>b[1].amt-a[1].amt).map(([tk,d])=>{
@@ -4120,8 +4171,8 @@ function renderDividends(){
     return `<tr><td><strong>${escHtml(tk)}</strong></td><td>${escHtml(d.group||'—')}</td>
      <td class="r">${d.n}</td><td style="font-size:11px;color:var(--muted2)">${escHtml((platMap||{})[tk]||'—')}</td>
      <td class="r gain">${fmt(d.amt)}</td>
-     <td class="r">${c>0?(d.amt/c*100).toFixed(1)+'%':'<span style="color:var(--muted2)">ขายหมดแล้ว</span>'}</td>
-     <td class="r" style="color:var(--muted2)">${d.last.toISOString().slice(0,10)}</td>
+     <td class="r" title="${c>0?`ปันผล 12 เดือน ${fmt(d.amt12)} ÷ ต้นทุนที่ถืออยู่ ${fmt(c)} · สะสมทั้งหมด ${(d.amt/c*100).toFixed(1)}%`:''}">${c>0?(d.amt12>0?(d.amt12/c*100).toFixed(1)+'%':'<span style="color:var(--muted2)">ไม่มีใน 12 ด.</span>'):'<span style="color:var(--muted2)">ขายหมดแล้ว</span>'}</td>
+     <td class="r" style="color:var(--muted2)">${isoLocal(d.last)}</td>
      <td class="r">${(d.amt/total*100).toFixed(1)}%</td></tr>`;}).join('');
 
   // v56 — ปันผลรายปี (ย้ายมาจาก Investment Flow)
@@ -4497,7 +4548,11 @@ async function gsSync(){
 
     // Required sheets (fail if missing)
     const REQ = ['Transaction','Asset_Tracker','Asset_Live_Price_Feed'];
-    const reqUrl = BASE+'&'+REQ.map(s=>'ranges='+encodeURIComponent(s+'!A1:Z5000')).join('&');
+    /* v62 — ช่วงเปิดท้าย (A1:Z) แทน A1:Z5000
+       ข้อมูลจริง: Transaction ใกล้ 5,000 แถวแล้ว เหลือที่ว่างราว 3 เดือน
+       เกิน 5,000 เมื่อไร รายการใหม่หายเงียบๆ — หน้า Cash Flow เดือนปัจจุบันว่าง ทั้งที่ยอดบัญชียังถูก
+       แถวเปล่าที่มีแต่สูตรเดือน/ปีท้ายชีตถูกข้ามอยู่แล้ว (ไม่มีวันที่ = ไม่ใช่รายการ) */
+    const reqUrl = BASE+'&'+REQ.map(s=>'ranges='+encodeURIComponent(s+'!A1:Z')).join('&');
     const r1 = await fetch(reqUrl, {headers:hdrs});
     if(!r1.ok){
       if(r1.status===401||r1.status===403){
@@ -4531,9 +4586,9 @@ async function gsSync(){
     const OPT = ['Insurance_Policies','Insurance_Coverage','Market_Data','Value_Log','Reconcile'];
     for(const s of OPT){
       try{
-        // Value_Log เป็น time series วันละแถว — 500 แถว = ~1.4 ปีเท่านั้น
-        // ชีตอื่นเป็นตารางอ้างอิงขนาดคงที่ 500 พอ
-        const rng = (s==='Value_Log') ? '!A1:Z2000' : '!A1:Z500';
+        // v62 — Reconcile โตครั้งละ 10 แถว (บัญชีละแถว) และ Value_Log วันละแถว
+        // เพดานตายตัวทำให้แถวล่าสุดหายเงียบๆ — "verify ล่าสุด" จะค้างที่ของเก่า · ใช้ช่วงเปิดท้ายทั้งหมด
+        const rng = '!A1:Z';
         const ro=await fetch(BASE+'&ranges='+encodeURIComponent(s+rng),{headers:hdrs});
         if(ro.ok){const do_=(await ro.json());if(do_.valueRanges?.[0]?.values)map[s]=do_.valueRanges[0].values;
           console.log('[GS] Optional loaded:',s,map[s].length,'rows');}
@@ -4583,7 +4638,9 @@ async function gsSync(){
 }
 
 
-// ── Parse Google Sheets 2D arrays → same global state as parseFile ──
+// ── Parse Google Sheets 2D arrays → global state ──
+// v61 — เส้นทางอัปโหลด Excel (parseFile) ถูกถอดออกไปนานแล้ว เหลือเส้นทางนี้ทางเดียว
+// คอมเมนต์เก่าที่บอกให้ "ดูเส้นทาง Excel / ต้องแก้ทั้งสองที่" ถูกเก็บกวาดออกในรุ่นนี้
 // ═══ MARKET DATA BRIDGE ═══════════════════════════════════════════
 // อ่านชีต Market_Data (Key | Value | Updated | Note) → localStorage
 // ให้หน้า Investment Analysis ใช้เป็นข้อมูลตลาดสด (Method 1: Google Sheets pipeline)
@@ -4615,8 +4672,7 @@ function gsProcessData(map){
       const bankNameRow = txRaw[1]||[];
       const bankBalRow  = txRaw[2]||[];
       const bankTypeRow = txRaw[0]||[];
-      // #25 — เก็บ "รายการ index ของคอลัมน์บัญชี" จาก header row ให้เหมือนเส้นทาง Excel เป๊ะ
-      // (Excel: for i=Details+1..txH.length ถ้า txH[i] มีค่าก็ push)
+      // #25 — เก็บ "รายการ index ของคอลัมน์บัญชี" จาก header row: ทุกคอลัมน์หลัง Details ที่มีค่า
       // เวอร์ชันก่อนหน้าใช้ while แล้วหยุดที่ช่องว่างแรก → ชีตที่เว้นคอลัมน์คั่นกลาง
       // จะทำบัญชีทั้งหมดหลังช่องว่างหายไปเงียบๆ ต้องไล่จนสุดแถวแล้วข้ามช่องว่างแทน
       const bankCols=[];
@@ -4642,7 +4698,7 @@ function gsProcessData(map){
         if(!['Expense','Income','Transfer','Savings','Bills','Debt'].includes(txType))continue;
         const rawDate=r[ti('Date')];
         const d=parseDate(rawDate);if(!d||isNaN(d.getTime()))continue;
-        // ขาดหาย v48 #A — ต้องเก็บ movement รายบัญชี (ดูคำอธิบายในเส้นทาง Excel)
+        // v48 #A — เก็บ movement รายบัญชี (acct) ไว้ให้ debtComposition แตกหนี้ตามร้านค้าได้
         let amt=0; const acct={};
         for(const ci of bankCols){
           const v=parseFloat(r[ci]||0); if(isNaN(v)||v===0) continue;
@@ -4650,7 +4706,7 @@ function gsProcessData(map){
           const an = bankNameRow[ci]!=null ? String(bankNameRow[ci]).trim() : (hArr[ci]||('col'+ci));
           if(an) acct[an]=(acct[an]||0)+v;
         }
-        // BUGFIX v48 #18 — ดูคำอธิบายในเส้นทาง Excel (ต้องแก้ทั้งสองที่)
+        // BUGFIX v48 #18 — แถวที่ไม่มียอดในบัญชีไหนเลยคือแถวว่าง/สรุป ข้าม (ยกเว้น Transfer)
         if(Object.keys(acct).length===0 && txType!=='Transfer') continue;
         rows.push({date:d,acct,
           dateStr:`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`,
@@ -4805,7 +4861,7 @@ function gsParseAssetTracker(rows){
   console.log('[AT] schema พร้อม — รายการสุดท้ายแถว', atSheetMeta.lastRow);
   fxMap={};for(const[t,v]of Object.entries(fxAcc))fxMap[t]=parseFloat((v.reduce((s,x)=>s+x,0)/v.length).toFixed(2));
   waccMap={};for(const[t,v]of Object.entries(waccAcc2))waccMap[t]=v.qty>0?v.cost/v.qty:0;
-  // BUGFIX v48 #14 — ดูคำอธิบายในเส้นทาง Excel ด้านบน (ต้องแก้ทั้งสองที่)
+  // BUGFIX v48 #14 — platMap ต้องมาจากจำนวนที่ถือจริงต่อ platform (qtyByPlatform) ไม่ใช่ platform ของแถวสุดท้าย
   platMap={};
   {
     const _qbp = qtyByPlatform(trackerRows2);
@@ -5170,7 +5226,7 @@ body{font-family:'Sarabun',sans-serif;font-size:13px;color:#1a1a2e;background:#f
   color:#666;margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid #e5e7eb}
 .cf-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px}
 .cf-card{background:#f9fafb;border-radius:8px;padding:12px 16px;border:1px solid #e5e7eb}
-.cf-card-wide{grid-column:1/-1;background:#f0faf7;border:1.5px solid #00c78c}
+
 .cf-lbl{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#888;margin-bottom:4px}
 .cf-val{font-size:20px;font-weight:700}
 .cf-sub{font-size:10px;color:#aaa;margin-top:2px}
@@ -5687,7 +5743,9 @@ function savePortfolioToStorage(){
     // NOTE: type ต้องเป็นค่าดิบจากชีต (Buy/Sell/Dividend Payout/Split)
     // ห้ามย่อเป็น buy/sell เพราะปันผลจะถูกนับผิดเป็นการขาย
     const tradeLog=(tracker||[]).filter(t=>t.ticker && t.date).map(t=>({
-      d:(t.date instanceof Date)?t.date.toISOString().slice(0,10):String(t.date).slice(0,10),
+      // v61 — isoLocal ไม่ใช่ toISOString: t.date คือเที่ยงคืนเวลาไทยจาก parseDate()
+      // toISOString แปลงเป็น UTC แล้วได้วันก่อนหน้า → อายุ "ซื้อล่าสุด" เพี้ยน 1 วัน
+      d:(t.date instanceof Date)?isoLocal(t.date):String(t.date).slice(0,10),
       t:t.txType||'', k:t.ticker, thb:Math.round(t.amtTHB||0)
     }));
 
@@ -6151,13 +6209,10 @@ function renderCost(){
   const _fsC = feeStats(tracker);          // v55 — ตัวเดียวกับ Overview/Analyst
   const fees = nz(_fsC.fees);
 
-  const USD_TYPES = /US_Stock|US Stock|Crypto|Gold/i;
-  let usdVal = 0, thbVal = 0;
-  [...CLS.active, ...CLS.dormant, ...CLS.intentional].forEach(r => {
-    if(r.val == null) return;
-    if(USD_TYPES.test(r.type || '')) usdVal += r.val; else thbVal += r.val;
-  });
-  const tot = usdVal + thbVal, usdPct = tot > 0 ? usdVal / tot * 100 : 0;
+  // v62 — usdExposure() ตัวเดียวกับ Overview และ Risk Analyst (เดิมสามจุดใช้สองเกณฑ์ ได้ 23% vs 54%)
+  const _ux = usdExposure([...CLS.active, ...CLS.dormant, ...CLS.intentional]
+    .filter(r => r.val != null).map(r => ({ val: r.val, type: r.type, currency: r.currency })));
+  const usdVal = _ux.usd, thbVal = _ux.thb, tot = _ux.total, usdPct = _ux.pct;
   const fx = (typeof mdNum === 'function') ? mdNum('USDTHB') : 0;
 
   document.getElementById('cost-body').innerHTML = `
@@ -6637,7 +6692,9 @@ function renderBot(){
   const actCol = a => a==='buy' ? IA_GAIN : a==='sell' ? IA_LOSS : a==='skip' ? IA_MUTE : IA_WARN;
   const actTh  = a => a==='buy' ? 'ซื้อ' : a==='sell' ? 'ขาย' : a==='skip' ? 'ข้าม' : 'อยู่เฉย';
   const decBlock = (T.decisions && T.decisions.length) ? `
-    <div class="sl">บอทคิดอะไรในรอบล่าสุด (${escHtml(T.date||'—')})</div>
+    <div class="sl">บอทคิดอะไรในรอบล่าสุด (${escHtml(T.date||'—')})
+      <span style="font-weight:400;color:${T.rules&&T.rules===S.rules?'var(--muted2)':IA_WARN}">
+        · กฎ ${escHtml(T.rules||'ก่อน v61 (ไม่ได้บันทึก)')}</span></div>
     <div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;
         overflow:hidden;margin-bottom:18px">
       ${T.decisions.map(d=>`
@@ -6692,7 +6749,9 @@ function renderBot(){
           <div style="font-size:11.5px;color:var(--muted2)">${usd(t.usd)} @ ${usd(t.px)}
             <span style="font-size:10px;opacity:.75"> · ค่าธรรมเนียม ${usd(t.fee)}</span></div>
         </div>
-        <div style="font-size:10.5px;color:var(--muted2);line-height:1.7;margin-top:2px">${escHtml(t.why||'')}</div>
+        <div style="font-size:10.5px;color:var(--muted2);line-height:1.7;margin-top:2px">${escHtml(t.why||'')}
+          <span style="font-size:9.5px;opacity:.8;margin-left:6px;${t.rules===S.rules?'':'color:'+IA_WARN}">
+            · กฎ ${escHtml(t.rules||'ก่อน v61 (ไม่ได้บันทึก)')}</span></div>
       </div>`).join('')}
     </div>` : `<div class="sl sl-mt">การเทรดล่าสุดของบอท</div>
       ${iaEmptyRow('ยังไม่มีคำสั่งที่ผ่านเกณฑ์ — การไม่เทรดก็เป็นผลลัพธ์อย่างหนึ่ง')}`;
@@ -6700,8 +6759,18 @@ function renderBot(){
   const C = S.config || {};
   const uni = (C.universe||[]).map(u=>`${escHtml(u.name||u.k)} ${Math.round((u.w||0)*100)}%`).join(' · ');
 
+  /* v61 — ถ้ามีคำสั่งที่ใช้กฎคนละชุดกับปัจจุบัน ผลตอบแทนที่เห็นคือ "กฎผสม"
+     ต้องบอกให้ชัด ไม่งั้นจะเข้าใจผิดว่าตัวเลขนี้คือผลของกฎปัจจุบันล้วน ๆ */
+  const mixed = (S.trades||[]).filter(t=>t.book==='bot' && t.rules!==S.rules).length;
+  const mixedWarn = (S.rules && mixed) ? `<div style="background:var(--bg3);border:1px solid ${IA_WARN}55;
+      border-radius:10px;padding:11px 15px;font-size:11.5px;color:var(--muted2);line-height:1.8;margin-bottom:18px">
+      <strong style="color:${IA_WARN}">${mixed} คำสั่งใช้กฎคนละชุดกับปัจจุบัน (${escHtml(S.rules)})</strong> —
+      ผลตอบแทนข้างล่างจึงเป็นผลของกฎผสม ถ้าอยากวัดกฎปัจจุบันล้วน ๆ ให้กด
+      <em>Actions → Update market data → Run workflow</em> แล้วติ๊ก <code>reset_bot</code></div>` : '';
+
   el.innerHTML = `
     ${warn}
+    ${mixedWarn}
     <div class="sg" style="margin-bottom:14px">
       <div class="sc"><div class="sc-lbl">บอท (ตามสัญญาณ)</div>
         <div class="sc-val" style="font-size:22px;color:${(bot.ret||0)>=0?IA_GAIN:IA_LOSS}">${pc(bot.ret)}</div>
@@ -6911,10 +6980,10 @@ function buildAnalystCtx(){
   const insCV=(insPolicies||[]).reduce((s,pl)=>s+(pl.surrender||0),0);
   const netWorth=sb.cash-sb.liabilities+totalVal+insCV;
 
-  // เงินเข้าพอร์ตต่อเดือน = เฉลี่ยจากที่เก็บได้จริง 6 เดือนล่าสุด
-  const rec=months.slice(-6);
-  const monthlyContrib=rec.length
-    ? Math.max(0, rec.reduce((s,x)=>s-(Number(x.savings)||0)+Math.max(0,x.net),0)/rec.length) : 0;   // v54 — ไม่ใช้ Math.abs
+  // v62 — เงินเข้าความมั่งคั่งต่อเดือน: monthlyWealthContrib() ตัวเดียวกับหน้าเป้าหมาย
+  // เดิม: 6 เดือนของ (ยอดโอนไปลงทุน + ส่วนเกินเฉพาะเดือนที่บวก) — เดือนที่ใช้เกินรายได้ถูกปัดเป็น 0
+  const _wc=monthlyWealthContrib(months);
+  const monthlyContrib=Math.max(0,_wc.avg);
 
   let illiquidPct=0;
   try{
@@ -6934,7 +7003,7 @@ function buildAnalystCtx(){
     // ค่าจริงอยู่ในตัวแปร global totalFee ที่ gsParseAssetTracker คำนวณไว้
     totalFee: Math.round(Number(totalFee)||0),
     fee: feeStats(tracker),                  // v55 — ให้ Analyst ใช้สูตรเดียวกับทุกหน้า
-    expectedReturn:gcfg.expectedReturn||7,
+    expectedReturn:gcfg.expectedReturn ?? 7,   // v61 — ?? ไม่ใช่ || (0% ต้องเป็น 0)
     usdthb:mdNum('USDTHB'), vix:mdNum('VIX'), cpi:mdNum('TH_CPI'),
     // ปีของข้อมูล CPI — pipeline ส่ง observation date เป็นสิ้นปีของข้อมูลจริง
     // ไม่ใช่วันที่ดึง จึงใช้บอกอายุที่แท้จริงให้ผู้อ่านได้
@@ -6948,10 +7017,13 @@ function buildAnalystCtx(){
     investGap:Math.max(0, sb.cash-(ef?ef.target6:0)),
     liabilities:sb.liabilities,
     monthlyInterest:di?di.monthlyInterest:0,
-    topEffApr:(di&&di.rows.length)?Math.max(0,...di.rows.map(r=>r.effApr)):null,
+    // v62 — เทียบโปะหนี้ vs ลงทุน เฉพาะบัญชีที่ใส่ดอกเบี้ยแล้ว · บัญชีที่ยังไม่ใส่ แจ้งแยก (ห้ามถือเป็น 0%)
+    topEffApr:(di&&di.rows.some(r=>r.apr>0))?Math.max(0,...di.rows.filter(r=>r.apr>0).map(r=>r.effApr)):null,
+    aprMissing: di ? di.rows.filter(r=>!(r.apr>0)).map(r=>r.name) : [],
     payoffMonths:plan?plan.months:null, payoffInterest:plan?plan.totalInterest:0,
     reconVerified, debtAccounts,
-    netWorth, goal:gcfg.final, monthlyContrib,
+    netWorth, goal:gcfg.final, monthlyContrib, contribMonths:_wc.n,
+    investedShare: netWorth>0 ? totalVal/netWorth : 0,   // v62 — ให้ FIRE ฉายภาพสูตรเดียวกับหน้าเป้าหมาย
     safeWithdraw:Math.max(0,netWorth)*0.04/12,
   };
 }
@@ -7000,11 +7072,14 @@ function renderAnalystDesk(){
 // การ์ด "ลงทุนอยู่ที่ไหนบ้าง" มีชื่อ platform ยาว + ยอดเงิน ต้องการ ~230px
 // พอบีบเป็น 2 คอลัมน์บนจอ 390px เหลือ 175px → ตัวเลขขาด ชื่อถูกตัด
 // ตอนนี้คิดจากความกว้างจริงที่มี หารด้วยความกว้างขั้นต่ำของการ์ดแต่ละชนิด
-function capCols(n, minW){
+function capCols(n, minW, gap){
   minW = minW || 150;
+  gap  = gap == null ? 12 : gap;                      // v62 — ช่องว่างระหว่างการ์ด (gap ของ grid)
   const pad  = window.innerWidth <= 768 ? 28 : 48;   // padding ซ้าย+ขวาของ .page
   const avail = Math.min(window.innerWidth, 1200) - pad;
-  const fit   = Math.max(1, Math.floor(avail / minW));
+  /* v62 — เดิม floor(avail/minW) ไม่นับ gap: จอ 390px ได้ 3 คอลัมน์ × 120px แต่ gap 2×12px
+     ทำให้เนื้อที่จริงเหลือ ~113px/การ์ด → การ์ดความคุ้มครอง 8 ประเภท (ข้อมูลจริง) ล้นขอบขวา ~15px */
+  const fit   = Math.max(1, Math.floor((avail + gap) / (minW + gap)));
   return Math.max(1, Math.min(n, fit));
 }
 // หมุนจอ = ความกว้างเปลี่ยน = จำนวนคอลัมน์ที่คำนวณไว้ไม่ตรงแล้ว ต้องวาดใหม่
@@ -7443,6 +7518,40 @@ const INS_COV_META={
   'Theft':           {icon:'🔒', label:'Theft',          color:'#a0c4ff'},
   'Other':           {icon:'📄', label:'Other',          color:'#9090c0'},
 };
+/* v61 — ชื่อ Coverage_Type ในชีตไม่จำเป็นต้องตรงตัวพิมพ์/ขีดล่างกับคีย์ข้างบนเป๊ะ
+   อาการเดิม: ใส่ "IPD" · "Room" · "Accident Death" · "OPD Accident" แล้วได้การ์ด
+   "📄 OTHER" 4 ใบหน้าตาเหมือนกัน ชื่อจริงหายหมด แยกไม่ออกว่าใบไหนคืออะไร
+   แก้สองชั้น:
+     1) รู้จักชื่อพ้องที่ชัดเจน (อังกฤษ/ไทย ไม่สนตัวพิมพ์ เว้นวรรค ขีด)
+     2) ชื่อที่ไม่รู้จัก → ใช้ชื่อจริงจากชีตเป็นป้าย แทนที่จะกลายเป็น "Other"
+   จงใจ "ไม่" จับ Room/ค่าห้อง เข้า Medical_IPD — หน่วยต่างกัน (ต่อวัน vs ต่อปี)
+   ถ้ารวมกลุ่มกัน ยอดคุ้มครองจะถูกบวกข้ามหน่วย = ตัวเลขที่ไม่มีความหมาย */
+const INS_COV_ALIAS = (()=>{
+  const m = {
+    Life:            ['life','death','ชีวิต','ประกันชีวิต','เสียชีวิต'],
+    Early_CI:        ['earlyci','ciearly','โรคร้ายแรงระยะเริ่มต้น'],
+    Severe_CI:       ['severeci','ci','criticalillness','โรคร้ายแรง'],
+    Accident:        ['accident','accidentdeath','pa','personalaccident','อุบัติเหตุ','เสียชีวิตจากอุบัติเหตุ'],
+    Accident_Medical:['accidentmedical','accidentmed','opdaccident','accidentopd','ค่ารักษาอุบัติเหตุ','รักษาอุบัติเหตุ'],
+    Medical_IPD:     ['medicalipd','ipd','inpatient','ผู้ป่วยใน','ค่ารักษาผู้ป่วยใน'],
+    Hospital_Cash:   ['hospitalcash','hb','hospitalbenefit','ชดเชยรายวัน','ค่าชดเชยรายวัน'],
+    OPD:             ['opd','outpatient','ผู้ป่วยนอก'],
+    Theft:           ['theft','โจรกรรม'],
+    Other:           ['other','อื่นๆ','อื่น'],
+  };
+  const out = {};
+  Object.entries(m).forEach(([k, arr])=>arr.forEach(a=>{ out[a] = k; }));
+  return out;
+})();
+function insCovNorm(v){ return String(v==null?'':v).toLowerCase().replace(/[\s_\-.()\/]+/g,''); }
+function insCovKey(raw){
+  const t = String(raw==null?'':raw).trim();
+  if(INS_COV_META[t]) return t;
+  return INS_COV_ALIAS[insCovNorm(t)] || t || 'Other';
+}
+function insCovMeta(key){
+  return INS_COV_META[key] || { icon:'📄', label:String(key), color:INS_COV_META.Other.color };
+}
 const INS_UNIT_LABEL={
   'Lump Sum':'บาท','One-time Benefit':'บาท','Single Payment':'บาท',
   'Per Day':'บาท/วัน','Daily Payment':'บาท/วัน',
@@ -7529,10 +7638,11 @@ function renderInsurance(){
   // ── Coverage score cards — group by Coverage_Type ──
   const covByType={};
   insCoverage.forEach(c=>{
-    if(!covByType[c.covType])covByType[c.covType]={amount:0,target:0,unit:c.unit,items:[]};
-    covByType[c.covType].amount+=c.amount;
-    if(c.target>0)covByType[c.covType].target=c.target;
-    covByType[c.covType].items.push(c);
+    const k = insCovKey(c.covType);   // v61 — รวมชื่อพ้อง · ชื่อที่ไม่รู้จักคงชื่อจริงไว้
+    if(!covByType[k])covByType[k]={amount:0,target:0,unit:c.unit,items:[]};
+    covByType[k].amount+=c.amount;
+    if(c.target>0)covByType[k].target=c.target;
+    covByType[k].items.push(c);
   });
   const covTypes=Object.keys(covByType).sort((a,b)=>{
     const order=['Life','Early_CI','Severe_CI','Accident','Accident_Medical',
@@ -7554,7 +7664,7 @@ function renderInsurance(){
   covGrid.style.gridTemplateColumns=`repeat(${capCols(covCols,120)},1fr)`;
 
   document.getElementById('ins-cov-grid').innerHTML=covTypes.map(ct=>{
-    const meta=INS_COV_META[ct]||INS_COV_META['Other'];
+    const meta=insCovMeta(ct);        // v61 — ชื่อที่ไม่รู้จักใช้ชื่อจริง ไม่ใช่ "Other"
     const data=covByType[ct];
     const hasTarget=data.target>0;
     const pct=hasTarget&&data.target>0?clampPct(Math.round(data.amount/data.target*100)):0;
@@ -7701,7 +7811,7 @@ function insCloseDetail(){
 }
 
 function insRenderDetail(covType,data){
-  const meta=INS_COV_META[covType]||INS_COV_META['Other'];
+  const meta=insCovMeta(covType);
   const panel=document.getElementById('ins-detail-panel');
   panel.classList.add('show');
   document.getElementById('ins-detail-title-text').textContent=`${meta.icon} ${escHtml(meta.label)} — breakdown ตาม policy`;
