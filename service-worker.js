@@ -22,7 +22,7 @@
 // หน้านั้นถูกยุบเข้า index.html และลบออกจาก repo แล้ว ถ้ายังอยู่ในลิสต์
 // ทุกครั้งที่ install จะ log "ข้ามไฟล์ที่หาไม่เจอ" ซึ่งเป็น noise ที่จะกลบ
 // warning จริงในอนาคต (กลไกข้ามไฟล์หายทำงานถูกแล้ว — แต่ต้องไม่มีของหายตั้งแต่แรก)
-const CACHE_NAME = 'finance-os-v63';  // bump version so old cache is cleared on deploy
+const CACHE_NAME = 'finance-os-v64';  // bump version so old cache is cleared on deploy
 const BASE = '/personaltracker-dashboard';
 
 // App shell — files to pre-cache on install
@@ -42,7 +42,7 @@ const SHELL_FILES = [
 // CDN assets — cache on first use
 // Font URL must match the exact href used in <link> tags so cache hits work
 const CDN_ASSETS = [
-  'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
+  // v64 — ลบ xlsx.full.min.js: เส้นทางอัปโหลด Excel ถูกถอดใน v61 ไม่มีหน้าไหนโหลดไฟล์นี้แล้ว
   'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js',
   // Google Fonts: cache the CSS endpoint; actual font files are cached on first use below.
   // #1/#9 — MUST stay byte-identical to the href in both HTML files or the cache

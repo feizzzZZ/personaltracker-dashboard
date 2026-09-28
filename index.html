@@ -161,7 +161,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
   .sb-brand{padding:14px 16px 12px}
   .sb-item{padding:6px 10px;font-size:11.5px}
   .sb-section{padding:7px 8px 3px}
-  .sb-bottom .btn-pdf,.sb-bottom .sb-upload-btn{padding-top:7px;padding-bottom:7px}
+  .sb-bottom .btn-pdf{padding-top:7px;padding-bottom:7px}
 }
 @media (max-height:680px){
   .sb-status{display:none}
@@ -191,6 +191,52 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 .grp-tab:hover{color:var(--text)}
 .grp-tab.active{color:var(--white);border-bottom-color:var(--income);font-weight:600}
 .grp-tab:focus-visible{outline:2px solid var(--income);outline-offset:-2px}
+/* v64 — ขอบจางบอกว่ายังมีแท็บให้เลื่อนดู */
+.grp-tabs.more-r{-webkit-mask-image:linear-gradient(to right,#000 82%,transparent);mask-image:linear-gradient(to right,#000 82%,transparent)}
+.grp-tabs.more-l{-webkit-mask-image:linear-gradient(to left,#000 82%,transparent);mask-image:linear-gradient(to left,#000 82%,transparent)}
+.grp-tabs.more-l.more-r{-webkit-mask-image:linear-gradient(to right,transparent,#000 14%,#000 86%,transparent);mask-image:linear-gradient(to right,transparent,#000 14%,#000 86%,transparent)}
+
+/* ══ v64 — ย่อ/ขยายเมนูด้านข้าง (เดสก์ท็อป/แท็บเล็ต) ══════════════════
+   โหมดย่อเหลือแต่ไอคอน 64px → พื้นที่เนื้อหาเพิ่ม ~136px (จอ 1280 การ์ด/ตารางไม่ต้องบีบ)
+   ชื่อเมนูเป็น text node ตรงๆ จึงซ่อนด้วย font-size:0 แล้วคืนขนาดให้ไอคอน */
+.sb-brand{position:relative}
+.sb-collapse{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));right:10px;width:26px;height:26px;
+  border-radius:7px;border:1px solid var(--border2);background:var(--bg3);color:var(--muted2);
+  font:inherit;font-size:14px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.sb-collapse:hover{color:var(--text);border-color:var(--muted)}
+.sb-collapse:focus-visible{outline:2px solid var(--income);outline-offset:1px}
+.sidebar,.main-content{transition:width .18s ease,margin-left .18s ease,transform .2s}
+@media(min-width:769px){
+  body.sb-mini{--sidebar-w:64px}
+  .sb-mini .sb-brand{padding-left:8px;padding-right:8px;min-height:64px}
+  .sb-mini .sb-logo,.sb-mini .sb-sub,.sb-mini .sb-status,.sb-mini .sb-section,.sb-mini .sb-lbl{display:none}
+  .sb-mini .sb-collapse{left:50%;right:auto;transform:translateX(-50%)}
+  .sb-mini .sb-item{font-size:0;justify-content:center;padding:10px 0;position:relative;gap:0}
+  .sb-mini .sb-item .sb-icon{font-size:18px;width:auto}
+  .sb-mini .sb-item .sb-badge,.sb-mini .sb-item .bgt-badge{position:absolute;top:2px;right:4px;margin:0;
+    font-size:8px!important;padding:0 4px;line-height:14px;min-width:0}
+  .sb-mini .sb-bottom{padding:10px 6px}
+  .sb-mini .sb-bottom>div{flex-direction:column}
+  .sb-mini .sb-bottom button{width:100%;justify-content:center}
+}
+@media(max-width:768px){ .sb-collapse{display:none} }
+@media(prefers-reduced-motion:reduce){ .sidebar,.main-content{transition:none} }
+
+/* ══ v64 — รายการ "ต้องลงมือ" บนมือถือ: เห็น 2 เรื่องแรก ที่เหลือกดดู ══ */
+.act-toggle{display:none;margin-top:8px;width:100%;background:transparent;border:1px dashed var(--border2);
+  color:var(--muted2);border-radius:8px;padding:7px 0;font:inherit;font-size:11.5px;cursor:pointer}
+@media(max-width:768px){
+  .act-box:not(.expanded) .act-more{display:none!important}
+  .act-toggle{display:block}
+}
+
+/* ══ v64 — มือถือ: เลื่อนลงซ่อนแถบเมนูล่าง เลื่อนขึ้นแสดงกลับ (ได้พื้นที่อ่านเพิ่ม) ══ */
+@media(max-width:768px){
+  .bnav{transition:transform .22s ease}
+  body.nav-hide .bnav{transform:translateY(110%)}
+  body.nav-hide .tx-fab{transform:translateY(64px)}
+}
+@media(prefers-reduced-motion:reduce){ .bnav{transition:none} }
 .ov-goal-line{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:12px 16px;margin:14px 0;font-size:12.5px;color:var(--muted2);cursor:pointer;line-height:1.7}
 .ov-goal-line strong{color:var(--white)}
 .ov-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
@@ -269,32 +315,44 @@ select.month-display{text-align-last:center;outline:none}
    ย้ายมาเป็น class เพื่อให้ breakpoint ทำงาน  */
 .wealth-strip{
   display:grid;
-  grid-template-columns:1fr 1px 1fr 1px 1fr 1px 1fr 1px 1.25fr;
-  gap:0;background:var(--bg3);border:1px solid var(--border2);
-  border-radius:14px;overflow:hidden;margin-bottom:14px;
+  grid-template-columns:1fr 1fr;
+  gap:1px;background:var(--border);border:1px solid var(--border2);
+  border-radius:14px;overflow:hidden;
 }
 .wealth-strip>div{min-width:0}                 /* ให้ตัวเลขยาวหุบได้ ไม่ดันกริด */
-.ws-div{background:var(--border)}
-.wealth-strip .ws-val{overflow-wrap:anywhere}
+.wealth-strip>div:not(.ws-div){background:var(--bg3)}
+.ws-div{display:none;background:var(--border)}
+.wealth-strip>div:last-child{grid-column:1 / -1}   /* Net Worth เต็มแถว */
+.wealth-strip .ws-val{white-space:nowrap;font-size:clamp(15px,5cqw,20px)!important;letter-spacing:-.01em}
 
-/* แท็บเล็ต — 3 คอลัมน์ ซ่อนเส้นคั่นแล้วใช้เส้นขอบแทน */
-@media(max-width:1100px){
-  .wealth-strip{grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border)}
-  .wealth-strip>div:not(.ws-div){background:var(--bg3)}
-  .ws-div{display:none}
-  .wealth-strip>div:last-child{grid-column:1 / -1}   /* Net Worth เต็มแถว */
+/* v64 — เลือกจำนวนคอลัมน์จาก "ความกว้างของกล่องเอง" (container query) ไม่ใช่ความกว้างจอ
+   เดิม media query วัดทั้งจอ แต่ sidebar กินไป 200px (หรือ 64px ตอนย่อเมนู) → จอ 1280/1600/1920
+   การ์ดแคบเกินจน "฿3,201,309" ถูกตัดกลางตัวเลขเป็น 2 บรรทัด
+   ตัวเลขใหญ่ต้องการคอลัมน์ ≥ ~210px: 5 คอลัมน์ต้องการกล่อง ≥1100 · 4 คอลัมน์ ≥860 · ต่ำกว่านั้น 2 */
+.ws-wrap{container-type:inline-size;margin-bottom:14px}
+@container (min-width:640px){
+  .wealth-strip .ws-val{font-size:clamp(20px,3.6cqw,28px)!important;letter-spacing:-.02em}
 }
-/* มือถือ — 2 คอลัมน์ ลดขนาดตัวเลขและ padding */
-@media(max-width:768px){
-  .wealth-strip{grid-template-columns:1fr 1fr}
-  .wealth-strip>div:not(.ws-div){padding:14px 14px!important}
-  .wealth-strip .ws-val{font-size:clamp(15px,4.6vw,20px)!important;letter-spacing:-.01em}
-  .wealth-strip .ws-lbl{font-size:9px!important}
+@container (min-width:860px){
+  .wealth-strip{grid-template-columns:repeat(4,1fr)}
+  .wealth-strip .ws-val{font-size:clamp(20px,2.4cqw,28px)!important}
+}
+@container (min-width:1100px){
+  .wealth-strip{grid-template-columns:1fr 1px 1fr 1px 1fr 1px 1fr 1px 1.25fr;gap:0;background:var(--bg3)}
+  .ws-div{display:block}
+  .wealth-strip>div:last-child{grid-column:auto}
+  .wealth-strip .ws-val{font-size:clamp(20px,2.1cqw,28px)!important}
+  .wealth-strip>div:last-child .ws-val{font-size:clamp(22px,2.5cqw,32px)!important}
 }
 /* จอเล็กมาก (SE) — เรียงเดี่ยว ให้ตัวเลขอ่านได้เต็มบรรทัด */
-@media(max-width:380px){
+@container (max-width:330px){
   .wealth-strip{grid-template-columns:1fr}
-  .wealth-strip>div:last-child{grid-column:auto}
+  .wealth-strip .ws-val{font-size:20px!important}
+}
+/* มือถือ — ลด padding และขนาดป้าย */
+@media(max-width:768px){
+  .wealth-strip>div:not(.ws-div){padding:14px 14px!important}
+  .wealth-strip .ws-lbl{font-size:9px!important}
 }
 
 /* ── Health items ── */
@@ -430,6 +488,12 @@ select.month-display{text-align-last:center;outline:none}
 .yt td:first-child{text-align:left;color:var(--white);font-family:var(--f-sans);font-weight:600}
 .yt tr:last-child td{border-bottom:none}
 .yt tr:hover td{background:rgba(255,255,255,.02)}
+.yt-wrap{border-radius:12px}
+.yt th,.yt td{white-space:nowrap}
+@media(max-width:600px){
+  .yt th,.yt td{padding:8px 9px}
+  .yt th:first-child,.yt td:first-child{position:sticky;left:0;z-index:1;background:var(--bg3)}
+}
 .savrate-bar{width:100%;height:3px;background:var(--border);border-radius:2px;margin-top:3px;overflow:hidden}
 /* v61 — คลาสเหล่านี้ถูกสร้างใน JS แต่ไม่เคยมีกฎ CSS
    อาการ: แถบสัดส่วนใต้ Net Worth มองไม่เห็น (span ว่างไม่มีความสูง)
@@ -1005,6 +1069,9 @@ html.standalone .a2hs{display:none}
   <!-- Sidebar -->
   <div class="sidebar" id="sidebar">
     <div class="sb-brand">
+      <!-- v64 — ย่อ/ขยายเมนู (เดสก์ท็อป) · จำค่าไว้ในเครื่อง -->
+      <button type="button" class="sb-collapse" id="sb-collapse" onclick="toggleSidebarMini()"
+        aria-label="ย่อเมนู" title="ย่อเมนู">«</button>
       <div class="sb-logo">FINANCE OS</div>
       <div class="sb-sub">Personal dashboard</div>
       <div class="sb-status"><span class="dot-live"></span><span id="sb-status">กำลังโหลด...</span></div>
@@ -1062,20 +1129,20 @@ html.standalone .a2hs{display:none}
                  color:var(--gain);padding:8px 0;border-radius:8px;font-size:11px;
                  cursor:pointer;font-family:inherit;font-weight:600">
           <span class="gs-dot" id="gs-dot" style="background:var(--muted)"></span>
-          <span id="gs-btn-text">Connect Sheets</span>
+          <span id="gs-btn-text" class="sb-lbl">Connect Sheets</span>
         </button>
         <button onclick="gsOpenModal()" title="ตั้งค่า Client ID / Spreadsheet ID"
           style="background:var(--bg4);border:1px solid var(--border2);color:var(--muted2);
                  padding:8px 10px;border-radius:8px;font-size:12px;cursor:pointer;font-family:inherit">⚙</button>
       </div>
       <button class="btn-pdf" onclick="generateMonthlyPDF()" style="width:100%;margin-bottom:6px;justify-content:center">
-        ⬇ Export PDF
+        ⬇<span class="sb-lbl"> Export PDF</span>
       </button>
       <div style="display:flex;gap:6px;margin-top:6px">
         <button onclick="exportSettings()" title="สำรองการตั้งค่า + ประวัติ TWR เป็นไฟล์ JSON"
-          style="flex:1;background:rgba(0,212,160,.08);border:1px solid rgba(0,212,160,.3);color:var(--gain);padding:7px 0;border-radius:8px;font-size:11px;cursor:pointer;font-family:inherit">💾 Backup</button>
+          style="flex:1;background:rgba(0,212,160,.08);border:1px solid rgba(0,212,160,.3);color:var(--gain);padding:7px 0;border-radius:8px;font-size:11px;cursor:pointer;font-family:inherit">💾<span class="sb-lbl"> Backup</span></button>
         <button onclick="document.getElementById('settings-import').click()" title="กู้คืนจากไฟล์ backup"
-          style="flex:1;background:rgba(124,111,236,.08);border:1px solid rgba(124,111,236,.3);color:var(--savings);padding:7px 0;border-radius:8px;font-size:11px;cursor:pointer;font-family:inherit">📥 Restore</button>
+          style="flex:1;background:rgba(124,111,236,.08);border:1px solid rgba(124,111,236,.3);color:var(--savings);padding:7px 0;border-radius:8px;font-size:11px;cursor:pointer;font-family:inherit">📥<span class="sb-lbl"> Restore</span></button>
         <input type="file" id="settings-import" accept=".json" style="display:none" onchange="importSettings(this)">
       </div>
     </div>
@@ -1094,7 +1161,7 @@ html.standalone .a2hs{display:none}
 
       <!-- Total Wealth 4-part section -->
       <div class="sl" style="margin-bottom:12px">Total Wealth</div>
-      <div class="wealth-strip">
+      <div class="ws-wrap"><div class="wealth-strip">
         <!-- Cash -->
         <div style="padding:20px 24px">
           <div class="ws-lbl" style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2);margin-bottom:8px;display:flex;align-items:center;gap:6px">
@@ -1139,7 +1206,7 @@ html.standalone .a2hs{display:none}
           <div class="ws-val" style="font-family:var(--f-sans);font-size:clamp(22px,3vw,32px);font-weight:700;color:var(--white);letter-spacing:-.02em" id="ov-networth">฿0</div>
           <div style="font-size:11px;color:var(--muted2);margin-top:6px">Cash − Debt + Portfolio + Ins CV</div>
         </div>
-      </div>
+      </div></div><!-- /.ws-wrap -->
 
       <!-- v44: Action needed — ทุกอย่างที่ต้องลงมือ รวมไว้บนสุด -->
       <div id="ov-action" style="display:none;margin:14px 0"></div>
@@ -1243,7 +1310,8 @@ html.standalone .a2hs{display:none}
       </div>
       <!-- All-years table (always visible) -->
       <div class="sl sl-mt">All years overview</div>
-      <div class="cc" style="margin-bottom:18px;padding:0;overflow:hidden">
+      <!-- v64 — overflow:hidden ตัดคอลัมน์ หนี้/Net/Save rate ทิ้งบนจอ 390px → เลื่อนแนวนอนได้ + ปักคอลัมน์ปี -->
+      <div class="cc tw yt-wrap" style="margin-bottom:18px;padding:0">
         <table class="yt"><thead><tr>
           <th>Year</th><th>Income</th><th>Expense</th><th>Savings</th><th title="ผลรวมแถวประเภท Debt = ยอดรูดบัตร + ค่างวด/ใช้หนี้จากบัญชีธนาคาร · ชี้ที่ตัวเลขเพื่อดูแยก">หนี้ &amp; บัตร</th><th>Net</th><th>Save rate</th>
         </tr></thead><tbody id="yr-body"></tbody></table>
@@ -1264,8 +1332,12 @@ html.standalone .a2hs{display:none}
 
       <!-- All Cash total bar -->
       <div class="bank-total" style="margin-bottom:16px">
-        <span style="font-size:12px;color:var(--white);opacity:.75;letter-spacing:.06em;font-weight:600">ALL CASH BALANCE</span>
-        <span style="font-size:22px;font-weight:500;color:var(--income)" id="acc-total">฿0</span>
+        <!-- v64 — เดิมป้าย "ALL CASH BALANCE" แต่ตัวเลขคือยอดสุทธิที่หักหนี้แล้ว ไม่ตรงกับ "Cash" ใน Overview -->
+        <span style="display:flex;flex-direction:column;gap:3px;min-width:0">
+          <span style="font-size:12px;color:var(--white);opacity:.75;letter-spacing:.06em;font-weight:600">NET CASH · ยอดรวมทุกบัญชี</span>
+          <span style="font-size:11px;color:var(--muted2)" id="acc-total-sub"></span>
+        </span>
+        <span style="font-size:22px;font-weight:500;color:var(--income);white-space:nowrap" id="acc-total">฿0</span>
       </div>
 
       <!-- Row 1: Donut + Bank cards -->
@@ -1354,8 +1426,7 @@ html.standalone .a2hs{display:none}
         <div class="sc"><div class="sc-lbl">⚓ ตัวถ่วง (XIRR ต่ำสุด)</div><div id="perf-bottom" style="font-size:12px;line-height:2;margin-top:6px">—</div></div>
       </div>
       <!-- v48 — เอาการ์ด "คุณ vs ตลาด" (benchmark S&P 500) ออกตามที่ผู้ใช้ขอ
-           benchmarkXIRR() ยังอยู่ใน shared.js เผื่อจะเรียกกลับมาใช้ภายหลัง
-           แต่ไม่มีอะไรใน UI เรียกแล้ว — ตัดทั้ง markup และ render block -->
+           v64 — benchmarkXIRR()/priceAt() ใน shared.js ถูกลบแล้วเพราะไม่มีที่ไหนเรียก (ดู git history) -->
 
       <div class="sl sl-mt">Where are your assets</div>
       <div class="plat-grid" id="pf-plat-grid" style="margin-bottom:18px"></div>
@@ -2082,7 +2153,14 @@ const parseDate=v=>{if(!v)return null;if(v instanceof Date)return v;if(typeof v=
    mutation (e.g. stacked) still cannot leak into other charts.
    NOTE: structuredClone() is NOT a valid alternative - it throws
    DataCloneError when the object contains functions. */
-const axisTick = v => Math.abs(v) >= 1000 ? (v/1000).toFixed(0)+'k' : v;
+// v64 — ปัดเป็นพันเต็มทำให้แกนที่ step 200 ขึ้น "2k 2k 1k 1k 1k" (ป้ายซ้ำ อ่านค่าไม่ได้)
+//        ต่ำกว่า 10k ให้ทศนิยม 1 ตำแหน่ง แล้วตัด .0 ทิ้ง · ล้านขึ้นไปใช้ M
+const axisTick = v => {
+  const a=Math.abs(v);
+  if(a>=1e6) return +(v/1e6).toFixed(a>=1e7?0:1)+'M';
+  if(a>=1000) return +(v/1000).toFixed(a>=1e4?0:1)+'k';
+  return v;
+};
 
 /* ── ข้อ 1: หน่วยของกราฟ ────────────────────────────────────────────────
    REGRESSION ที่ผมทำเองตอนแก้ #3: ตอนย้าย tooltip มาใช้ fmt() ร่วมกัน
@@ -2250,7 +2328,10 @@ function renderOverview(){
   const _cfg=getGoalCfg(), _next=nextMilestone(netWorth);
   const _passed=_cfg.milestones.filter(m=>netWorth>=m).pop();
   const _prev=_passed||0;                                  // ฐานของช่วงที่กำลังวิ่ง
-  const _legPct=clampPct(_next>_prev?(netWorth-_prev)/(_next-_prev)*100:0);
+  // v64 — ผ่านเป้าปลายทางแล้ว: _next=_prev=GOAL → เดิมได้ 0% + "ต่อไป ฿3M · ขาดอีก ฿0"
+  //        ขณะที่ Overview บอก 100% · ต้องถือว่าช่วงสุดท้ายเต็มแล้ว
+  const _reached=GOAL>0 && netWorth>=GOAL;
+  const _legPct=_reached?100:clampPct(_next>_prev?(netWorth-_prev)/(_next-_prev)*100:0);
 
   // ตัวเลขเด่น = ความคืบหน้าของ "ช่วงที่กำลังวิ่ง" ไม่ใช่ของเป้าปลายทาง
   document.getElementById('ov-3m-pct').textContent=_legPct.toFixed(0)+'%';
@@ -2261,18 +2342,25 @@ function renderOverview(){
 
   const _tEl=document.getElementById('ov-goal-title'), _sEl=document.getElementById('ov-goal-sub');
   // หัวข้อพูดถึงหมุดถัดไป เพราะนั่นคือสิ่งที่กำลังทำ
-  if(_tEl) _tEl.textContent=`ต่อไป: ${fmtC(_next)}`;
-  if(_sEl) _sEl.innerHTML=`ขาดอีก <strong style="color:var(--text)">${fmt(Math.max(_next-netWorth,0))}</strong>`+
-    ` จะถึงหมุด ${fmtC(_next)}`;
+  if(_tEl) _tEl.textContent=_reached?`ถึงเป้าปลายทาง ${fmtC(GOAL)} แล้ว`:`ต่อไป: ${fmtC(_next)}`;
+  if(_sEl) _sEl.innerHTML=_reached
+    ? `เกินเป้ามา <strong style="color:var(--text)">${fmt(netWorth-GOAL)}</strong> · ตั้งเป้าใหม่ได้ในหน้าเป้าหมาย`
+    : `ขาดอีก <strong style="color:var(--text)">${fmt(Math.max(_next-netWorth,0))}</strong>`+
+      ` จะถึงหมุด ${fmtC(_next)}`;
 
   // v56 — Overview แสดงเป้าบรรทัดเดียว (การ์ดเต็มย้ายไปหน้าเป้าหมาย)
   const _gl=document.getElementById('ov-goal-line');
-  if(_gl) _gl.innerHTML=`🎯 ต่อไป <strong>${fmtC(_next)}</strong> · ขาดอีก ${fmt(Math.max(_next-netWorth,0))}`+
-    ` · ปลายทาง ${fmtC(GOAL)} <strong>${pct.toFixed(1)}%</strong> <span style="float:right">เป้าหมาย ›</span>`;
+  if(_gl) _gl.innerHTML=(_reached
+      ? `🎉 ถึงเป้าปลายทาง <strong>${fmtC(GOAL)}</strong> แล้ว · เกินมา ${fmt(netWorth-GOAL)}`
+      : `🎯 ต่อไป <strong>${fmtC(_next)}</strong> · ขาดอีก ${fmt(Math.max(_next-netWorth,0))}`+
+        ` · ปลายทาง ${fmtC(GOAL)} <strong>${pct.toFixed(1)}%</strong>`)+
+    ` <span style="float:right">เป้าหมาย ›</span>`;
 
   // บรรทัดล่างพูดถึงเป้าปลายทางแยกกันคนละบรรทัด ไม่ปนกับหมุด
   const remEl=document.getElementById('ov-3m-remain');
-  remEl.innerHTML=_passed
+  remEl.innerHTML=_reached
+    ? `<span style="color:var(--muted)">Net Worth ${fmtC(netWorth)} · ${pct.toFixed(0)}% ของเป้าปลายทาง</span>`
+    : _passed
     ? `ผ่าน ${fmtC(_passed)} แล้ว · <span style="color:var(--muted)">ปลายทาง ${fmtC(GOAL)} เหลือ ${fmtC(remain)}</span>`
     : `<span style="color:var(--muted)">ปลายทาง ${fmtC(GOAL)} เหลือ ${fmtC(remain)} (${pct.toFixed(1)}%)</span>`;
 
@@ -2750,7 +2838,7 @@ function renderActionNeeded(ef){
     const rc = computeReconciliation(bankBals, reconMap);
     if(!rc.checkedCount) items.push({lv:'warn',
       t:'ยอดบัญชียังไม่เคย verify กับธนาคาร',
-      d:`${rc.totalCount} บัญชี · ยอดที่เห็นคือผลรวมธุรกรรมที่กรอกมือ 12,000+ แถว — สร้างชีต Reconcile เพื่อจับรายการตกหล่น`,
+      d:`${rc.totalCount} บัญชี · ยอดที่เห็นคือผลรวมธุรกรรมที่กรอกมือ ${(txRows||[]).length.toLocaleString(LOC)} แถว — สร้างชีต Reconcile เพื่อจับรายการตกหล่น`,
       go:'accounts'});
     else if(rc.unmatched) items.push({lv:'alert',
       t:`ยอดไม่ตรง ${rc.unmatched} บัญชี — ต่างรวม ${fmt(rc.totalDrift)}`,
@@ -2861,13 +2949,16 @@ function renderActionNeeded(ef){
   const C = { alert:{b:'rgba(255,69,58,.4)',g:'rgba(255,69,58,.07)',c:'var(--loss)',i:'●'},
               warn: {b:'rgba(255,149,0,.4)', g:'rgba(255,149,0,.07)', c:'var(--debt)',i:'▲'} };
   const worst = items.some(i=>i.lv==='alert') ? 'alert' : 'warn';
+  // v64 — มือถือ: เรื่องสีแดงขึ้นก่อน แล้วย่อให้เห็น 2 เรื่องแรก ที่เหลือกด "ดูอีก" (จอเล็กเดิมเต็มไปทั้งหน้าจอ)
+  items.sort((a,b)=>(a.lv==='alert'?0:1)-(b.lv==='alert'?0:1));
+  const ACT_SHOW = 2, nMore = Math.max(0, items.length-ACT_SHOW);
   el.style.display='block';
   el.innerHTML = `
-    <div style="background:${C[worst].g};border:1px solid ${C[worst].b};border-radius:12px;padding:14px 16px">
+    <div class="act-box" style="background:${C[worst].g};border:1px solid ${C[worst].b};border-radius:12px;padding:14px 16px">
       <div style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:${C[worst].c};margin-bottom:10px">
         ⚡ ต้องลงมือ · ${items.length} เรื่อง</div>
-      ${items.map(it=>`
-        <div ${it.go?`onclick="switchPage('${it.go}')"`:''}
+      ${items.map((it,i)=>`
+        <div ${it.go?`onclick="switchPage('${it.go}')"`:''} class="act-it${i>=ACT_SHOW?' act-more':''}"
              style="display:flex;gap:9px;padding:7px 0;border-top:1px solid var(--border);align-items:flex-start${it.go?';cursor:pointer':''}">
           <span style="color:${C[it.lv].c};font-size:9px;line-height:1.7;flex-shrink:0">${C[it.lv].i}</span>
           <div style="min-width:0">
@@ -2876,6 +2967,9 @@ function renderActionNeeded(ef){
           </div>
           ${it.go?'<span style="margin-left:auto;color:var(--muted2);font-size:13px;flex-shrink:0">›</span>':''}
         </div>`).join('')}
+      ${nMore?`<button type="button" class="act-toggle" aria-expanded="false"
+        onclick="const b=this.closest('.act-box');const x=b.classList.toggle('expanded');this.setAttribute('aria-expanded',x);
+                 this.textContent=x?'ย่อ ▴':'ดูอีก ${nMore} เรื่อง ▾'">ดูอีก ${nMore} เรื่อง ▾</button>`:''}
     </div>`;
 }
 
@@ -2989,7 +3083,11 @@ function renderTxTable(rows){
   body.innerHTML=total===0?`<tr><td colspan="5" class="nd">No transactions</td></tr>`:
     page.map(r=>{
       const ac=r.type==='Income'?'pp':r.type==='Savings'?'pz':r.type==='Debt'?'pz':'pn';
-      const at=r.amount>=0?'+฿'+Math.abs(r.amount).toLocaleString(LOC):'฿'+Math.abs(r.amount).toLocaleString(LOC);
+      // v64 — แถวที่ย้ายเงินระหว่างบัญชี (จ่ายบัตร / ค่างวดที่ลงคอลัมน์ Loan) ยอดสุทธิเป็น 0
+      //        เดิมขึ้น "+฿0" ดูเหมือนรายการว่าง → แสดงยอดที่ย้ายจริงพร้อม ⇄
+      const _moved=Object.values(r.acct||{}).filter(v=>v>0).reduce((s,v)=>s+v,0);
+      const at=(r.amount===0&&_moved>0)?'⇄ ฿'+_moved.toLocaleString(LOC)
+        :r.amount>=0?'+฿'+Math.abs(r.amount).toLocaleString(LOC):'฿'+Math.abs(r.amount).toLocaleString(LOC);
       const TX_MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
       const fmtTxDate=ds=>{const[,m,d]=ds.split('-');return TX_MONTHS[+m-1]+'-'+d;};
       const ed=r.sheetRow?` class="tx-editable" onclick="txOpenForm(${r.sheetRow})" title="แตะเพื่อแก้ไข"`:'';
@@ -3192,6 +3290,10 @@ function renderAccounts(){
   // v48 — ยอดรวมต้องเป็นชุดเดียวกับที่ Overview/Debt ใช้ ไม่งั้นสองหน้าไม่ตรงกัน
   const total=effectiveBals().reduce((s,b)=>s+b.balance,0);
   document.getElementById('acc-total').textContent=fmt(total);
+  document.getElementById('acc-total').style.color=total<0?'var(--loss)':'var(--income)';
+  try{ const _sb=splitBalances(effectiveBals()); const _sub=document.getElementById('acc-total-sub');
+       if(_sub) _sub.textContent=_sb.liabilities>0
+         ? `เงินสด ${fmt(_sb.cash)} − หนี้ในบัญชี ${fmt(_sb.liabilities)}` : 'ไม่มีหนี้ค้างในบัญชี'; }catch(e){}
   try{ renderReconciliation(); }catch(e){ console.warn('[v44] recon:', e.message); }
   const active=bankBals.filter(b=>b.balance!==0);
   // Assign accent color + badge style by account type
@@ -3319,7 +3421,7 @@ function renderAccounts(){
   const ptColors=balData.map((v,i)=>i>0?(v>=balData[i-1]?'#00d4a0':'#ff4060'):'#00d4a0');
 
   if(charts.accTrend)charts.accTrend.destroy();
-  charts.accTrend=new Chart(document.getElementById('acc-trend-chart').getContext('2d'),{
+  charts.accTrend=_ctx('acc-trend-chart')&&new Chart(_ctx('acc-trend-chart'),{   // v64 — ไม่มี Chart.js/canvas ไม่ทำให้ทั้งหน้าพัง
     type:'line',
     data:{
       labels:chartLabels,
@@ -3352,7 +3454,7 @@ function renderAccounts(){
         x:{grid:{color:'rgba(30,30,53,.8)',lineWidth:.5},ticks:{color:'#6060a0',font:{family:CHART_FONT,size:10}}},
         y:{grid:{color:'rgba(30,30,53,.8)',lineWidth:.5},
            ticks:{color:'#6060a0',font:{family:CHART_FONT,size:9},
-             callback:v=>v>=1000?(v/1000).toFixed(0)+'k':v}}
+             callback:axisTick}}
       }
     }
   });
@@ -3486,7 +3588,7 @@ function exportSettings(){
   const blob = new Blob([JSON.stringify(payload,null,1)], {type:'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `finance-os-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.download = `finance-os-backup-${isoLocal(new Date())}.json`;   // v64 — วันที่ท้องถิ่น
   a.click(); URL.revokeObjectURL(a.href);
   const n = Object.keys(data).length;
   let logN = 0;
@@ -3584,7 +3686,9 @@ function logValueSnapshot(totalVal){
       .map(a=>a.ticker);
 
     const log = JSON.parse(localStorage.getItem('finOS_valueLog')||'[]');
-    const today = new Date().toISOString().slice(0,10);
+    // v64 — วันที่ท้องถิ่น (isoLocal) ไม่ใช่ UTC: เปิดแอปตี 0–7 โมงเวลาไทย เดิมได้วันที่ของเมื่อวาน
+    //        แล้วเขียนทับ snapshot ของเมื่อวานด้วยมูลค่าวันนี้ → TWR รายวันเพี้ยน
+    const today = isoLocal(new Date());
     const entry = {d:today, v:totalVal};
     /* ขาดหาย v48 #D — valueLog เก็บแค่มูลค่าพอร์ต ไม่เก็บ net worth
        ผลคือกราฟ "ความมั่งคั่งย้อนหลัง" วาดไม่ได้เลย ทั้งที่เป็นตัวเลขที่
@@ -3633,7 +3737,7 @@ const VLOG_PURGED_KEY = 'finOS_valueLogPurged_v44';
 //   ฟังก์ชันหาย  → BLOCK  (แอปคำนวณผิดแน่นอน — นี่คือสิ่งที่ guard มีไว้จับ)
 //   เลขไม่ตรง    → WARN   (แค่ลืม bump — log ไว้ ไม่รบกวนผู้ใช้)
 // ฟังก์ชันที่ต้องมีคือสัญญาจริงระหว่างสองไฟล์ ส่วนสตริงเวอร์ชันเป็นแค่ป้าย
-const EXPECTED_SHARED_BUILD = 'v63';
+const EXPECTED_SHARED_BUILD = 'v64';
 const REQUIRED_SHARED_FNS = [
   'resolvePrices', 'pipelinePricesTHB', 'parseReconcileRows',
   'computeReconciliation', 'splitBalances', 'debtVsInvest', 'buildDebtPlan',
@@ -4088,10 +4192,13 @@ function renderEngine(){
     el.innerHTML =
       _savLine+'<br>'+
       _invLine+'<br>'+
-      (isFinite(mNow)
+      // v64 — พอร์ตผ่านเป้าแล้ว monthsTo() คืน 0 → เดิมขึ้น "จะถึง ฿3,000,000 ใน 0 เดือน (0.0 ปี)"
+      (mNow===0
+        ? `🎯 มูลค่าพอร์ต ${fmt(pv)} <strong style="color:var(--gain)">ผ่านเป้า ${fmt(goalAmt)} แล้ว</strong> — ตั้งเป้าถัดไปได้ในหน้าเป้าหมาย<br>`
+        : isFinite(mNow)
         ? `🎯 ที่อัตราลงทุนปัจจุบัน (${fmt(monthlyNow)}/เดือน, ผลตอบแทน ${cfg.expectedReturn}%/ปี) จะถึง ${fmt(goalAmt)} ใน <strong>${mNow} เดือน (${(mNow/12).toFixed(1)} ปี)</strong><br>`
         : `🎯 ที่อัตราลงทุนปัจจุบันยังไปไม่ถึงเป้า<br>`)+
-      (isFinite(mDeploy) && saved>0
+      (mNow===0 ? '' : isFinite(mDeploy) && saved>0
         ? `🚀 ถ้าเอาเงินที่นอนอยู่ไปลงทุนด้วย (${fmt(monthlyIfDeploy)}/เดือน) จะถึงเป้าใน <strong style="color:var(--gain)">${mDeploy} เดือน (${(mDeploy/12).toFixed(1)} ปี)</strong> — <strong>เร็วขึ้น ${saved} เดือน</strong>`
         : `🚀 คุณกำลังลงทุนเต็มศักยภาพของเงินที่เก็บได้แล้ว — ก้าวถัดไปคือเพิ่มรายได้หรือลดรายจ่าย`)+
       `<br><span style="color:var(--muted2);font-size:11px">นับจาก <strong>เงินที่ลงทุนจริง</strong> ใน Asset_Tracker เท่านั้น (หน้า Overview ฉายภาพจาก net cashflow + savings ทั้งหมด จึงมองโลกในแง่ดีกว่า) · ฐานคำนวณ = มูลค่าพอร์ต ${fmt(pv)} ไม่รวมเงินสด<br>หมายเหตุ: กันเงินสำรองฉุกเฉิน 3-6 เดือนของรายจ่าย (${fmt(exp12/L12.length*6)}) ไว้ก่อนเสมอ — เงินที่ "นอนอยู่" ส่วนหนึ่งควรเป็นก้อนนี้</span>`;
@@ -5754,7 +5861,7 @@ function savePortfolioToStorage(){
       pnl:Math.round(totalPnl),pnlPct:totalCost>0?Math.round(totalPnl/totalCost*100):0,
       allocation:groupMap,topHoldings,
       cashBalance:effectiveSplit().cash,
-      lastUpdated:new Date().toISOString().slice(0,10)
+      lastUpdated:isoLocal(new Date())   // v64 — วันที่ท้องถิ่น
     };
     localStorage.setItem('finOS_portfolio',JSON.stringify(summary));
     console.log('[FinOS] Portfolio saved to localStorage:',Object.keys(groupMap));
@@ -5884,7 +5991,9 @@ function renderDebtComposition(liabAccounts){
     const rr=o.repayRate;
     const rrTxt = rr==null ? 'ยังไม่มียอดรูด'
       : `ชำระคืนแล้ว <strong style="color:${rr>=1?'var(--gain)':rr>=.9?'var(--debt)':'var(--loss)'}">${(rr*100).toFixed(0)}%</strong> ของยอดที่รูดทั้งหมด`;
-    const mTxt = o.mNet===0 ? 'เดือนนี้ยังไม่มีรายการ'
+    // v64 — เดิมเช็คแค่ mNet===0 → เดือนที่รูดแล้วจ่ายคืนเต็มพอดีขึ้น "ยังไม่มีรายการ"
+    const mTxt = (!o.mCharged && !o.mRepaid) ? 'เดือนนี้ยังไม่มีรายการ'
+      : o.mNet===0 ? `เดือนนี้ยอดไม่เปลี่ยน (รูด ${fmt(o.mCharged)} · จ่าย ${fmt(o.mRepaid)})`
       : o.mNet>0 ? `<strong style="color:var(--gain)">เดือนนี้หนี้ลดลง ${fmt(o.mNet)}</strong> (รูด ${fmt(o.mCharged)} · จ่าย ${fmt(o.mRepaid)})`
                  : `<strong style="color:var(--loss)">เดือนนี้หนี้เพิ่ม ${fmt(Math.abs(o.mNet))}</strong> (รูด ${fmt(o.mCharged)} · จ่าย ${fmt(o.mRepaid)})`;
 
@@ -7014,7 +7123,7 @@ function buildAnalystCtx(){
     // v62 — เทียบโปะหนี้ vs ลงทุน เฉพาะบัญชีที่ใส่ดอกเบี้ยแล้ว · บัญชีที่ยังไม่ใส่ แจ้งแยก (ห้ามถือเป็น 0%)
     topEffApr:(di&&di.rows.some(r=>r.apr>0))?Math.max(0,...di.rows.filter(r=>r.apr>0).map(r=>r.effApr)):null,
     aprMissing: di ? di.rows.filter(r=>!(r.apr>0)).map(r=>r.name) : [],
-    payoffMonths:plan?plan.months:null, payoffInterest:plan?plan.totalInterest:0,
+    payoffMonths:plan?plan.months:null, payoffInterest:plan?plan.totalInterest:0, payoffBudget:plan?plan.budget:0,
     reconVerified, debtAccounts,
     netWorth, goal:gcfg.final, monthlyContrib, contribMonths:_wc.n,
     investedShare: netWorth>0 ? totalVal/netWorth : 0,   // v62 — ให้ FIRE ฉายภาพสูตรเดียวกับหน้าเป้าหมาย
@@ -7128,11 +7237,22 @@ function renderGroupTabs(g, name){
   bar.innerHTML = g.pages.map(([id,lbl])=>
     `<button type="button" role="tab" class="grp-tab${id===name?' active':''}" aria-selected="${id===name}"
       onclick="switchPage('${id}')">${escHtml(lbl)}</button>`).join('');
+  // v64 — จอแคบแท็บท้ายถูกตัดจนมองไม่เห็นว่ามีอีก · เลื่อนแท็บที่เลือกมากลาง + ขอบจางบอกทิศที่ยังเลื่อนได้
+  const act = bar.querySelector('.grp-tab.active');
+  if(act) bar.scrollLeft = Math.max(0, act.offsetLeft - (bar.clientWidth - act.offsetWidth)/2);
+  _grpTabsEdge(bar);
+  if(!bar._edgeBound){ bar._edgeBound=true; bar.addEventListener('scroll',()=>_grpTabsEdge(bar),{passive:true}); }
+}
+function _grpTabsEdge(bar){
+  const r = bar.scrollWidth - bar.clientWidth - bar.scrollLeft;
+  bar.classList.toggle('more-r', r > 4);
+  bar.classList.toggle('more-l', bar.scrollLeft > 4);
 }
 
 function switchPage(name){
   if(!document.getElementById('page-'+name)) name = 'overview';
   curPage = name;
+  document.body.classList.remove('nav-hide');   // v64 — เปลี่ยนหน้าแล้วต้องเห็นแถบเมนูล่างเสมอ
   const _g = groupOfPage(name);
   _lastTab[_g.id] = name;
   document.querySelectorAll('.sb-item').forEach(el=>{el.classList.toggle('active',el.dataset.group===_g.id);});
@@ -7161,6 +7281,44 @@ function switchPage(name){
   if(window.innerWidth<=768){document.getElementById('sidebar').classList.remove('open');}
 }
 function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');}
+
+/* ══ v64 — ย่อ/ขยายเมนูด้านข้าง + ซ่อนแถบเมนูล่างตอนเลื่อน (มือถือ) ══ */
+const SB_MINI_KEY='finOS_sbMini';
+function _applySidebarMini(on){
+  document.body.classList.toggle('sb-mini', on);
+  const b=document.getElementById('sb-collapse');
+  if(b){ b.textContent=on?'»':'«'; const t=on?'ขยายเมนู':'ย่อเมนู'; b.title=t; b.setAttribute('aria-label',t); }
+  // กราฟวัดขนาดใหม่หลังความกว้างเนื้อหาเปลี่ยน (transition 180ms)
+  setTimeout(()=>{ try{ if(window.Chart && Chart.instances)
+    Object.values(Chart.instances).forEach(c=>{ try{ c.resize(); }catch(e){} }); }catch(e){} }, 220);
+}
+function toggleSidebarMini(){
+  const on=!document.body.classList.contains('sb-mini');
+  _applySidebarMini(on);
+  try{ localStorage.setItem(SB_MINI_KEY, on?'1':'0'); }catch(e){}
+}
+document.addEventListener('DOMContentLoaded', () => {
+  // โหมดย่อซ่อนชื่อเมนู → ใส่ tooltip ชื่อให้ทุกเมนู
+  document.querySelectorAll('.sb-item').forEach(el=>{
+    if(!el.title) el.title=[...el.childNodes].filter(n=>n.nodeType===3).map(n=>n.textContent).join('').trim();
+  });
+  let on=false; try{ on=localStorage.getItem(SB_MINI_KEY)==='1'; }catch(e){}
+  if(on) _applySidebarMini(true);
+
+  // มือถือ: เลื่อนลง > 12px ซ่อนแถบล่าง · เลื่อนขึ้นหรือใกล้บนสุดแสดงกลับ
+  let lastY=window.scrollY, ticking=false;
+  window.addEventListener('scroll', ()=>{
+    if(ticking) return; ticking=true;
+    requestAnimationFrame(()=>{
+      const y=window.scrollY, dy=y-lastY;
+      if(window.innerWidth>768 || y<60 || dy<-6 || document.getElementById('sidebar')?.classList.contains('open'))
+        document.body.classList.remove('nav-hide');
+      else if(dy>12) document.body.classList.add('nav-hide');
+      if(Math.abs(dy)>6) lastY=y;
+      ticking=false;
+    });
+  }, {passive:true});
+});
 
 // ── Events ────────────────────────────────────────────────────────────
 
@@ -7714,7 +7872,7 @@ function renderInsurance(){
 
   if(charts.insPremium)charts.insPremium.destroy();
   if(provLabels.length){
-    charts.insPremium=new Chart(document.getElementById('ins-premium-chart').getContext('2d'),{
+    charts.insPremium=_ctx('ins-premium-chart')&&new Chart(_ctx('ins-premium-chart'),{   // v64 — ไม่มี Chart.js/canvas ไม่ทำให้ทั้งหน้าพัง
       type:'doughnut',
       data:{labels:provLabels,datasets:[{data:provValues,
         backgroundColor:EXP_COLORS.slice(0,provLabels.length),borderWidth:0,hoverOffset:4}]},
@@ -7736,7 +7894,7 @@ function renderInsurance(){
 
   if(charts.insCategory)charts.insCategory.destroy();
   if(catLabels.length){
-    charts.insCategory=new Chart(document.getElementById('ins-category-chart').getContext('2d'),{
+    charts.insCategory=_ctx('ins-category-chart')&&new Chart(_ctx('ins-category-chart'),{   // v64 — ไม่มี Chart.js/canvas ไม่ทำให้ทั้งหน้าพัง
       type:'bar',
       data:{labels:catLabels,datasets:[{data:catValues,
         backgroundColor:EXP_COLORS.slice(0,catLabels.length).map(c=>c+'cc'),
@@ -7749,7 +7907,7 @@ function renderInsurance(){
         scales:{
           x:{grid:{color:'rgba(30,30,53,.8)',lineWidth:.5},ticks:{color:'#6060a0',font:{family:CHART_FONT,size:9}}},
           y:{grid:{color:'rgba(30,30,53,.8)',lineWidth:.5},
-             ticks:{color:'#6060a0',font:{family:CHART_FONT,size:9},callback:v=>v>=1000?(v/1000).toFixed(0)+'k':v}}
+             ticks:{color:'#6060a0',font:{family:CHART_FONT,size:9},callback:axisTick}}
         }}
     });
   }
