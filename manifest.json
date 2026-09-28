@@ -6,8 +6,8 @@
   "scope": "/personaltracker-dashboard/",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "theme_color": "#09090f",
-  "background_color": "#09090f",
+  "theme_color": "#0F172A",
+  "background_color": "#0F172A",
   "lang": "th",
   "categories": ["finance", "productivity"],
   "icons": [
