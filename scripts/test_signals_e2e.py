@@ -192,15 +192,19 @@ check("ตัวที่ราคามาจากชีต (K-USA) ถูก�
 check("symbol ถูก map ถูก (KBANK → KBANK.BK)", sg["KBANK"]["sym"] == "KBANK.BK",
       f"ได้ {sg['KBANK']['sym']}")
 one = sg["AAPL"]
+# v61 — v60 ถอด "score" (ผลรวมเทรนด์ + จังหวะ) ออก แล้วเพิ่มเกณฑ์ 3 ชั้น
+FIELDS = ("price", "rsi", "ma50", "ma200", "chg1m", "chg3m", "pos52w", "drawdown",
+          "vol30d", "mom12_1", "gate", "gate_why", "rank", "size", "action",
+          "why", "spark", "updated")
 check("มีครบทุกฟิลด์ที่หน้าเว็บจะใช้",
-      all(k in one for k in ("price", "rsi", "ma50", "ma200", "chg1m", "chg3m",
-                             "pos52w", "drawdown", "vol30d", "score", "action",
-                             "why", "spark", "updated")),
-      f"ขาด {[k for k in ('price','rsi','ma50','ma200','chg1m','chg3m','pos52w','drawdown','vol30d','score','action','why','spark','updated') if k not in one]}")
+      all(k in one for k in FIELDS),
+      f"ขาด {[k for k in FIELDS if k not in one]}")
 check("sparkline ไม่เกิน 26 จุด", len(one["spark"]) <= 26, f"ได้ {len(one['spark'])}")
 check("sparkline จบที่ราคาล่าสุด", one["spark"][-1] == round(one["price"], 4),
       f"{one['spark'][-1]} vs {one['price']}")
-check("คะแนนอยู่ในช่วง ±4", all(-4 <= e["score"] <= 4 for e in sg.values()))
+check("ไม่มี field score ค้าง (ถอดออกใน v60)", all("score" not in e for e in sg.values()))
+check("ประตูเป็นค่าที่รู้จัก", all(e["gate"] in ("pass", "fail", "unknown") for e in sg.values()))
+check("ขนาดไม้อยู่ใน ×0.5–1.5", all(0.5 <= e["size"] <= 1.5 for e in sg.values()))
 check("ทุกตัวมีคำอธิบายเหตุผล", all(isinstance(e["why"], list) for e in sg.values()))
 
 print("── ความเสี่ยงระดับตลาด ────────────────────────")
@@ -215,8 +219,12 @@ print("── ไฟล์ประวัติ ──────────�
 day = list(hist["days"].values())[0]
 check("มี snapshot ของวันนี้", fs.TODAY in hist["days"], f"ได้ {list(hist['days'])}")
 check("snapshot เก็บ macro", "US10Y" in day["macro"])
-check("snapshot เก็บ [ราคา, RSI, คะแนน] ต่อสินทรัพย์",
-      len(day["assets"]["AAPL"]) == 3, f"ได้ {day['assets'].get('AAPL')}")
+# v61 — schema 3 (v60): [ราคา, RSI, เทรนด์, จังหวะ, โมเมนตัม 12-1, ประตู 1/0/None]
+# ข้อนี้ค้างที่ schema 1 (3 ช่อง) มาตั้งแต่ schema 2 แล้ว
+row = day["assets"]["AAPL"]
+check("snapshot เก็บ [ราคา, RSI, เทรนด์, จังหวะ, โมเมนตัม, ประตู] ต่อสินทรัพย์",
+      len(row) == 6 and row[5] in (1, 0, None) and hist.get("schema") == 3,
+      f"ได้ {row} · schema {hist.get('schema')}")
 check("snapshot เก็บระดับความเสี่ยง", "level" in day["risk"])
 
 # เขียนต่อจากไฟล์เดิม ต้องไม่ล้างของเก่า

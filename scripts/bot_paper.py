@@ -78,6 +78,17 @@ CFG = {
 
 SCHEMA = 1
 
+# ══════════════════════════════════════════════════════════════════════
+# RULES — ชื่อชุดกฎที่ใช้ตัดสินใจ ประทับลงทุกคำสั่งและทุกการตัดสินใจ (v61)
+# ══════════════════════════════════════════════════════════════════════
+# บั๊กที่แก้: วันที่ 27 ก.ย. 2026 บอทตัดสินใจด้วยกฎ v59 (ซื้อ BTC-USD) แล้วรอบถัดมา
+# (โค้ด v60) เห็นว่าเทรดวันนี้ไปแล้ว จึงยกการตัดสินใจเดิมมา แต่เขียน `config`
+# ของ v60 ทับ — ไฟล์จึงบอกว่าใช้กฎ v60 ทั้งที่คำสั่งนั้นขัดกับกฎ v60 ตรง ๆ
+# (BTC-USD ไม่ผ่านประตู: โมเมนตัม 12-1 = −14.2%)
+# `config` เป็น "ค่าปัจจุบัน" ไม่ใช่ "ค่าที่ใช้ตอนเทรด" — ต้องประทับที่ตัวคำสั่งเอง
+# และเก็บประวัติการเปลี่ยนกฎไว้ใน config_log  เปลี่ยนเกณฑ์ครั้งหน้าให้เปลี่ยนชื่อนี้ด้วย
+RULES = "v60-gate"   # ประตู (MA200 + โมเมนตัม 12-1) × ขนาดไม้ · ดู fetch_signals.py
+
 
 def fee_for(notional: float, kind: str) -> float:
     """ค่าธรรมเนียม + slippage ของคำสั่งหนึ่ง (USD)
@@ -279,7 +290,7 @@ def main() -> int:
         log.append({"d": TODAY, "book": book_name, "k": k, "side": side,
                     "qty": round(qty, 8), "px": round(price, 6),
                     "usd": round(abs(qty) * price, 2), "fee": round(f, 4),
-                    "why": why})
+                    "why": why, "rules": RULES})
 
     # ── 1. เงินเข้า ─────────────────────────────────────────────────
     # เงินก้อนแรกเข้าทั้งสองพอร์ตพร้อมกันวันเดียวกัน จากนั้นเติมเดือนละครั้ง
@@ -337,7 +348,7 @@ def main() -> int:
             if not p or not sig:
                 why = next((x["why"] for x in skipped if x["k"] == k), "ไม่มีข้อมูล")
                 decisions.append({"k": k, "name": u["name"], "act": "skip",
-                                  "why": why, "usd": 0})
+                                  "why": why, "usd": 0, "rules": RULES})
                 continue
             held = bot["pos"].get(k, {"qty": 0.0})
             cur = held["qty"] * p
@@ -369,7 +380,7 @@ def main() -> int:
                               "gate": sig.get("gate"), "size": sig.get("size"),
                               "rank": sig.get("rank"), "mom12_1": sig.get("mom12_1"),
                               "ma200": sig.get("ma200"), "rsi": sig.get("rsi"),
-                              "price": p})
+                              "price": p, "rules": RULES})
             print(f"  {'▲' if act=='buy' else '▼' if act=='sell' else '·'} "
                   f"{k:<8} {act:<5} ${usd:>8,.2f}  {why}")
         st["last_trade_day"] = TODAY
@@ -431,8 +442,19 @@ def main() -> int:
         "fees_paid": round(sum(t["fee"] for t in bot_trades), 2),
         "usdthb": usdthb,
     }
-    st["today"] = {"date": TODAY, "decisions": decisions, "skipped": skipped}
-    st["config"] = CFG
+    # กฎของ "วันนี้" = กฎที่ใช้ตัดสินใจจริง ไม่ใช่กฎของโค้ดที่รันรอบนี้
+    # ถ้าวันนี้เทรดไปแล้วด้วยกฎเก่า ต้องคงชื่อกฎเก่าไว้ (หรือ None ถ้าไฟล์รุ่นก่อน v61)
+    prev_today = st.get("today") or {}
+    today_rules = (prev_today.get("rules") if traded_today and prev_today.get("date") == TODAY
+                   else RULES)
+    st["today"] = {"date": TODAY, "decisions": decisions, "skipped": skipped,
+                   "rules": today_rules}
+    # ประวัติกฎ — เพิ่มแถวเมื่อชื่อกฎหรือพารามิเตอร์เปลี่ยน  ไม่เขียนทับของเดิม
+    clog = st.setdefault("config_log", [])
+    if not clog or clog[-1].get("rules") != RULES or clog[-1].get("config") != CFG:
+        clog.append({"from": TODAY, "rules": RULES, "config": CFG})
+    st["config"] = CFG            # ค่าปัจจุบัน — หน้าเว็บอ่านไปแสดงกฎ
+    st["rules"] = RULES
     st["computed_at"] = FETCHED_AT
 
     with open(OUT, "w", encoding="utf-8") as f:
