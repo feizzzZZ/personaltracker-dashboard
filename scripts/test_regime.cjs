@@ -41,7 +41,7 @@ function setPipeline(obj) {
 }
 
 console.log('build =', api.APP_BUILD);
-chk('APP_BUILD เป็น v51', api.APP_BUILD === 'v51', api.APP_BUILD);
+chk('APP_BUILD เป็นรูปแบบ vNN', /^v\d+$/.test(api.APP_BUILD), api.APP_BUILD);   // v64 — เดิม hardcode 'v51' แดงทุกครั้งที่ bump
 
 console.log('\n═══ 1. computeRegime — ตัดสัญญาณที่เก่าเกิน ═══');
 {
@@ -156,17 +156,20 @@ console.log('\n═══ 4. loadSignals / loadRisk ═══');
                       ma50: 'Above', ma200: 'Above', score: 0,
                       action: 'ถือ', why: [], ...o });
   setPipeline({ data: {}, signals: {
-    AAPL: S({ score: 3, action: 'ทยอยเข้าเพิ่ม' }),
-    TSLA: S({ score: -3, action: 'ชะลอเข้าเพิ่ม', ma200: 'Below' }),
+    AAPL: S({ score: 3, action: 'ทยอยเข้าเพิ่ม', gate: 'pass', rank: 2 }),
+    TSLA: S({ score: -3, action: 'ชะลอเข้าเพิ่ม', ma200: 'Below', gate: 'fail', rank: 1 }),
     BTC:  S({ score: 1 }),
     OLD:  S({ score: 4, updated: iso(30) }),
-  }, risk: { level: 'elevated', severity: 3, flags: [
+  }, risk: { level: 'elevated', severity: 3, computed_at: iso(0),   // v64 — v54 ตรวจอายุ risk ด้วย computed_at
+    flags: [
     { k: 'breadth', sev: 1, msg: 'a' }, { k: 'vix', sev: 2, msg: 'b' }] } });
 
   const L = loadSignals();
   chk('อ่านสัญญาณได้ครบ 4 ตัว', L && L.length === 4, L && L.length);
-  chk('เรียงตามคะแนนมากไปน้อย',
-      L && L.map(x => x.ticker).join(',') === 'OLD,AAPL,BTC,TSLA',
+  // v64 — v60 เปลี่ยนการเรียงเป็น byGateThenRank (ผ่านประตูก่อน → ยังไม่รู้ → ไม่ผ่าน) ไม่ใช่ score
+  //        AAPL ผ่าน · BTC/OLD ไม่มี gate (= ยังไม่รู้ เรียงตามชื่อ) · TSLA ไม่ผ่าน
+  chk('เรียงตาม byGateThenRank (v60)',
+      L && L.map(x => x.ticker).join(',') === 'AAPL,BTC,OLD,TSLA',
       L && L.map(x => `${x.ticker}:${x.score}`).join(','));
   chk('ตัวที่อัปเดต 30 วันก่อน ถูกติดธง stale',
       L && L.find(x => x.ticker === 'OLD').stale === true);
@@ -176,11 +179,15 @@ console.log('\n═══ 4. loadSignals / loadRisk ═══');
   const sum = signalSummary(L);
   chk('สรุปไม่นับตัว stale', sum.count === 3 && sum.stale === 1,
       JSON.stringify(sum));
-  chk('คะแนน ≥3 ที่ยังสดเท่านั้นเข้ากลุ่มซื้อ',
-      sum.buy.length === 1 && sum.buy[0].ticker === 'AAPL',
-      sum.buy.map(x => x.ticker).join(','));
-  chk('คะแนน ≤−2 เข้ากลุ่มลด',
-      sum.trim.length === 1 && sum.trim[0].ticker === 'TSLA');
+  // v64 — v60 เลิกใช้กลุ่ม buy/trim ตามคะแนน เปลี่ยนเป็นประตู pass/fail/unknown
+  chk('gate=pass ที่ยังสดเข้ากลุ่มผ่าน',
+      sum.pass.length === 1 && sum.pass[0].ticker === 'AAPL',
+      sum.pass.map(x => x.ticker).join(','));
+  chk('gate=fail เข้ากลุ่มไม่ผ่าน',
+      sum.fail.length === 1 && sum.fail[0].ticker === 'TSLA');
+  chk('ไม่มี gate = ยังไม่รู้ (ไม่ใช่ไม่ผ่าน) · ตัว stale ไม่นับ',
+      sum.unknown.length === 1 && sum.unknown[0].ticker === 'BTC' && sum.legacy === 1,
+      JSON.stringify({unk: sum.unknown.map(x => x.ticker), legacy: sum.legacy}));
   chk('breadth นับจากตัวที่ยังสด (2 ใน 3 เหนือ MA200)', sum.breadth === 67,
       String(sum.breadth));
 

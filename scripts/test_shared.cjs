@@ -125,9 +125,7 @@ console.log('\n═══ ไม่ทำลายของเดิม ═══
   const r=resolvePrices({B:20});
   chk('pipeline สดชนะ', r.priceMap.A===10 && r.srcMap.A==='pipeline');
   chk('ราคาชีตยังใช้ได้', r.priceMap.B===20 && r.srcMap.B==='sheet');
-  const q=priceQuality({A:'pipeline',B:'cached'},['A','B','C']);
-  chk('priceQuality: degraded/missing ถูก', q.degraded===1 && q.missing.length===1);
-  chk('priceQuality: trustworthy=false เมื่อมี cached', q.trustworthy===false);
+  // v64 — priceQuality() ถูกลบออกจาก shared.js ใน v62 (ไม่มีที่ไหนเรียก) จึงเอาการตรวจ 2 ข้อนี้ออก
 }
 console.log(fail?`\n❌ ไม่ผ่าน ${fail} ข้อ`:'\n✅ ผ่านทั้งหมด');
 process.exit(fail?1:0);

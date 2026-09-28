@@ -16,7 +16,7 @@ window.LOC = window.LOC || 'th-TH-u-ca-gregory';
 //   • XIRR engine
 // กติกา: ไฟล์นี้ห้ามแตะ DOM ของหน้าใดหน้าหนึ่ง — pure data layer เท่านั้น
 // ═══════════════════════════════════════════════════════════════════
-const APP_BUILD = 'v63';
+const APP_BUILD = 'v64';
 console.log('[Finance OS shared] build', APP_BUILD);
 window.SHARED_BUILD = APP_BUILD;   // v45 — ให้ index.html ตรวจได้ว่าเวอร์ชันตรงกัน
  
@@ -364,7 +364,7 @@ function parseReconcileRows(rows){
     // วันที่: รับทั้ง Date, ISO string และ Google serial number
     let d = '';
     const raw = r[iD];
-    if(raw instanceof Date) d = raw.toISOString().slice(0,10);
+    if(raw instanceof Date) d = isoLocal(raw);   // v64 — Date ท้องถิ่นเที่ยงคืน → toISOString ได้วันก่อนหน้า (UTC+7)
     // gserialToISO คืน ISO เต็ม ('2026-07-31T00:00:00.000Z') ต้องตัดเหลือ 10 ตัว
     // ไม่งั้นการเทียบ d >= prev.date จะข้ามฟอร์แมตกัน ('2026-07-31T…' vs '2026-08-01')
     else if(typeof raw === 'number' && raw > 20000) d = (gserialToISO(raw)||'').slice(0,10);
@@ -459,7 +459,7 @@ function loadHoldingTags(){
 }
 function setHoldingTag(ticker, tag){
   const t=loadHoldingTags();
-  if(tag) t[ticker]={tag, at:new Date().toISOString().slice(0,10)};
+  if(tag) t[ticker]={tag, at:isoLocal(new Date())};   // v64 — วันที่ท้องถิ่น
   else delete t[ticker];
   try{ localStorage.setItem(HTAG_KEY, JSON.stringify(t)); }catch(e){}
   return t;
@@ -533,7 +533,8 @@ function classifyHoldings(trades, assets, priceSrc){
       div:h.div, buys:h.buys.length, sells:h.sells,
       medianGap:Math.round(cad.median), rcv:cad.rcv,
       regular: h.buys.length>=4 && cad.rcv<=REGULAR_RCV,
-      ageDays, lastBuy: lastBuy? new Date(lastBuy).toISOString().slice(0,10):null,
+      // v64 — lastBuy มาจาก parseDate (เที่ยงคืนเวลาท้องถิ่น) → toISOString ได้วันก่อนหน้าในไทย
+      ageDays, lastBuy: lastBuy? isoLocal(new Date(lastBuy)):null,
       unpriced: val==null,
       priceSrc: (priceSrc||{})[a.ticker]||null,
       tag: tags[a.ticker]?tags[a.ticker].tag:null,
@@ -887,55 +888,8 @@ function cleanSheetSpikesV62(){
   }catch(e){ return null; }
 }
 
-// ═══ Benchmark simulation — "ถ้าเงินก้อนเดียวกันเข้า S&P 500 แทน" ═══
-// จำลอง cashflow เดิมทุกรายการซื้อ/ขาย ^GSPC ณ ราคาสัปดาห์นั้น (แปลงเป็นบาทด้วย
-// USD/THB ณ วันเดียวกัน — FX คือส่วนหนึ่งของผลตอบแทนจริงของนักลงทุนไทย)
-function priceAt(series, tMs){
-  // series = [[iso, price]] เรียงเก่า→ใหม่ · คืนราคาล่าสุดที่ไม่เกินวันนั้น
-  // #24 — ถ้า tMs เก่ากว่าจุดแรกของ series ต้องคืน null ไม่ใช่ราคาจุดแรก
-  // (history ครอบคลุม 5 ปี ธุรกรรมเก่ากว่านั้นเคยได้ราคาผิดยุคไปเงียบๆ
-  //  ทำให้ units ที่จำลองผิด → benchmark XIRR เพี้ยนโดยไม่มีสัญญาณเตือน)
-  if(!series || !series.length) return null;
-  if(Date.parse(series[0][0]) > tMs) return null;   // ก่อนช่วงข้อมูล → ไม่รู้ราคา
-  let best = null;
-  for(let i=0;i<series.length;i++){
-    if(Date.parse(series[i][0]) <= tMs) best = series[i][1];
-    else break;
-  }
-  return best;
-}
-// คืน {rate, terminal, asOf} เมื่อสำเร็จ · คืน {error, ...} เมื่อทำไม่ได้ (UI จะได้บอกเหตุผลจริง)
-function benchmarkXIRR(flows){
-  const act = loadActions();
-  const h = act && act.history;
-  if(!h || !h.SP500 || h.SP500.length<10 || !h.USDTHB || !h.USDTHB.length)
-    return { error:'no_history' };
-  // #24 — ธุรกรรมที่เก่ากว่าจุดเริ่มของ history จำลองไม่ได้ ต้องบอกให้ชัด
-  // ไม่ใช่เงียบแล้วใช้ราคาผิดยุค
-  const covFrom = h.SP500[0][0], fxFrom = h.USDTHB[0][0];
-  const startT = Math.max(Date.parse(covFrom), Date.parse(fxFrom));
-  const tooOld = flows.filter(f => f.t < startT);
-  if(tooOld.length){
-    const earliest = new Date(Math.min(...tooOld.map(f=>f.t))).toISOString().slice(0,10);
-    return { error:'out_of_range', coverageFrom: covFrom > fxFrom ? covFrom : fxFrom,
-             earliestFlow: earliest, nOutside: tooOld.length, nTotal: flows.length };
-  }
-  let units = 0;
-  for(const f of flows){
-    const px = priceAt(h.SP500, f.t), fx = priceAt(h.USDTHB, f.t);
-    if(!px || !fx) return { error:'gap', at:new Date(f.t).toISOString().slice(0,10) };
-    units += (-f.v) / (px * fx);   // ซื้อ (cf<0) → units เพิ่ม · ถอน/ปันผล (cf>0) → units ลด
-  }
-  // terminal = ราคา ณ วันนี้ (ไม่ใช่แถวสุดท้ายของ series — กันกรณีข้อมูลลากเกินวันนี้)
-  const nowT = Date.now();
-  const lastPx = priceAt(h.SP500, nowT);
-  const lastFx = priceAt(h.USDTHB, nowT);
-  const terminal = Math.max(0, units) * lastPx * lastFx;
-  const r = xirrJS([...flows, {t: nowT, v: terminal}]);
-  let asOf = h.SP500[0][0];
-  for(const [d] of h.SP500){ if(Date.parse(d) <= nowT) asOf = d; else break; }
-  return r===null ? { error:'xirr_no_solution' } : { rate:r, terminal, asOf };
-}
+// v64 — ลบ priceAt() + benchmarkXIRR() (จำลองพอร์ตเทียบ S&P 500) ออก
+// การ์ด "คุณ vs ตลาด" ถูกถอดตั้งแต่ v48 ตามที่ผู้ใช้ขอ ไม่มีที่ไหนเรียกอีกเลย · ดูโค้ดเดิมได้ใน git history
  
 // ═══ WEALTH GOAL CONFIG — แหล่งเดียวของเป้าหมาย (ทุกหน้าต้องอ่านจากที่นี่) ═══
 // เดิมเป้าหมายกระจายอยู่ 3 ที่และไม่ตรงกัน (Overview ฿3M / Wealth Engine ฿1M /
@@ -2198,7 +2152,10 @@ function analystDebt(c){
         + (d.topMerchant&&d.topMerchant[0]?` · ก้อนใหญ่สุดตลอดมา: ${d.topMerchant[0].name}`:'') });
   });
   if(c.payoffMonths!=null && isFinite(c.payoffMonths))
-    F.push({ s:'g', t:`ปลดหนี้หมดใน ${c.payoffMonths} เดือน ถ้าจ่ายเท่าเดิม`,
+    // v64 — เดิมเขียน "ถ้าจ่ายเท่าเดิม" แต่แผนจำลองจากขั้นต่ำที่ตั้งไว้ (minPct/minFloor + extra) ไม่ใช่ยอดที่จ่ายจริง
+    //        ผ่อนรถเดือนละ 6,500 แต่ขั้นต่ำ 10% = 15,500 → บอก "10 เดือน" ทั้งที่จริง ~24 เดือน · ต้องบอกยอดที่ใช้คำนวณ
+    F.push({ s:'g', t:`ปลดหนี้หมดใน ${c.payoffMonths} เดือน`+
+        (c.payoffBudget>0 ? ` ถ้าจ่ายเดือนละ ${_n(c.payoffBudget)} บาท (ตามขั้นต่ำที่ตั้งไว้ในหน้าหนี้)` : ''),
       d: _noApr.length ? `ดอกเบี้ยรวม — ยังคำนวณไม่ได้ (${_noApr.length} บัญชีไม่มีดอกเบี้ย แผนนี้จึงนับเป็น 0%)`
                        : `ดอกเบี้ยรวมตลอดแผน ${_n(c.payoffInterest||0)} บาท` });
   else if(c.payoffMonths!=null)
