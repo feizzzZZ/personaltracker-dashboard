@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#09090f">
+<meta name="theme-color" content="#0F172A">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -81,30 +81,61 @@
 <title>Personal Tracker</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!-- v65 — ธีม/ภาษาต้องตั้งก่อน paint แรก ไม่งั้นเห็นธีมเดิมกะพริบก่อนเปลี่ยน -->
+<script>
+(function(){try{var th=localStorage.getItem('finOS_theme');
+  document.documentElement.setAttribute('data-theme', th==='midnight'?'midnight':'slate');}catch(e){
+  document.documentElement.setAttribute('data-theme','slate');}})();
+</script>
+<script src="i18n.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 :root{
-  /* ── Typography (#1,#9): The old GoogleSans / GoogleSansMono stack was Google-internal
-     and NOT served by fonts.googleapis.com -> the old <link> 400'd and
-     everything fell back to generic monospace, which has no Thai glyphs.
-     Latin font first, Thai font second: digits/EN render from Inter/JetBrains,
-     Thai automatically falls through to IBM Plex Sans Thai. ── */
-  --f-sans:'Inter','IBM Plex Sans Thai',system-ui,-apple-system,'Segoe UI',sans-serif;
-  --f-mono:'JetBrains Mono','IBM Plex Sans Thai',ui-monospace,'SFMono-Regular',Menlo,monospace;
-  --bg:#07070e;--bg2:#0d0d1a;--bg3:#111120;--bg4:#181830;
-  --border:#1a1a30;--border2:#262640;--cb:#1e1e38;
-  --income:#00d4a0;--expense:#ff4060;--savings:#7c6fec;--debt:#ff9500;
-  --white:#ffffff;--text:#dcdcf0;--muted:#8a8ac0;  /* P2-6: เดิม #5a5a8a = contrast 3.12:1 บนพื้น #07070e ต่ำกว่า WCAG AA (4.5:1)
-                       และถูกใช้กับข้อความ 9-10px ซึ่งนับเป็น normal text
-                       #8a8ac0 = 6.19:1 ผ่าน AA โดยคงลำดับชั้นสายตาเดิม */;--muted2:#8080b0;
-  --gain:#00d4a0;--loss:#ff4060;
+  /* ── Typography (#1,#9): Latin font first, Thai font second: digits/EN render from
+     Inter/JetBrains, Thai falls through to the Thai font.
+     v65 — ธีม Slate (ค่าเริ่มต้น) ใช้ Noto Sans Thai + ตัวหนังสือหลักเป็น sans
+           ธีม Midnight (เดิม) ใช้ IBM Plex Sans Thai + ตัวหนังสือหลักเป็น mono ── */
+  --f-sans:'Inter','Noto Sans Thai',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --f-mono:'JetBrains Mono','Noto Sans Thai',ui-monospace,'SFMono-Regular',Menlo,monospace;
+  --f-body:var(--f-sans);
+
+  /* ══ v65 — ธีม Slate (ค่าเริ่มต้น) ══════════════════════════════════
+     พื้น #0F172A · การ์ด #1E293B · เส้น #334155 · ตัวหนังสือ #F8FAFC / #94A3B8
+     สีสถานะ: เขียว #10B981 · แดง #EF4444 · ฟ้า #3B82F6 (ตามแบบที่ผู้ใช้ส่งมา)
+     contrast (WCAG AA ≥4.5:1): #94A3B8 บน #1E293B = 5.7:1 · บน #0F172A = 6.9:1 */
+  --bg:#0F172A;--bg2:#0B1324;--bg3:#1E293B;--bg4:#273449;
+  --border:#334155;--border2:#475569;--cb:#334155;
+  --income:#10B981;--expense:#EF4444;--savings:#818CF8;--debt:#F59E0B;--accent:#3B82F6;
+  --white:#F8FAFC;--text:#E2E8F0;--muted:#94A3B8;--muted2:#A3B1C6;
+  --gain:#10B981;--loss:#EF4444;
+  --card-shadow:0 4px 6px -1px rgba(0,0,0,.3);
+  /* สีในกราฟ (Chart.js อ่านผ่าน CT ใน index.html) */
+  --c-tip-bg:#0F172A;--c-tip-border:#334155;--c-tip-title:#F8FAFC;--c-tip-body:#CBD5E1;
+  --c-tick:#94A3B8;--c-grid:rgba(51,65,85,.6);
   --sidebar-w:200px;
 }
+/* ธีม Midnight — ค่าชุดเดิมก่อน v65 ทุกตัว */
+html[data-theme="midnight"]{
+  --f-sans:'Inter','IBM Plex Sans Thai',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --f-mono:'JetBrains Mono','IBM Plex Sans Thai',ui-monospace,'SFMono-Regular',Menlo,monospace;
+  --f-body:var(--f-mono);
+  --bg:#07070e;--bg2:#0d0d1a;--bg3:#111120;--bg4:#181830;
+  --border:#1a1a30;--border2:#262640;--cb:#1e1e38;
+  --income:#00d4a0;--expense:#ff4060;--savings:#7c6fec;--debt:#ff9500;--accent:#7c6fec;
+  --white:#ffffff;--text:#dcdcf0;--muted:#8a8ac0;--muted2:#8080b0;  /* P2-6: #8a8ac0 = 6.19:1 บน #07070e ผ่าน AA */
+  --gain:#00d4a0;--loss:#ff4060;
+  --card-shadow:none;
+  --c-tip-bg:#12121a;--c-tip-border:#1e1e35;--c-tip-title:#e2e2f0;--c-tip-body:#9090c0;
+  --c-tick:#6060a0;--c-grid:rgba(30,30,53,.8);
+}
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--text);font-family:var(--f-mono);min-height:100vh;display:flex;overflow-x:hidden}
+body{background:var(--bg);color:var(--text);font-family:var(--f-body);min-height:100vh;display:flex;overflow-x:hidden}
+/* v65 — การ์ดมีมิติ (Slate) · Midnight ไม่มีเงาเหมือนเดิม */
+.sc,.cc,.bank-card,.an-card,.wealth-strip,.bgt-card{box-shadow:var(--card-shadow)}
 body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.03) 2px,rgba(0,0,0,.03) 4px)}
+html:not([data-theme="midnight"]) body::before{display:none}   /* v65 — เส้น scanline เป็นลายของธีม Midnight */
 
 /* ── Upload ── */
 #up{position:fixed;inset:0;z-index:200;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;padding:24px}
@@ -221,6 +252,22 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 }
 @media(max-width:768px){ .sb-collapse{display:none} }
 @media(prefers-reduced-motion:reduce){ .sidebar,.main-content{transition:none} }
+
+/* ══ v65 — ปุ่มภาษา / ธีม (ท้ายเมนูข้าง) ══ */
+.pref-row{display:flex;gap:6px;margin-bottom:6px}
+.seg{display:flex;flex:1;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;padding:2px;gap:2px}
+.seg button{flex:1;background:transparent;border:none;color:var(--muted2);font:inherit;font-size:11px;font-weight:600;
+  padding:5px 0;border-radius:6px;cursor:pointer;letter-spacing:.04em}
+.seg button.active{background:var(--bg3);color:var(--white);box-shadow:0 0 0 1px var(--border2)}
+.seg button:focus-visible,.theme-btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.theme-btn{display:flex;align-items:center;justify-content:center;gap:5px;background:var(--bg4);border:1px solid var(--border2);
+  color:var(--muted2);border-radius:8px;padding:0 10px;font:inherit;font-size:11px;cursor:pointer}
+.theme-btn:hover,.seg button:hover{color:var(--text)}
+@media(min-width:769px){
+  .sb-mini .pref-row{flex-direction:column}
+  .sb-mini .seg{flex-direction:column}
+  .sb-mini .theme-btn{padding:6px 0}
+}
 
 /* ══ v64 — รายการ "ต้องลงมือ" บนมือถือ: เห็น 2 เรื่องแรก ที่เหลือกดดู ══ */
 .act-toggle{display:none;margin-top:8px;width:100%;background:transparent;border:1px dashed var(--border2);
@@ -1135,6 +1182,15 @@ html.standalone .a2hs{display:none}
           style="background:var(--bg4);border:1px solid var(--border2);color:var(--muted2);
                  padding:8px 10px;border-radius:8px;font-size:12px;cursor:pointer;font-family:inherit">⚙</button>
       </div>
+      <!-- v65 — สลับภาษา TH/EN + ธีม Slate/Midnight (จำค่าไว้ในเครื่อง) -->
+      <div class="pref-row">
+        <div class="seg" role="group" aria-label="สลับภาษา" title="สลับภาษา">
+          <button type="button" data-lang-btn="th" onclick="I18N.setLang('th')">TH</button>
+          <button type="button" data-lang-btn="en" onclick="I18N.setLang('en')">EN</button>
+        </div>
+        <button type="button" class="theme-btn" id="theme-btn" onclick="toggleTheme()" title="สลับธีม" aria-label="สลับธีม">
+          <span aria-hidden="true">◐</span><span class="sb-lbl" id="theme-lbl">Slate</span></button>
+      </div>
       <button class="btn-pdf" onclick="generateMonthlyPDF()" style="width:100%;margin-bottom:6px;justify-content:center">
         ⬇<span class="sb-lbl"> Export PDF</span>
       </button>
@@ -2003,7 +2059,26 @@ html.standalone .a2hs{display:none}
    const/var) makes it idempotent, so load order can't cause a
    'already been declared' SyntaxError that would kill the whole script. */
 window.LOC = window.LOC || 'th-TH-u-ca-gregory';
-const CHART_FONT = "'JetBrains Mono','IBM Plex Sans Thai',ui-monospace,monospace";
+/* v65 — สี/ฟอนต์ของกราฟอ่านจากตัวแปร CSS ของธีมปัจจุบัน ตอนสร้างกราฟ
+   (เดิม hardcode สีธีม Midnight ไว้ 6 ที่ — เปลี่ยนธีมแล้วกราฟยังเป็นสีเดิม) */
+// v65 — ข้อความที่ถูกแยกหลายท่อนด้วยแท็ก (ตัวแปลใน DOM แปลทีละท่อนไม่ได้) เลือกภาษาตอน render
+const _L = (th, en) => (window.I18N && I18N.lang === 'en') ? en : th;
+const _cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const CT = {
+  get tipBg(){ return _cssVar('--c-tip-bg') || '#12121a'; },
+  get tipBorder(){ return _cssVar('--c-tip-border') || '#1e1e35'; },
+  get title(){ return _cssVar('--c-tip-title') || '#e2e2f0'; },
+  get body(){ return _cssVar('--c-tip-body') || '#9090c0'; },
+  get tick(){ return _cssVar('--c-tick') || '#6060a0'; },
+  get grid(){ return _cssVar('--c-grid') || 'rgba(30,30,53,.8)'; },
+};
+let CHART_FONT = "'JetBrains Mono','IBM Plex Sans Thai',ui-monospace,monospace";
+function _syncChartFont(){
+  CHART_FONT = document.documentElement.getAttribute('data-theme')==='midnight'
+    ? "'JetBrains Mono','IBM Plex Sans Thai',ui-monospace,monospace"
+    : "'Inter','Noto Sans Thai',system-ui,sans-serif";
+}
+_syncChartFont();
 // ── Constants ───────────────────────────────────────────────────────
 const GC={'Thai Stock':'#4cc9f0','US Stock':'#00d4a0','Crypto':'#ff9500',
           'Mutual Fund':'#7c6fec','Provident Fund':'#ffd166','Gold':'#ffa94d','Other':'#5a5a8a'};
@@ -2176,17 +2251,17 @@ const UNIT = {
 const chartOpts = (unit='baht') => ({
   responsive:true,maintainAspectRatio:false,
   plugins:{
-    legend:{labels:{color:'#6060a0',font:{family:CHART_FONT,size:10},boxWidth:10,padding:10}},
-    tooltip:{backgroundColor:'#12121a',borderColor:'#1e1e35',borderWidth:1,
-      titleColor:'#e2e2f0',bodyColor:'#9090c0',titleFont:{family:CHART_FONT},bodyFont:{family:CHART_FONT,size:11},
+    legend:{labels:{color:CT.tick,font:{family:CHART_FONT,size:10},boxWidth:10,padding:10}},
+    tooltip:{backgroundColor:CT.tipBg,borderColor:CT.tipBorder,borderWidth:1,
+      titleColor:CT.title,bodyColor:CT.body,titleFont:{family:CHART_FONT},bodyFont:{family:CHART_FONT,size:11},
       /* ข้อ 1 — ต้องผ่าน UNIT[unit] ไม่ใช่ fmt() ตรงๆ
          ไม่งั้นกราฟที่เป็น % จะได้ '฿' ติดมาด้วย (เดิม "Invest %: ฿47")
          แกน Y ใช้ UNIT อยู่แล้ว แต่ tooltip ตกหล่นไป — สองที่ต้องใช้หน่วยเดียวกัน */
       callbacks:{label:c=>` ${escHtml(c.dataset.label)}: ${(UNIT[unit]||UNIT.baht).tip(c.raw)}`}}
   },
   scales:{
-    x:{grid:{color:'rgba(30,30,53,.8)',lineWidth:.5},ticks:{color:'#6060a0',font:{family:CHART_FONT,size:9}}},
-    y:{grid:{color:'rgba(30,30,53,.8)',lineWidth:.5},ticks:{color:'#6060a0',font:{family:CHART_FONT,size:9},callback:(UNIT[unit]||UNIT.baht).axis}}
+    x:{grid:{color:CT.grid,lineWidth:.5},ticks:{color:CT.tick,font:{family:CHART_FONT,size:9}}},
+    y:{grid:{color:CT.grid,lineWidth:.5},ticks:{color:CT.tick,font:{family:CHART_FONT,size:9},callback:(UNIT[unit]||UNIT.baht).axis}}
   }
 });
 /* BUGFIX v48 #11 — ทั้งสามตัวเรียก getElementById(id).getContext('2d') ตรงๆ
@@ -2199,8 +2274,11 @@ function _ctx(id){
   if(typeof Chart==='undefined'){ console.warn('[chart] Chart.js ยังไม่โหลด — ข้าม #'+id); return null; }
   return el.getContext('2d');
 }
+// v65 — ชื่อชุดข้อมูลในกราฟ (legend/tooltip) อยู่ใน canvas ตัวแปลภาษาใน DOM มองไม่เห็น → แปลตอนสร้างกราฟ
+const _trDs = ds => (ds||[]).map(d => (d && d.label && window.I18N) ? {...d, label:I18N.t(d.label)} : d);
 function mkBarChart(id,labels,datasets,stacked=false,unit='baht'){
   const ctx=_ctx(id); if(!ctx) return;
+  datasets=_trDs(datasets);
   const opts=chartOpts(unit);
   if(stacked){opts.scales.x.stacked=true;opts.scales.y.stacked=true;}
   if(charts[id])charts[id].destroy();
@@ -2208,6 +2286,7 @@ function mkBarChart(id,labels,datasets,stacked=false,unit='baht'){
 }
 function mkLineChart(id,labels,datasets,unit='baht'){
   const ctx=_ctx(id); if(!ctx) return;
+  datasets=_trDs(datasets);
   if(charts[id])charts[id].destroy();
   charts[id]=new Chart(ctx,{type:'line',data:{labels,datasets},options:chartOpts(unit)});
 }
@@ -2221,8 +2300,8 @@ function mkDonut(id,labels,values,colors){
        ทะลุกล่องที่สูงแค่ 150px  false = ใช้กล่องตามจริงทั้งกว้างและสูง
        โดนัทยังกลมอยู่เสมอ เพราะ Chart.js ใช้ min(กว้าง,สูง) เป็นรัศมี */
     options:{cutout:'70%',responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false},tooltip:{backgroundColor:'#12121a',borderColor:'#1e1e35',borderWidth:1,
-        titleColor:'#e2e2f0',bodyColor:'#9090c0',titleFont:{family:CHART_FONT},bodyFont:{family:CHART_FONT,size:11},
+      plugins:{legend:{display:false},tooltip:{backgroundColor:CT.tipBg,borderColor:CT.tipBorder,borderWidth:1,
+        titleColor:CT.title,bodyColor:CT.body,titleFont:{family:CHART_FONT},bodyFont:{family:CHART_FONT,size:11},
         callbacks:{label:c=>{const t=values.reduce((a,b)=>a+b,0);return `฿${Math.round(c.raw).toLocaleString(LOC)} (${(c.raw/t*100).toFixed(1)}%)`;}}}}
     }
   });
@@ -2342,19 +2421,24 @@ function renderOverview(){
 
   const _tEl=document.getElementById('ov-goal-title'), _sEl=document.getElementById('ov-goal-sub');
   // หัวข้อพูดถึงหมุดถัดไป เพราะนั่นคือสิ่งที่กำลังทำ
-  if(_tEl) _tEl.textContent=_reached?`ถึงเป้าปลายทาง ${fmtC(GOAL)} แล้ว`:`ต่อไป: ${fmtC(_next)}`;
+  if(_tEl) _tEl.textContent=_reached?_L(`ถึงเป้าปลายทาง ${fmtC(GOAL)} แล้ว`,`Final goal ${fmtC(GOAL)} reached`)
+                                   :_L(`ต่อไป: ${fmtC(_next)}`,`Next: ${fmtC(_next)}`);
   if(_sEl) _sEl.innerHTML=_reached
-    ? `เกินเป้ามา <strong style="color:var(--text)">${fmt(netWorth-GOAL)}</strong> · ตั้งเป้าใหม่ได้ในหน้าเป้าหมาย`
-    : `ขาดอีก <strong style="color:var(--text)">${fmt(Math.max(_next-netWorth,0))}</strong>`+
-      ` จะถึงหมุด ${fmtC(_next)}`;
+    ? _L(`เกินเป้ามา <strong style="color:var(--text)">${fmt(netWorth-GOAL)}</strong> · ตั้งเป้าใหม่ได้ในหน้าเป้าหมาย`,
+         `<strong style="color:var(--text)">${fmt(netWorth-GOAL)}</strong> over the goal · set a new one on the Goals page`)
+    : _L(`ขาดอีก <strong style="color:var(--text)">${fmt(Math.max(_next-netWorth,0))}</strong> จะถึงหมุด ${fmtC(_next)}`,
+         `<strong style="color:var(--text)">${fmt(Math.max(_next-netWorth,0))}</strong> to go to the ${fmtC(_next)} milestone`);
 
   // v56 — Overview แสดงเป้าบรรทัดเดียว (การ์ดเต็มย้ายไปหน้าเป้าหมาย)
   const _gl=document.getElementById('ov-goal-line');
   if(_gl) _gl.innerHTML=(_reached
-      ? `🎉 ถึงเป้าปลายทาง <strong>${fmtC(GOAL)}</strong> แล้ว · เกินมา ${fmt(netWorth-GOAL)}`
-      : `🎯 ต่อไป <strong>${fmtC(_next)}</strong> · ขาดอีก ${fmt(Math.max(_next-netWorth,0))}`+
-        ` · ปลายทาง ${fmtC(GOAL)} <strong>${pct.toFixed(1)}%</strong>`)+
-    ` <span style="float:right">เป้าหมาย ›</span>`;
+      ? _L(`🎉 ถึงเป้าปลายทาง <strong>${fmtC(GOAL)}</strong> แล้ว · เกินมา ${fmt(netWorth-GOAL)}`,
+           `🎉 Final goal <strong>${fmtC(GOAL)}</strong> reached · ${fmt(netWorth-GOAL)} over`)
+      : _L(`🎯 ต่อไป <strong>${fmtC(_next)}</strong> · ขาดอีก ${fmt(Math.max(_next-netWorth,0))}`+
+           ` · ปลายทาง ${fmtC(GOAL)} <strong>${pct.toFixed(1)}%</strong>`,
+           `🎯 Next <strong>${fmtC(_next)}</strong> · ${fmt(Math.max(_next-netWorth,0))} to go`+
+           ` · final ${fmtC(GOAL)} <strong>${pct.toFixed(1)}%</strong>`))+
+    ` <span style="float:right">${_L('เป้าหมาย ›','Goals ›')}</span>`;
 
   // บรรทัดล่างพูดถึงเป้าปลายทางแยกกันคนละบรรทัด ไม่ปนกับหมุด
   const remEl=document.getElementById('ov-3m-remain');
@@ -2745,7 +2829,7 @@ function renderEmergencyFund(){
     <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap">
       <div>
         <div style="font-family:var(--f-sans);font-size:clamp(22px,3vw,30px);font-weight:700;color:${c};letter-spacing:-.02em">
-          ${ef.monthsCovered.toFixed(1)} <span style="font-size:14px;font-weight:500">เดือน</span></div>
+          ${ef.monthsCovered.toFixed(1)} <span style="font-size:14px;font-weight:500">${(window.I18N&&I18N.lang==='en')?'months':'เดือน'}</span></div>
         <div style="font-size:11px;color:var(--muted2);margin-top:4px">
           เงินสด ${fmt(ef.cash)} ÷ รายจ่ายจำเป็น ${fmt(ef.burn)}/เดือน</div>
       </div>
@@ -3442,8 +3526,8 @@ function renderAccounts(){
       plugins:{
         legend:{display:false},
         tooltip:{
-          backgroundColor:'#12121a',borderColor:'#1e1e35',borderWidth:1,
-          titleColor:'#e2e2f0',bodyColor:'#9090c0',
+          backgroundColor:CT.tipBg,borderColor:CT.tipBorder,borderWidth:1,
+          titleColor:CT.title,bodyColor:CT.body,
           titleFont:{family:CHART_FONT},bodyFont:{family:CHART_FONT,size:11},
           callbacks:{
             label:ctx=>{const i=ctx.dataIndex;const val=ctx.raw;const vStr='฿'+val.toLocaleString(LOC,{maximumFractionDigits:0});if(i===0)return ' '+vStr;const prev=balData[i-1];const chg=val-prev;const pct=prev!==0?(chg/Math.abs(prev)*100).toFixed(1):'—';const sign=chg>=0?'+':'';return[' '+vStr,' YoY: '+sign+'฿'+Math.abs(chg).toLocaleString(LOC,{maximumFractionDigits:0})+' ('+sign+pct+'%)'];}
@@ -3451,9 +3535,9 @@ function renderAccounts(){
         }
       },
       scales:{
-        x:{grid:{color:'rgba(30,30,53,.8)',lineWidth:.5},ticks:{color:'#6060a0',font:{family:CHART_FONT,size:10}}},
-        y:{grid:{color:'rgba(30,30,53,.8)',lineWidth:.5},
-           ticks:{color:'#6060a0',font:{family:CHART_FONT,size:9},
+        x:{grid:{color:CT.grid,lineWidth:.5},ticks:{color:CT.tick,font:{family:CHART_FONT,size:10}}},
+        y:{grid:{color:CT.grid,lineWidth:.5},
+           ticks:{color:CT.tick,font:{family:CHART_FONT,size:9},
              callback:axisTick}}
       }
     }
@@ -3737,7 +3821,7 @@ const VLOG_PURGED_KEY = 'finOS_valueLogPurged_v44';
 //   ฟังก์ชันหาย  → BLOCK  (แอปคำนวณผิดแน่นอน — นี่คือสิ่งที่ guard มีไว้จับ)
 //   เลขไม่ตรง    → WARN   (แค่ลืม bump — log ไว้ ไม่รบกวนผู้ใช้)
 // ฟังก์ชันที่ต้องมีคือสัญญาจริงระหว่างสองไฟล์ ส่วนสตริงเวอร์ชันเป็นแค่ป้าย
-const EXPECTED_SHARED_BUILD = 'v64';
+const EXPECTED_SHARED_BUILD = 'v65';
 const REQUIRED_SHARED_FNS = [
   'resolvePrices', 'pipelinePricesTHB', 'parseReconcileRows',
   'computeReconciliation', 'splitBalances', 'debtVsInvest', 'buildDebtPlan',
@@ -4482,7 +4566,8 @@ function gsInit(){
     _restoringFromCache=true;
     loadGoals(); updateBudgetBadge(); try{updateDebtBadge();}catch(e){} savePortfolioToStorage();
     _restoringFromCache=false;
-    switchPage('overview');
+    // v65 — เหมือน v54 ฝั่ง sync: อยู่หน้าที่ผู้ใช้เปิดไว้ ไม่ดีดกลับ Overview (เดิมถ้ากดเปลี่ยนหน้าระหว่างโหลดจะเด้งกลับ)
+    switchPage(document.getElementById('page-'+curPage) ? curPage : 'overview');
     gsSetStatus('📦 ใช้ข้อมูล cache ('+(cacheAge<60?cacheAge+' นาทีที่แล้ว':Math.round(cacheAge/60)+' ชม.ที่แล้ว')+') — กด Sync เพื่ออัปเดต','ok');
   }
 
@@ -7282,6 +7367,33 @@ function switchPage(name){
 }
 function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');}
 
+/* ══ v65 — ธีม Slate/Midnight + ภาษา TH/EN ══════════════════════════
+   ทั้งสองอย่างเปลี่ยนสิ่งที่ render ไปแล้ว (สีในกราฟ · รูปแบบวันที่ · ชื่อชุดข้อมูลในกราฟ)
+   → ล้าง renderedPages แล้ว render หน้าปัจจุบันใหม่ · หน้าอื่น render ใหม่เมื่อเปิด */
+const THEME_KEY='finOS_theme';
+function _rerenderAll(){
+  try{
+    if(typeof renderedPages==='undefined' || !(txRows.length || assets.length)) return;
+    renderedPages=new Set();
+    switchPage(curPage);
+    if(typeof populateMonthSelect==='function') try{ populateMonthSelect(); }catch(e){}
+  }catch(e){ console.warn('[prefs] rerender:', e.message); }
+}
+function _paintThemeBtn(){
+  const th=document.documentElement.getAttribute('data-theme')||'slate';
+  const l=document.getElementById('theme-lbl'); if(l) l.textContent = th==='midnight' ? 'Midnight' : 'Slate';
+  const m=document.querySelector('meta[name="theme-color"]'); if(m) m.setAttribute('content', th==='midnight' ? '#09090f' : '#0F172A');
+}
+function toggleTheme(){
+  const cur=document.documentElement.getAttribute('data-theme')==='midnight'?'midnight':'slate';
+  const next=cur==='midnight'?'slate':'midnight';
+  document.documentElement.setAttribute('data-theme', next);
+  try{ localStorage.setItem(THEME_KEY, next); }catch(e){}
+  _syncChartFont(); _paintThemeBtn(); _rerenderAll();
+}
+window.onLangChange = () => _rerenderAll();
+document.addEventListener('DOMContentLoaded', _paintThemeBtn);
+
 /* ══ v64 — ย่อ/ขยายเมนูด้านข้าง + ซ่อนแถบเมนูล่างตอนเลื่อน (มือถือ) ══ */
 const SB_MINI_KEY='finOS_sbMini';
 function _applySidebarMini(on){
@@ -7877,9 +7989,9 @@ function renderInsurance(){
       data:{labels:provLabels,datasets:[{data:provValues,
         backgroundColor:EXP_COLORS.slice(0,provLabels.length),borderWidth:0,hoverOffset:4}]},
       options:{cutout:'65%',responsive:true,maintainAspectRatio:false,
-        plugins:{legend:{position:'bottom',labels:{color:'#9090c0',font:{family:CHART_FONT,size:10},boxWidth:10,padding:10}},
-          tooltip:{backgroundColor:'#12121a',borderColor:'#1e1e35',borderWidth:1,
-            titleColor:'#e2e2f0',bodyColor:'#9090c0',titleFont:{family:CHART_FONT},bodyFont:{family:CHART_FONT,size:11},
+        plugins:{legend:{position:'bottom',labels:{color:CT.body,font:{family:CHART_FONT,size:10},boxWidth:10,padding:10}},
+          tooltip:{backgroundColor:CT.tipBg,borderColor:CT.tipBorder,borderWidth:1,
+            titleColor:CT.title,bodyColor:CT.body,titleFont:{family:CHART_FONT},bodyFont:{family:CHART_FONT,size:11},
             callbacks:{label:c=>` ${escHtml(c.label)}: ${fmt(c.raw)}`}}}}
     });
   }
@@ -7901,13 +8013,13 @@ function renderInsurance(){
         borderRadius:4,borderSkipped:false}]},
       options:{responsive:true,maintainAspectRatio:false,
         plugins:{legend:{display:false},
-          tooltip:{backgroundColor:'#12121a',borderColor:'#1e1e35',borderWidth:1,
-            titleColor:'#e2e2f0',bodyColor:'#9090c0',titleFont:{family:CHART_FONT},bodyFont:{family:CHART_FONT,size:11},
+          tooltip:{backgroundColor:CT.tipBg,borderColor:CT.tipBorder,borderWidth:1,
+            titleColor:CT.title,bodyColor:CT.body,titleFont:{family:CHART_FONT},bodyFont:{family:CHART_FONT,size:11},
             callbacks:{label:c=>` ${fmt(c.raw)}`}}},
         scales:{
-          x:{grid:{color:'rgba(30,30,53,.8)',lineWidth:.5},ticks:{color:'#6060a0',font:{family:CHART_FONT,size:9}}},
-          y:{grid:{color:'rgba(30,30,53,.8)',lineWidth:.5},
-             ticks:{color:'#6060a0',font:{family:CHART_FONT,size:9},callback:axisTick}}
+          x:{grid:{color:CT.grid,lineWidth:.5},ticks:{color:CT.tick,font:{family:CHART_FONT,size:9}}},
+          y:{grid:{color:CT.grid,lineWidth:.5},
+             ticks:{color:CT.tick,font:{family:CHART_FONT,size:9},callback:axisTick}}
         }}
     });
   }

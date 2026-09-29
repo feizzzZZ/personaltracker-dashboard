@@ -22,7 +22,7 @@
 // หน้านั้นถูกยุบเข้า index.html และลบออกจาก repo แล้ว ถ้ายังอยู่ในลิสต์
 // ทุกครั้งที่ install จะ log "ข้ามไฟล์ที่หาไม่เจอ" ซึ่งเป็น noise ที่จะกลบ
 // warning จริงในอนาคต (กลไกข้ามไฟล์หายทำงานถูกแล้ว — แต่ต้องไม่มีของหายตั้งแต่แรก)
-const CACHE_NAME = 'finance-os-v64';  // bump version so old cache is cleared on deploy
+const CACHE_NAME = 'finance-os-v65';  // bump version so old cache is cleared on deploy
 const BASE = '/personaltracker-dashboard';
 
 // App shell — files to pre-cache on install
@@ -33,6 +33,7 @@ const BASE = '/personaltracker-dashboard';
 const SHELL_FILES = [
   BASE + '/',
   BASE + '/index.html',
+  BASE + '/i18n.js',                   // v65 — สลับภาษา TH/EN
   BASE + '/shared.js',                 // data layer กลาง — ต้อง precache ให้ offline ทำงาน
   BASE + '/manifest.json',
   BASE + '/icon/icon-192x192.png',
@@ -49,7 +50,7 @@ const CDN_ASSETS = [
   // never hits. The old entry pointed at Google Sans / Google Sans Mono, which are
   // Google-internal fonts that fonts.googleapis.com does not serve: the request
   // 400'd, so this was caching a failure and Thai text had no font offline.
-  'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap',
+  'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap',
 ];
 
 // ── Install: pre-cache app shell ──────────────────────────────────────
