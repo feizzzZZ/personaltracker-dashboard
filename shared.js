@@ -782,6 +782,137 @@ function computeDeviations(real){
           illiquidPct: grossVal>0 ? illiquidVal/grossVal*100 : 0};
 }
  
+// ═══ v66 — REBALANCING (เติมเงิน / ถอนเงิน / ปรับสมดุล) ═══════════════════
+// ตัวคำนวณล้วน (ไม่แตะ DOM) · ทดสอบใน scripts/test_rebalance.cjs
+// holdings: [{ticker, group, qty, price(บาท/หน่วย), val, cost}] · targets: {ticker: %}
+// mode: 'topup' (ซื้ออย่างเดียว) · 'withdraw' (ขายอย่างเดียว) · 'rebalance' (ซื้อ+ขายให้ถึงเป้า)
+// หลัก: กองที่ขายไม่ได้ (ALLOC_META illiquid เช่น Provident Fund) ไม่อยู่ในสมการเลย —
+//       แบบเดียวกับ computeDeviations() ไม่งั้นจะแนะนำให้ "ขาย PVD" ซึ่งทำไม่ได้
+const REBAL_TARGETS_KEY = 'finOS_rebalTargets';
+const REBAL_OPTS_KEY    = 'finOS_rebalOpts';
+// หน่วยซื้อขายขั้นต่ำต่อกลุ่ม: หุ้นไทยซื้อทีละ 100 หุ้น (board lot) · อื่น ๆ ซื้อเป็นเศษได้
+const REBAL_LOT_DEFAULT = { 'Thai Stock':100, 'US Stock':0.0001, 'Crypto':0.000001,
+                            'Mutual Fund':0.0001, 'Gold':0.0001, 'Other':1 };
+function rebalLot(group, opts){
+  const o = (opts && opts.lots) || {};
+  const v = Number(o[group] ?? REBAL_LOT_DEFAULT[group] ?? 1);
+  return v > 0 ? v : 1;
+}
+const _rbIlliquid = h => !!(ALLOC_META[h.group] && ALLOC_META[h.group].illiquid);
+
+// เป้ารายตัวเริ่มต้น: เป้าของกลุ่ม (getTargets) แบ่งให้แต่ละตัวตามสัดส่วนมูลค่าในกลุ่มตอนนี้
+// แล้ว normalize ให้รวม 100 เฉพาะกลุ่มที่ถืออยู่จริงและขายได้ (ไม่รวม Cash)
+function defaultRebalTargets(holdings){
+  const gt = getTargets();
+  const liq = (holdings||[]).filter(h => !_rbIlliquid(h) && h.val > 0);
+  const byG = {};
+  liq.forEach(h => { byG[h.group] = (byG[h.group]||0) + h.val; });
+  const raw = {};
+  liq.forEach(h => { const g = gt[h.group] ?? gt['Other'] ?? 0; raw[h.ticker] = g * h.val / byG[h.group]; });
+  const sum = Object.values(raw).reduce((a,b)=>a+b, 0);
+  const out = {};
+  Object.entries(raw).forEach(([k,v]) => { out[k] = sum > 0 ? Math.round(v/sum*1000)/10 : 0; });
+  return out;
+}
+function getRebalTargets(holdings){
+  try{ const s = JSON.parse(localStorage.getItem(REBAL_TARGETS_KEY)||'null');
+       if(s && typeof s==='object' && Object.keys(s).length) return s; }catch(e){}
+  return defaultRebalTargets(holdings);
+}
+function getRebalOpts(){
+  try{ const s = JSON.parse(localStorage.getItem(REBAL_OPTS_KEY)||'null'); if(s && typeof s==='object') return s; }catch(e){}
+  return { lots:{} };
+}
+
+// หา r ที่ Σ f(r) = amount ด้วย bisection (f เป็นฟังก์ชันเพิ่มขึ้นตาม r)
+function _rbSolve(f, amount, lo, hi){
+  for(let i=0;i<80;i++){ const m=(lo+hi)/2; if(f(m) < amount) lo=m; else hi=m; }
+  return hi;
+}
+function rebalancePlan(holdings, targets, amount, mode, opts){
+  mode = mode || 'topup';
+  amount = Math.max(0, Number(amount)||0);
+  const H = (holdings||[]).filter(h => !_rbIlliquid(h) && h.price > 0 &&
+                                       ((targets||{})[h.ticker] > 0 || h.val > 0));
+  const tSum = H.reduce((s,h)=>s+(Number(targets[h.ticker])||0), 0);
+  const cur  = H.reduce((s,h)=>s+(h.val||0), 0);
+  const empty = { rows:[], totalBuy:0, totalSell:0, leftover:amount, totalBefore:cur, totalAfter:cur, targetSum:tSum };
+  if(!H.length || tSum <= 0) return empty;
+  const tw = h => (Number(targets[h.ticker])||0) / tSum;          // สัดส่วนเป้า (normalize เผื่อรวมไม่ถึง 100)
+  const after = mode==='withdraw' ? Math.max(0, cur-amount) : cur+amount;
+  const want  = h => tw(h) * after;
+  const raw = {};
+  if(mode === 'topup'){
+    // water-filling: ยกตัวที่ขาดเป้ามากสุด (val/want ต่ำสุด) ขึ้นไประดับเดียวกัน r จนเงินหมด
+    const f = r => H.reduce((s,h)=>s+Math.max(0, r*want(h) - h.val), 0);
+    const r = f(1) >= amount ? _rbSolve(f, amount, 0, 1) : 1;
+    H.forEach(h => { raw[h.ticker] = Math.max(0, r*want(h) - h.val); });
+    const spent = Object.values(raw).reduce((a,b)=>a+b,0);
+    if(spent < amount - 0.01){               // ทุกตัวถึงเป้าแล้ว เงินเหลือ → แบ่งตามเป้า
+      const extra = amount - spent; H.forEach(h => { raw[h.ticker] += extra * tw(h); });
+    }
+  } else if(mode === 'withdraw'){
+    // ลดตัวที่เกินเป้ามากสุด (val/want สูงสุด) ลงมาระดับเดียวกัน r จนได้เงินครบ
+    const f = r => H.reduce((s,h)=>s+Math.min(h.val, Math.max(0, h.val - r*want(h))), 0);
+    const target = Math.min(amount, cur);
+    // f ลดลงเมื่อ r เพิ่ม → หา r ใน [0, rMax] ที่ f(r)=target
+    const rMax = Math.max(1, ...H.map(h => want(h)>0 ? h.val/want(h) : 1)) + 1;
+    let lo=0, hi=rMax;
+    for(let i=0;i<80;i++){ const m=(lo+hi)/2; if(f(m) > target) lo=m; else hi=m; }
+    H.forEach(h => { raw[h.ticker] = -Math.min(h.val, Math.max(0, h.val - hi*want(h))); });
+  } else {
+    H.forEach(h => { raw[h.ticker] = want(h) - h.val; });
+  }
+  // ปัดเป็นหน่วยซื้อขาย · ซื้อปัดลง (ไม่เกินงบ) · ขายปัดขึ้น (ได้เงินไม่ขาด) แต่ไม่เกินที่ถือ
+  const unitsOf = (h, thb) => {
+    const lot = rebalLot(h.group, opts);
+    const u = thb / h.price / lot;
+    let n = Math.floor(u + 1e-9);   // ซื้อ: ปัดลง (ไม่เกินงบ) · ขาย (u ติดลบ): ปัดออกจากศูนย์ = ขายพอให้ได้เงินครบ
+    if(thb < 0) n = Math.max(n, -Math.floor((h.qty||0)/lot + 1e-9));
+    return +(n*lot).toFixed(8);
+  };
+  const units = {}; H.forEach(h => { units[h.ticker] = unitsOf(h, raw[h.ticker]); });
+  // เงินเหลือจากการปัด (โหมดเติมเงิน) → เติมทีละ lot ให้ตัวที่ขาดเป้ามากสุดที่ยังซื้อไหว
+  if(mode === 'topup'){
+    let left = amount - H.reduce((s,h)=>s+units[h.ticker]*h.price, 0);
+    for(let guard=0; guard<500; guard++){
+      const cand = H.map(h => { const lot=rebalLot(h.group,opts), cost=lot*h.price;
+          const v=h.val+units[h.ticker]*h.price; return {h,lot,cost,ratio: want(h)>0 ? v/want(h) : Infinity}; })
+        .filter(c => c.cost <= left + 1e-6 && c.ratio < 1).sort((a,b)=>a.ratio-b.ratio)[0];
+      if(!cand || cand.cost < 0.01) break;
+      units[cand.h.ticker] = +(units[cand.h.ticker] + cand.lot).toFixed(8); left -= cand.cost;
+    }
+  }
+  // ถอนเงิน: ปัดขึ้นรายตัวทำให้ขายเกิน (หุ้นไทยทีละ 100 หุ้น) → คืน lot ที่ไม่จำเป็น
+  // ตราบใดที่ยังได้เงิน ≥ ที่ถอน · คืนจากตัวที่หลังขายแล้วต่ำกว่าเป้ามากสุดก่อน
+  if(mode === 'withdraw'){
+    const need = Math.min(amount, cur);
+    let got = -H.reduce((s,h)=>s+units[h.ticker]*h.price, 0);
+    for(let guard=0; guard<500; guard++){
+      const cand = H.filter(h => units[h.ticker] < 0).map(h => { const lot=rebalLot(h.group,opts);
+          const v=h.val+units[h.ticker]*h.price; return {h,lot,back:lot*h.price,ratio: want(h)>0 ? v/want(h) : Infinity}; })
+        .filter(c => got - c.back >= need - 1e-6).sort((a,b)=>a.ratio-b.ratio)[0];
+      if(!cand) break;
+      units[cand.h.ticker] = +(units[cand.h.ticker] + cand.lot).toFixed(8); got -= cand.back;
+    }
+  }
+  const gOf = {}; H.forEach(h => { gOf[h.group] = gOf[h.group] || {val:0, tgt:0}; gOf[h.group].val += h.val; gOf[h.group].tgt += tw(h); });
+  const rows = H.map(h => {
+    const tradeUnits = units[h.ticker], tradeTHB = tradeUnits*h.price, valAfter = h.val + tradeTHB;
+    const g = gOf[h.group];
+    return { ticker:h.ticker, label:h.label||h.ticker, group:h.group, qty:h.qty, price:h.price, val:h.val, cost:h.cost||0,
+      gain:(h.val||0)-(h.cost||0), gainPct: h.cost>0 ? ((h.val||0)-h.cost)/h.cost*100 : null,
+      shareNow: cur>0 ? h.val/cur*100 : 0, shareTarget: tw(h)*100,
+      shareAfter: after>0 ? valAfter/after*100 : 0,
+      catShareNow: g.val>0 ? h.val/g.val*100 : 0, catTarget: g.tgt>0 ? tw(h)/g.tgt*100 : 0,
+      lot: rebalLot(h.group, opts), tradeUnits, tradeTHB };
+  });
+  const totalBuy  = rows.reduce((s,r)=>s+Math.max(0,r.tradeTHB),0);
+  const totalSell = rows.reduce((s,r)=>s+Math.max(0,-r.tradeTHB),0);
+  const leftover  = mode==='withdraw' ? totalSell-amount : amount - totalBuy + totalSell;
+  return { rows, totalBuy, totalSell, leftover, totalBefore:cur, totalAfter:cur+totalBuy-totalSell, targetSum:tSum, mode };
+}
+
 // ═══ Market bridge — ชีต → localStorage (ทั้ง Excel และ Sheets sync) ═══
 function gserialToISO(v){
   // Google/Excel serial date → ISO string (25569 = 1970-01-01)

@@ -84,58 +84,57 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <!-- v65 — ธีม/ภาษาต้องตั้งก่อน paint แรก ไม่งั้นเห็นธีมเดิมกะพริบก่อนเปลี่ยน -->
 <script>
+// v66 — เหลือ 2 ธีม: midnight (ค่าเริ่มต้น = Slate ของ v65) · light  · ค่าเก่า 'slate'/'midnight' → midnight
 (function(){try{var th=localStorage.getItem('finOS_theme');
-  document.documentElement.setAttribute('data-theme', th==='midnight'?'midnight':'slate');}catch(e){
-  document.documentElement.setAttribute('data-theme','slate');}})();
+  document.documentElement.setAttribute('data-theme', th==='light'?'light':'midnight');}catch(e){
+  document.documentElement.setAttribute('data-theme','midnight');}})();
 </script>
 <script src="i18n.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 :root{
-  /* ── Typography (#1,#9): Latin font first, Thai font second: digits/EN render from
-     Inter/JetBrains, Thai falls through to the Thai font.
-     v65 — ธีม Slate (ค่าเริ่มต้น) ใช้ Noto Sans Thai + ตัวหนังสือหลักเป็น sans
-           ธีม Midnight (เดิม) ใช้ IBM Plex Sans Thai + ตัวหนังสือหลักเป็น mono ── */
+  /* ── Typography: Latin font first (Inter/JetBrains), Thai falls through to Noto Sans Thai ── */
   --f-sans:'Inter','Noto Sans Thai',system-ui,-apple-system,'Segoe UI',sans-serif;
   --f-mono:'JetBrains Mono','Noto Sans Thai',ui-monospace,'SFMono-Regular',Menlo,monospace;
   --f-body:var(--f-sans);
 
-  /* ══ v65 — ธีม Slate (ค่าเริ่มต้น) ══════════════════════════════════
+  /* ══ ธีม Midnight (ค่าเริ่มต้น · เดิมชื่อ Slate ใน v65) ════════════════
      พื้น #0F172A · การ์ด #1E293B · เส้น #334155 · ตัวหนังสือ #F8FAFC / #94A3B8
-     สีสถานะ: เขียว #10B981 · แดง #EF4444 · ฟ้า #3B82F6 (ตามแบบที่ผู้ใช้ส่งมา)
-     contrast (WCAG AA ≥4.5:1): #94A3B8 บน #1E293B = 5.7:1 · บน #0F172A = 6.9:1 */
+     contrast (WCAG AA ≥4.5:1): #94A3B8 บน #1E293B = 5.7:1 · บน #0F172A = 6.9:1
+     --white = "ข้อความเด่นที่สุด" (ธีม Light กลับเป็นสีเข้ม) ไม่ใช่สีขาวตายตัว */
   --bg:#0F172A;--bg2:#0B1324;--bg3:#1E293B;--bg4:#273449;
   --border:#334155;--border2:#475569;--cb:#334155;
   --income:#10B981;--expense:#EF4444;--savings:#818CF8;--debt:#F59E0B;--accent:#3B82F6;
   --white:#F8FAFC;--text:#E2E8F0;--muted:#94A3B8;--muted2:#A3B1C6;
   --gain:#10B981;--loss:#EF4444;
-  --card-shadow:0 4px 6px -1px rgba(0,0,0,.3);
+  --hover:rgba(255,255,255,.03);--overlay:rgba(2,6,23,.6);--warn-bg:#2a1c05;--on-accent:#06131a;
+  --card-shadow:0 4px 6px -1px rgba(0,0,0,.3);--pop-shadow:0 8px 28px rgba(0,0,0,.55);
   /* สีในกราฟ (Chart.js อ่านผ่าน CT ใน index.html) */
   --c-tip-bg:#0F172A;--c-tip-border:#334155;--c-tip-title:#F8FAFC;--c-tip-body:#CBD5E1;
   --c-tick:#94A3B8;--c-grid:rgba(51,65,85,.6);
   --sidebar-w:200px;
+  color-scheme:dark;
 }
-/* ธีม Midnight — ค่าชุดเดิมก่อน v65 ทุกตัว */
-html[data-theme="midnight"]{
-  --f-sans:'Inter','IBM Plex Sans Thai',system-ui,-apple-system,'Segoe UI',sans-serif;
-  --f-mono:'JetBrains Mono','IBM Plex Sans Thai',ui-monospace,'SFMono-Regular',Menlo,monospace;
-  --f-body:var(--f-mono);
-  --bg:#07070e;--bg2:#0d0d1a;--bg3:#111120;--bg4:#181830;
-  --border:#1a1a30;--border2:#262640;--cb:#1e1e38;
-  --income:#00d4a0;--expense:#ff4060;--savings:#7c6fec;--debt:#ff9500;--accent:#7c6fec;
-  --white:#ffffff;--text:#dcdcf0;--muted:#8a8ac0;--muted2:#8080b0;  /* P2-6: #8a8ac0 = 6.19:1 บน #07070e ผ่าน AA */
-  --gain:#00d4a0;--loss:#ff4060;
-  --card-shadow:none;
-  --c-tip-bg:#12121a;--c-tip-border:#1e1e35;--c-tip-title:#e2e2f0;--c-tip-body:#9090c0;
-  --c-tick:#6060a0;--c-grid:rgba(30,30,53,.8);
+/* ══ v66 — ธีม Light ════════════════════════════════════════════════
+   สีสถานะเข้มขึ้นให้อ่านบนพื้นขาวได้ (AA): เขียว #047857 5.5:1 · แดง #DC2626 4.8:1 · ส้ม #B45309 5.0:1
+   muted #64748B บนขาว 4.8:1 */
+html[data-theme="light"]{
+  --bg:#F4F6FA;--bg2:#FFFFFF;--bg3:#FFFFFF;--bg4:#EEF2F7;
+  --border:#E2E8F0;--border2:#CBD5E1;--cb:#E2E8F0;
+  --income:#047857;--expense:#DC2626;--savings:#4F46E5;--debt:#B45309;--accent:#2563EB;
+  --white:#0F172A;--text:#1E293B;--muted:#64748B;--muted2:#56657A;
+  --gain:#047857;--loss:#DC2626;
+  --hover:rgba(15,23,42,.04);--overlay:rgba(15,23,42,.35);--warn-bg:#FFF4E0;--on-accent:#FFFFFF;
+  --card-shadow:0 1px 3px rgba(15,23,42,.08),0 1px 2px rgba(15,23,42,.04);--pop-shadow:0 10px 30px rgba(15,23,42,.18);
+  --c-tip-bg:#FFFFFF;--c-tip-border:#CBD5E1;--c-tip-title:#0F172A;--c-tip-body:#334155;
+  --c-tick:#64748B;--c-grid:rgba(203,213,225,.7);
+  color-scheme:light;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg);color:var(--text);font-family:var(--f-body);min-height:100vh;display:flex;overflow-x:hidden}
 /* v65 — การ์ดมีมิติ (Slate) · Midnight ไม่มีเงาเหมือนเดิม */
 .sc,.cc,.bank-card,.an-card,.wealth-strip,.bgt-card{box-shadow:var(--card-shadow)}
-body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.03) 2px,rgba(0,0,0,.03) 4px)}
-html:not([data-theme="midnight"]) body::before{display:none}   /* v65 — เส้น scanline เป็นลายของธีม Midnight */
 
 /* ── Upload ── */
 #up{position:fixed;inset:0;z-index:200;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;padding:24px}
@@ -204,7 +203,7 @@ html:not([data-theme="midnight"]) body::before{display:none}   /* v65 — เส
 .sb-icon{font-size:16px;flex-shrink:0;display:inline-block;width:20px;text-align:center}
 .sb-badge{margin-left:auto;font-size:9px;padding:1px 5px;border-radius:4px;background:rgba(0,212,160,.15);color:var(--income)}
 .sb-badge-warn{background:rgba(255,64,96,.2);color:var(--expense)}
-.sb-badge-alert{background:var(--expense);color:#fff}
+.sb-badge-alert{background:var(--expense);color:#FFFFFF}
 .sb-bottom{padding:12px 8px;border-top:1px solid var(--border)}
 
 
@@ -226,6 +225,20 @@ html:not([data-theme="midnight"]) body::before{display:none}   /* v65 — เส
 .grp-tabs.more-r{-webkit-mask-image:linear-gradient(to right,#000 82%,transparent);mask-image:linear-gradient(to right,#000 82%,transparent)}
 .grp-tabs.more-l{-webkit-mask-image:linear-gradient(to left,#000 82%,transparent);mask-image:linear-gradient(to left,#000 82%,transparent)}
 .grp-tabs.more-l.more-r{-webkit-mask-image:linear-gradient(to right,transparent,#000 14%,#000 86%,transparent);mask-image:linear-gradient(to right,transparent,#000 14%,#000 86%,transparent)}
+/* v66 — มือถือแนวตั้ง: แถบแท็บเลื่อนแนวนอนซ่อน scrollbar → แท็บท้าย ๆ ตกขอบ ผู้ใช้ไม่รู้ว่าเลื่อนได้
+   เปลี่ยนเป็นชิปห่อหลายบรรทัด (เห็นทุกแท็บเสมอ) + ติดขอบบนตอนเลื่อน สลับแท็บได้โดยไม่ต้องเลื่อนกลับ */
+@media(max-width:768px){
+  .grp-tabs{flex-wrap:wrap;overflow:visible;gap:6px;border-bottom:none;margin:0;
+    padding:calc(8px + env(safe-area-inset-top,0px)) 14px 8px;position:sticky;top:0;z-index:60;
+    background:var(--bg);box-shadow:0 1px 0 var(--border);
+    -webkit-mask-image:none!important;mask-image:none!important}
+  .grp-tab{border:1px solid var(--border);border-radius:999px;padding:6px 12px;margin:0;font-size:12px;
+    background:var(--bg3);line-height:1.2}
+  .grp-tab.active{border-color:var(--income);color:var(--income);background:var(--bg4)}
+  .grp-tabs:not([hidden]) + .page, .grp-tabs:not([hidden]) ~ .page{padding-top:14px}
+}
+/* v66 — class ตั้ง display:flex ซึ่งชนะ attribute hidden → กลุ่มที่มีหน้าเดียวเคยได้แถบเปล่า (เส้น + ช่องว่าง 18px) */
+.grp-tabs[hidden]{display:none!important}
 
 /* ══ v64 — ย่อ/ขยายเมนูด้านข้าง (เดสก์ท็อป/แท็บเล็ต) ══════════════════
    โหมดย่อเหลือแต่ไอคอน 64px → พื้นที่เนื้อหาเพิ่ม ~136px (จอ 1280 การ์ด/ตารางไม่ต้องบีบ)
@@ -252,6 +265,96 @@ html:not([data-theme="midnight"]) body::before{display:none}   /* v65 — เส
 }
 @media(max-width:768px){ .sb-collapse{display:none} }
 @media(prefers-reduced-motion:reduce){ .sidebar,.main-content{transition:none} }
+
+
+/* v66 — ธีม Light: สีสด (ออกแบบไว้บนพื้นมืด) ที่ฝังเป็น inline style หลายสิบจุด อ่านไม่ออกบนพื้นขาว
+   (#00d4a0 บนขาว = 2.0:1 · #ffd166 = 1.4:1) → เปลี่ยนเป็นสีสถานะของธีมที่ผ่าน AA
+   ใช้ attribute selector + !important เพราะ inline style ชนะ class ปกติ · กระทบเฉพาะสีตัวอักษร */
+html[data-theme="light"] [style*="color:#00d4a0"],
+html[data-theme="light"] [style*="color: #00d4a0"],
+html[data-theme="light"] [style*="color:#06d6a0"],
+html[data-theme="light"] [style*="color: #06d6a0"],
+html[data-theme="light"] [style*="color:#00c78c"],
+html[data-theme="light"] [style*="color: #00c78c"],
+html[data-theme="light"] [style*="color:#10B981"],
+html[data-theme="light"] [style*="color: #10B981"],
+html[data-theme="light"] [style*="color:#10b981"],
+html[data-theme="light"] [style*="color: #10b981"]{color:var(--gain)!important}
+html[data-theme="light"] [style*="color:#ff9500"],
+html[data-theme="light"] [style*="color: #ff9500"],
+html[data-theme="light"] [style*="color:#ffd166"],
+html[data-theme="light"] [style*="color: #ffd166"],
+html[data-theme="light"] [style*="color:#ffa94d"],
+html[data-theme="light"] [style*="color: #ffa94d"],
+html[data-theme="light"] [style*="color:#ff9f43"],
+html[data-theme="light"] [style*="color: #ff9f43"],
+html[data-theme="light"] [style*="color:#ff9f0a"],
+html[data-theme="light"] [style*="color: #ff9f0a"],
+html[data-theme="light"] [style*="color:#ffb340"],
+html[data-theme="light"] [style*="color: #ffb340"],
+html[data-theme="light"] [style*="color:#F59E0B"],
+html[data-theme="light"] [style*="color: #F59E0B"],
+html[data-theme="light"] [style*="color:#f59e0b"],
+html[data-theme="light"] [style*="color: #f59e0b"]{color:var(--debt)!important}
+html[data-theme="light"] [style*="color:#ff4060"],
+html[data-theme="light"] [style*="color: #ff4060"],
+html[data-theme="light"] [style*="color:#ff6b6b"],
+html[data-theme="light"] [style*="color: #ff6b6b"],
+html[data-theme="light"] [style*="color:#ff453a"],
+html[data-theme="light"] [style*="color: #ff453a"],
+html[data-theme="light"] [style*="color:#EF4444"],
+html[data-theme="light"] [style*="color: #EF4444"],
+html[data-theme="light"] [style*="color:#ef4444"],
+html[data-theme="light"] [style*="color: #ef4444"]{color:var(--loss)!important}
+html[data-theme="light"] [style*="color:#7c6fec"],
+html[data-theme="light"] [style*="color: #7c6fec"],
+html[data-theme="light"] [style*="color:#818CF8"],
+html[data-theme="light"] [style*="color: #818CF8"],
+html[data-theme="light"] [style*="color:#818cf8"],
+html[data-theme="light"] [style*="color: #818cf8"]{color:var(--savings)!important}
+html[data-theme="light"] [style*="color:#4cc9f0"],
+html[data-theme="light"] [style*="color: #4cc9f0"]{color:#0369A1!important}
+html[data-theme="light"] [style*="color:#a0c4ff"],
+html[data-theme="light"] [style*="color: #a0c4ff"]{color:#1D4ED8!important}
+/* ══ v66 — หน้าปรับสมดุล ══ */
+.rb-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:14px}
+.rb-seg{display:flex;background:var(--bg4);border:1px solid var(--border2);border-radius:10px;padding:3px;gap:3px}
+.rb-seg button{background:transparent;border:none;color:var(--muted2);font:inherit;font-size:12.5px;padding:8px 14px;border-radius:8px;cursor:pointer}
+.rb-seg button.active{background:var(--bg3);color:var(--white);box-shadow:0 0 0 1px var(--border2),var(--card-shadow);font-weight:600}
+.rb-field{display:flex;flex-direction:column;gap:4px}
+.rb-field label{font-size:11px;color:var(--muted)}
+.rb-amt{background:var(--bg4);border:1px solid var(--border2);color:var(--white);border-radius:10px;padding:9px 12px;font:inherit;font-size:14px;width:170px}
+.rb-amt:focus{outline:2px solid var(--accent);outline-offset:1px}
+.rb-btn{background:var(--bg4);border:1px solid var(--border2);color:var(--text);border-radius:10px;padding:9px 14px;font:inherit;font-size:12.5px;cursor:pointer}
+.rb-btn:hover{border-color:var(--muted)}
+.rb-btn.primary{background:var(--accent);border-color:var(--accent);color:#FFFFFF;font-weight:600}
+.rb-sum{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+.rb-sum .sc{min-width:150px;flex:0 0 auto}
+.rb-table{width:100%;border-collapse:collapse;font-size:12px}
+.rb-table th{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);text-align:left;padding:10px;border-bottom:1px solid var(--border);white-space:nowrap}
+.rb-table td{padding:11px 10px;border-bottom:1px solid var(--border);vertical-align:top;color:var(--text)}
+.rb-table tr:last-child td{border-bottom:none}
+.rb-table tr.done td{opacity:.45}
+.rb-table .sub{font-size:11px;color:var(--muted);margin-top:2px}
+.rb-table .tk{font-weight:600;color:var(--white)}
+.rb-trade.buy{color:var(--gain);font-weight:600} .rb-trade.sell{color:var(--loss);font-weight:600} .rb-trade.none{color:var(--muted)}
+.rb-chk{width:18px;height:18px;accent-color:var(--accent);cursor:pointer}
+.rb-setup{margin-bottom:14px}
+.rb-setup input{background:var(--bg4);border:1px solid var(--border2);color:var(--white);border-radius:7px;padding:5px 8px;font:inherit;font-size:12px;width:80px;text-align:right}
+.rb-note{font-size:11px;color:var(--muted);margin-top:10px;line-height:1.7}
+@media(max-width:768px){
+  .rb-amt{width:100%}
+  .rb-bar .rb-field{flex:1 1 140px}
+  /* ตาราง → การ์ดต่อแถว (ป้ายมาจาก data-l) */
+  .rb-table thead{display:none}
+  .rb-table tr{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;padding:12px;border-bottom:1px solid var(--border)}
+  .rb-table td{border:none;padding:0}
+  .rb-table td[data-l]::before{content:attr(data-l);display:block;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+  .rb-table tr{position:relative}
+  .rb-table td.rb-asset{grid-column:1 / -1;padding-right:34px}
+  .rb-table td.rb-done{position:absolute;right:12px;top:12px}
+  .rb-table td.rb-hide-m{display:none}
+}
 
 /* ══ v65 — ปุ่มภาษา / ธีม (ท้ายเมนูข้าง) ══ */
 .pref-row{display:flex;gap:6px;margin-bottom:6px}
@@ -481,7 +584,7 @@ select.month-display{text-align-last:center;outline:none}
    tabular-nums = บังคับเลขทุกตัวกว้างเท่ากัน หลักพัน/หมื่นจะเรียงตรงกันเวลาเทียบยอด */
 .at td.r{text-align:right;font-variant-numeric:tabular-nums}
 .at tr:last-child td{border-bottom:none}
-.at tr:hover td{background:rgba(255,255,255,.02)}
+.at tr:hover td{background:var(--hover)}
 .tk{color:var(--white);font-weight:500;font-size:12px}
 .tp{display:inline-block;padding:2px 6px;border-radius:4px;font-size:10px;border:1px solid}
 .pill-Income{color:var(--income);border-color:rgba(0,212,160,.3);background:rgba(0,212,160,.07)}
@@ -534,7 +637,7 @@ select.month-display{text-align-last:center;outline:none}
 .yt td{padding:9px 12px;border-bottom:1px solid var(--border);text-align:right;color:var(--muted2)}
 .yt td:first-child{text-align:left;color:var(--white);font-family:var(--f-sans);font-weight:600}
 .yt tr:last-child td{border-bottom:none}
-.yt tr:hover td{background:rgba(255,255,255,.02)}
+.yt tr:hover td{background:var(--hover)}
 .yt-wrap{border-radius:12px}
 .yt th,.yt td{white-space:nowrap}
 @media(max-width:600px){
@@ -838,7 +941,7 @@ select.month-display{text-align-last:center;outline:none}
     white-space:nowrap;max-width:none;min-width:0}
 }
 .ins-table tr:last-child td{border-bottom:none}
-.ins-table tr:hover td{background:rgba(255,255,255,.02)}
+.ins-table tr:hover td{background:var(--hover)}
 .ins-status-pill{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;
   letter-spacing:.04em;border:1px solid}
 .ins-status-pill.inforce{color:var(--income);border-color:rgba(0,212,160,.3);background:rgba(0,212,160,.08)}
@@ -871,7 +974,7 @@ select.month-display{text-align-last:center;outline:none}
 .gs-connect-text{font-size:13px;font-weight:500}
 .gs-connect-sub{font-size:11px;color:var(--muted2);margin-top:1px}
 /* Settings modal */
-.gs-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;
+.gs-modal-overlay{position:fixed;inset:0;background:var(--overlay);z-index:200;
   display:none;align-items:center;justify-content:center}
 .gs-modal-overlay.show{display:flex}
 .gs-modal{background:var(--bg2);border:1px solid var(--border2);border-radius:16px;
@@ -932,7 +1035,7 @@ select.month-display{text-align-last:center;outline:none}
 .tx-fab{position:fixed;right:22px;bottom:22px;z-index:900;
   width:56px;height:56px;border-radius:50%;border:none;display:none;
   font-size:28px;line-height:1;font-weight:600;cursor:pointer;
-  background:var(--income);color:#06131a;
+  background:var(--income);color:var(--on-accent);
   box-shadow:0 6px 22px rgba(0,0,0,.45);transition:transform .15s}
 .tx-fab:hover{transform:scale(1.07)}
 .tx-fab:active{transform:scale(.94)}
@@ -975,7 +1078,7 @@ select.month-display{text-align-last:center;outline:none}
 .fab-opt-ic{font-size:19px;flex:0 0 auto;line-height:1}
 .fab-opt b{display:block;font-size:13px;font-weight:600}
 .fab-opt small{display:block;font-size:10.5px;color:var(--muted);font-family:var(--f-mono);margin-top:1px}
-.fab-backdrop{position:fixed;inset:0;z-index:899;background:rgba(0,0,0,.45)}
+.fab-backdrop{position:fixed;inset:0;z-index:899;background:var(--overlay)}
 .fab-backdrop[hidden]{display:none}
 .tx-fab.open{transform:rotate(45deg)}
 @media(max-width:640px){.fab-menu{right:16px;bottom:calc(74px + env(safe-area-inset-bottom,0px) + 56px + 12px)}}
@@ -1001,7 +1104,7 @@ select.month-display{text-align-last:center;outline:none}
 .bnav-item:active{background:var(--bg3)}
 .bnav-item:focus-visible{outline:2px solid var(--income);outline-offset:-2px}
 /* แตะนอกเมนูเพื่อปิด — เดิมต้องกด ☰ ซ้ำอย่างเดียว */
-.sb-backdrop{display:none;position:fixed;inset:0;z-index:99;background:rgba(0,0,0,.55)}
+.sb-backdrop{display:none;position:fixed;inset:0;z-index:99;background:var(--overlay)}
 .sidebar.open ~ .sb-backdrop{display:block}
 
 @media(max-width:768px){
@@ -1052,7 +1155,7 @@ html,body{overscroll-behavior:none}
   /* เหนือปุ่ม + (สูง 56px อยู่ที่ bottom 74px) ไม่งั้นทับกันพอดี */
   bottom:calc(74px + 56px + 12px + env(safe-area-inset-bottom,0px));
   background:var(--bg2);border:1px solid var(--income);border-radius:14px;
-  padding:13px 15px;box-shadow:0 8px 28px rgba(0,0,0,.55)}
+  padding:13px 15px;box-shadow:var(--pop-shadow)}
 .a2hs[hidden]{display:none}
 .a2hs-ic{font-size:22px;flex:0 0 auto;line-height:1}
 .a2hs-txt{flex:1 1 auto;min-width:0;font-size:12.5px;line-height:1.6;color:var(--text)}
@@ -1068,7 +1171,7 @@ html.standalone .a2hs{display:none}
    ด้วยนโยบาย disallowed_useragent — แก้ที่โค้ดไม่ได้
    สิ่งที่ทำได้คือบอกทางออกก่อนผู้ใช้ไปเจอหน้า error ของ Google */
 .wv-warn{position:fixed;top:0;left:0;right:0;z-index:100000;display:flex;align-items:flex-start;gap:12px;
-  padding:calc(12px + env(safe-area-inset-top,0px)) 14px 12px;background:#2a1c05;border-bottom:1px solid rgba(255,149,0,.5);
+  padding:calc(12px + env(safe-area-inset-top,0px)) 14px 12px;background:var(--warn-bg);border-bottom:1px solid rgba(255,149,0,.5);
   font-size:12.5px;line-height:1.55;color:#f0e2c8}
 /* ต้องมีบรรทัดนี้ — display:flex ข้างบนเป็น class selector ซึ่ง specificity
    เท่ากับ [hidden]{display:none} ของเบราว์เซอร์ แต่มาทีหลังจึงชนะ
@@ -1189,7 +1292,7 @@ html.standalone .a2hs{display:none}
           <button type="button" data-lang-btn="en" onclick="I18N.setLang('en')">EN</button>
         </div>
         <button type="button" class="theme-btn" id="theme-btn" onclick="toggleTheme()" title="สลับธีม" aria-label="สลับธีม">
-          <span aria-hidden="true">◐</span><span class="sb-lbl" id="theme-lbl">Slate</span></button>
+          <span aria-hidden="true">◐</span><span class="sb-lbl" id="theme-lbl">Midnight</span></button>
       </div>
       <button class="btn-pdf" onclick="generateMonthlyPDF()" style="width:100%;margin-bottom:6px;justify-content:center">
         ⬇<span class="sb-lbl"> Export PDF</span>
@@ -1994,6 +2097,13 @@ html.standalone .a2hs{display:none}
       <div id="dorm-active"></div>
     </div>
 
+    <!-- ══ REBALANCE (v66) ══ -->
+    <div class="page" id="page-rebalance">
+      <div class="pg-hdr"><div><div class="pg-title">ปรับสมดุลพอร์ต</div>
+        <div class="pg-sub">คำนวณว่าต้องซื้อ/ขายตัวไหนกี่หน่วย ให้สัดส่วนกลับไปตามเป้า — กองที่ขายไม่ได้ (Provident Fund) ไม่นับ</div></div></div>
+      <div id="rb-body"></div>
+    </div>
+
     <!-- ══ COST ══ -->
     <div class="page" id="page-cost">
       <div class="pg-hdr"><div><div class="pg-title">ต้นทุนที่มองไม่เห็น</div>
@@ -2073,11 +2183,7 @@ const CT = {
   get grid(){ return _cssVar('--c-grid') || 'rgba(30,30,53,.8)'; },
 };
 let CHART_FONT = "'JetBrains Mono','IBM Plex Sans Thai',ui-monospace,monospace";
-function _syncChartFont(){
-  CHART_FONT = document.documentElement.getAttribute('data-theme')==='midnight'
-    ? "'JetBrains Mono','IBM Plex Sans Thai',ui-monospace,monospace"
-    : "'Inter','Noto Sans Thai',system-ui,sans-serif";
-}
+function _syncChartFont(){ CHART_FONT = "'Inter','Noto Sans Thai',system-ui,sans-serif"; }   // v66 — ทั้งสองธีมใช้ sans
 _syncChartFont();
 // ── Constants ───────────────────────────────────────────────────────
 const GC={'Thai Stock':'#4cc9f0','US Stock':'#00d4a0','Crypto':'#ff9500',
@@ -3663,6 +3769,8 @@ const BACKUP_KEYS = [
   'finOS_goalCfg',       // เป้า Net Worth / expected return
   'finOS_holdingTags',   // แท็ก core รายสินทรัพย์
   'finOS_lastPrice',     // ราคาล่าสุดที่จำไว้ (กันพอร์ตกระตุกหลัง restore)
+  'finOS_rebalTargets',  // v66 — เป้ารายตัวของหน้าปรับสมดุล
+  'finOS_rebalOpts',     // v66 — หน่วยซื้อขายขั้นต่ำต่อกลุ่ม
 ];
 function exportSettings(){
   const data = {};
@@ -3835,6 +3943,7 @@ const REQUIRED_SHARED_FNS = [
   'monthlyWealthContrib', 'monthsToGoal', 'usdExposure', 'debtSplit',   // v62 — นิยามเดียวข้ามหน้า
   'budgetSpendMap',                                           // v63 — งบนับรายจ่ายรูดบัตร
   'valueLogJumps', 'cleanSheetSpikesV62',                     // v62 — ด่านคุณภาพ Value_Log
+  'rebalancePlan', 'getRebalTargets', 'getRebalOpts', 'rebalLot',   // v66 — ปรับสมดุล
   'loadBotPaper', 'fetchBotPaper', 'botStatus',   // v59 — หน้าบอทจำลอง
 ];
 function checkSharedVersion(){
@@ -6387,6 +6496,105 @@ function iaToggleTag(ticker){
 /* ═══ 2. HIDDEN COST ═══════════════════════════════════════════════════
    ค่าคอม/ภาษี เป็นต้นทุนเดียวที่ "แน่นอน 100%" ในการลงทุน — ผลตอบแทนไม่แน่
    แต่ค่าธรรมเนียมจ่ายแน่ทุกครั้ง จึงควรวัดจริงจังกว่าการเดาทิศตลาด */
+/* ══ v66 — ปรับสมดุล (Rebalancing) ═════════════════════════════════════
+   ตัวคำนวณอยู่ใน shared.js (rebalancePlan) · หน้านี้แค่เก็บ state + วาด */
+const _rb = { mode:'topup', amount:10000, setup:false, done:new Set(), plan:null };
+function _rbHoldings(){
+  return (assets||[]).filter(a=>a.qty>1e-9 && a.cur>0)
+    .map(a=>({ticker:a.ticker, label:a.ticker, group:a.group, qty:a.qty, price:a.cur, val:a.val, cost:a.cost}));
+}
+function renderRebalance(){
+  const el=document.getElementById('rb-body'); if(!el) return;
+  const H=_rbHoldings();
+  if(!H.length){ el.innerHTML=`<div class="cc" style="text-align:center;color:var(--muted)">${_L('ยังไม่มีสินทรัพย์ที่มีราคา','No priced holdings yet')}</div>`; return; }
+  const T=getRebalTargets(H), O=getRebalOpts();
+  const p=_rb.plan=rebalancePlan(H, T, _rb.amount, _rb.mode, O);
+  const n2=v=>(+v).toLocaleString(LOC,{maximumFractionDigits:v>=100?0:v>=1?2:6});
+  const pct=v=>v.toFixed(2)+'%';
+  const modeBtn=(m,th,en)=>`<button type="button" class="${_rb.mode===m?'active':''}" onclick="_rb.mode='${m}';_rb.done.clear();renderRebalance()">${_L(th,en)}</button>`;
+  const tSum=Object.entries(T).filter(([k])=>H.some(h=>h.ticker===k)).reduce((s,[,v])=>s+(+v||0),0);
+  const setup=_rb.setup?`<div class="cc rb-setup">
+      <div class="ct">${_L('ตั้งค่าเป้าหมายรายตัว','Per-asset targets')}<span>${_L('รวม','Total')} ${tSum.toFixed(1)}%${Math.abs(tSum-100)>0.5?' · '+_L('ระบบจะปรับสัดส่วนให้รวม 100% เอง','normalized to 100% automatically'):''}</span></div>
+      <div class="tw" style="border:none"><table class="rb-table"><thead><tr><th>${_L('สินทรัพย์','Asset')}</th><th>${_L('หมวด','Category')}</th><th>${_L('สัดส่วนตอนนี้','Now')}</th><th>${_L('เป้า %','Target %')}</th></tr></thead><tbody>
+      ${H.filter(h=>!(ALLOC_META[h.group]||{}).illiquid).map(h=>{const r=p.rows.find(x=>x.ticker===h.ticker);
+        return `<tr><td class="rb-asset tk">${escHtml(h.ticker)}</td><td data-l="${_L('หมวด','Category')}">${escHtml(h.group)}</td>
+        <td data-l="${_L('ตอนนี้','Now')}">${r?pct(r.shareNow):'—'}</td>
+        <td data-l="${_L('เป้า %','Target %')}"><input type="number" min="0" max="100" step="0.1" data-rbt="${escAttr(h.ticker)}" value="${+(T[h.ticker]||0)}"></td></tr>`;}).join('')}
+      </tbody></table></div>
+      <div class="ct" style="margin-top:14px">${_L('หน่วยซื้อขายขั้นต่ำต่อหมวด','Minimum trading unit per category')}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:12px">${[...new Set(H.map(h=>h.group))].filter(g=>!(ALLOC_META[g]||{}).illiquid).map(g=>
+        `<label style="font-size:12px;color:var(--muted2);display:flex;align-items:center;gap:6px">${escHtml(g)} <input type="number" min="0" step="any" data-rbl="${escAttr(g)}" value="${rebalLot(g,O)}"></label>`).join('')}</div>
+      <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+        <button type="button" class="rb-btn primary" onclick="rbSaveSetup()">${_L('บันทึก','Save')}</button>
+        <button type="button" class="rb-btn" onclick="rbResetSetup()">${_L('ใช้ค่าเริ่มต้น (จากเป้าหมวด)','Reset to category defaults')}</button>
+      </div></div>`:'';
+  const rows=p.rows.map((r,i)=>{
+    const cls=r.tradeUnits>0?'buy':r.tradeUnits<0?'sell':'none', done=_rb.done.has(r.ticker);
+    const act=r.tradeUnits>0?_L('ซื้อ','Buy'):r.tradeUnits<0?_L('ขาย','Sell'):'';
+    return `<tr class="${done?'done':''}">
+      <td class="rb-hide-m" style="color:var(--muted)">${i+1}</td>
+      <td class="rb-asset"><div class="tk">${escHtml(r.ticker)}</div><div class="sub">${escHtml(r.group)}</div></td>
+
+      <td data-l="${_L('ต้นทุน','Cost basis')}">${fmt(r.cost)}</td>
+      <td data-l="${_L('มูลค่าปัจจุบัน','Current value')}"><div style="font-weight:600;color:var(--white)">${fmt(r.val)}</div><div class="sub">${fmt(r.price)}</div></td>
+      <td data-l="${_L('กำไร','Gain')}" class="${r.gain>=0?'gain':'loss'}">${fmtSign(r.gain)}<div class="sub">${r.gainPct==null?'—':(r.gainPct>=0?'▲ ':'▼ ')+Math.abs(r.gainPct).toFixed(2)+'%'}</div></td>
+      <td data-l="${_L('สัดส่วนในพอร์ต','Share in portfolio')}">${pct(r.shareNow)}<div class="sub">${_L('เป้า','target')} ${pct(r.shareTarget)}</div></td>
+      <td class="rb-hide-m">${escHtml(r.group)}</td>
+      <td data-l="${_L('สัดส่วนในหมวด','Share in category')}">${pct(r.catShareNow)}<div class="sub">${_L('เป้า','target')} ${pct(r.catTarget)}</div></td>
+      <td data-l="${act?_L('ต้อง','To')+' '+act.toLowerCase():_L('ต้องซื้อ/ขาย','To buy/sell')}" class="rb-trade ${cls}">${r.tradeUnits?`${act} ${n2(Math.abs(r.tradeUnits))} ${_L('หน่วย','units')}<div class="sub">${fmt(Math.abs(r.tradeTHB))}</div>`:'—'}</td>
+      <td class="rb-done"><input type="checkbox" class="rb-chk" ${done?'checked':''} ${r.tradeUnits?'':'disabled'} aria-label="${_L('ทำแล้ว','Done')}"
+          onchange="this.checked?_rb.done.add('${escAttr(r.ticker)}'):_rb.done.delete('${escAttr(r.ticker)}');this.closest('tr').classList.toggle('done',this.checked)"></td>
+    </tr>`;}).join('');
+  const lblAmt=_rb.mode==='withdraw'?_L('จำนวนเงินที่ถอน (฿)','Withdrawal amount (฿)'):_rb.mode==='rebalance'?_L('เงินเติมเพิ่ม (฿) · 0 = ปรับอย่างเดียว','Top-up (฿) · 0 = rebalance only'):_L('จำนวนเงินที่เติม (฿)','Top-up amount (฿)');
+  el.innerHTML=`
+    <div class="rb-bar">
+      <div class="rb-seg" role="group">${modeBtn('topup','เติมเงิน','Top up')}${modeBtn('rebalance','ปรับสมดุล','Rebalance')}${modeBtn('withdraw','ถอนเงิน','Withdrawal')}</div>
+      <div class="rb-field"><label for="rb-amt">${lblAmt}</label>
+        <input id="rb-amt" class="rb-amt" type="number" min="0" step="100" value="${_rb.amount}" onkeydown="if(event.key==='Enter')rbRun()"></div>
+      <button type="button" class="rb-btn" onclick="_rb.setup=!_rb.setup;renderRebalance()">⚙ ${_L('ตั้งค่า','Set up')} ${_rb.setup?'▴':'▾'}</button>
+      <button type="button" class="rb-btn primary" onclick="rbRun()">${_L('ดูผลลัพธ์','See result')}</button>
+      <button type="button" class="rb-btn" style="margin-left:auto" onclick="rbExportCSV()" title="${_L('ส่งออก CSV','Export CSV')}">⇩ CSV</button>
+    </div>
+    ${setup}
+    <div class="rb-sum">
+      <div class="sc"><div class="sc-lbl">${_L('ยอดซื้อรวม','Total purchase')}</div><div class="sc-val" style="color:var(--gain)">${fmt(p.totalBuy)}</div></div>
+      <div class="sc"><div class="sc-lbl">${_L('ยอดขายรวม','Total sale')}</div><div class="sc-val" style="color:var(--loss)">${fmt(p.totalSell)}</div></div>
+      <div class="sc"><div class="sc-lbl">${_rb.mode==='withdraw'?_L('ได้เกินที่ถอน','Surplus over withdrawal'):_L('เงินเหลือจากการปัดหน่วย','Left after rounding')}</div><div class="sc-val">${fmt(p.leftover)}</div></div>
+      <div class="sc"><div class="sc-lbl">${_L('มูลค่าหลังปรับ','Value after')}</div><div class="sc-val">${fmt(p.totalAfter)}</div><div class="sc-sub">${_L('ก่อน','before')} ${fmt(p.totalBefore)}</div></div>
+    </div>
+    <div class="cc" style="padding:0"><div class="tw" style="border:none"><table class="rb-table">
+      <thead><tr><th>#</th><th>${_L('สินทรัพย์','Asset')}</th><th>${_L('ต้นทุน','Cost basis')}</th><th>${_L('มูลค่าปัจจุบัน','Current cost')}</th><th>${_L('กำไร','Gain')}</th>
+        <th>${_L('สัดส่วนในพอร์ต','Share in portfolio')}</th><th>${_L('หมวด','Categories')}</th><th>${_L('สัดส่วนในหมวด','Share in a category')}</th><th>${_L('ต้องซื้อ/ขาย','To buy / sell')}</th><th></th></tr></thead>
+      <tbody>${rows}</tbody></table></div></div>
+    <div class="rb-note">${_L(
+      'เติมเงิน = ซื้ออย่างเดียว ใส่เงินให้ตัวที่ต่ำกว่าเป้ามากสุดก่อน · ถอนเงิน = ขายตัวที่เกินเป้ามากสุดก่อน · ปรับสมดุล = ซื้อและขายให้ตรงเป้า · หุ้นไทยซื้อทีละ 100 หุ้น (แก้ได้ใน ⚙) · ราคาใช้ราคาล่าสุดในแอป ราคาจริงตอนส่งคำสั่งอาจต่าง · ไม่รวมค่าธรรมเนียม',
+      'Top up = buy only, most-underweight first · Withdrawal = sell most-overweight first · Rebalance = buy and sell to target · Thai stocks trade in 100-share lots (change in ⚙) · Uses the latest in-app prices; execution prices may differ · Fees excluded')}</div>`;
+}
+function rbRun(){
+  const v=parseFloat((document.getElementById('rb-amt')||{}).value);
+  _rb.amount=isFinite(v)&&v>=0?v:0; _rb.done.clear(); renderRebalance();
+}
+function rbSaveSetup(){
+  const T={}; document.querySelectorAll('[data-rbt]').forEach(i=>{const v=parseFloat(i.value); if(v>0) T[i.dataset.rbt]=v;});
+  const O=getRebalOpts(); O.lots=O.lots||{};
+  document.querySelectorAll('[data-rbl]').forEach(i=>{const v=parseFloat(i.value); if(v>0) O.lots[i.dataset.rbl]=v;});
+  try{ localStorage.setItem(REBAL_TARGETS_KEY, JSON.stringify(T)); localStorage.setItem(REBAL_OPTS_KEY, JSON.stringify(O)); }catch(e){}
+  _rb.setup=false; renderRebalance();
+}
+function rbResetSetup(){
+  try{ localStorage.removeItem(REBAL_TARGETS_KEY); localStorage.removeItem(REBAL_OPTS_KEY); }catch(e){}
+  renderRebalance();
+}
+function rbExportCSV(){
+  const p=_rb.plan; if(!p) return;
+  const q=v=>'"'+String(v).replace(/"/g,'""')+'"';
+  const lines=[['ticker','group','qty','price_thb','value_thb','share_now_pct','share_target_pct','trade_units','trade_thb'].join(',')]
+    .concat(p.rows.map(r=>[q(r.ticker),q(r.group),r.qty,r.price.toFixed(4),r.val.toFixed(2),r.shareNow.toFixed(2),r.shareTarget.toFixed(2),r.tradeUnits,r.tradeTHB.toFixed(2)].join(',')));
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob(['\ufeff'+lines.join('\n')],{type:'text/csv;charset=utf-8'}));
+  a.download=`rebalance-${_rb.mode}-${isoLocal(new Date())}.csv`; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+
 function renderCost(){
   iaRefresh();
   if(!CLS || !PORT){ iaNeedData('cost-body'); return; }
@@ -7098,7 +7306,7 @@ let pageRenderFns={
   goals:renderGoals,
   debt:renderDebt,
   // v51 — ยุบมาจาก investment-analysis.html
-  dormant:renderDormant, cost:renderCost, market:renderMarket,
+  dormant:renderDormant, cost:renderCost, market:renderMarket, rebalance:renderRebalance,
   // v53
   signals:renderSignals,
   // v59 — ภาพรวมตลาด (watchlist 25 ตัว) + บอทจำลอง
@@ -7303,7 +7511,7 @@ const NAV_GROUPS = [
   {id:'accounts',  pages:[['accounts','บัญชี'],['debt','หนี้']]},
   {id:'insurance', pages:[['insurance','ประกัน']]},
   {id:'invest',    pages:[['portfolio','ภาพรวมพอร์ต'],['flow','รายการซื้อขาย'],['realized','ขายแล้ว'],
-                          ['dormant','ไม่มีใครดูแล'],['cost','ต้นทุน & ค่าเงิน']]},
+                          ['dormant','ไม่มีใครดูแล'],['cost','ต้นทุน & ค่าเงิน'],['rebalance','ปรับสมดุล']]},
   {id:'dividends', pages:[['dividends','ปันผล']]},
   {id:'markets',   pages:[['signals','สัญญาณรายตัว'],['watch','ภาพรวมตลาด'],
                           ['bot','บอทจำลอง'],['market','ตลาดวันนี้']]},
@@ -7380,13 +7588,12 @@ function _rerenderAll(){
   }catch(e){ console.warn('[prefs] rerender:', e.message); }
 }
 function _paintThemeBtn(){
-  const th=document.documentElement.getAttribute('data-theme')||'slate';
-  const l=document.getElementById('theme-lbl'); if(l) l.textContent = th==='midnight' ? 'Midnight' : 'Slate';
-  const m=document.querySelector('meta[name="theme-color"]'); if(m) m.setAttribute('content', th==='midnight' ? '#09090f' : '#0F172A');
+  const th=document.documentElement.getAttribute('data-theme')==='light'?'light':'midnight';
+  const l=document.getElementById('theme-lbl'); if(l) l.textContent = th==='light' ? 'Light' : 'Midnight';
+  const m=document.querySelector('meta[name="theme-color"]'); if(m) m.setAttribute('content', th==='light' ? '#F4F6FA' : '#0F172A');
 }
 function toggleTheme(){
-  const cur=document.documentElement.getAttribute('data-theme')==='midnight'?'midnight':'slate';
-  const next=cur==='midnight'?'slate':'midnight';
+  const next=document.documentElement.getAttribute('data-theme')==='light'?'midnight':'light';
   document.documentElement.setAttribute('data-theme', next);
   try{ localStorage.setItem(THEME_KEY, next); }catch(e){}
   _syncChartFont(); _paintThemeBtn(); _rerenderAll();
