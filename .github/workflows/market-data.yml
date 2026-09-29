@@ -32,7 +32,8 @@ jobs:
     # ต้องมากกว่าผลรวมของ step อย่างชัดเจน เผื่อเวลา checkout/setup-python/commit
     #   fetch (10m) + signals (9m) + bot (3m) + งานประกอบ ≈ 24m  →  ตั้ง 30m
     # v59 — signals ขยับจาก 7m เป็น 9m เพราะ watchlist เพิ่มอีก ~25 symbol
-    timeout-minutes: 30
+    # v66 — + fundamentals (6m) → ตั้ง 36m
+    timeout-minutes: 36
 
     steps:
       - name: Checkout
@@ -92,6 +93,20 @@ jobs:
         env:
           SIGNALS_DEADLINE: '420'       # 7 นาที
         run: python3 scripts/fetch_signals.py
+
+      # ── ขั้นที่ 2b (v66): ข้อมูลพื้นฐานรายบริษัท → fundamentals.json ─────
+      # หน้า Deep Research + Dividend tracker · อ่านรายชื่อจาก market-data.json
+      # งบรายปีดึงสัปดาห์ละครั้ง (FUND_REFRESH_DAYS) · ราคา/ปันผล/ข่าวทุกรอบ
+      # ล้มได้โดยไม่กระทบไฟล์อื่น — ตัวที่ดึงไม่ได้คงของรอบก่อนไว้
+      # ถ้า SEC ตอบ 403 ให้ตั้ง secret SEC_USER_AGENT = "ชื่อ อีเมล" (SEC ขอให้ระบุตัวตน)
+      - name: Fetch fundamentals
+        id: fund
+        continue-on-error: true
+        timeout-minutes: 6
+        env:
+          FUND_DEADLINE: '300'          # 5 นาที
+          SEC_USER_AGENT: ${{ secrets.SEC_USER_AGENT }}
+        run: python3 scripts/fetch_fundamentals.py
 
       # ── ขั้นที่ 3: พอร์ตจำลอง (paper) ───────────────────────────────
       # ⚠️ ไม่มีการส่งคำสั่งซื้อขายจริง ไม่มี secret ของ exchange ในไฟล์นี้
@@ -199,6 +214,7 @@ jobs:
           git add market-data.json
           if [ -f signal-history.json ]; then git add signal-history.json; fi
           if [ -f bot-paper.json ];      then git add bot-paper.json;      fi
+          if [ -f fundamentals.json ];   then git add fundamentals.json;   fi
 
           # เทียบข้อมูลจริงโดยตัด timestamp ออกก่อน — timestamp เปลี่ยนทุกรัน
           # แม้ข้อมูลจริงจะเหมือนเดิม ทำให้ git diff --quiet ไม่เคยว่างเลย
@@ -235,8 +251,16 @@ jobs:
             if [ "$OLD_DAYS" != "$NEW_DAYS" ]; then HIST_CHANGED=1; fi
           fi
 
+          # v66 — fundamentals.json: ตัด generated_at/meta ก่อนเทียบ (เปลี่ยนทุกรอบ)
+          FUND_CHANGED=0
+          if [ -f fundamentals.json ]; then
+            OLD_FUND=$(git show HEAD:fundamentals.json 2>/dev/null | jq -S 'del(.generated_at, .meta)' 2>/dev/null | sha256sum | cut -d' ' -f1 || echo none)
+            NEW_FUND=$(jq -S 'del(.generated_at, .meta)' fundamentals.json | sha256sum | cut -d' ' -f1)
+            if [ "$OLD_FUND" != "$NEW_FUND" ]; then FUND_CHANGED=1; fi
+          fi
+
           if [ "$OLD_HASH" = "$NEW_HASH" ] && [ "$HIST_CHANGED" = "0" ] \
-             && [ "$BOT_CHANGED" = "0" ]; then
+             && [ "$BOT_CHANGED" = "0" ] && [ "$FUND_CHANGED" = "0" ]; then
             echo "ข้อมูลจริงไม่เปลี่ยน (ต่างแค่ timestamp) — ข้าม commit"
           else
             git commit -m "chore(data): market data + signals + paper bot $(date -u +'%Y-%m-%d %H:%M UTC')"

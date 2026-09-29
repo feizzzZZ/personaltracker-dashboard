@@ -84,58 +84,57 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <!-- v65 — ธีม/ภาษาต้องตั้งก่อน paint แรก ไม่งั้นเห็นธีมเดิมกะพริบก่อนเปลี่ยน -->
 <script>
+// v66 — เหลือ 2 ธีม: midnight (ค่าเริ่มต้น = Slate ของ v65) · light  · ค่าเก่า 'slate'/'midnight' → midnight
 (function(){try{var th=localStorage.getItem('finOS_theme');
-  document.documentElement.setAttribute('data-theme', th==='midnight'?'midnight':'slate');}catch(e){
-  document.documentElement.setAttribute('data-theme','slate');}})();
+  document.documentElement.setAttribute('data-theme', th==='light'?'light':'midnight');}catch(e){
+  document.documentElement.setAttribute('data-theme','midnight');}})();
 </script>
 <script src="i18n.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 :root{
-  /* ── Typography (#1,#9): Latin font first, Thai font second: digits/EN render from
-     Inter/JetBrains, Thai falls through to the Thai font.
-     v65 — ธีม Slate (ค่าเริ่มต้น) ใช้ Noto Sans Thai + ตัวหนังสือหลักเป็น sans
-           ธีม Midnight (เดิม) ใช้ IBM Plex Sans Thai + ตัวหนังสือหลักเป็น mono ── */
+  /* ── Typography: Latin font first (Inter/JetBrains), Thai falls through to Noto Sans Thai ── */
   --f-sans:'Inter','Noto Sans Thai',system-ui,-apple-system,'Segoe UI',sans-serif;
   --f-mono:'JetBrains Mono','Noto Sans Thai',ui-monospace,'SFMono-Regular',Menlo,monospace;
   --f-body:var(--f-sans);
 
-  /* ══ v65 — ธีม Slate (ค่าเริ่มต้น) ══════════════════════════════════
+  /* ══ ธีม Midnight (ค่าเริ่มต้น · เดิมชื่อ Slate ใน v65) ════════════════
      พื้น #0F172A · การ์ด #1E293B · เส้น #334155 · ตัวหนังสือ #F8FAFC / #94A3B8
-     สีสถานะ: เขียว #10B981 · แดง #EF4444 · ฟ้า #3B82F6 (ตามแบบที่ผู้ใช้ส่งมา)
-     contrast (WCAG AA ≥4.5:1): #94A3B8 บน #1E293B = 5.7:1 · บน #0F172A = 6.9:1 */
+     contrast (WCAG AA ≥4.5:1): #94A3B8 บน #1E293B = 5.7:1 · บน #0F172A = 6.9:1
+     --white = "ข้อความเด่นที่สุด" (ธีม Light กลับเป็นสีเข้ม) ไม่ใช่สีขาวตายตัว */
   --bg:#0F172A;--bg2:#0B1324;--bg3:#1E293B;--bg4:#273449;
   --border:#334155;--border2:#475569;--cb:#334155;
   --income:#10B981;--expense:#EF4444;--savings:#818CF8;--debt:#F59E0B;--accent:#3B82F6;
   --white:#F8FAFC;--text:#E2E8F0;--muted:#94A3B8;--muted2:#A3B1C6;
   --gain:#10B981;--loss:#EF4444;
-  --card-shadow:0 4px 6px -1px rgba(0,0,0,.3);
+  --hover:rgba(255,255,255,.03);--overlay:rgba(2,6,23,.6);--warn-bg:#2a1c05;--on-accent:#06131a;
+  --card-shadow:0 4px 6px -1px rgba(0,0,0,.3);--pop-shadow:0 8px 28px rgba(0,0,0,.55);
   /* สีในกราฟ (Chart.js อ่านผ่าน CT ใน index.html) */
   --c-tip-bg:#0F172A;--c-tip-border:#334155;--c-tip-title:#F8FAFC;--c-tip-body:#CBD5E1;
   --c-tick:#94A3B8;--c-grid:rgba(51,65,85,.6);
   --sidebar-w:200px;
+  color-scheme:dark;
 }
-/* ธีม Midnight — ค่าชุดเดิมก่อน v65 ทุกตัว */
-html[data-theme="midnight"]{
-  --f-sans:'Inter','IBM Plex Sans Thai',system-ui,-apple-system,'Segoe UI',sans-serif;
-  --f-mono:'JetBrains Mono','IBM Plex Sans Thai',ui-monospace,'SFMono-Regular',Menlo,monospace;
-  --f-body:var(--f-mono);
-  --bg:#07070e;--bg2:#0d0d1a;--bg3:#111120;--bg4:#181830;
-  --border:#1a1a30;--border2:#262640;--cb:#1e1e38;
-  --income:#00d4a0;--expense:#ff4060;--savings:#7c6fec;--debt:#ff9500;--accent:#7c6fec;
-  --white:#ffffff;--text:#dcdcf0;--muted:#8a8ac0;--muted2:#8080b0;  /* P2-6: #8a8ac0 = 6.19:1 บน #07070e ผ่าน AA */
-  --gain:#00d4a0;--loss:#ff4060;
-  --card-shadow:none;
-  --c-tip-bg:#12121a;--c-tip-border:#1e1e35;--c-tip-title:#e2e2f0;--c-tip-body:#9090c0;
-  --c-tick:#6060a0;--c-grid:rgba(30,30,53,.8);
+/* ══ v66 — ธีม Light ════════════════════════════════════════════════
+   สีสถานะเข้มขึ้นให้อ่านบนพื้นขาวได้ (AA): เขียว #047857 5.5:1 · แดง #DC2626 4.8:1 · ส้ม #B45309 5.0:1
+   muted #64748B บนขาว 4.8:1 */
+html[data-theme="light"]{
+  --bg:#F4F6FA;--bg2:#FFFFFF;--bg3:#FFFFFF;--bg4:#EEF2F7;
+  --border:#E2E8F0;--border2:#CBD5E1;--cb:#E2E8F0;
+  --income:#047857;--expense:#DC2626;--savings:#4F46E5;--debt:#B45309;--accent:#2563EB;
+  --white:#0F172A;--text:#1E293B;--muted:#64748B;--muted2:#56657A;
+  --gain:#047857;--loss:#DC2626;
+  --hover:rgba(15,23,42,.04);--overlay:rgba(15,23,42,.35);--warn-bg:#FFF4E0;--on-accent:#FFFFFF;
+  --card-shadow:0 1px 3px rgba(15,23,42,.08),0 1px 2px rgba(15,23,42,.04);--pop-shadow:0 10px 30px rgba(15,23,42,.18);
+  --c-tip-bg:#FFFFFF;--c-tip-border:#CBD5E1;--c-tip-title:#0F172A;--c-tip-body:#334155;
+  --c-tick:#64748B;--c-grid:rgba(203,213,225,.7);
+  color-scheme:light;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg);color:var(--text);font-family:var(--f-body);min-height:100vh;display:flex;overflow-x:hidden}
 /* v65 — การ์ดมีมิติ (Slate) · Midnight ไม่มีเงาเหมือนเดิม */
 .sc,.cc,.bank-card,.an-card,.wealth-strip,.bgt-card{box-shadow:var(--card-shadow)}
-body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.03) 2px,rgba(0,0,0,.03) 4px)}
-html:not([data-theme="midnight"]) body::before{display:none}   /* v65 — เส้น scanline เป็นลายของธีม Midnight */
 
 /* ── Upload ── */
 #up{position:fixed;inset:0;z-index:200;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;padding:24px}
@@ -204,7 +203,7 @@ html:not([data-theme="midnight"]) body::before{display:none}   /* v65 — เส
 .sb-icon{font-size:16px;flex-shrink:0;display:inline-block;width:20px;text-align:center}
 .sb-badge{margin-left:auto;font-size:9px;padding:1px 5px;border-radius:4px;background:rgba(0,212,160,.15);color:var(--income)}
 .sb-badge-warn{background:rgba(255,64,96,.2);color:var(--expense)}
-.sb-badge-alert{background:var(--expense);color:#fff}
+.sb-badge-alert{background:var(--expense);color:#FFFFFF}
 .sb-bottom{padding:12px 8px;border-top:1px solid var(--border)}
 
 
@@ -226,6 +225,20 @@ html:not([data-theme="midnight"]) body::before{display:none}   /* v65 — เส
 .grp-tabs.more-r{-webkit-mask-image:linear-gradient(to right,#000 82%,transparent);mask-image:linear-gradient(to right,#000 82%,transparent)}
 .grp-tabs.more-l{-webkit-mask-image:linear-gradient(to left,#000 82%,transparent);mask-image:linear-gradient(to left,#000 82%,transparent)}
 .grp-tabs.more-l.more-r{-webkit-mask-image:linear-gradient(to right,transparent,#000 14%,#000 86%,transparent);mask-image:linear-gradient(to right,transparent,#000 14%,#000 86%,transparent)}
+/* v66 — มือถือแนวตั้ง: แถบแท็บเลื่อนแนวนอนซ่อน scrollbar → แท็บท้าย ๆ ตกขอบ ผู้ใช้ไม่รู้ว่าเลื่อนได้
+   เปลี่ยนเป็นชิปห่อหลายบรรทัด (เห็นทุกแท็บเสมอ) + ติดขอบบนตอนเลื่อน สลับแท็บได้โดยไม่ต้องเลื่อนกลับ */
+@media(max-width:768px){
+  .grp-tabs{flex-wrap:wrap;overflow:visible;gap:6px;border-bottom:none;margin:0;
+    padding:calc(8px + env(safe-area-inset-top,0px)) 14px 8px;position:sticky;top:0;z-index:60;
+    background:var(--bg);box-shadow:0 1px 0 var(--border);
+    -webkit-mask-image:none!important;mask-image:none!important}
+  .grp-tab{border:1px solid var(--border);border-radius:999px;padding:6px 12px;margin:0;font-size:12px;
+    background:var(--bg3);line-height:1.2}
+  .grp-tab.active{border-color:var(--income);color:var(--income);background:var(--bg4)}
+  .grp-tabs:not([hidden]) + .page, .grp-tabs:not([hidden]) ~ .page{padding-top:14px}
+}
+/* v66 — class ตั้ง display:flex ซึ่งชนะ attribute hidden → กลุ่มที่มีหน้าเดียวเคยได้แถบเปล่า (เส้น + ช่องว่าง 18px) */
+.grp-tabs[hidden]{display:none!important}
 
 /* ══ v64 — ย่อ/ขยายเมนูด้านข้าง (เดสก์ท็อป/แท็บเล็ต) ══════════════════
    โหมดย่อเหลือแต่ไอคอน 64px → พื้นที่เนื้อหาเพิ่ม ~136px (จอ 1280 การ์ด/ตารางไม่ต้องบีบ)
@@ -252,6 +265,162 @@ html:not([data-theme="midnight"]) body::before{display:none}   /* v65 — เส
 }
 @media(max-width:768px){ .sb-collapse{display:none} }
 @media(prefers-reduced-motion:reduce){ .sidebar,.main-content{transition:none} }
+
+
+/* v66 — ธีม Light: สีสด (ออกแบบไว้บนพื้นมืด) ที่ฝังเป็น inline style หลายสิบจุด อ่านไม่ออกบนพื้นขาว
+   (#00d4a0 บนขาว = 2.0:1 · #ffd166 = 1.4:1) → เปลี่ยนเป็นสีสถานะของธีมที่ผ่าน AA
+   ใช้ attribute selector + !important เพราะ inline style ชนะ class ปกติ · กระทบเฉพาะสีตัวอักษร */
+html[data-theme="light"] [style*="color:#00d4a0"],
+html[data-theme="light"] [style*="color: #00d4a0"],
+html[data-theme="light"] [style*="color:#06d6a0"],
+html[data-theme="light"] [style*="color: #06d6a0"],
+html[data-theme="light"] [style*="color:#00c78c"],
+html[data-theme="light"] [style*="color: #00c78c"],
+html[data-theme="light"] [style*="color:#10B981"],
+html[data-theme="light"] [style*="color: #10B981"],
+html[data-theme="light"] [style*="color:#10b981"],
+html[data-theme="light"] [style*="color: #10b981"]{color:var(--gain)!important}
+html[data-theme="light"] [style*="color:#ff9500"],
+html[data-theme="light"] [style*="color: #ff9500"],
+html[data-theme="light"] [style*="color:#ffd166"],
+html[data-theme="light"] [style*="color: #ffd166"],
+html[data-theme="light"] [style*="color:#ffa94d"],
+html[data-theme="light"] [style*="color: #ffa94d"],
+html[data-theme="light"] [style*="color:#ff9f43"],
+html[data-theme="light"] [style*="color: #ff9f43"],
+html[data-theme="light"] [style*="color:#ff9f0a"],
+html[data-theme="light"] [style*="color: #ff9f0a"],
+html[data-theme="light"] [style*="color:#ffb340"],
+html[data-theme="light"] [style*="color: #ffb340"],
+html[data-theme="light"] [style*="color:#F59E0B"],
+html[data-theme="light"] [style*="color: #F59E0B"],
+html[data-theme="light"] [style*="color:#f59e0b"],
+html[data-theme="light"] [style*="color: #f59e0b"]{color:var(--debt)!important}
+html[data-theme="light"] [style*="color:#ff4060"],
+html[data-theme="light"] [style*="color: #ff4060"],
+html[data-theme="light"] [style*="color:#ff6b6b"],
+html[data-theme="light"] [style*="color: #ff6b6b"],
+html[data-theme="light"] [style*="color:#ff453a"],
+html[data-theme="light"] [style*="color: #ff453a"],
+html[data-theme="light"] [style*="color:#EF4444"],
+html[data-theme="light"] [style*="color: #EF4444"],
+html[data-theme="light"] [style*="color:#ef4444"],
+html[data-theme="light"] [style*="color: #ef4444"]{color:var(--loss)!important}
+html[data-theme="light"] [style*="color:#7c6fec"],
+html[data-theme="light"] [style*="color: #7c6fec"],
+html[data-theme="light"] [style*="color:#818CF8"],
+html[data-theme="light"] [style*="color: #818CF8"],
+html[data-theme="light"] [style*="color:#818cf8"],
+html[data-theme="light"] [style*="color: #818cf8"]{color:var(--savings)!important}
+html[data-theme="light"] [style*="color:#4cc9f0"],
+html[data-theme="light"] [style*="color: #4cc9f0"]{color:#0369A1!important}
+html[data-theme="light"] [style*="color:#a0c4ff"],
+html[data-theme="light"] [style*="color: #a0c4ff"]{color:#1D4ED8!important}
+/* ══ v66 — Dividend tracker ══ */
+.dvt-top{display:grid;grid-template-columns:minmax(260px,1fr) 2fr;gap:12px;margin-bottom:16px}
+.dvt-inc{text-align:center;display:flex;flex-direction:column;gap:6px}
+.dvt-lbl{font-size:12px;color:var(--muted2)}
+.dvt-big{font-family:var(--f-sans);font-size:28px;font-weight:700;color:var(--white)}
+.dvt-box{background:var(--bg4);border:1px solid var(--border);border-radius:10px;padding:6px 14px;text-align:left;margin-top:6px}
+.dvt-row{display:flex;align-items:center;gap:10px;padding:8px 0;font-size:12.5px;color:var(--muted2);border-bottom:1px solid var(--border)}
+.dvt-row:last-child{border-bottom:none}
+.dvt-row strong{margin-left:auto;color:var(--white);font-weight:600}
+.dvt-ic{width:18px;text-align:center}
+.dvt-note{font-size:10.5px;color:var(--muted);line-height:1.6;margin-top:4px}
+.dvt-mh{display:flex;align-items:center;gap:10px;margin:18px 0 8px;font-size:13px;color:var(--muted2)}
+.dvt-sum{font-size:11.5px;background:rgba(16,185,129,.14);color:var(--gain);padding:2px 8px;border-radius:6px;font-weight:600}
+.dvt-list{padding:4px 16px}
+.dvt-it{display:grid;grid-template-columns:36px minmax(120px,2fr) 1fr 1fr 100px 1fr 20px;gap:12px;align-items:center;padding:11px 0;border-bottom:1px solid var(--border);font-size:12px}
+.dvt-it:last-child{border-bottom:none}
+.dvt-it .s{font-size:10.5px;color:var(--muted);margin-top:2px}
+.dvt-it .t{color:var(--white);font-weight:600}
+.dvt-nm .t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dvt-logo{width:32px;height:32px;border-radius:8px;background:var(--bg4);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:var(--accent);letter-spacing:.02em}
+.dvt-dt .dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:5px;vertical-align:1px}
+.dvt-fq span{display:inline-block;font-size:10.5px;padding:3px 8px;border-radius:6px;background:rgba(16,185,129,.12);color:var(--gain)}
+.dvt-ck{color:var(--gain);font-weight:700;text-align:right}
+.dvt-it.got{opacity:.8}
+@media(max-width:900px){ .dvt-top{grid-template-columns:1fr} }
+@media(max-width:640px){
+  .dvt-list{padding:2px 12px}
+  .dvt-it{grid-template-columns:32px minmax(0,1fr) auto;gap:4px 10px}
+  .dvt-it>*{min-width:0}
+  .dvt-logo{grid-row:span 2}
+  .dvt-dt{grid-column:2} .dvt-amt{grid-column:3;grid-row:1;text-align:right} .dvt-nm{grid-column:2;grid-row:1}
+  .dvt-fq{grid-column:3;grid-row:2;text-align:right} .dvt-ex,.dvt-ck{display:none}
+}
+
+/* ══ v66 — Deep Research ══ */
+.rs-pick{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.rs-sel{background:var(--bg4);border:1px solid var(--border2);color:var(--white);border-radius:10px;padding:9px 12px;font:inherit;font-size:13px;max-width:100%}
+.rs-cmp{width:100%;margin-top:10px;color:var(--muted2)}
+.rs-stale{font-size:11px;color:var(--debt)}
+.rs-head{display:grid;grid-template-columns:1fr auto;gap:14px 20px;align-items:center}
+.rs-id{display:flex;gap:12px;align-items:center}
+.rs-nm{font-size:17px;font-weight:600;color:var(--white)}
+.rs-sub{font-size:11.5px;color:var(--muted);margin-top:2px}
+.rs-px{grid-column:1;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.rs-px .p{font-size:26px;font-weight:600;color:var(--white);font-family:var(--f-sans)}
+.rs-stats{grid-column:2;grid-row:1 / span 2;display:flex;gap:18px;flex-wrap:wrap;justify-content:flex-end}
+.rs-st .l{font-size:10.5px;color:var(--muted)} .rs-st .v{font-size:13px;color:var(--white);font-weight:600;margin-top:3px}
+.rs-tabs{grid-column:1 / -1;display:flex;gap:4px;border-top:1px solid var(--border);padding-top:6px;margin-top:4px;flex-wrap:wrap}
+.rs-tabs button{background:none;border:none;border-bottom:2px solid transparent;color:var(--muted2);font:inherit;font-size:12.5px;padding:8px 12px;cursor:pointer}
+.rs-tabs button.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+.rs-fin-bar{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.rs-hint{font-size:11px;color:var(--muted)}
+.rs-ft tr.on td:first-child{color:var(--white);font-weight:600}
+.rs-ft tr:not(.on) td{opacity:.6}
+.rs-sw{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:8px;vertical-align:-1px}
+.rs-news{padding:4px 18px}
+.rs-news a{display:block;padding:12px 0;border-bottom:1px solid var(--border);text-decoration:none}
+.rs-news a:last-child{border-bottom:none}
+.rs-news .t{color:var(--white);font-size:13px;font-weight:500} .rs-news .s{color:var(--muted);font-size:11px;margin-top:3px}
+.rs-news a:hover .t{color:var(--accent)}
+@media(max-width:768px){
+  .rs-head{grid-template-columns:1fr}
+  .rs-stats{grid-column:1;grid-row:auto;justify-content:flex-start;gap:14px}
+  .rs-sel{width:100%}
+}
+
+/* ══ v66 — หน้าปรับสมดุล ══ */
+.rb-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:14px}
+.rb-seg{display:flex;background:var(--bg4);border:1px solid var(--border2);border-radius:10px;padding:3px;gap:3px}
+.rb-seg button{background:transparent;border:none;color:var(--muted2);font:inherit;font-size:12.5px;padding:8px 14px;border-radius:8px;cursor:pointer}
+.rb-seg button.active{background:var(--bg3);color:var(--white);box-shadow:0 0 0 1px var(--border2),var(--card-shadow);font-weight:600}
+.rb-field{display:flex;flex-direction:column;gap:4px}
+.rb-field label{font-size:11px;color:var(--muted)}
+.rb-amt{background:var(--bg4);border:1px solid var(--border2);color:var(--white);border-radius:10px;padding:9px 12px;font:inherit;font-size:14px;width:170px}
+.rb-amt:focus{outline:2px solid var(--accent);outline-offset:1px}
+.rb-btn{background:var(--bg4);border:1px solid var(--border2);color:var(--text);border-radius:10px;padding:9px 14px;font:inherit;font-size:12.5px;cursor:pointer}
+.rb-btn:hover{border-color:var(--muted)}
+.rb-btn.primary{background:var(--accent);border-color:var(--accent);color:#FFFFFF;font-weight:600}
+.rb-sum{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+.rb-sum .sc{min-width:150px;flex:0 0 auto}
+.rb-table{width:100%;border-collapse:collapse;font-size:12px}
+.rb-table th{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);text-align:left;padding:10px;border-bottom:1px solid var(--border);white-space:nowrap}
+.rb-table td{padding:11px 10px;border-bottom:1px solid var(--border);vertical-align:top;color:var(--text)}
+.rb-table tr:last-child td{border-bottom:none}
+.rb-table tr.done td{opacity:.45}
+.rb-table .sub{font-size:11px;color:var(--muted);margin-top:2px}
+.rb-table .tk{font-weight:600;color:var(--white)}
+.rb-trade.buy{color:var(--gain);font-weight:600} .rb-trade.sell{color:var(--loss);font-weight:600} .rb-trade.none{color:var(--muted)}
+.rb-chk{width:18px;height:18px;accent-color:var(--accent);cursor:pointer}
+.rb-setup{margin-bottom:14px}
+.rb-setup input{background:var(--bg4);border:1px solid var(--border2);color:var(--white);border-radius:7px;padding:5px 8px;font:inherit;font-size:12px;width:80px;text-align:right}
+.rb-note{font-size:11px;color:var(--muted);margin-top:10px;line-height:1.7}
+@media(max-width:768px){
+  .rb-amt{width:100%}
+  .rb-bar .rb-field{flex:1 1 140px}
+  /* ตาราง → การ์ดต่อแถว (ป้ายมาจาก data-l) */
+  .rb-table thead{display:none}
+  .rb-table tr{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;padding:12px;border-bottom:1px solid var(--border)}
+  .rb-table td{border:none;padding:0}
+  .rb-table td[data-l]::before{content:attr(data-l);display:block;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+  .rb-table tr{position:relative}
+  .rb-table td.rb-asset{grid-column:1 / -1;padding-right:34px}
+  .rb-table td.rb-done{position:absolute;right:12px;top:12px}
+  .rb-table td.rb-hide-m{display:none}
+}
 
 /* ══ v65 — ปุ่มภาษา / ธีม (ท้ายเมนูข้าง) ══ */
 .pref-row{display:flex;gap:6px;margin-bottom:6px}
@@ -481,7 +650,7 @@ select.month-display{text-align-last:center;outline:none}
    tabular-nums = บังคับเลขทุกตัวกว้างเท่ากัน หลักพัน/หมื่นจะเรียงตรงกันเวลาเทียบยอด */
 .at td.r{text-align:right;font-variant-numeric:tabular-nums}
 .at tr:last-child td{border-bottom:none}
-.at tr:hover td{background:rgba(255,255,255,.02)}
+.at tr:hover td{background:var(--hover)}
 .tk{color:var(--white);font-weight:500;font-size:12px}
 .tp{display:inline-block;padding:2px 6px;border-radius:4px;font-size:10px;border:1px solid}
 .pill-Income{color:var(--income);border-color:rgba(0,212,160,.3);background:rgba(0,212,160,.07)}
@@ -534,7 +703,7 @@ select.month-display{text-align-last:center;outline:none}
 .yt td{padding:9px 12px;border-bottom:1px solid var(--border);text-align:right;color:var(--muted2)}
 .yt td:first-child{text-align:left;color:var(--white);font-family:var(--f-sans);font-weight:600}
 .yt tr:last-child td{border-bottom:none}
-.yt tr:hover td{background:rgba(255,255,255,.02)}
+.yt tr:hover td{background:var(--hover)}
 .yt-wrap{border-radius:12px}
 .yt th,.yt td{white-space:nowrap}
 @media(max-width:600px){
@@ -838,7 +1007,7 @@ select.month-display{text-align-last:center;outline:none}
     white-space:nowrap;max-width:none;min-width:0}
 }
 .ins-table tr:last-child td{border-bottom:none}
-.ins-table tr:hover td{background:rgba(255,255,255,.02)}
+.ins-table tr:hover td{background:var(--hover)}
 .ins-status-pill{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;
   letter-spacing:.04em;border:1px solid}
 .ins-status-pill.inforce{color:var(--income);border-color:rgba(0,212,160,.3);background:rgba(0,212,160,.08)}
@@ -871,7 +1040,7 @@ select.month-display{text-align-last:center;outline:none}
 .gs-connect-text{font-size:13px;font-weight:500}
 .gs-connect-sub{font-size:11px;color:var(--muted2);margin-top:1px}
 /* Settings modal */
-.gs-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;
+.gs-modal-overlay{position:fixed;inset:0;background:var(--overlay);z-index:200;
   display:none;align-items:center;justify-content:center}
 .gs-modal-overlay.show{display:flex}
 .gs-modal{background:var(--bg2);border:1px solid var(--border2);border-radius:16px;
@@ -932,7 +1101,7 @@ select.month-display{text-align-last:center;outline:none}
 .tx-fab{position:fixed;right:22px;bottom:22px;z-index:900;
   width:56px;height:56px;border-radius:50%;border:none;display:none;
   font-size:28px;line-height:1;font-weight:600;cursor:pointer;
-  background:var(--income);color:#06131a;
+  background:var(--income);color:var(--on-accent);
   box-shadow:0 6px 22px rgba(0,0,0,.45);transition:transform .15s}
 .tx-fab:hover{transform:scale(1.07)}
 .tx-fab:active{transform:scale(.94)}
@@ -975,7 +1144,7 @@ select.month-display{text-align-last:center;outline:none}
 .fab-opt-ic{font-size:19px;flex:0 0 auto;line-height:1}
 .fab-opt b{display:block;font-size:13px;font-weight:600}
 .fab-opt small{display:block;font-size:10.5px;color:var(--muted);font-family:var(--f-mono);margin-top:1px}
-.fab-backdrop{position:fixed;inset:0;z-index:899;background:rgba(0,0,0,.45)}
+.fab-backdrop{position:fixed;inset:0;z-index:899;background:var(--overlay)}
 .fab-backdrop[hidden]{display:none}
 .tx-fab.open{transform:rotate(45deg)}
 @media(max-width:640px){.fab-menu{right:16px;bottom:calc(74px + env(safe-area-inset-bottom,0px) + 56px + 12px)}}
@@ -1001,7 +1170,7 @@ select.month-display{text-align-last:center;outline:none}
 .bnav-item:active{background:var(--bg3)}
 .bnav-item:focus-visible{outline:2px solid var(--income);outline-offset:-2px}
 /* แตะนอกเมนูเพื่อปิด — เดิมต้องกด ☰ ซ้ำอย่างเดียว */
-.sb-backdrop{display:none;position:fixed;inset:0;z-index:99;background:rgba(0,0,0,.55)}
+.sb-backdrop{display:none;position:fixed;inset:0;z-index:99;background:var(--overlay)}
 .sidebar.open ~ .sb-backdrop{display:block}
 
 @media(max-width:768px){
@@ -1052,7 +1221,7 @@ html,body{overscroll-behavior:none}
   /* เหนือปุ่ม + (สูง 56px อยู่ที่ bottom 74px) ไม่งั้นทับกันพอดี */
   bottom:calc(74px + 56px + 12px + env(safe-area-inset-bottom,0px));
   background:var(--bg2);border:1px solid var(--income);border-radius:14px;
-  padding:13px 15px;box-shadow:0 8px 28px rgba(0,0,0,.55)}
+  padding:13px 15px;box-shadow:var(--pop-shadow)}
 .a2hs[hidden]{display:none}
 .a2hs-ic{font-size:22px;flex:0 0 auto;line-height:1}
 .a2hs-txt{flex:1 1 auto;min-width:0;font-size:12.5px;line-height:1.6;color:var(--text)}
@@ -1068,7 +1237,7 @@ html.standalone .a2hs{display:none}
    ด้วยนโยบาย disallowed_useragent — แก้ที่โค้ดไม่ได้
    สิ่งที่ทำได้คือบอกทางออกก่อนผู้ใช้ไปเจอหน้า error ของ Google */
 .wv-warn{position:fixed;top:0;left:0;right:0;z-index:100000;display:flex;align-items:flex-start;gap:12px;
-  padding:calc(12px + env(safe-area-inset-top,0px)) 14px 12px;background:#2a1c05;border-bottom:1px solid rgba(255,149,0,.5);
+  padding:calc(12px + env(safe-area-inset-top,0px)) 14px 12px;background:var(--warn-bg);border-bottom:1px solid rgba(255,149,0,.5);
   font-size:12.5px;line-height:1.55;color:#f0e2c8}
 /* ต้องมีบรรทัดนี้ — display:flex ข้างบนเป็น class selector ซึ่ง specificity
    เท่ากับ [hidden]{display:none} ของเบราว์เซอร์ แต่มาทีหลังจึงชนะ
@@ -1189,7 +1358,7 @@ html.standalone .a2hs{display:none}
           <button type="button" data-lang-btn="en" onclick="I18N.setLang('en')">EN</button>
         </div>
         <button type="button" class="theme-btn" id="theme-btn" onclick="toggleTheme()" title="สลับธีม" aria-label="สลับธีม">
-          <span aria-hidden="true">◐</span><span class="sb-lbl" id="theme-lbl">Slate</span></button>
+          <span aria-hidden="true">◐</span><span class="sb-lbl" id="theme-lbl">Midnight</span></button>
       </div>
       <button class="btn-pdf" onclick="generateMonthlyPDF()" style="width:100%;margin-bottom:6px;justify-content:center">
         ⬇<span class="sb-lbl"> Export PDF</span>
@@ -1824,6 +1993,9 @@ html.standalone .a2hs{display:none}
         <div class="pg-title">Dividend Income</div>
         <div class="pg-sub">รายได้ที่ไม่ต้องทำงาน — เงินทำงานแทนคุณเดือนละเท่าไหร่แล้ว</div>
       </div></div>
+      <!-- v66 — Dividend tracker: คาดการณ์ 12 เดือนข้างหน้า + ปฏิทินรายเดือน -->
+      <div id="dv-tracker"></div>
+      <div class="sl sl-mt">ประวัติที่ได้รับจริง</div>
       <div class="sg">
         <div class="sc" style="--g:rgba(0,212,160,.1)">
           <div class="sc-lbl">ปันผลรวมทั้งหมด</div>
@@ -1994,11 +2166,25 @@ html.standalone .a2hs{display:none}
       <div id="dorm-active"></div>
     </div>
 
+    <!-- ══ REBALANCE (v66) ══ -->
+    <div class="page" id="page-rebalance">
+      <div class="pg-hdr"><div><div class="pg-title">ปรับสมดุลพอร์ต</div>
+        <div class="pg-sub">คำนวณว่าต้องซื้อ/ขายตัวไหนกี่หน่วย ให้สัดส่วนกลับไปตามเป้า — กองที่ขายไม่ได้ (Provident Fund) ไม่นับ</div></div></div>
+      <div id="rb-body"></div>
+    </div>
+
     <!-- ══ COST ══ -->
     <div class="page" id="page-cost">
       <div class="pg-hdr"><div><div class="pg-title">ต้นทุนที่มองไม่เห็น</div>
         <div class="pg-sub">ค่าธรรมเนียม ภาษี และความเสี่ยงค่าเงิน</div></div></div>
       <div id="cost-body"></div>
+    </div>
+
+    <!-- ══ DEEP RESEARCH (v66) ══ -->
+    <div class="page" id="page-research">
+      <div class="pg-hdr"><div><div class="pg-title">วิเคราะห์เจาะลึก</div>
+        <div class="pg-sub">งบการเงินรายปี · ปันผล · ข่าว รายบริษัท — ข้อมูลจาก pipeline (Yahoo · SEC EDGAR) ไม่ใช่คำแนะนำการลงทุน</div></div></div>
+      <div id="rs-body"></div>
     </div>
 
     <!-- ══ SIGNALS (v53) ══ -->
@@ -2073,11 +2259,7 @@ const CT = {
   get grid(){ return _cssVar('--c-grid') || 'rgba(30,30,53,.8)'; },
 };
 let CHART_FONT = "'JetBrains Mono','IBM Plex Sans Thai',ui-monospace,monospace";
-function _syncChartFont(){
-  CHART_FONT = document.documentElement.getAttribute('data-theme')==='midnight'
-    ? "'JetBrains Mono','IBM Plex Sans Thai',ui-monospace,monospace"
-    : "'Inter','Noto Sans Thai',system-ui,sans-serif";
-}
+function _syncChartFont(){ CHART_FONT = "'Inter','Noto Sans Thai',system-ui,sans-serif"; }   // v66 — ทั้งสองธีมใช้ sans
 _syncChartFont();
 // ── Constants ───────────────────────────────────────────────────────
 const GC={'Thai Stock':'#4cc9f0','US Stock':'#00d4a0','Crypto':'#ff9500',
@@ -3663,6 +3845,8 @@ const BACKUP_KEYS = [
   'finOS_goalCfg',       // เป้า Net Worth / expected return
   'finOS_holdingTags',   // แท็ก core รายสินทรัพย์
   'finOS_lastPrice',     // ราคาล่าสุดที่จำไว้ (กันพอร์ตกระตุกหลัง restore)
+  'finOS_rebalTargets',  // v66 — เป้ารายตัวของหน้าปรับสมดุล
+  'finOS_rebalOpts',     // v66 — หน่วยซื้อขายขั้นต่ำต่อกลุ่ม
 ];
 function exportSettings(){
   const data = {};
@@ -3821,7 +4005,7 @@ const VLOG_PURGED_KEY = 'finOS_valueLogPurged_v44';
 //   ฟังก์ชันหาย  → BLOCK  (แอปคำนวณผิดแน่นอน — นี่คือสิ่งที่ guard มีไว้จับ)
 //   เลขไม่ตรง    → WARN   (แค่ลืม bump — log ไว้ ไม่รบกวนผู้ใช้)
 // ฟังก์ชันที่ต้องมีคือสัญญาจริงระหว่างสองไฟล์ ส่วนสตริงเวอร์ชันเป็นแค่ป้าย
-const EXPECTED_SHARED_BUILD = 'v65';
+const EXPECTED_SHARED_BUILD = 'v66';
 const REQUIRED_SHARED_FNS = [
   'resolvePrices', 'pipelinePricesTHB', 'parseReconcileRows',
   'computeReconciliation', 'splitBalances', 'debtVsInvest', 'buildDebtPlan',
@@ -3835,6 +4019,8 @@ const REQUIRED_SHARED_FNS = [
   'monthlyWealthContrib', 'monthsToGoal', 'usdExposure', 'debtSplit',   // v62 — นิยามเดียวข้ามหน้า
   'budgetSpendMap',                                           // v63 — งบนับรายจ่ายรูดบัตร
   'valueLogJumps', 'cleanSheetSpikesV62',                     // v62 — ด่านคุณภาพ Value_Log
+  'rebalancePlan', 'getRebalTargets', 'getRebalOpts', 'rebalLot',   // v66 — ปรับสมดุล
+  'loadFundamentals', 'fetchFundamentals', 'fundOf', 'dividendCalendar', 'divFrequency',   // v66 — research/ปันผล
   'loadBotPaper', 'fetchBotPaper', 'botStatus',   // v59 — หน้าบอทจำลอง
 ];
 function checkSharedVersion(){
@@ -4305,6 +4491,7 @@ function renderEngine(){
 
 // ── DIVIDENDS: passive income ────────────────────────────────────────
 function renderDividends(){
+  try{ renderDividendTracker(); }catch(e){ console.warn('[div] tracker:', e.message); }
   const rows=tracker.filter(r=>TX_DIV.includes(r.txType) && r.date);
   const setT=(id,v)=>{const e=document.getElementById(id); if(e) e.textContent=v;};
   if(!rows.length){ setT('dv-total','฿0'); setT('dv-total-s','ยังไม่มีรายการปันผล'); return; }
@@ -4373,6 +4560,247 @@ function renderDividends(){
     `<div style="background:var(--bg4);border:1px solid var(--border);border-radius:8px;padding:10px 12px;text-align:center">
       <div style="font-size:10px;color:var(--muted2);margin-bottom:3px">${y}</div>
       <div style="font-size:14px;font-weight:500;color:var(--gain)">+${fmt(divByYr[y])}</div></div>`).join('');
+}
+
+/* ══ v66 — Dividend tracker ═══════════════════════════════════════════
+   ตัวคำนวณ: dividendCalendar() ใน shared.js · ข้อมูลรายครั้งจาก fundamentals.json (Yahoo events=div)
+   เงินที่ได้รับจริง: แถว Dividend Payout ในชีต Asset_Tracker */
+let _dvShowAll=false;
+function renderDividendTracker(){
+  const el=document.getElementById('dv-tracker'); if(!el) return;
+  const F=loadFundamentals(); const fund=(F&&F.tickers)||{};
+  const held=(assets||[]).filter(a=>a.qty>1e-9);
+  const withHist=held.filter(a=>(fund[a.ticker]?.dividends||[]).length);
+  if(!withHist.length){
+    el.innerHTML=`<div class="cc" style="color:var(--muted2);font-size:12px;line-height:1.8">${_L(
+      '📅 ยังไม่มีประวัติปันผลรายตัวของสินทรัพย์ที่ถืออยู่ — pipeline จะดึงให้ใน <code>fundamentals.json</code> (Actions → Update market data) แล้วหน้านี้จะแสดงปฏิทินปันผลและรายได้ที่คาดการณ์ 12 เดือนข้างหน้า',
+      '📅 No per-holding dividend history yet — the pipeline writes it to <code>fundamentals.json</code> (Actions → Update market data), then this page shows the dividend calendar and 12-month forward income')}</div>`;
+    return;
+  }
+  const usd=(typeof mdNum==='function'&&mdNum('USDTHB'))||(()=>{const v=Object.values(fxMap||{}).filter(x=>x>1);return v.length?v.reduce((a,b)=>a+b,0)/v.length:0;})();
+  const received=(tracker||[]).filter(r=>TX_DIV.includes(r.txType)&&r.date).map(r=>({ticker:r.ticker,date:r.date,amtTHB:r.amtTHB}));
+  const holdings=held.map(a=>({ticker:a.ticker,qty:a.qty,name:(fund[a.ticker]?.profile?.name)||a.ticker}));
+  const C=dividendCalendar(holdings, fund, received, {USD:usd}, new Date());
+  const pv=(assets||[]).reduce((s,a)=>s+(a.val||0),0);
+  const stale=withHist.filter(a=>{const f=fundOf(a.ticker);return f&&f.stale;}).length;
+  const ML=k=>monthLabel(k);
+  const stat=(ic,th,en,v,tip)=>`<div class="dvt-row"${tip?` title="${escAttr(tip)}"`:''}><span class="dvt-ic">${ic}</span><span>${_L(th,en)}</span><strong>${v}</strong></div>`;
+  // รายการแยกเดือน — ตั้งแต่ต้นเดือนก่อนถึง 12 เดือนข้างหน้า
+  const now=new Date(), from=isoLocal(new Date(now.getFullYear(),now.getMonth()-1,1));
+  const list=C.events.filter(e=>e.payDate>=from);
+  const byM={}; list.forEach(e=>{(byM[e.payDate.slice(0,7)]=byM[e.payDate.slice(0,7)]||[]).push(e);});
+  const mKeys=Object.keys(byM).sort();
+  const shown=_dvShowAll?mKeys:mKeys.slice(0,4);
+  const pill={received:['var(--gain)',_L('ได้รับแล้ว','Received')],declared:['var(--accent)',_L('ประกาศแล้ว · รอรับ','Declared')],estimated:['var(--muted)',_L('ประมาณการ','Estimated')]};
+  const initials=t=>escHtml(String(t).replace(/[^A-Za-z0-9]/g,'').slice(0,4)||'?');
+  const fmtD=d=>new Date(d+'T00:00:00').toLocaleDateString(LOC,{day:'numeric',month:'short',year:'2-digit'});
+  const groups=shown.map(k=>{
+    const rows=byM[k], sum=rows.reduce((s,e)=>s+e.amount,0);
+    return `<div class="dvt-mh"><span>${ML(k)}</span><span class="dvt-sum">+${fmt(sum)}</span></div>
+    <div class="cc dvt-list">${rows.map(e=>`<div class="dvt-it${e.status==='received'?' got':''}">
+      <div class="dvt-logo" aria-hidden="true">${initials(e.ticker)}</div>
+      <div class="dvt-nm"><div class="t">${escHtml(e.name)}</div><div class="s">${escHtml(e.ticker)}</div></div>
+      <div class="dvt-dt"><div>${fmtD(e.payDate)}</div><div class="s"><span class="dot" style="background:${pill[e.status][0]}"></span>${pill[e.status][1]}</div></div>
+      <div class="dvt-amt"><div class="t">${fmt(e.amount)}</div><div class="s">${(+e.qty).toLocaleString(LOC,{maximumFractionDigits:4})}×${e.currency==='THB'?'฿':'$'}${(+e.dps).toLocaleString(LOC,{maximumFractionDigits:4})}</div></div>
+      <div class="dvt-fq">${e.freq?`<span>${_L(e.freqTh,e.freq)}</span>`:''}</div>
+      <div class="dvt-ex"><div>${fmtD(e.exDate)}</div><div class="s">${_L('วันขึ้น XD','Ex-dividend date')}</div></div>
+      <div class="dvt-ck">${e.status==='received'?'✓':''}</div></div>`).join('')}</div>`;}).join('');
+  el.innerHTML=`
+    <div class="dvt-top">
+      <div class="cc dvt-inc">
+        <div class="dvt-lbl">${_L('รายได้ปันผลต่อปี (คาดการณ์)','Annual income (forward)')}</div>
+        <div class="dvt-big">${fmt(C.annual)}</div>
+        <div class="dvt-box">
+          ${stat('📊','รายเดือน','Monthly',fmt(C.monthly))}
+          ${stat('📅','รายวัน','Daily',fmt(C.daily))}
+          ${stat('％','Yield','Yield',pv>0?(C.annual/pv*100).toFixed(2)+'%':'—',_L('รายได้ปันผลต่อปี ÷ มูลค่าพอร์ต','Annual income ÷ portfolio value'))}
+          ${stat('⏳','ยังไม่ได้รับ','Yet to receive',fmt(C.yetToReceive),_L('ขึ้น XD แล้วแต่ยังไม่เจอเงินเข้าในชีต','Went ex-dividend but no payout row in the sheet yet'))}
+        </div>
+        <div class="dvt-note">${_L('ก่อนหักภาษี ณ ที่จ่าย · ฉายจากรอบเดียวกันของปีก่อน × จำนวนหุ้นตอนนี้','Before withholding tax · projected from last year\'s payments × current shares')}${usd?` · USD/THB ${usd.toFixed(2)}`:''}${stale?` · <span style="color:var(--debt)">${_L(`ข้อมูล ${stale} ตัวเก่ากว่า ${FUND_MAX_DAYS} วัน`,`${stale} tickers older than ${FUND_MAX_DAYS} days`)}</span>`:''}</div>
+      </div>
+      <div class="cc dvt-chart"><div class="cw" style="height:250px;margin:0"><canvas id="dv-fwd-chart"></canvas></div></div>
+    </div>
+    ${groups||`<div class="cc" style="color:var(--muted2)">${_L('ไม่มีรายการใน 12 เดือนข้างหน้า','No payments in the next 12 months')}</div>`}
+    ${mKeys.length>4?`<button type="button" class="act-toggle" style="display:block" onclick="_dvShowAll=!_dvShowAll;renderDividendTracker()">${_dvShowAll?_L('ย่อ ▴','Collapse ▴'):_L(`ดูอีก ${mKeys.length-4} เดือน ▾`,`Show ${mKeys.length-4} more months ▾`)}</button>`:''}`;
+  mkBarChart('dv-fwd-chart', C.months.map(m=>ML(m.key).split(' ')[0]), [
+    {label:'ได้รับแล้ว', data:C.months.map(m=>Math.round(m.received)), backgroundColor:'rgba(16,185,129,.85)', borderRadius:4},
+    {label:'ประกาศแล้ว', data:C.months.map(m=>Math.round(m.declared)), backgroundColor:'rgba(56,189,248,.95)', borderRadius:4},
+    {label:'ประมาณการ', data:C.months.map(m=>Math.round(m.estimated)), backgroundColor:'rgba(59,130,246,.45)', borderRadius:4},
+  ], true);
+}
+
+/* ══ v66 — Deep Research ══════════════════════════════════════════════
+   อ่านอย่างเดียวจาก fundamentals.json (fundOf) + สัญญาณเดิม (loadSignals/loadWatchlist)
+   ไม่คำนวณงบซ้ำ — ROA/Payout มาจาก pipeline */
+const _rs = { tk:null, tab:'overview', cmp:'', on:new Set(['revenue','netIncome','payout','roa']) };
+const RS_METRICS = [
+  {k:'revenue',     th:'รายได้รวม',     en:'Total revenue', kind:'money', color:'#0EA5E9'},
+  {k:'netIncome',   th:'กำไรสุทธิ',      en:'Net income',    kind:'money', color:'#8B5CF6'},
+  {k:'totalAssets', th:'สินทรัพย์รวม',   en:'Total assets',  kind:'money', color:'#64748B'},
+  {k:'payout',      th:'Payout ratio',  en:'Payout ratio',  kind:'pct',   color:'#F59E0B'},
+  {k:'roa',         th:'ROA',           en:'ROA',           kind:'pct',   color:'#2DD4BF'},
+  {k:'eps',         th:'EPS',           en:'EPS',           kind:'num',   color:'#F472B6'},
+];
+function fmtBig(v, ccy){
+  if(v==null || !isFinite(v)) return '—';
+  const sym = ccy==='USD'?'$':ccy==='THB'?'฿':'';
+  const a=Math.abs(v), sg=v<0?'−':'';
+  const x = a>=1e12?(a/1e12).toFixed(2)+'T':a>=1e9?(a/1e9).toFixed(a>=1e11?0:1)+'B':a>=1e6?(a/1e6).toFixed(1)+'M':a>=1e3?(a/1e3).toFixed(1)+'K':a.toFixed(2);
+  return sg+sym+x;
+}
+function _rsUniverse(){
+  const F=loadFundamentals(); const T=(F&&F.tickers)||{};
+  const heldVal={}; (assets||[]).forEach(a=>{ if(a.qty>1e-9) heldVal[a.ticker]=a.val||0; });
+  const keys=Object.keys(T);
+  const held=keys.filter(k=>k in heldVal).sort((a,b)=>heldVal[b]-heldVal[a]);
+  const watch=keys.filter(k=>!(k in heldVal)).sort();
+  return {T, held, watch};
+}
+function renderResearch(){
+  const el=document.getElementById('rs-body'); if(!el) return;
+  const {T, held, watch}=_rsUniverse();
+  if(!held.length && !watch.length){
+    el.innerHTML=`<div class="cc" style="color:var(--muted2);font-size:12px;line-height:1.8">${_L(
+      '🔬 ยังไม่มีข้อมูลรายบริษัท — pipeline จะเขียน <code>fundamentals.json</code> ให้ในรอบถัดไปของ Actions → Update market data (ของที่ถือ + watchlist 25 ตัว · งบรายปี ปันผล ข่าว)',
+      '🔬 No company data yet — the pipeline writes <code>fundamentals.json</code> on the next Actions → Update market data run (holdings + 25-asset watchlist · annual financials, dividends, news)')}</div>`;
+    return;
+  }
+  if(!_rs.tk || !T[_rs.tk]) _rs.tk = held[0] || watch[0];
+  const f=fundOf(_rs.tk)||{}; const P=f.profile||{}, S=f.stats||{}, ccy=P.currency||'';
+  const opt=(k)=>`<option value="${escAttr(k)}"${k===_rs.tk?' selected':''}>${escHtml(k)} — ${escHtml((T[k].profile||{}).name||T[k].nameTh||'')}</option>`;
+  const sel=`<select class="rs-sel" onchange="_rs.tk=this.value;_rs.cmp='';renderResearch()" aria-label="${_L('เลือกบริษัท','Select company')}">
+      ${held.length?`<optgroup label="${_L('ถืออยู่','Holdings')}">${held.map(opt).join('')}</optgroup>`:''}
+      ${watch.length?`<optgroup label="${_L('Watchlist','Watchlist')}">${watch.map(opt).join('')}</optgroup>`:''}</select>`;
+  const chgCls=(S.chg||0)>=0?'gain':'loss';
+  const px=v=>v==null?'—':(ccy==='USD'?'$':ccy==='THB'?'฿':'')+(+v).toLocaleString(LOC,{minimumFractionDigits:2,maximumFractionDigits:2});
+  // XD ถัดไปโดยประมาณ = ครั้งล่าสุด + ความถี่
+  const dv=f.dividends||[]; const fq=divFrequency(dv.map(d=>d.date));
+  let nextEx=null;
+  if(dv.length && fq){ let t=Date.parse(dv[dv.length-1].date); const step=365/fq.n*864e5; while(t<=Date.now()) t+=step; nextEx=isoLocal(new Date(t)); }
+  const stat=(th,en,v)=>`<div class="rs-st"><div class="l">${_L(th,en)}</div><div class="v">${v}</div></div>`;
+  const tabs=[['overview','ภาพรวม','Overview'],['dividends','ปันผล','Dividends'],['financials','งบการเงิน','Financials'],['news','ข่าว','News']];
+  el.innerHTML=`
+    <div class="rs-pick">${sel}${f.stale?`<span class="rs-stale">${_L(`ข้อมูล ${f.age??'?'} วันก่อน`,`data ${f.age??'?'} days old`)}</span>`:''}</div>
+    <div class="cc rs-head">
+      <div class="rs-id"><div class="dvt-logo" style="width:44px;height:44px;font-size:11px">${escHtml(_rs.tk.replace(/[^A-Za-z0-9]/g,'').slice(0,4))}</div>
+        <div><div class="rs-nm">${escHtml(P.name||f.nameTh||_rs.tk)}</div><div class="rs-sub">${escHtml(_rs.tk)}${P.exchange?' • '+escHtml(P.exchange):''}${P.type?' • '+escHtml(P.type):''}</div></div></div>
+      <div class="rs-px"><span class="p">${px(S.price)}</span>
+        <span class="${chgCls}" style="font-size:13px">${S.chg==null?'':(S.chg>=0?'+':'−')+px(Math.abs(S.chg)).replace(/^([$฿])/,'$1')} ${S.chgPct==null?'':`(${S.chgPct>=0?'▲':'▼'} ${Math.abs(S.chgPct).toFixed(2)}%)`}</span></div>
+      <div class="rs-stats">
+        ${stat('XD ถัดไป (ประมาณ)','Next ex-date (est.)',nextEx?new Date(nextEx+'T00:00:00').toLocaleDateString(LOC,{day:'numeric',month:'short'}):'—')}
+        ${stat('P/E','P/E',S.pe!=null?(+S.pe).toFixed(1):'—')}
+        ${stat('EPS','EPS',S.eps!=null?(+S.eps).toFixed(2):'—')}
+        ${stat('มูลค่าตลาด','Market cap',fmtBig(S.mcap,ccy))}
+        ${stat('อัตราปันผล','Dividend yield',S.divYield!=null?(+S.divYield).toFixed(2)+'%':'—')}
+      </div>
+      <div class="rs-tabs" role="tablist">${tabs.map(([k,th,en])=>`<button type="button" role="tab" aria-selected="${_rs.tab===k}" class="${_rs.tab===k?'active':''}" onclick="_rs.tab='${k}';renderResearch()">${_L(th,en)}</button>`).join('')}</div>
+    </div>
+    <div id="rs-tab"></div>`;
+  const tb=document.getElementById('rs-tab');
+  if(_rs.tab==='financials') _rsFinancials(tb, f, T, held, watch);
+  else if(_rs.tab==='dividends') _rsDividends(tb, f, fq);
+  else if(_rs.tab==='news') _rsNews(tb, f);
+  else _rsOverview(tb, f);
+}
+function _rsOverview(tb, f){
+  const sig=[...(loadSignals()||[]), ...((typeof loadWatchlist==='function'?loadWatchlist():null)||[])].find(x=>x.ticker===_rs.tk||x.key===_rs.tk);
+  const a=(assets||[]).find(x=>x.ticker===_rs.tk && x.qty>1e-9);
+  const pv=(assets||[]).reduce((s,x)=>s+(x.val||0),0);
+  const last=(f.annual||[]).slice(-1)[0]||{}; const ccy=(f.profile||{}).currency;
+  const box=(th,en,v,sub)=>`<div class="sc"><div class="sc-lbl">${_L(th,en)}</div><div class="sc-val" style="font-size:18px">${v}</div>${sub?`<div class="sc-sub">${sub}</div>`:''}</div>`;
+  tb.innerHTML=`
+    <div class="sl sl-mt">${_L('สัญญาณ (เกณฑ์เดียวกับหน้าสัญญาณรายตัว)','Signal (same rules as the Signals page)')}</div>
+    ${sig?`<div class="sg">
+      ${box('ประตู','Gate',sig.gate==='pass'?`<span class="gain">${_L('ผ่าน','Pass')}</span>`:sig.gate==='fail'?`<span class="loss">${_L('ไม่ผ่าน','Fail')}</span>`:'—',escHtml(sig.gate_why||''))}
+      ${box('อันดับ','Rank',sig.rank==null?'—':(+sig.rank).toFixed(2),_L('โมเมนตัม ÷ ความผันผวน','momentum ÷ volatility'))}
+      ${box('ขนาดไม้','Size',sig.size==null?'—':'×'+sig.size,escHtml(sig.action||''))}
+      ${box('RSI · ห่างจุดสูง','RSI · from high',`${sig.rsi??'—'} · ${sig.drawdown==null?'—':sig.drawdown+'%'}`,`MA200 ${escHtml(sig.ma200||'—')}`)}
+    </div>`:`<div class="cc" style="color:var(--muted2);font-size:12px">${_L('ไม่มีสัญญาณของตัวนี้','No signal for this ticker')}</div>`}
+    <div class="sl sl-mt">${_L('ของเราในพอร์ต','Your position')}</div>
+    ${a?`<div class="sg">
+      ${box('จำนวน','Quantity',(+a.qty).toLocaleString(LOC,{maximumFractionDigits:6}))}
+      ${box('มูลค่า','Value',fmt(a.val),pv>0?(a.val/pv*100).toFixed(1)+'% '+_L('ของพอร์ต','of portfolio'):'')}
+      ${box('ต้นทุน','Cost basis',fmt(a.cost),'WACC '+fmt(a.wacc||0))}
+      ${box('กำไร','Gain',`<span class="${a.pnl>=0?'gain':'loss'}">${fmtSign(a.pnl)}</span>`,(a.pnlPct>=0?'+':'')+(+a.pnlPct).toFixed(1)+'%')}
+    </div>`:`<div class="cc" style="color:var(--muted2);font-size:12px">${_L('ยังไม่ได้ถือตัวนี้','Not held')}</div>`}
+    ${last.year?`<div class="sl sl-mt">${_L('งบปีล่าสุด','Latest fiscal year')} (${last.year})</div><div class="sg">
+      ${box('รายได้รวม','Total revenue',fmtBig(last.revenue,ccy))}${box('กำไรสุทธิ','Net income',fmtBig(last.netIncome,ccy))}
+      ${box('ROA','ROA',last.roa==null?'—':last.roa+'%')}${box('Payout ratio','Payout ratio',last.payout==null?'—':last.payout+'%')}</div>`:''}`;
+}
+function _rsDividends(tb, f, fq){
+  const dv=f.dividends||[]; const ccy=(f.profile||{}).currency;
+  if(!dv.length){ tb.innerHTML=`<div class="cc" style="color:var(--muted2);font-size:12px">${_L('ไม่มีประวัติปันผล','No dividend history')}</div>`; return; }
+  const byY={}; dv.forEach(d=>{const y=d.date.slice(0,4); byY[y]=(byY[y]||0)+d.amount;});
+  const ys=Object.keys(byY).sort();
+  const a=(assets||[]).find(x=>x.ticker===_rs.tk && x.qty>1e-9);
+  const usd=(typeof mdNum==='function'&&mdNum('USDTHB'))||0, rate=ccy==='THB'?1:ccy==='USD'?usd:0;
+  const cut=isoLocal(new Date(Date.now()-365*864e5)); const t12=dv.filter(d=>d.date>cut).reduce((s,d)=>s+d.amount,0);
+  const yoc=a&&a.cost>0&&rate?(t12*a.qty*rate/a.cost*100):null;
+  const sym=ccy==='USD'?'$':ccy==='THB'?'฿':'';
+  tb.innerHTML=`
+    <div class="sg" style="margin-top:14px">
+      <div class="sc"><div class="sc-lbl">${_L('ปันผล 12 เดือน / หุ้น','12-month DPS')}</div><div class="sc-val" style="font-size:18px">${sym}${t12.toFixed(4).replace(/0+$/,'').replace(/\.$/,'')}</div></div>
+      <div class="sc"><div class="sc-lbl">${_L('ความถี่','Frequency')}</div><div class="sc-val" style="font-size:18px">${fq?_L(fq.th,fq.en):'—'}</div></div>
+      <div class="sc"><div class="sc-lbl">Yield on cost</div><div class="sc-val" style="font-size:18px">${yoc==null?'—':yoc.toFixed(2)+'%'}</div><div class="sc-sub">${_L('ปันผล 12 เดือน × หุ้นที่ถือ ÷ ต้นทุน','12m DPS × shares ÷ cost')}</div></div>
+    </div>
+    <div class="cc"><div class="ct">${_L('ปันผลต่อหุ้นรายปี','Dividends per share by year')}<span>${escHtml(ccy||'')}</span></div>
+      <div class="cw" style="height:220px;margin:0"><canvas id="rs-div-chart"></canvas></div></div>
+    <div class="cc" style="margin-top:12px;padding:0"><div class="tw" style="border:none"><table class="at"><thead><tr>
+      <th>${_L('วันขึ้น XD','Ex-dividend date')}</th><th class="r">${_L('ต่อหุ้น','Per share')}</th>${a?`<th class="r">${_L('ของเรา (ประมาณ)','Yours (est.)')}</th>`:''}</tr></thead>
+      <tbody>${dv.slice(-12).reverse().map(d=>`<tr><td>${d.date}</td><td class="r">${sym}${d.amount}</td>${a?`<td class="r gain">${rate?fmt(d.amount*a.qty*rate):'—'}</td>`:''}</tr>`).join('')}</tbody></table></div></div>`;
+  mkBarChart('rs-div-chart', ys, [{label:_L('ปันผล/หุ้น','DPS'), data:ys.map(y=>+byY[y].toFixed(4)), backgroundColor:'rgba(14,165,233,.8)', borderRadius:4}], false, 'num');
+}
+function _rsNews(tb, f){
+  const n=f.news||[];
+  tb.innerHTML=n.length?`<div class="cc rs-news">${n.map(x=>`<a href="${escAttr(x.link)}" target="_blank" rel="noopener noreferrer">
+      <div class="t">${escHtml(x.title)}</div><div class="s">${escHtml(x.publisher||'')}${x.time?' · '+escHtml(x.time):''} ↗</div></a>`).join('')}</div>`
+    :`<div class="cc" style="color:var(--muted2);font-size:12px">${_L('ยังไม่มีข่าว','No news yet')}</div>`;
+}
+function _rsFinancials(tb, f, T, held, watch){
+  const rows=f.annual||[]; const ccy=(f.profile||{}).currency;
+  if(!rows.length){ tb.innerHTML=`<div class="cc" style="color:var(--muted2);font-size:12px">${_L('ไม่มีงบการเงิน (ETF / กองทุน หรือแหล่งข้อมูลยังไม่มี)','No financial statements (ETF/fund, or not available from the source)')}</div>`; return; }
+  const cmpF=_rs.cmp?fundOf(_rs.cmp):null; const cRows=(cmpF&&cmpF.annual)||[];
+  const years=[...new Set([...rows.map(r=>r.year), ...cRows.map(r=>r.year)])].sort();
+  const val=(rs,y,k)=>{const r=rs.find(x=>x.year===y); return r&&r[k]!=null?r[k]:null;};
+  const others=[...held,...watch].filter(k=>k!==_rs.tk && (T[k].annual||[]).length);
+  const cell=(m,v)=>v==null?'—':m.kind==='money'?fmtBig(v,ccy):m.kind==='pct'?v.toFixed(1)+'%':(+v).toFixed(2);
+  const src=f.finSrc?` · ${_L('แหล่ง','source')}: ${escHtml(f.finSrc)}${f.finUpdated?' · '+escHtml(f.finUpdated):''}`:'';
+  tb.innerHTML=`
+    <div class="cc" style="margin-top:14px">
+      <div class="rs-fin-bar"><span class="rs-hint">💡 ${_L('คลิกแถวในตารางเพื่อเปิด/ปิดบนกราฟ','Click a row in the table to toggle it on the chart')}</span>
+        <button type="button" class="rb-btn" style="padding:5px 10px;font-size:11px" onclick="_rs.on.clear();renderResearch()">${_L('ล้างทั้งหมด','Clear all')}</button></div>
+      <select class="rs-sel rs-cmp" onchange="_rs.cmp=this.value;renderResearch()" aria-label="${_L('เทียบกับบริษัท','Compare with')}">
+        <option value="">⇆ ${_L('เลือกบริษัทเพื่อเปรียบเทียบ…','Select a company for comparison…')}</option>
+        ${others.map(k=>`<option value="${escAttr(k)}"${k===_rs.cmp?' selected':''}>${escHtml(k)} — ${escHtml((T[k].profile||{}).name||'')}</option>`).join('')}</select>
+      ${cmpF&&(cmpF.profile||{}).currency!==ccy?`<div class="rs-hint" style="margin:6px 0">⚠ ${_L('สกุลเงินต่างกัน','Different currencies')} (${escHtml(ccy)} vs ${escHtml((cmpF.profile||{}).currency||'?')}) — ${_L('เทียบได้เฉพาะ % (ROA/Payout)','only % metrics (ROA/Payout) are comparable')}</div>`:''}
+      <div class="cw" style="height:320px;margin:10px 0 0"><canvas id="rs-fin-chart"></canvas></div>
+      <div class="rs-hint" style="margin-top:6px">${_L('หน่วย','Units')}: ${escHtml(ccy||'—')} · ${_L('ปีงบที่สิ้นสุด','fiscal year ended')}${src}</div>
+    </div>
+    <div class="cc" style="margin-top:12px;padding:0"><div class="tw" style="border:none"><table class="at rs-ft"><thead><tr><th>${_L('รายการ','Metric')}</th>${years.map(y=>`<th class="r">${y}</th>`).join('')}</tr></thead>
+      <tbody>${RS_METRICS.map(m=>`<tr class="${_rs.on.has(m.k)?'on':''}" onclick="_rs.on.has('${m.k}')?_rs.on.delete('${m.k}'):_rs.on.add('${m.k}');renderResearch()" style="cursor:pointer">
+        <td><span class="rs-sw" style="background:${m.color}"></span>${_L(m.th,m.en)}</td>${years.map(y=>`<td class="r">${cell(m,val(rows,y,m.k))}</td>`).join('')}</tr>`).join('')}</tbody></table></div></div>`;
+  const ctx=_ctx('rs-fin-chart'); if(!ctx) return;
+  const ds=[];
+  RS_METRICS.filter(m=>_rs.on.has(m.k)).forEach(m=>{
+    const data=years.map(y=>val(rows,y,m.k));
+    if(m.kind==='money') ds.push({type:'bar', label:_L(m.th,m.en), data, backgroundColor:m.color+'CC', borderRadius:3, yAxisID:'y', order:2});
+    else ds.push({type:'line', label:_L(m.th,m.en), data, borderColor:m.color, backgroundColor:m.color, yAxisID:m.kind==='pct'?'y1':'y2', tension:.25, pointRadius:3, spanGaps:true, order:1});
+    if(cmpF && cRows.length && (m.kind!=='money' || (cmpF.profile||{}).currency===ccy)){
+      ds.push({type:'line', label:`${_rs.cmp} · ${_L(m.th,m.en)}`, data:years.map(y=>val(cRows,y,m.k)), borderColor:m.color, borderDash:[5,4],
+               backgroundColor:'transparent', yAxisID:m.kind==='money'?'y':m.kind==='pct'?'y1':'y2', tension:.25, pointRadius:2, spanGaps:true, order:0});
+    }
+  });
+  if(charts['rs-fin-chart']) charts['rs-fin-chart'].destroy();
+  const tick={color:CT.tick,font:{family:CHART_FONT,size:10}};
+  charts['rs-fin-chart']=new Chart(ctx,{data:{labels:years,datasets:ds},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+    plugins:{legend:{position:'bottom',labels:{color:CT.body,font:{family:CHART_FONT,size:10},boxWidth:10}},
+      tooltip:{backgroundColor:CT.tipBg,borderColor:CT.tipBorder,borderWidth:1,titleColor:CT.title,bodyColor:CT.body,
+        callbacks:{label:c=>{const m=RS_METRICS.find(x=>c.dataset.label.endsWith(_L(x.th,x.en))); const v=c.raw;
+          return ' '+c.dataset.label+': '+(v==null?'—':m&&m.kind==='money'?fmtBig(v,ccy):m&&m.kind==='pct'?v.toFixed(1)+'%':(+v).toFixed(2));}}}},
+    scales:{x:{grid:{color:CT.grid},ticks:tick},
+      y:{position:'left',display:ds.some(d=>d.yAxisID==='y'),grid:{color:CT.grid},ticks:{...tick,callback:v=>fmtBig(v,'')}},
+      y1:{position:'right',display:ds.some(d=>d.yAxisID==='y1'),grid:{drawOnChartArea:false},ticks:{...tick,callback:v=>v+'%'}},
+      y2:{position:'right',display:ds.some(d=>d.yAxisID==='y2'),grid:{drawOnChartArea:false},ticks:tick}}}});
 }
 
 // ── Flow chart ────────────────────────────────────────────────────────
@@ -5302,6 +5730,10 @@ async function refreshMarketFeeds(reason){
     fetchExternalData().catch(e=>{ console.warn('[feeds] external:', e.message); return null; }),
     (typeof fetchBotPaper === 'function'
       ? fetchBotPaper().catch(e=>{ console.warn('[feeds] bot-paper.json:', e.message); return null; })
+      : Promise.resolve(null)),
+    // v66 — หน้า Deep Research / Dividend tracker · แยก catch เหตุผลเดียวกับ bot-paper.json
+    (typeof fetchFundamentals === 'function'
+      ? fetchFundamentals().catch(e=>{ console.warn('[feeds] fundamentals.json:', e.message); return null; })
       : Promise.resolve(null))
   ]);
   invalidateMarketCache();
@@ -6387,6 +6819,105 @@ function iaToggleTag(ticker){
 /* ═══ 2. HIDDEN COST ═══════════════════════════════════════════════════
    ค่าคอม/ภาษี เป็นต้นทุนเดียวที่ "แน่นอน 100%" ในการลงทุน — ผลตอบแทนไม่แน่
    แต่ค่าธรรมเนียมจ่ายแน่ทุกครั้ง จึงควรวัดจริงจังกว่าการเดาทิศตลาด */
+/* ══ v66 — ปรับสมดุล (Rebalancing) ═════════════════════════════════════
+   ตัวคำนวณอยู่ใน shared.js (rebalancePlan) · หน้านี้แค่เก็บ state + วาด */
+const _rb = { mode:'topup', amount:10000, setup:false, done:new Set(), plan:null };
+function _rbHoldings(){
+  return (assets||[]).filter(a=>a.qty>1e-9 && a.cur>0)
+    .map(a=>({ticker:a.ticker, label:a.ticker, group:a.group, qty:a.qty, price:a.cur, val:a.val, cost:a.cost}));
+}
+function renderRebalance(){
+  const el=document.getElementById('rb-body'); if(!el) return;
+  const H=_rbHoldings();
+  if(!H.length){ el.innerHTML=`<div class="cc" style="text-align:center;color:var(--muted)">${_L('ยังไม่มีสินทรัพย์ที่มีราคา','No priced holdings yet')}</div>`; return; }
+  const T=getRebalTargets(H), O=getRebalOpts();
+  const p=_rb.plan=rebalancePlan(H, T, _rb.amount, _rb.mode, O);
+  const n2=v=>(+v).toLocaleString(LOC,{maximumFractionDigits:v>=100?0:v>=1?2:6});
+  const pct=v=>v.toFixed(2)+'%';
+  const modeBtn=(m,th,en)=>`<button type="button" class="${_rb.mode===m?'active':''}" onclick="_rb.mode='${m}';_rb.done.clear();renderRebalance()">${_L(th,en)}</button>`;
+  const tSum=Object.entries(T).filter(([k])=>H.some(h=>h.ticker===k)).reduce((s,[,v])=>s+(+v||0),0);
+  const setup=_rb.setup?`<div class="cc rb-setup">
+      <div class="ct">${_L('ตั้งค่าเป้าหมายรายตัว','Per-asset targets')}<span>${_L('รวม','Total')} ${tSum.toFixed(1)}%${Math.abs(tSum-100)>0.5?' · '+_L('ระบบจะปรับสัดส่วนให้รวม 100% เอง','normalized to 100% automatically'):''}</span></div>
+      <div class="tw" style="border:none"><table class="rb-table"><thead><tr><th>${_L('สินทรัพย์','Asset')}</th><th>${_L('หมวด','Category')}</th><th>${_L('สัดส่วนตอนนี้','Now')}</th><th>${_L('เป้า %','Target %')}</th></tr></thead><tbody>
+      ${H.filter(h=>!(ALLOC_META[h.group]||{}).illiquid).map(h=>{const r=p.rows.find(x=>x.ticker===h.ticker);
+        return `<tr><td class="rb-asset tk">${escHtml(h.ticker)}</td><td data-l="${_L('หมวด','Category')}">${escHtml(h.group)}</td>
+        <td data-l="${_L('ตอนนี้','Now')}">${r?pct(r.shareNow):'—'}</td>
+        <td data-l="${_L('เป้า %','Target %')}"><input type="number" min="0" max="100" step="0.1" data-rbt="${escAttr(h.ticker)}" value="${+(T[h.ticker]||0)}"></td></tr>`;}).join('')}
+      </tbody></table></div>
+      <div class="ct" style="margin-top:14px">${_L('หน่วยซื้อขายขั้นต่ำต่อหมวด','Minimum trading unit per category')}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:12px">${[...new Set(H.map(h=>h.group))].filter(g=>!(ALLOC_META[g]||{}).illiquid).map(g=>
+        `<label style="font-size:12px;color:var(--muted2);display:flex;align-items:center;gap:6px">${escHtml(g)} <input type="number" min="0" step="any" data-rbl="${escAttr(g)}" value="${rebalLot(g,O)}"></label>`).join('')}</div>
+      <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+        <button type="button" class="rb-btn primary" onclick="rbSaveSetup()">${_L('บันทึก','Save')}</button>
+        <button type="button" class="rb-btn" onclick="rbResetSetup()">${_L('ใช้ค่าเริ่มต้น (จากเป้าหมวด)','Reset to category defaults')}</button>
+      </div></div>`:'';
+  const rows=p.rows.map((r,i)=>{
+    const cls=r.tradeUnits>0?'buy':r.tradeUnits<0?'sell':'none', done=_rb.done.has(r.ticker);
+    const act=r.tradeUnits>0?_L('ซื้อ','Buy'):r.tradeUnits<0?_L('ขาย','Sell'):'';
+    return `<tr class="${done?'done':''}">
+      <td class="rb-hide-m" style="color:var(--muted)">${i+1}</td>
+      <td class="rb-asset"><div class="tk">${escHtml(r.ticker)}</div><div class="sub">${escHtml(r.group)}</div></td>
+
+      <td data-l="${_L('ต้นทุน','Cost basis')}">${fmt(r.cost)}</td>
+      <td data-l="${_L('มูลค่าปัจจุบัน','Current value')}"><div style="font-weight:600;color:var(--white)">${fmt(r.val)}</div><div class="sub">${fmt(r.price)}</div></td>
+      <td data-l="${_L('กำไร','Gain')}" class="${r.gain>=0?'gain':'loss'}">${fmtSign(r.gain)}<div class="sub">${r.gainPct==null?'—':(r.gainPct>=0?'▲ ':'▼ ')+Math.abs(r.gainPct).toFixed(2)+'%'}</div></td>
+      <td data-l="${_L('สัดส่วนในพอร์ต','Share in portfolio')}">${pct(r.shareNow)}<div class="sub">${_L('เป้า','target')} ${pct(r.shareTarget)}</div></td>
+      <td class="rb-hide-m">${escHtml(r.group)}</td>
+      <td data-l="${_L('สัดส่วนในหมวด','Share in category')}">${pct(r.catShareNow)}<div class="sub">${_L('เป้า','target')} ${pct(r.catTarget)}</div></td>
+      <td data-l="${act?_L('ต้อง','To')+' '+act.toLowerCase():_L('ต้องซื้อ/ขาย','To buy/sell')}" class="rb-trade ${cls}">${r.tradeUnits?`${act} ${n2(Math.abs(r.tradeUnits))} ${_L('หน่วย','units')}<div class="sub">${fmt(Math.abs(r.tradeTHB))}</div>`:'—'}</td>
+      <td class="rb-done"><input type="checkbox" class="rb-chk" ${done?'checked':''} ${r.tradeUnits?'':'disabled'} aria-label="${_L('ทำแล้ว','Done')}"
+          onchange="this.checked?_rb.done.add('${escAttr(r.ticker)}'):_rb.done.delete('${escAttr(r.ticker)}');this.closest('tr').classList.toggle('done',this.checked)"></td>
+    </tr>`;}).join('');
+  const lblAmt=_rb.mode==='withdraw'?_L('จำนวนเงินที่ถอน (฿)','Withdrawal amount (฿)'):_rb.mode==='rebalance'?_L('เงินเติมเพิ่ม (฿) · 0 = ปรับอย่างเดียว','Top-up (฿) · 0 = rebalance only'):_L('จำนวนเงินที่เติม (฿)','Top-up amount (฿)');
+  el.innerHTML=`
+    <div class="rb-bar">
+      <div class="rb-seg" role="group">${modeBtn('topup','เติมเงิน','Top up')}${modeBtn('rebalance','ปรับสมดุล','Rebalance')}${modeBtn('withdraw','ถอนเงิน','Withdrawal')}</div>
+      <div class="rb-field"><label for="rb-amt">${lblAmt}</label>
+        <input id="rb-amt" class="rb-amt" type="number" min="0" step="100" value="${_rb.amount}" onkeydown="if(event.key==='Enter')rbRun()"></div>
+      <button type="button" class="rb-btn" onclick="_rb.setup=!_rb.setup;renderRebalance()">⚙ ${_L('ตั้งค่า','Set up')} ${_rb.setup?'▴':'▾'}</button>
+      <button type="button" class="rb-btn primary" onclick="rbRun()">${_L('ดูผลลัพธ์','See result')}</button>
+      <button type="button" class="rb-btn" style="margin-left:auto" onclick="rbExportCSV()" title="${_L('ส่งออก CSV','Export CSV')}">⇩ CSV</button>
+    </div>
+    ${setup}
+    <div class="rb-sum">
+      <div class="sc"><div class="sc-lbl">${_L('ยอดซื้อรวม','Total purchase')}</div><div class="sc-val" style="color:var(--gain)">${fmt(p.totalBuy)}</div></div>
+      <div class="sc"><div class="sc-lbl">${_L('ยอดขายรวม','Total sale')}</div><div class="sc-val" style="color:var(--loss)">${fmt(p.totalSell)}</div></div>
+      <div class="sc"><div class="sc-lbl">${_rb.mode==='withdraw'?_L('ได้เกินที่ถอน','Surplus over withdrawal'):_L('เงินเหลือจากการปัดหน่วย','Left after rounding')}</div><div class="sc-val">${fmt(p.leftover)}</div></div>
+      <div class="sc"><div class="sc-lbl">${_L('มูลค่าหลังปรับ','Value after')}</div><div class="sc-val">${fmt(p.totalAfter)}</div><div class="sc-sub">${_L('ก่อน','before')} ${fmt(p.totalBefore)}</div></div>
+    </div>
+    <div class="cc" style="padding:0"><div class="tw" style="border:none"><table class="rb-table">
+      <thead><tr><th>#</th><th>${_L('สินทรัพย์','Asset')}</th><th>${_L('ต้นทุน','Cost basis')}</th><th>${_L('มูลค่าปัจจุบัน','Current cost')}</th><th>${_L('กำไร','Gain')}</th>
+        <th>${_L('สัดส่วนในพอร์ต','Share in portfolio')}</th><th>${_L('หมวด','Categories')}</th><th>${_L('สัดส่วนในหมวด','Share in a category')}</th><th>${_L('ต้องซื้อ/ขาย','To buy / sell')}</th><th></th></tr></thead>
+      <tbody>${rows}</tbody></table></div></div>
+    <div class="rb-note">${_L(
+      'เติมเงิน = ซื้ออย่างเดียว ใส่เงินให้ตัวที่ต่ำกว่าเป้ามากสุดก่อน · ถอนเงิน = ขายตัวที่เกินเป้ามากสุดก่อน · ปรับสมดุล = ซื้อและขายให้ตรงเป้า · หุ้นไทยซื้อทีละ 100 หุ้น (แก้ได้ใน ⚙) · ราคาใช้ราคาล่าสุดในแอป ราคาจริงตอนส่งคำสั่งอาจต่าง · ไม่รวมค่าธรรมเนียม',
+      'Top up = buy only, most-underweight first · Withdrawal = sell most-overweight first · Rebalance = buy and sell to target · Thai stocks trade in 100-share lots (change in ⚙) · Uses the latest in-app prices; execution prices may differ · Fees excluded')}</div>`;
+}
+function rbRun(){
+  const v=parseFloat((document.getElementById('rb-amt')||{}).value);
+  _rb.amount=isFinite(v)&&v>=0?v:0; _rb.done.clear(); renderRebalance();
+}
+function rbSaveSetup(){
+  const T={}; document.querySelectorAll('[data-rbt]').forEach(i=>{const v=parseFloat(i.value); if(v>0) T[i.dataset.rbt]=v;});
+  const O=getRebalOpts(); O.lots=O.lots||{};
+  document.querySelectorAll('[data-rbl]').forEach(i=>{const v=parseFloat(i.value); if(v>0) O.lots[i.dataset.rbl]=v;});
+  try{ localStorage.setItem(REBAL_TARGETS_KEY, JSON.stringify(T)); localStorage.setItem(REBAL_OPTS_KEY, JSON.stringify(O)); }catch(e){}
+  _rb.setup=false; renderRebalance();
+}
+function rbResetSetup(){
+  try{ localStorage.removeItem(REBAL_TARGETS_KEY); localStorage.removeItem(REBAL_OPTS_KEY); }catch(e){}
+  renderRebalance();
+}
+function rbExportCSV(){
+  const p=_rb.plan; if(!p) return;
+  const q=v=>'"'+String(v).replace(/"/g,'""')+'"';
+  const lines=[['ticker','group','qty','price_thb','value_thb','share_now_pct','share_target_pct','trade_units','trade_thb'].join(',')]
+    .concat(p.rows.map(r=>[q(r.ticker),q(r.group),r.qty,r.price.toFixed(4),r.val.toFixed(2),r.shareNow.toFixed(2),r.shareTarget.toFixed(2),r.tradeUnits,r.tradeTHB.toFixed(2)].join(',')));
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob(['\ufeff'+lines.join('\n')],{type:'text/csv;charset=utf-8'}));
+  a.download=`rebalance-${_rb.mode}-${isoLocal(new Date())}.csv`; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+
 function renderCost(){
   iaRefresh();
   if(!CLS || !PORT){ iaNeedData('cost-body'); return; }
@@ -7098,11 +7629,11 @@ let pageRenderFns={
   goals:renderGoals,
   debt:renderDebt,
   // v51 — ยุบมาจาก investment-analysis.html
-  dormant:renderDormant, cost:renderCost, market:renderMarket,
+  dormant:renderDormant, cost:renderCost, market:renderMarket, rebalance:renderRebalance,
   // v53
   signals:renderSignals,
   // v59 — ภาพรวมตลาด (watchlist 25 ตัว) + บอทจำลอง
-  watch:renderWatch, bot:renderBot
+  watch:renderWatch, bot:renderBot, research:renderResearch
 };
 /* ══ v49 — Analyst Desk ═══════════════════════════════════════════════
    ตัวเชื่อมระหว่าง state ของแอปกับ analystDesk() ที่เป็น pure function
@@ -7303,9 +7834,9 @@ const NAV_GROUPS = [
   {id:'accounts',  pages:[['accounts','บัญชี'],['debt','หนี้']]},
   {id:'insurance', pages:[['insurance','ประกัน']]},
   {id:'invest',    pages:[['portfolio','ภาพรวมพอร์ต'],['flow','รายการซื้อขาย'],['realized','ขายแล้ว'],
-                          ['dormant','ไม่มีใครดูแล'],['cost','ต้นทุน & ค่าเงิน']]},
+                          ['dormant','ไม่มีใครดูแล'],['cost','ต้นทุน & ค่าเงิน'],['rebalance','ปรับสมดุล']]},
   {id:'dividends', pages:[['dividends','ปันผล']]},
-  {id:'markets',   pages:[['signals','สัญญาณรายตัว'],['watch','ภาพรวมตลาด'],
+  {id:'markets',   pages:[['signals','สัญญาณรายตัว'],['research','วิเคราะห์เจาะลึก'],['watch','ภาพรวมตลาด'],
                           ['bot','บอทจำลอง'],['market','ตลาดวันนี้']]},
 ];
 const PAGE_DEPS = { portfolio:['overview'], accounts:['overview'], goals:['overview','dividends'] };
@@ -7380,13 +7911,12 @@ function _rerenderAll(){
   }catch(e){ console.warn('[prefs] rerender:', e.message); }
 }
 function _paintThemeBtn(){
-  const th=document.documentElement.getAttribute('data-theme')||'slate';
-  const l=document.getElementById('theme-lbl'); if(l) l.textContent = th==='midnight' ? 'Midnight' : 'Slate';
-  const m=document.querySelector('meta[name="theme-color"]'); if(m) m.setAttribute('content', th==='midnight' ? '#09090f' : '#0F172A');
+  const th=document.documentElement.getAttribute('data-theme')==='light'?'light':'midnight';
+  const l=document.getElementById('theme-lbl'); if(l) l.textContent = th==='light' ? 'Light' : 'Midnight';
+  const m=document.querySelector('meta[name="theme-color"]'); if(m) m.setAttribute('content', th==='light' ? '#F4F6FA' : '#0F172A');
 }
 function toggleTheme(){
-  const cur=document.documentElement.getAttribute('data-theme')==='midnight'?'midnight':'slate';
-  const next=cur==='midnight'?'slate':'midnight';
+  const next=document.documentElement.getAttribute('data-theme')==='light'?'midnight':'light';
   document.documentElement.setAttribute('data-theme', next);
   try{ localStorage.setItem(THEME_KEY, next); }catch(e){}
   _syncChartFont(); _paintThemeBtn(); _rerenderAll();
