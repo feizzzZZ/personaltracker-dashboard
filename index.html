@@ -316,6 +316,72 @@ html[data-theme="light"] [style*="color:#4cc9f0"],
 html[data-theme="light"] [style*="color: #4cc9f0"]{color:#0369A1!important}
 html[data-theme="light"] [style*="color:#a0c4ff"],
 html[data-theme="light"] [style*="color: #a0c4ff"]{color:#1D4ED8!important}
+/* ══ v66 — Dividend tracker ══ */
+.dvt-top{display:grid;grid-template-columns:minmax(260px,1fr) 2fr;gap:12px;margin-bottom:16px}
+.dvt-inc{text-align:center;display:flex;flex-direction:column;gap:6px}
+.dvt-lbl{font-size:12px;color:var(--muted2)}
+.dvt-big{font-family:var(--f-sans);font-size:28px;font-weight:700;color:var(--white)}
+.dvt-box{background:var(--bg4);border:1px solid var(--border);border-radius:10px;padding:6px 14px;text-align:left;margin-top:6px}
+.dvt-row{display:flex;align-items:center;gap:10px;padding:8px 0;font-size:12.5px;color:var(--muted2);border-bottom:1px solid var(--border)}
+.dvt-row:last-child{border-bottom:none}
+.dvt-row strong{margin-left:auto;color:var(--white);font-weight:600}
+.dvt-ic{width:18px;text-align:center}
+.dvt-note{font-size:10.5px;color:var(--muted);line-height:1.6;margin-top:4px}
+.dvt-mh{display:flex;align-items:center;gap:10px;margin:18px 0 8px;font-size:13px;color:var(--muted2)}
+.dvt-sum{font-size:11.5px;background:rgba(16,185,129,.14);color:var(--gain);padding:2px 8px;border-radius:6px;font-weight:600}
+.dvt-list{padding:4px 16px}
+.dvt-it{display:grid;grid-template-columns:36px minmax(120px,2fr) 1fr 1fr 100px 1fr 20px;gap:12px;align-items:center;padding:11px 0;border-bottom:1px solid var(--border);font-size:12px}
+.dvt-it:last-child{border-bottom:none}
+.dvt-it .s{font-size:10.5px;color:var(--muted);margin-top:2px}
+.dvt-it .t{color:var(--white);font-weight:600}
+.dvt-nm .t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dvt-logo{width:32px;height:32px;border-radius:8px;background:var(--bg4);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:var(--accent);letter-spacing:.02em}
+.dvt-dt .dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:5px;vertical-align:1px}
+.dvt-fq span{display:inline-block;font-size:10.5px;padding:3px 8px;border-radius:6px;background:rgba(16,185,129,.12);color:var(--gain)}
+.dvt-ck{color:var(--gain);font-weight:700;text-align:right}
+.dvt-it.got{opacity:.8}
+@media(max-width:900px){ .dvt-top{grid-template-columns:1fr} }
+@media(max-width:640px){
+  .dvt-list{padding:2px 12px}
+  .dvt-it{grid-template-columns:32px minmax(0,1fr) auto;gap:4px 10px}
+  .dvt-it>*{min-width:0}
+  .dvt-logo{grid-row:span 2}
+  .dvt-dt{grid-column:2} .dvt-amt{grid-column:3;grid-row:1;text-align:right} .dvt-nm{grid-column:2;grid-row:1}
+  .dvt-fq{grid-column:3;grid-row:2;text-align:right} .dvt-ex,.dvt-ck{display:none}
+}
+
+/* ══ v66 — Deep Research ══ */
+.rs-pick{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.rs-sel{background:var(--bg4);border:1px solid var(--border2);color:var(--white);border-radius:10px;padding:9px 12px;font:inherit;font-size:13px;max-width:100%}
+.rs-cmp{width:100%;margin-top:10px;color:var(--muted2)}
+.rs-stale{font-size:11px;color:var(--debt)}
+.rs-head{display:grid;grid-template-columns:1fr auto;gap:14px 20px;align-items:center}
+.rs-id{display:flex;gap:12px;align-items:center}
+.rs-nm{font-size:17px;font-weight:600;color:var(--white)}
+.rs-sub{font-size:11.5px;color:var(--muted);margin-top:2px}
+.rs-px{grid-column:1;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.rs-px .p{font-size:26px;font-weight:600;color:var(--white);font-family:var(--f-sans)}
+.rs-stats{grid-column:2;grid-row:1 / span 2;display:flex;gap:18px;flex-wrap:wrap;justify-content:flex-end}
+.rs-st .l{font-size:10.5px;color:var(--muted)} .rs-st .v{font-size:13px;color:var(--white);font-weight:600;margin-top:3px}
+.rs-tabs{grid-column:1 / -1;display:flex;gap:4px;border-top:1px solid var(--border);padding-top:6px;margin-top:4px;flex-wrap:wrap}
+.rs-tabs button{background:none;border:none;border-bottom:2px solid transparent;color:var(--muted2);font:inherit;font-size:12.5px;padding:8px 12px;cursor:pointer}
+.rs-tabs button.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+.rs-fin-bar{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.rs-hint{font-size:11px;color:var(--muted)}
+.rs-ft tr.on td:first-child{color:var(--white);font-weight:600}
+.rs-ft tr:not(.on) td{opacity:.6}
+.rs-sw{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:8px;vertical-align:-1px}
+.rs-news{padding:4px 18px}
+.rs-news a{display:block;padding:12px 0;border-bottom:1px solid var(--border);text-decoration:none}
+.rs-news a:last-child{border-bottom:none}
+.rs-news .t{color:var(--white);font-size:13px;font-weight:500} .rs-news .s{color:var(--muted);font-size:11px;margin-top:3px}
+.rs-news a:hover .t{color:var(--accent)}
+@media(max-width:768px){
+  .rs-head{grid-template-columns:1fr}
+  .rs-stats{grid-column:1;grid-row:auto;justify-content:flex-start;gap:14px}
+  .rs-sel{width:100%}
+}
+
 /* ══ v66 — หน้าปรับสมดุล ══ */
 .rb-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:14px}
 .rb-seg{display:flex;background:var(--bg4);border:1px solid var(--border2);border-radius:10px;padding:3px;gap:3px}
@@ -1927,6 +1993,9 @@ html.standalone .a2hs{display:none}
         <div class="pg-title">Dividend Income</div>
         <div class="pg-sub">รายได้ที่ไม่ต้องทำงาน — เงินทำงานแทนคุณเดือนละเท่าไหร่แล้ว</div>
       </div></div>
+      <!-- v66 — Dividend tracker: คาดการณ์ 12 เดือนข้างหน้า + ปฏิทินรายเดือน -->
+      <div id="dv-tracker"></div>
+      <div class="sl sl-mt">ประวัติที่ได้รับจริง</div>
       <div class="sg">
         <div class="sc" style="--g:rgba(0,212,160,.1)">
           <div class="sc-lbl">ปันผลรวมทั้งหมด</div>
@@ -2109,6 +2178,13 @@ html.standalone .a2hs{display:none}
       <div class="pg-hdr"><div><div class="pg-title">ต้นทุนที่มองไม่เห็น</div>
         <div class="pg-sub">ค่าธรรมเนียม ภาษี และความเสี่ยงค่าเงิน</div></div></div>
       <div id="cost-body"></div>
+    </div>
+
+    <!-- ══ DEEP RESEARCH (v66) ══ -->
+    <div class="page" id="page-research">
+      <div class="pg-hdr"><div><div class="pg-title">วิเคราะห์เจาะลึก</div>
+        <div class="pg-sub">งบการเงินรายปี · ปันผล · ข่าว รายบริษัท — ข้อมูลจาก pipeline (Yahoo · SEC EDGAR) ไม่ใช่คำแนะนำการลงทุน</div></div></div>
+      <div id="rs-body"></div>
     </div>
 
     <!-- ══ SIGNALS (v53) ══ -->
@@ -3929,7 +4005,7 @@ const VLOG_PURGED_KEY = 'finOS_valueLogPurged_v44';
 //   ฟังก์ชันหาย  → BLOCK  (แอปคำนวณผิดแน่นอน — นี่คือสิ่งที่ guard มีไว้จับ)
 //   เลขไม่ตรง    → WARN   (แค่ลืม bump — log ไว้ ไม่รบกวนผู้ใช้)
 // ฟังก์ชันที่ต้องมีคือสัญญาจริงระหว่างสองไฟล์ ส่วนสตริงเวอร์ชันเป็นแค่ป้าย
-const EXPECTED_SHARED_BUILD = 'v65';
+const EXPECTED_SHARED_BUILD = 'v66';
 const REQUIRED_SHARED_FNS = [
   'resolvePrices', 'pipelinePricesTHB', 'parseReconcileRows',
   'computeReconciliation', 'splitBalances', 'debtVsInvest', 'buildDebtPlan',
@@ -3944,6 +4020,7 @@ const REQUIRED_SHARED_FNS = [
   'budgetSpendMap',                                           // v63 — งบนับรายจ่ายรูดบัตร
   'valueLogJumps', 'cleanSheetSpikesV62',                     // v62 — ด่านคุณภาพ Value_Log
   'rebalancePlan', 'getRebalTargets', 'getRebalOpts', 'rebalLot',   // v66 — ปรับสมดุล
+  'loadFundamentals', 'fetchFundamentals', 'fundOf', 'dividendCalendar', 'divFrequency',   // v66 — research/ปันผล
   'loadBotPaper', 'fetchBotPaper', 'botStatus',   // v59 — หน้าบอทจำลอง
 ];
 function checkSharedVersion(){
@@ -4414,6 +4491,7 @@ function renderEngine(){
 
 // ── DIVIDENDS: passive income ────────────────────────────────────────
 function renderDividends(){
+  try{ renderDividendTracker(); }catch(e){ console.warn('[div] tracker:', e.message); }
   const rows=tracker.filter(r=>TX_DIV.includes(r.txType) && r.date);
   const setT=(id,v)=>{const e=document.getElementById(id); if(e) e.textContent=v;};
   if(!rows.length){ setT('dv-total','฿0'); setT('dv-total-s','ยังไม่มีรายการปันผล'); return; }
@@ -4482,6 +4560,247 @@ function renderDividends(){
     `<div style="background:var(--bg4);border:1px solid var(--border);border-radius:8px;padding:10px 12px;text-align:center">
       <div style="font-size:10px;color:var(--muted2);margin-bottom:3px">${y}</div>
       <div style="font-size:14px;font-weight:500;color:var(--gain)">+${fmt(divByYr[y])}</div></div>`).join('');
+}
+
+/* ══ v66 — Dividend tracker ═══════════════════════════════════════════
+   ตัวคำนวณ: dividendCalendar() ใน shared.js · ข้อมูลรายครั้งจาก fundamentals.json (Yahoo events=div)
+   เงินที่ได้รับจริง: แถว Dividend Payout ในชีต Asset_Tracker */
+let _dvShowAll=false;
+function renderDividendTracker(){
+  const el=document.getElementById('dv-tracker'); if(!el) return;
+  const F=loadFundamentals(); const fund=(F&&F.tickers)||{};
+  const held=(assets||[]).filter(a=>a.qty>1e-9);
+  const withHist=held.filter(a=>(fund[a.ticker]?.dividends||[]).length);
+  if(!withHist.length){
+    el.innerHTML=`<div class="cc" style="color:var(--muted2);font-size:12px;line-height:1.8">${_L(
+      '📅 ยังไม่มีประวัติปันผลรายตัวของสินทรัพย์ที่ถืออยู่ — pipeline จะดึงให้ใน <code>fundamentals.json</code> (Actions → Update market data) แล้วหน้านี้จะแสดงปฏิทินปันผลและรายได้ที่คาดการณ์ 12 เดือนข้างหน้า',
+      '📅 No per-holding dividend history yet — the pipeline writes it to <code>fundamentals.json</code> (Actions → Update market data), then this page shows the dividend calendar and 12-month forward income')}</div>`;
+    return;
+  }
+  const usd=(typeof mdNum==='function'&&mdNum('USDTHB'))||(()=>{const v=Object.values(fxMap||{}).filter(x=>x>1);return v.length?v.reduce((a,b)=>a+b,0)/v.length:0;})();
+  const received=(tracker||[]).filter(r=>TX_DIV.includes(r.txType)&&r.date).map(r=>({ticker:r.ticker,date:r.date,amtTHB:r.amtTHB}));
+  const holdings=held.map(a=>({ticker:a.ticker,qty:a.qty,name:(fund[a.ticker]?.profile?.name)||a.ticker}));
+  const C=dividendCalendar(holdings, fund, received, {USD:usd}, new Date());
+  const pv=(assets||[]).reduce((s,a)=>s+(a.val||0),0);
+  const stale=withHist.filter(a=>{const f=fundOf(a.ticker);return f&&f.stale;}).length;
+  const ML=k=>monthLabel(k);
+  const stat=(ic,th,en,v,tip)=>`<div class="dvt-row"${tip?` title="${escAttr(tip)}"`:''}><span class="dvt-ic">${ic}</span><span>${_L(th,en)}</span><strong>${v}</strong></div>`;
+  // รายการแยกเดือน — ตั้งแต่ต้นเดือนก่อนถึง 12 เดือนข้างหน้า
+  const now=new Date(), from=isoLocal(new Date(now.getFullYear(),now.getMonth()-1,1));
+  const list=C.events.filter(e=>e.payDate>=from);
+  const byM={}; list.forEach(e=>{(byM[e.payDate.slice(0,7)]=byM[e.payDate.slice(0,7)]||[]).push(e);});
+  const mKeys=Object.keys(byM).sort();
+  const shown=_dvShowAll?mKeys:mKeys.slice(0,4);
+  const pill={received:['var(--gain)',_L('ได้รับแล้ว','Received')],declared:['var(--accent)',_L('ประกาศแล้ว · รอรับ','Declared')],estimated:['var(--muted)',_L('ประมาณการ','Estimated')]};
+  const initials=t=>escHtml(String(t).replace(/[^A-Za-z0-9]/g,'').slice(0,4)||'?');
+  const fmtD=d=>new Date(d+'T00:00:00').toLocaleDateString(LOC,{day:'numeric',month:'short',year:'2-digit'});
+  const groups=shown.map(k=>{
+    const rows=byM[k], sum=rows.reduce((s,e)=>s+e.amount,0);
+    return `<div class="dvt-mh"><span>${ML(k)}</span><span class="dvt-sum">+${fmt(sum)}</span></div>
+    <div class="cc dvt-list">${rows.map(e=>`<div class="dvt-it${e.status==='received'?' got':''}">
+      <div class="dvt-logo" aria-hidden="true">${initials(e.ticker)}</div>
+      <div class="dvt-nm"><div class="t">${escHtml(e.name)}</div><div class="s">${escHtml(e.ticker)}</div></div>
+      <div class="dvt-dt"><div>${fmtD(e.payDate)}</div><div class="s"><span class="dot" style="background:${pill[e.status][0]}"></span>${pill[e.status][1]}</div></div>
+      <div class="dvt-amt"><div class="t">${fmt(e.amount)}</div><div class="s">${(+e.qty).toLocaleString(LOC,{maximumFractionDigits:4})}×${e.currency==='THB'?'฿':'$'}${(+e.dps).toLocaleString(LOC,{maximumFractionDigits:4})}</div></div>
+      <div class="dvt-fq">${e.freq?`<span>${_L(e.freqTh,e.freq)}</span>`:''}</div>
+      <div class="dvt-ex"><div>${fmtD(e.exDate)}</div><div class="s">${_L('วันขึ้น XD','Ex-dividend date')}</div></div>
+      <div class="dvt-ck">${e.status==='received'?'✓':''}</div></div>`).join('')}</div>`;}).join('');
+  el.innerHTML=`
+    <div class="dvt-top">
+      <div class="cc dvt-inc">
+        <div class="dvt-lbl">${_L('รายได้ปันผลต่อปี (คาดการณ์)','Annual income (forward)')}</div>
+        <div class="dvt-big">${fmt(C.annual)}</div>
+        <div class="dvt-box">
+          ${stat('📊','รายเดือน','Monthly',fmt(C.monthly))}
+          ${stat('📅','รายวัน','Daily',fmt(C.daily))}
+          ${stat('％','Yield','Yield',pv>0?(C.annual/pv*100).toFixed(2)+'%':'—',_L('รายได้ปันผลต่อปี ÷ มูลค่าพอร์ต','Annual income ÷ portfolio value'))}
+          ${stat('⏳','ยังไม่ได้รับ','Yet to receive',fmt(C.yetToReceive),_L('ขึ้น XD แล้วแต่ยังไม่เจอเงินเข้าในชีต','Went ex-dividend but no payout row in the sheet yet'))}
+        </div>
+        <div class="dvt-note">${_L('ก่อนหักภาษี ณ ที่จ่าย · ฉายจากรอบเดียวกันของปีก่อน × จำนวนหุ้นตอนนี้','Before withholding tax · projected from last year\'s payments × current shares')}${usd?` · USD/THB ${usd.toFixed(2)}`:''}${stale?` · <span style="color:var(--debt)">${_L(`ข้อมูล ${stale} ตัวเก่ากว่า ${FUND_MAX_DAYS} วัน`,`${stale} tickers older than ${FUND_MAX_DAYS} days`)}</span>`:''}</div>
+      </div>
+      <div class="cc dvt-chart"><div class="cw" style="height:250px;margin:0"><canvas id="dv-fwd-chart"></canvas></div></div>
+    </div>
+    ${groups||`<div class="cc" style="color:var(--muted2)">${_L('ไม่มีรายการใน 12 เดือนข้างหน้า','No payments in the next 12 months')}</div>`}
+    ${mKeys.length>4?`<button type="button" class="act-toggle" style="display:block" onclick="_dvShowAll=!_dvShowAll;renderDividendTracker()">${_dvShowAll?_L('ย่อ ▴','Collapse ▴'):_L(`ดูอีก ${mKeys.length-4} เดือน ▾`,`Show ${mKeys.length-4} more months ▾`)}</button>`:''}`;
+  mkBarChart('dv-fwd-chart', C.months.map(m=>ML(m.key).split(' ')[0]), [
+    {label:'ได้รับแล้ว', data:C.months.map(m=>Math.round(m.received)), backgroundColor:'rgba(16,185,129,.85)', borderRadius:4},
+    {label:'ประกาศแล้ว', data:C.months.map(m=>Math.round(m.declared)), backgroundColor:'rgba(56,189,248,.95)', borderRadius:4},
+    {label:'ประมาณการ', data:C.months.map(m=>Math.round(m.estimated)), backgroundColor:'rgba(59,130,246,.45)', borderRadius:4},
+  ], true);
+}
+
+/* ══ v66 — Deep Research ══════════════════════════════════════════════
+   อ่านอย่างเดียวจาก fundamentals.json (fundOf) + สัญญาณเดิม (loadSignals/loadWatchlist)
+   ไม่คำนวณงบซ้ำ — ROA/Payout มาจาก pipeline */
+const _rs = { tk:null, tab:'overview', cmp:'', on:new Set(['revenue','netIncome','payout','roa']) };
+const RS_METRICS = [
+  {k:'revenue',     th:'รายได้รวม',     en:'Total revenue', kind:'money', color:'#0EA5E9'},
+  {k:'netIncome',   th:'กำไรสุทธิ',      en:'Net income',    kind:'money', color:'#8B5CF6'},
+  {k:'totalAssets', th:'สินทรัพย์รวม',   en:'Total assets',  kind:'money', color:'#64748B'},
+  {k:'payout',      th:'Payout ratio',  en:'Payout ratio',  kind:'pct',   color:'#F59E0B'},
+  {k:'roa',         th:'ROA',           en:'ROA',           kind:'pct',   color:'#2DD4BF'},
+  {k:'eps',         th:'EPS',           en:'EPS',           kind:'num',   color:'#F472B6'},
+];
+function fmtBig(v, ccy){
+  if(v==null || !isFinite(v)) return '—';
+  const sym = ccy==='USD'?'$':ccy==='THB'?'฿':'';
+  const a=Math.abs(v), sg=v<0?'−':'';
+  const x = a>=1e12?(a/1e12).toFixed(2)+'T':a>=1e9?(a/1e9).toFixed(a>=1e11?0:1)+'B':a>=1e6?(a/1e6).toFixed(1)+'M':a>=1e3?(a/1e3).toFixed(1)+'K':a.toFixed(2);
+  return sg+sym+x;
+}
+function _rsUniverse(){
+  const F=loadFundamentals(); const T=(F&&F.tickers)||{};
+  const heldVal={}; (assets||[]).forEach(a=>{ if(a.qty>1e-9) heldVal[a.ticker]=a.val||0; });
+  const keys=Object.keys(T);
+  const held=keys.filter(k=>k in heldVal).sort((a,b)=>heldVal[b]-heldVal[a]);
+  const watch=keys.filter(k=>!(k in heldVal)).sort();
+  return {T, held, watch};
+}
+function renderResearch(){
+  const el=document.getElementById('rs-body'); if(!el) return;
+  const {T, held, watch}=_rsUniverse();
+  if(!held.length && !watch.length){
+    el.innerHTML=`<div class="cc" style="color:var(--muted2);font-size:12px;line-height:1.8">${_L(
+      '🔬 ยังไม่มีข้อมูลรายบริษัท — pipeline จะเขียน <code>fundamentals.json</code> ให้ในรอบถัดไปของ Actions → Update market data (ของที่ถือ + watchlist 25 ตัว · งบรายปี ปันผล ข่าว)',
+      '🔬 No company data yet — the pipeline writes <code>fundamentals.json</code> on the next Actions → Update market data run (holdings + 25-asset watchlist · annual financials, dividends, news)')}</div>`;
+    return;
+  }
+  if(!_rs.tk || !T[_rs.tk]) _rs.tk = held[0] || watch[0];
+  const f=fundOf(_rs.tk)||{}; const P=f.profile||{}, S=f.stats||{}, ccy=P.currency||'';
+  const opt=(k)=>`<option value="${escAttr(k)}"${k===_rs.tk?' selected':''}>${escHtml(k)} — ${escHtml((T[k].profile||{}).name||T[k].nameTh||'')}</option>`;
+  const sel=`<select class="rs-sel" onchange="_rs.tk=this.value;_rs.cmp='';renderResearch()" aria-label="${_L('เลือกบริษัท','Select company')}">
+      ${held.length?`<optgroup label="${_L('ถืออยู่','Holdings')}">${held.map(opt).join('')}</optgroup>`:''}
+      ${watch.length?`<optgroup label="${_L('Watchlist','Watchlist')}">${watch.map(opt).join('')}</optgroup>`:''}</select>`;
+  const chgCls=(S.chg||0)>=0?'gain':'loss';
+  const px=v=>v==null?'—':(ccy==='USD'?'$':ccy==='THB'?'฿':'')+(+v).toLocaleString(LOC,{minimumFractionDigits:2,maximumFractionDigits:2});
+  // XD ถัดไปโดยประมาณ = ครั้งล่าสุด + ความถี่
+  const dv=f.dividends||[]; const fq=divFrequency(dv.map(d=>d.date));
+  let nextEx=null;
+  if(dv.length && fq){ let t=Date.parse(dv[dv.length-1].date); const step=365/fq.n*864e5; while(t<=Date.now()) t+=step; nextEx=isoLocal(new Date(t)); }
+  const stat=(th,en,v)=>`<div class="rs-st"><div class="l">${_L(th,en)}</div><div class="v">${v}</div></div>`;
+  const tabs=[['overview','ภาพรวม','Overview'],['dividends','ปันผล','Dividends'],['financials','งบการเงิน','Financials'],['news','ข่าว','News']];
+  el.innerHTML=`
+    <div class="rs-pick">${sel}${f.stale?`<span class="rs-stale">${_L(`ข้อมูล ${f.age??'?'} วันก่อน`,`data ${f.age??'?'} days old`)}</span>`:''}</div>
+    <div class="cc rs-head">
+      <div class="rs-id"><div class="dvt-logo" style="width:44px;height:44px;font-size:11px">${escHtml(_rs.tk.replace(/[^A-Za-z0-9]/g,'').slice(0,4))}</div>
+        <div><div class="rs-nm">${escHtml(P.name||f.nameTh||_rs.tk)}</div><div class="rs-sub">${escHtml(_rs.tk)}${P.exchange?' • '+escHtml(P.exchange):''}${P.type?' • '+escHtml(P.type):''}</div></div></div>
+      <div class="rs-px"><span class="p">${px(S.price)}</span>
+        <span class="${chgCls}" style="font-size:13px">${S.chg==null?'':(S.chg>=0?'+':'−')+px(Math.abs(S.chg)).replace(/^([$฿])/,'$1')} ${S.chgPct==null?'':`(${S.chgPct>=0?'▲':'▼'} ${Math.abs(S.chgPct).toFixed(2)}%)`}</span></div>
+      <div class="rs-stats">
+        ${stat('XD ถัดไป (ประมาณ)','Next ex-date (est.)',nextEx?new Date(nextEx+'T00:00:00').toLocaleDateString(LOC,{day:'numeric',month:'short'}):'—')}
+        ${stat('P/E','P/E',S.pe!=null?(+S.pe).toFixed(1):'—')}
+        ${stat('EPS','EPS',S.eps!=null?(+S.eps).toFixed(2):'—')}
+        ${stat('มูลค่าตลาด','Market cap',fmtBig(S.mcap,ccy))}
+        ${stat('อัตราปันผล','Dividend yield',S.divYield!=null?(+S.divYield).toFixed(2)+'%':'—')}
+      </div>
+      <div class="rs-tabs" role="tablist">${tabs.map(([k,th,en])=>`<button type="button" role="tab" aria-selected="${_rs.tab===k}" class="${_rs.tab===k?'active':''}" onclick="_rs.tab='${k}';renderResearch()">${_L(th,en)}</button>`).join('')}</div>
+    </div>
+    <div id="rs-tab"></div>`;
+  const tb=document.getElementById('rs-tab');
+  if(_rs.tab==='financials') _rsFinancials(tb, f, T, held, watch);
+  else if(_rs.tab==='dividends') _rsDividends(tb, f, fq);
+  else if(_rs.tab==='news') _rsNews(tb, f);
+  else _rsOverview(tb, f);
+}
+function _rsOverview(tb, f){
+  const sig=[...(loadSignals()||[]), ...((typeof loadWatchlist==='function'?loadWatchlist():null)||[])].find(x=>x.ticker===_rs.tk||x.key===_rs.tk);
+  const a=(assets||[]).find(x=>x.ticker===_rs.tk && x.qty>1e-9);
+  const pv=(assets||[]).reduce((s,x)=>s+(x.val||0),0);
+  const last=(f.annual||[]).slice(-1)[0]||{}; const ccy=(f.profile||{}).currency;
+  const box=(th,en,v,sub)=>`<div class="sc"><div class="sc-lbl">${_L(th,en)}</div><div class="sc-val" style="font-size:18px">${v}</div>${sub?`<div class="sc-sub">${sub}</div>`:''}</div>`;
+  tb.innerHTML=`
+    <div class="sl sl-mt">${_L('สัญญาณ (เกณฑ์เดียวกับหน้าสัญญาณรายตัว)','Signal (same rules as the Signals page)')}</div>
+    ${sig?`<div class="sg">
+      ${box('ประตู','Gate',sig.gate==='pass'?`<span class="gain">${_L('ผ่าน','Pass')}</span>`:sig.gate==='fail'?`<span class="loss">${_L('ไม่ผ่าน','Fail')}</span>`:'—',escHtml(sig.gate_why||''))}
+      ${box('อันดับ','Rank',sig.rank==null?'—':(+sig.rank).toFixed(2),_L('โมเมนตัม ÷ ความผันผวน','momentum ÷ volatility'))}
+      ${box('ขนาดไม้','Size',sig.size==null?'—':'×'+sig.size,escHtml(sig.action||''))}
+      ${box('RSI · ห่างจุดสูง','RSI · from high',`${sig.rsi??'—'} · ${sig.drawdown==null?'—':sig.drawdown+'%'}`,`MA200 ${escHtml(sig.ma200||'—')}`)}
+    </div>`:`<div class="cc" style="color:var(--muted2);font-size:12px">${_L('ไม่มีสัญญาณของตัวนี้','No signal for this ticker')}</div>`}
+    <div class="sl sl-mt">${_L('ของเราในพอร์ต','Your position')}</div>
+    ${a?`<div class="sg">
+      ${box('จำนวน','Quantity',(+a.qty).toLocaleString(LOC,{maximumFractionDigits:6}))}
+      ${box('มูลค่า','Value',fmt(a.val),pv>0?(a.val/pv*100).toFixed(1)+'% '+_L('ของพอร์ต','of portfolio'):'')}
+      ${box('ต้นทุน','Cost basis',fmt(a.cost),'WACC '+fmt(a.wacc||0))}
+      ${box('กำไร','Gain',`<span class="${a.pnl>=0?'gain':'loss'}">${fmtSign(a.pnl)}</span>`,(a.pnlPct>=0?'+':'')+(+a.pnlPct).toFixed(1)+'%')}
+    </div>`:`<div class="cc" style="color:var(--muted2);font-size:12px">${_L('ยังไม่ได้ถือตัวนี้','Not held')}</div>`}
+    ${last.year?`<div class="sl sl-mt">${_L('งบปีล่าสุด','Latest fiscal year')} (${last.year})</div><div class="sg">
+      ${box('รายได้รวม','Total revenue',fmtBig(last.revenue,ccy))}${box('กำไรสุทธิ','Net income',fmtBig(last.netIncome,ccy))}
+      ${box('ROA','ROA',last.roa==null?'—':last.roa+'%')}${box('Payout ratio','Payout ratio',last.payout==null?'—':last.payout+'%')}</div>`:''}`;
+}
+function _rsDividends(tb, f, fq){
+  const dv=f.dividends||[]; const ccy=(f.profile||{}).currency;
+  if(!dv.length){ tb.innerHTML=`<div class="cc" style="color:var(--muted2);font-size:12px">${_L('ไม่มีประวัติปันผล','No dividend history')}</div>`; return; }
+  const byY={}; dv.forEach(d=>{const y=d.date.slice(0,4); byY[y]=(byY[y]||0)+d.amount;});
+  const ys=Object.keys(byY).sort();
+  const a=(assets||[]).find(x=>x.ticker===_rs.tk && x.qty>1e-9);
+  const usd=(typeof mdNum==='function'&&mdNum('USDTHB'))||0, rate=ccy==='THB'?1:ccy==='USD'?usd:0;
+  const cut=isoLocal(new Date(Date.now()-365*864e5)); const t12=dv.filter(d=>d.date>cut).reduce((s,d)=>s+d.amount,0);
+  const yoc=a&&a.cost>0&&rate?(t12*a.qty*rate/a.cost*100):null;
+  const sym=ccy==='USD'?'$':ccy==='THB'?'฿':'';
+  tb.innerHTML=`
+    <div class="sg" style="margin-top:14px">
+      <div class="sc"><div class="sc-lbl">${_L('ปันผล 12 เดือน / หุ้น','12-month DPS')}</div><div class="sc-val" style="font-size:18px">${sym}${t12.toFixed(4).replace(/0+$/,'').replace(/\.$/,'')}</div></div>
+      <div class="sc"><div class="sc-lbl">${_L('ความถี่','Frequency')}</div><div class="sc-val" style="font-size:18px">${fq?_L(fq.th,fq.en):'—'}</div></div>
+      <div class="sc"><div class="sc-lbl">Yield on cost</div><div class="sc-val" style="font-size:18px">${yoc==null?'—':yoc.toFixed(2)+'%'}</div><div class="sc-sub">${_L('ปันผล 12 เดือน × หุ้นที่ถือ ÷ ต้นทุน','12m DPS × shares ÷ cost')}</div></div>
+    </div>
+    <div class="cc"><div class="ct">${_L('ปันผลต่อหุ้นรายปี','Dividends per share by year')}<span>${escHtml(ccy||'')}</span></div>
+      <div class="cw" style="height:220px;margin:0"><canvas id="rs-div-chart"></canvas></div></div>
+    <div class="cc" style="margin-top:12px;padding:0"><div class="tw" style="border:none"><table class="at"><thead><tr>
+      <th>${_L('วันขึ้น XD','Ex-dividend date')}</th><th class="r">${_L('ต่อหุ้น','Per share')}</th>${a?`<th class="r">${_L('ของเรา (ประมาณ)','Yours (est.)')}</th>`:''}</tr></thead>
+      <tbody>${dv.slice(-12).reverse().map(d=>`<tr><td>${d.date}</td><td class="r">${sym}${d.amount}</td>${a?`<td class="r gain">${rate?fmt(d.amount*a.qty*rate):'—'}</td>`:''}</tr>`).join('')}</tbody></table></div></div>`;
+  mkBarChart('rs-div-chart', ys, [{label:_L('ปันผล/หุ้น','DPS'), data:ys.map(y=>+byY[y].toFixed(4)), backgroundColor:'rgba(14,165,233,.8)', borderRadius:4}], false, 'num');
+}
+function _rsNews(tb, f){
+  const n=f.news||[];
+  tb.innerHTML=n.length?`<div class="cc rs-news">${n.map(x=>`<a href="${escAttr(x.link)}" target="_blank" rel="noopener noreferrer">
+      <div class="t">${escHtml(x.title)}</div><div class="s">${escHtml(x.publisher||'')}${x.time?' · '+escHtml(x.time):''} ↗</div></a>`).join('')}</div>`
+    :`<div class="cc" style="color:var(--muted2);font-size:12px">${_L('ยังไม่มีข่าว','No news yet')}</div>`;
+}
+function _rsFinancials(tb, f, T, held, watch){
+  const rows=f.annual||[]; const ccy=(f.profile||{}).currency;
+  if(!rows.length){ tb.innerHTML=`<div class="cc" style="color:var(--muted2);font-size:12px">${_L('ไม่มีงบการเงิน (ETF / กองทุน หรือแหล่งข้อมูลยังไม่มี)','No financial statements (ETF/fund, or not available from the source)')}</div>`; return; }
+  const cmpF=_rs.cmp?fundOf(_rs.cmp):null; const cRows=(cmpF&&cmpF.annual)||[];
+  const years=[...new Set([...rows.map(r=>r.year), ...cRows.map(r=>r.year)])].sort();
+  const val=(rs,y,k)=>{const r=rs.find(x=>x.year===y); return r&&r[k]!=null?r[k]:null;};
+  const others=[...held,...watch].filter(k=>k!==_rs.tk && (T[k].annual||[]).length);
+  const cell=(m,v)=>v==null?'—':m.kind==='money'?fmtBig(v,ccy):m.kind==='pct'?v.toFixed(1)+'%':(+v).toFixed(2);
+  const src=f.finSrc?` · ${_L('แหล่ง','source')}: ${escHtml(f.finSrc)}${f.finUpdated?' · '+escHtml(f.finUpdated):''}`:'';
+  tb.innerHTML=`
+    <div class="cc" style="margin-top:14px">
+      <div class="rs-fin-bar"><span class="rs-hint">💡 ${_L('คลิกแถวในตารางเพื่อเปิด/ปิดบนกราฟ','Click a row in the table to toggle it on the chart')}</span>
+        <button type="button" class="rb-btn" style="padding:5px 10px;font-size:11px" onclick="_rs.on.clear();renderResearch()">${_L('ล้างทั้งหมด','Clear all')}</button></div>
+      <select class="rs-sel rs-cmp" onchange="_rs.cmp=this.value;renderResearch()" aria-label="${_L('เทียบกับบริษัท','Compare with')}">
+        <option value="">⇆ ${_L('เลือกบริษัทเพื่อเปรียบเทียบ…','Select a company for comparison…')}</option>
+        ${others.map(k=>`<option value="${escAttr(k)}"${k===_rs.cmp?' selected':''}>${escHtml(k)} — ${escHtml((T[k].profile||{}).name||'')}</option>`).join('')}</select>
+      ${cmpF&&(cmpF.profile||{}).currency!==ccy?`<div class="rs-hint" style="margin:6px 0">⚠ ${_L('สกุลเงินต่างกัน','Different currencies')} (${escHtml(ccy)} vs ${escHtml((cmpF.profile||{}).currency||'?')}) — ${_L('เทียบได้เฉพาะ % (ROA/Payout)','only % metrics (ROA/Payout) are comparable')}</div>`:''}
+      <div class="cw" style="height:320px;margin:10px 0 0"><canvas id="rs-fin-chart"></canvas></div>
+      <div class="rs-hint" style="margin-top:6px">${_L('หน่วย','Units')}: ${escHtml(ccy||'—')} · ${_L('ปีงบที่สิ้นสุด','fiscal year ended')}${src}</div>
+    </div>
+    <div class="cc" style="margin-top:12px;padding:0"><div class="tw" style="border:none"><table class="at rs-ft"><thead><tr><th>${_L('รายการ','Metric')}</th>${years.map(y=>`<th class="r">${y}</th>`).join('')}</tr></thead>
+      <tbody>${RS_METRICS.map(m=>`<tr class="${_rs.on.has(m.k)?'on':''}" onclick="_rs.on.has('${m.k}')?_rs.on.delete('${m.k}'):_rs.on.add('${m.k}');renderResearch()" style="cursor:pointer">
+        <td><span class="rs-sw" style="background:${m.color}"></span>${_L(m.th,m.en)}</td>${years.map(y=>`<td class="r">${cell(m,val(rows,y,m.k))}</td>`).join('')}</tr>`).join('')}</tbody></table></div></div>`;
+  const ctx=_ctx('rs-fin-chart'); if(!ctx) return;
+  const ds=[];
+  RS_METRICS.filter(m=>_rs.on.has(m.k)).forEach(m=>{
+    const data=years.map(y=>val(rows,y,m.k));
+    if(m.kind==='money') ds.push({type:'bar', label:_L(m.th,m.en), data, backgroundColor:m.color+'CC', borderRadius:3, yAxisID:'y', order:2});
+    else ds.push({type:'line', label:_L(m.th,m.en), data, borderColor:m.color, backgroundColor:m.color, yAxisID:m.kind==='pct'?'y1':'y2', tension:.25, pointRadius:3, spanGaps:true, order:1});
+    if(cmpF && cRows.length && (m.kind!=='money' || (cmpF.profile||{}).currency===ccy)){
+      ds.push({type:'line', label:`${_rs.cmp} · ${_L(m.th,m.en)}`, data:years.map(y=>val(cRows,y,m.k)), borderColor:m.color, borderDash:[5,4],
+               backgroundColor:'transparent', yAxisID:m.kind==='money'?'y':m.kind==='pct'?'y1':'y2', tension:.25, pointRadius:2, spanGaps:true, order:0});
+    }
+  });
+  if(charts['rs-fin-chart']) charts['rs-fin-chart'].destroy();
+  const tick={color:CT.tick,font:{family:CHART_FONT,size:10}};
+  charts['rs-fin-chart']=new Chart(ctx,{data:{labels:years,datasets:ds},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+    plugins:{legend:{position:'bottom',labels:{color:CT.body,font:{family:CHART_FONT,size:10},boxWidth:10}},
+      tooltip:{backgroundColor:CT.tipBg,borderColor:CT.tipBorder,borderWidth:1,titleColor:CT.title,bodyColor:CT.body,
+        callbacks:{label:c=>{const m=RS_METRICS.find(x=>c.dataset.label.endsWith(_L(x.th,x.en))); const v=c.raw;
+          return ' '+c.dataset.label+': '+(v==null?'—':m&&m.kind==='money'?fmtBig(v,ccy):m&&m.kind==='pct'?v.toFixed(1)+'%':(+v).toFixed(2));}}}},
+    scales:{x:{grid:{color:CT.grid},ticks:tick},
+      y:{position:'left',display:ds.some(d=>d.yAxisID==='y'),grid:{color:CT.grid},ticks:{...tick,callback:v=>fmtBig(v,'')}},
+      y1:{position:'right',display:ds.some(d=>d.yAxisID==='y1'),grid:{drawOnChartArea:false},ticks:{...tick,callback:v=>v+'%'}},
+      y2:{position:'right',display:ds.some(d=>d.yAxisID==='y2'),grid:{drawOnChartArea:false},ticks:tick}}}});
 }
 
 // ── Flow chart ────────────────────────────────────────────────────────
@@ -5411,6 +5730,10 @@ async function refreshMarketFeeds(reason){
     fetchExternalData().catch(e=>{ console.warn('[feeds] external:', e.message); return null; }),
     (typeof fetchBotPaper === 'function'
       ? fetchBotPaper().catch(e=>{ console.warn('[feeds] bot-paper.json:', e.message); return null; })
+      : Promise.resolve(null)),
+    // v66 — หน้า Deep Research / Dividend tracker · แยก catch เหตุผลเดียวกับ bot-paper.json
+    (typeof fetchFundamentals === 'function'
+      ? fetchFundamentals().catch(e=>{ console.warn('[feeds] fundamentals.json:', e.message); return null; })
       : Promise.resolve(null))
   ]);
   invalidateMarketCache();
@@ -7310,7 +7633,7 @@ let pageRenderFns={
   // v53
   signals:renderSignals,
   // v59 — ภาพรวมตลาด (watchlist 25 ตัว) + บอทจำลอง
-  watch:renderWatch, bot:renderBot
+  watch:renderWatch, bot:renderBot, research:renderResearch
 };
 /* ══ v49 — Analyst Desk ═══════════════════════════════════════════════
    ตัวเชื่อมระหว่าง state ของแอปกับ analystDesk() ที่เป็น pure function
@@ -7513,7 +7836,7 @@ const NAV_GROUPS = [
   {id:'invest',    pages:[['portfolio','ภาพรวมพอร์ต'],['flow','รายการซื้อขาย'],['realized','ขายแล้ว'],
                           ['dormant','ไม่มีใครดูแล'],['cost','ต้นทุน & ค่าเงิน'],['rebalance','ปรับสมดุล']]},
   {id:'dividends', pages:[['dividends','ปันผล']]},
-  {id:'markets',   pages:[['signals','สัญญาณรายตัว'],['watch','ภาพรวมตลาด'],
+  {id:'markets',   pages:[['signals','สัญญาณรายตัว'],['research','วิเคราะห์เจาะลึก'],['watch','ภาพรวมตลาด'],
                           ['bot','บอทจำลอง'],['market','ตลาดวันนี้']]},
 ];
 const PAGE_DEPS = { portfolio:['overview'], accounts:['overview'], goals:['overview','dividends'] };

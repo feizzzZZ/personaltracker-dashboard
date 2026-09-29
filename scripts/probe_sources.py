@@ -109,6 +109,26 @@ OTHER_SOURCES = [
 
     ("Stooq — แหล่งสำรองฟรี ไม่ต้องใช้ key",
      "https://stooq.com/q/d/l/?s=%5Espx&i=d", None),
+
+    # ── v66 — แหล่งของหน้า Deep Research / Dividend tracker (fetch_fundamentals.py) ──
+    ("Yahoo fundamentals-timeseries — งบรายปี AAPL (Deep Research)",
+     "https://query1.finance.yahoo.com/ws/fundamentals-timeseries/v1/finance/timeseries/AAPL"
+     "?symbol=AAPL&type=annualTotalRevenue,annualNetIncome,trailingPeRatio"
+     "&period1=1420070400&period2=1893456000", None),
+
+    ("Yahoo fundamentals-timeseries — หุ้นไทย KBANK.BK",
+     "https://query1.finance.yahoo.com/ws/fundamentals-timeseries/v1/finance/timeseries/KBANK.BK"
+     "?symbol=KBANK.BK&type=annualTotalRevenue,annualNetIncome"
+     "&period1=1420070400&period2=1893456000", None),
+
+    ("Yahoo chart events=div — ประวัติปันผล JEPI (Dividend tracker)",
+     "https://query1.finance.yahoo.com/v8/finance/chart/JEPI?range=2y&interval=1mo&events=div", None),
+
+    ("Yahoo search — ข่าวล่าสุด AAPL (Deep Research)",
+     "https://query1.finance.yahoo.com/v1/finance/search?q=AAPL&quotesCount=0&newsCount=3", None),
+
+    ("SEC EDGAR — ticker → CIK (งบสหรัฐย้อนหลัง 10+ ปี)",
+     "https://www.sec.gov/files/company_tickers.json", None),
 ]
 
 
