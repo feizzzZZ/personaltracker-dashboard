@@ -288,9 +288,28 @@ assert "แย่สุด" in wk2 and "Gold" in wk2.split("แย่สุด")
 print("✓ ดีสุด/แย่สุด แยกตามเครื่องหมาย ไม่ทับกัน")
 
 print("\n═══ ตรวจว่าไม่ส่งข้อความเปล่า ═══")
-assert LN.broadcast("", dry=True) is False
-assert LN.broadcast("   \n  ", dry=True) is False
-print("✓ ข้อความเปล่าไม่ถูกส่ง")
+# v67 — broadcast() แยกเป็น send_line() (LINE) + deliver() (history + push + LINE)
+assert LN.send_line("", dry=True) is False
+assert LN.send_line("   \n  ", dry=True) is False
+assert LN.deliver("daily", "", dry=True) is False
+assert LN.deliver("daily", "  \n ", dry=True) is False
+print("✓ ข้อความเปล่าไม่ถูกส่ง (ทุกช่องทาง)")
+
+print("\n═══ v67 สวิตช์ปิด LINE ═══")
+import unittest.mock as _m
+for v, want in [("off", False), ("OFF", False), ("0", False), ("on", True), ("", True)]:
+    with _m.patch.dict(os.environ, {"NOTIFY_LINE": v}):
+        assert LN.line_enabled() is want, (v, LN.line_enabled())
+with _m.patch.dict(os.environ, {"NOTIFY_LINE": "off"}), _m.patch.object(LN, "send_line") as sl:
+    import notify_store as _ns
+    with _m.patch.object(_ns, "record", return_value={"id": "x"}), _m.patch.object(_ns, "push", return_value={"sent": 1}):
+        assert LN.deliver("daily", "สวัสดี") is True
+    assert not sl.called, "NOTIFY_LINE=off ต้องไม่ส่ง LINE"
+with _m.patch.dict(os.environ, {"NOTIFY_LINE": "on"}), _m.patch.object(LN, "send_line", return_value=True) as sl:
+    with _m.patch.object(_ns, "record", side_effect=RuntimeError("boom")):
+        assert LN.deliver("daily", "สวัสดี") is True, "ช่องทางใหม่ล้มต้องไม่ลาก LINE ล้มตาม"
+    assert sl.called
+print("✓ NOTIFY_LINE=off ปิด LINE · ช่องทางใหม่ล้มไม่กระทบ LINE")
 
 print("\n═══ ความยาวข้อความ ═══")
 for name, msg in [("daily", LN.daily_message(port, MARKET, prev)),

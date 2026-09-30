@@ -1,4 +1,10 @@
-name: LINE notify
+name: Notify
+
+# v67 — แจ้งเตือนหลักย้ายเข้าแอปแล้ว (เมนู "การแจ้งเตือน"):
+#   1. history เข้ารหัส → notifications.enc.json (secret NOTIFY_KEY)
+#   2. Web Push ถึงทุกเครื่องที่ลงทะเบียน (secrets VAPID_PRIVATE_KEY · PUSH_SUBSCRIPTIONS)
+#   3. LINE — ส่งคู่ไปก่อน · ปิดด้วย repo variable NOTIFY_LINE = off (Settings → Variables)
+#   secret/variable ตัวไหนไม่มี = ข้ามช่องทางนั้นแบบนุ่ม ไม่ทำให้ job แดง
 
 # วางไฟล์นี้ที่  .github/workflows/line-notify.yml
 #
@@ -20,10 +26,10 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'โหมด — check = ตรวจการต่อชีตอย่างเดียว ไม่ส่ง LINE'
+        description: 'โหมด — check = ตรวจการต่อชีต · test = ส่งข้อความทดสอบเข้าแอป'
         type: choice
         default: daily
-        options: [check, daily, alert, weekly, monthly]
+        options: [check, test, daily, alert, weekly, monthly]
       dry_run:
         description: 'พิมพ์อย่างเดียว ไม่ส่งจริง'
         type: boolean
@@ -55,15 +61,17 @@ jobs:
       # ต้องเป็น `python3 -m pip` ไม่ใช่ `pip` เฉย ๆ
       # เดิมใช้ `pip install` ซึ่งขึ้นสำเร็จ แต่ python3 กลับ import ไม่เจอ
       # เพราะ pip ใน PATH กับ python3 ที่รันสคริปต์เป็นคนละ interpreter
-      - name: ติดตั้ง google-auth
+      - name: ติดตั้ง google-auth + cryptography + pywebpush
         run: |
-          python3 -m pip install --quiet --upgrade google-auth
+          python3 -m pip install --quiet --upgrade google-auth cryptography pywebpush
           # ยืนยันตรงนี้ว่าใช้ได้จริง ไม่ใช่ไปพังตอนรันสคริปต์แล้วดูเหมือนคนละปัญหา
           python3 - <<'PY'
           import sys
           from google.auth import crypt, jwt
           assert hasattr(crypt, "RSASigner") and hasattr(jwt, "encode")
-          print("google-auth OK ·", sys.executable)
+          from cryptography.hazmat.primitives.ciphers.aead import AESGCM   # noqa: F401
+          import pywebpush                                                  # noqa: F401
+          print("google-auth + cryptography + pywebpush OK ·", sys.executable)
           PY
 
       - name: เลือกโหมดจากตารางเวลา
@@ -79,9 +87,14 @@ jobs:
           echo "mode=$M" >> "$GITHUB_OUTPUT"
           echo "จะส่งโหมด: $M"
 
-      - name: ส่งเข้า LINE
+      - name: ส่งแจ้งเตือน (แอป + LINE)
         env:
           LINE_CHANNEL_TOKEN: ${{ secrets.LINE_CHANNEL_TOKEN }}
+          NOTIFY_LINE:        ${{ vars.NOTIFY_LINE }}
+          NOTIFY_KEY:         ${{ secrets.NOTIFY_KEY }}
+          VAPID_PRIVATE_KEY:  ${{ secrets.VAPID_PRIVATE_KEY }}
+          VAPID_SUBJECT:      ${{ secrets.VAPID_SUBJECT }}
+          PUSH_SUBSCRIPTIONS: ${{ secrets.PUSH_SUBSCRIPTIONS }}
           GS_SHEET_ID:        ${{ secrets.GS_SHEET_ID }}
           GOOGLE_SA_KEY:      ${{ secrets.GOOGLE_SA_KEY }}
         run: |
@@ -95,6 +108,7 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add notify-state.json 2>/dev/null || true
+          if [ -f notifications.enc.json ]; then git add notifications.enc.json; fi
           git diff --cached --quiet && { echo "ไม่มีอะไรเปลี่ยน"; exit 0; }
           git commit -m "chore: notify state (${{ steps.pick.outputs.mode }})"
           # pipeline อาจ commit market-data.json ระหว่างนี้ → rebase แล้วลองใหม่
