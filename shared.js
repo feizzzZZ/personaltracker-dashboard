@@ -16,7 +16,7 @@ window.LOC = window.LOC || 'th-TH-u-ca-gregory';
 //   • XIRR engine
 // กติกา: ไฟล์นี้ห้ามแตะ DOM ของหน้าใดหน้าหนึ่ง — pure data layer เท่านั้น
 // ═══════════════════════════════════════════════════════════════════
-const APP_BUILD = 'v66';
+const APP_BUILD = 'v67';
 console.log('[Finance OS shared] build', APP_BUILD);
 window.SHARED_BUILD = APP_BUILD;   // v45 — ให้ index.html ตรวจได้ว่าเวอร์ชันตรงกัน
  
@@ -782,6 +782,61 @@ function computeDeviations(real){
           illiquidPct: grossVal>0 ? illiquidVal/grossVal*100 : 0};
 }
  
+// ═══ v67 — NOTIFICATIONS (แทน LINE) ═══════════════════════════════════
+// ต้นทาง: notifications.enc.json ที่ Actions เข้ารหัสด้วย AES-256-GCM (scripts/notify_store.py)
+//        + เหตุการณ์ที่แอปสร้างเอง (เก็บในเครื่อง) · รูปแบบไฟล์ต้องตรงกับฝั่ง Python ทุกไบต์
+const NOTIF_AAD = 'finos-notify-v1';
+const NOTIF_KEY_LS = 'finOS_notifyKey', NOTIF_READ_LS = 'finOS_notifRead', NOTIF_LOCAL_LS = 'finOS_notifLocal',
+      NOTIF_CACHE_LS = 'finOS_notifCache', VAPID_PUB_LS = 'finOS_vapidPub';
+const NOTIF_CAT = { daily:'portfolio', weekly:'portfolio', monthly:'portfolio', alert:'price',
+                    system:'system', test:'system', app:'system' };
+function notifCategory(kind){ return NOTIF_CAT[kind] || 'system'; }
+function b64ToBytes(s){
+  s = String(s||'').trim().replace(/-/g,'+').replace(/_/g,'/');
+  s += '==='.slice((s.length + 3) % 4);
+  const bin = atob(s); const u = new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) u[i] = bin.charCodeAt(i);
+  return u;
+}
+function bytesToB64(u, url){
+  let bin=''; const a = u instanceof Uint8Array ? u : new Uint8Array(u);
+  for(let i=0;i<a.length;i++) bin += String.fromCharCode(a[i]);
+  const b = btoa(bin);
+  return url ? b.replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'') : b;
+}
+// คืน array ของรายการ · กุญแจผิด/ไฟล์เสีย → throw (ให้ UI บอกว่ากุญแจไม่ตรง ไม่ใช่ "ไม่มีแจ้งเตือน")
+async function notifyDecrypt(doc, keyB64){
+  if(!doc || !doc.iv || !doc.ct) return [];
+  const raw = b64ToBytes(keyB64);
+  if(raw.length !== 32) throw new Error('bad-key-length');
+  const key = await crypto.subtle.importKey('raw', raw, {name:'AES-GCM'}, false, ['decrypt']);
+  const pt = await crypto.subtle.decrypt({name:'AES-GCM', iv:b64ToBytes(doc.iv),
+                                          additionalData:new TextEncoder().encode(NOTIF_AAD)}, key, b64ToBytes(doc.ct));
+  const items = JSON.parse(new TextDecoder().decode(pt));
+  return Array.isArray(items) ? items : [];
+}
+// รวม remote + local · กันซ้ำด้วย id · ใหม่→เก่า
+function mergeNotifications(remote, local){
+  const seen = new Set(), out = [];
+  [...(remote||[]), ...(local||[])].forEach(n => {
+    if(!n || !n.id || seen.has(n.id)) return; seen.add(n.id);
+    out.push({ ...n, cat: notifCategory(n.kind) });
+  });
+  return out.sort((a,b) => String(b.ts||'').localeCompare(String(a.ts||'')));
+}
+function notifUnread(items, readIds){
+  const r = readIds instanceof Set ? readIds : new Set(readIds||[]);
+  return (items||[]).filter(n => !r.has(n.id)).length;
+}
+// เหตุการณ์ในแอป — กันซ้ำด้วย key ต่อวัน (เช่น "งบเกิน" ขึ้นวันละครั้ง ไม่ใช่ทุกครั้งที่ render)
+function notifLocalAdd(list, key, title, body, page, now){
+  const d = now ? new Date(now) : new Date();
+  const id = 'app-' + key + '-' + isoLocal(d);
+  if((list||[]).some(n => n.id === id)) return { list: list||[], added: null };
+  const n = { id, ts: d.toISOString(), kind:'app', title, body, page: page||null };
+  return { list: [n, ...(list||[])].slice(0, 200), added: n };
+}
+
 // ═══ v66 — FUNDAMENTALS (fundamentals.json จาก scripts/fetch_fundamentals.py) ═══
 // กติกาเดียวกับ loadSignals(): อ่าน + ตรวจอายุเท่านั้น ห้ามคำนวณงบซ้ำฝั่งนี้
 const FUND_KEY = 'finOS_fund';

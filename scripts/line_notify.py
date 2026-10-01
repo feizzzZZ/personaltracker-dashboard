@@ -886,7 +886,7 @@ def monthly_report(port, market, base, tx_rows) -> str:
 # ══════════════════════════════════════════════════════════════════════
 # 4. ส่ง
 # ══════════════════════════════════════════════════════════════════════
-def broadcast(text: str, dry: bool = False) -> bool:
+def send_line(text: str, dry: bool = False) -> bool:
     text = text.strip()
     if not text:
         print("— ไม่มีอะไรจะส่ง", file=sys.stderr)
@@ -900,7 +900,8 @@ def broadcast(text: str, dry: bool = False) -> bool:
         return True
     token = os.environ.get("LINE_CHANNEL_TOKEN", "").strip()
     if not token:
-        print("::error::ไม่มี LINE_CHANNEL_TOKEN", file=sys.stderr)
+        # v67 — แจ้งเตือนหลักย้ายไปอยู่ในแอปแล้ว ไม่มี token = ไม่ใช่ error
+        print("— ข้าม LINE: ไม่มี LINE_CHANNEL_TOKEN")
         return False
     body = json.dumps({"messages": [{"type": "text", "text": text}]}).encode()
     req = urllib.request.Request(
@@ -922,10 +923,48 @@ def broadcast(text: str, dry: bool = False) -> bool:
         return False
 
 
+# v67 — จุดส่งเดียวของทุกโหมด: history ในแอป (เข้ารหัส) → Web Push → LINE (ปิดได้ด้วย NOTIFY_LINE=off)
+TITLES = {"daily": "สรุปพอร์ตรายวัน", "alert": "ราคาเคลื่อนไหวผิดปกติ", "weekly": "สรุปรายสัปดาห์",
+          "monthly": "รายงานประจำเดือน", "test": "ทดสอบการแจ้งเตือน", "system": "แจ้งเตือนระบบ"}
+PAGES = {"daily": "overview", "alert": "portfolio", "weekly": "portfolio", "monthly": "cashflow"}
+
+
+def line_enabled() -> bool:
+    return os.environ.get("NOTIFY_LINE", "on").strip().lower() not in ("off", "0", "false", "no")
+
+
+def deliver(kind: str, text: str, dry: bool = False) -> bool:
+    text = (text or "").strip()
+    if not text:
+        print("— ไม่มีอะไรจะส่ง", file=sys.stderr)
+        return False
+    title = TITLES.get(kind, TITLES["system"])
+    if dry:
+        print(f"─── DRY RUN · [{kind}] {title} · ช่องทาง: history + push"
+              f"{' + LINE' if line_enabled() else ''} ───")
+        return send_line(text, dry=True)
+    ok = False
+    try:
+        import notify_store as ns
+        item = ns.record(kind, title, text, PAGES.get(kind))
+        r = ns.push(title, text, kind, item and item.get("id"))
+        ok = bool(item) or r.get("sent", 0) > 0
+    except BaseException as e:                               # noqa: BLE001 — pyo3 panic ไม่ใช่ Exception
+        if isinstance(e, (KeyboardInterrupt, SystemExit)):
+            raise
+        # ช่องทางใหม่ล้มต้องไม่ลาก LINE ล้มตาม (ช่วงส่งคู่กัน)
+        print(f"::warning::แจ้งเตือนในแอปล้ม ({type(e).__name__}: {e})", file=sys.stderr)
+    if line_enabled():
+        ok = send_line(text) or ok
+    else:
+        print("— ปิด LINE แล้ว (NOTIFY_LINE=off)")
+    return ok
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--mode", default="daily",
-                    choices=["daily", "alert", "weekly", "monthly", "check"])
+                    choices=["daily", "alert", "weekly", "monthly", "check", "test"])
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--stock-threshold", type=float, default=5.0)
     ap.add_argument("--crypto-threshold", type=float, default=8.0)
@@ -990,20 +1029,25 @@ def main() -> int:
             print(f"     → เติม Current_Price_THB ของตัวเหล่านี้ในแท็บ {PRICE_TAB}")
         return 0
 
+    if a.mode == "test":
+        sent = deliver("test", f"🔔 ทดสอบการแจ้งเตือน · {th_date(NOW)} {NOW:%H:%M}\n"
+                       "ถ้าเห็นข้อความนี้ในแอป แปลว่า history และ push ทำงานแล้ว", a.dry_run)
+        return 0
+
     if a.mode == "alert":
         mv = movers(port, state.get("last", {}), a.stock_threshold, a.crypto_threshold)
-        sent = broadcast(alert_message(mv, port), a.dry_run) if mv else False
+        sent = deliver("alert", alert_message(mv, port), a.dry_run) if mv else False
         if not mv:
             print("— ไม่มีตัวไหนขยับเกินเกณฑ์")
     elif a.mode == "weekly":
-        sent = broadcast(period_message(port, market, state.get("week", {}), "รายสัปดาห์"),
-                         a.dry_run)
+        sent = deliver("weekly", period_message(port, market, state.get("week", {}), "รายสัปดาห์"),
+                       a.dry_run)
     elif a.mode == "monthly":
         # v57 — Monthly report (รายรับ-รายจ่ายเดือนที่แล้ว + พอร์ต) รวมเป็นข้อความเดียว
-        sent = broadcast(monthly_report(port, market, state.get("month", {}),
-                                        parse_transactions(_tx_rows)), a.dry_run)
+        sent = deliver("monthly", monthly_report(port, market, state.get("month", {}),
+                                                 parse_transactions(_tx_rows)), a.dry_run)
     else:
-        sent = broadcast(
+        sent = deliver("daily",
             daily_message(port, market, state.get("last", {}),
                           "" if reason == "ok" else reason), a.dry_run)
 

@@ -185,6 +185,11 @@ const DICT = {
   'วันนี้':'Today', 'ทอง (USD/oz)':'Gold (USD/oz)', 'ภาพรวมจากสัญญาณ macro':'Macro signal overview',
   'ทำไมถึงกลับมาให้คะแนนได้อีก':'Why scoring is back',
   'เดือนนี้ยังไม่มีรายการ':'No activity this month',
+  // v67 — การแจ้งเตือน
+  'ระบบ':'System', 'การแจ้งเตือน':'Notifications',
+  'สรุปพอร์ต · ราคาเคลื่อนไหว · รายงานประจำเดือน · เหตุการณ์ในแอป — เก็บย้อนหลัง 180 วัน':'Portfolio summaries · price moves · monthly reports · in-app events — kept for 180 days',
+  'สรุปพอร์ตรายวัน':'Daily portfolio summary', 'ราคาเคลื่อนไหวผิดปกติ':'Unusual price moves', 'สรุปรายสัปดาห์':'Weekly summary',
+  'รายงานประจำเดือน':'Monthly report', 'ทดสอบการแจ้งเตือน':'Test notification', 'แจ้งเตือนระบบ':'System notice',
   // v66 — หน้าใหม่
   'ปรับสมดุล':'Rebalance', 'ปรับสมดุลพอร์ต':'Portfolio rebalancing',
   'คำนวณว่าต้องซื้อ/ขายตัวไหนกี่หน่วย ให้สัดส่วนกลับไปตามเป้า — กองที่ขายไม่ได้ (Provident Fund) ไม่นับ':'Works out how many units of each asset to buy or sell to get back to your targets — funds you cannot sell (Provident Fund) are excluded',

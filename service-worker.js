@@ -22,7 +22,7 @@
 // หน้านั้นถูกยุบเข้า index.html และลบออกจาก repo แล้ว ถ้ายังอยู่ในลิสต์
 // ทุกครั้งที่ install จะ log "ข้ามไฟล์ที่หาไม่เจอ" ซึ่งเป็น noise ที่จะกลบ
 // warning จริงในอนาคต (กลไกข้ามไฟล์หายทำงานถูกแล้ว — แต่ต้องไม่มีของหายตั้งแต่แรก)
-const CACHE_NAME = 'finance-os-v66';  // bump version so old cache is cleared on deploy
+const CACHE_NAME = 'finance-os-v67';  // bump version so old cache is cleared on deploy
 const BASE = '/personaltracker-dashboard';
 
 // App shell — files to pre-cache on install
@@ -166,4 +166,44 @@ self.addEventListener('fetch', event => {
 // ── Message: force refresh ────────────────────────────────────────────
 self.addEventListener('message', event => {
   if (event.data === 'SKIP_WAITING') self.skipWaiting();
+});
+
+// ══ v67 — Web Push (แทน LINE) ═════════════════════════════════════════
+// ตัวส่งคือ GitHub Actions (scripts/notify_store.py · pywebpush) · payload เข้ารหัสแบบ Web Push มาตรฐาน
+// เนื้อหาเต็มอยู่ใน notifications.enc.json — ที่นี่แสดงแค่หัวข้อ + ตัวอย่าง แล้วบอกหน้าที่เปิดอยู่ให้รีเฟรช inbox
+const PUSH_ICON = BASE + '/icon/icon-192x192.png';
+self.addEventListener('push', event => {
+  let d = {};
+  try { d = event.data ? event.data.json() : {}; }
+  catch (e) { d = { title: 'Finance OS', body: event.data ? event.data.text() : '' }; }
+  const title = d.title || 'Finance OS';
+  const opts = {
+    body: d.body || '',
+    icon: PUSH_ICON, badge: PUSH_ICON,
+    tag: 'finos-' + (d.kind || 'system'),      // หมวดเดียวกันแทนที่อันเก่า ไม่กองเต็มจอล็อก
+    renotify: true,
+    data: { url: d.url || (BASE + '/#notify'), id: d.id || null },
+  };
+  event.waitUntil(Promise.all([
+    self.registration.showNotification(title, opts),
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then(cs => cs.forEach(c => c.postMessage({ type: 'notif-refresh' }))),
+  ]));
+});
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  const target = new URL((event.notification.data && event.notification.data.url) || (BASE + '/#notify'),
+                         self.registration.scope).href;
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(cs => {
+      for (const c of cs) {
+        if (c.url.startsWith(self.registration.scope)) {
+          c.postMessage({ type: 'notif-open' });
+          return c.focus();
+        }
+      }
+      return self.clients.openWindow(target);
+    })
+  );
 });

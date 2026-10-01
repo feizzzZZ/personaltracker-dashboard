@@ -316,6 +316,52 @@ html[data-theme="light"] [style*="color:#4cc9f0"],
 html[data-theme="light"] [style*="color: #4cc9f0"]{color:#0369A1!important}
 html[data-theme="light"] [style*="color:#a0c4ff"],
 html[data-theme="light"] [style*="color: #a0c4ff"]{color:#1D4ED8!important}
+/* ══ v67 — การแจ้งเตือน ══ */
+.notif-bell{display:none;position:fixed;top:calc(8px + env(safe-area-inset-top,0px));right:12px;z-index:150;width:38px;height:38px;border-radius:50%;
+  background:var(--bg3);border:1px solid var(--border2);box-shadow:var(--card-shadow);font-size:17px;cursor:pointer;align-items:center;justify-content:center}
+.notif-dot{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--expense);color:#FFFFFF;
+  font-size:10px;font-weight:700;line-height:18px;text-align:center;font-family:var(--f-sans)}
+.notif-dot[hidden]{display:none}
+@media(max-width:768px){ .notif-bell{display:flex} .grp-tabs{padding-right:60px!important} .page .pg-hdr{padding-right:44px} }
+.nt-warn{background:var(--warn-bg);border:1px solid rgba(245,158,11,.45);border-radius:10px;padding:10px 14px;font-size:12px;color:var(--text);margin-bottom:12px;line-height:1.6}
+.nt-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:12px}
+.nt-cats{display:flex;gap:6px;flex-wrap:wrap}
+.nt-cats button{background:var(--bg3);border:1px solid var(--border);color:var(--muted2);border-radius:999px;padding:6px 12px;font:inherit;font-size:12px;cursor:pointer}
+.nt-cats button.active{border-color:var(--accent);color:var(--accent);font-weight:600}
+.nt-c{display:inline-block;min-width:16px;padding:0 5px;border-radius:8px;background:var(--expense);color:#FFFFFF;font-size:10px;line-height:16px;margin-left:3px}
+.nt-acts{display:flex;gap:6px}
+.nt-list{padding:0}
+.nt-it{display:flex;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border);cursor:pointer;position:relative}
+.nt-it:last-child{border-bottom:none}
+.nt-it:hover{background:var(--hover)}
+.nt-it:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.nt-ic{width:36px;height:36px;flex:0 0 36px;border-radius:10px;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:17px}
+.nt-main{flex:1;min-width:0}
+.nt-top{display:flex;gap:10px;align-items:baseline;justify-content:space-between}
+.nt-tt{font-size:13px;color:var(--text);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nt-it.un .nt-tt{color:var(--white);font-weight:700}
+.nt-tm{font-size:11px;color:var(--muted);white-space:nowrap;flex:0 0 auto}
+.nt-bd{font-size:12px;color:var(--muted2);margin-top:3px;line-height:1.55;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nt-it.open .nt-bd{white-space:pre-wrap;color:var(--text);font-family:var(--f-sans)}
+.nt-go{margin-top:8px;background:none;border:none;color:var(--accent);font:inherit;font-size:12px;cursor:pointer;padding:0}
+.nt-dot{position:absolute;right:14px;bottom:16px;width:8px;height:8px;border-radius:50%;background:var(--accent)}
+.nt-empty{text-align:center;color:var(--muted);padding:36px 16px;font-size:13px}
+.nt-empty .s{font-size:11.5px;margin-top:6px}
+.nt-setup{margin-bottom:12px}
+.nt-step{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
+.nt-step:last-child{border-bottom:none}
+.nt-n{width:26px;height:26px;flex:0 0 26px;border-radius:50%;background:var(--accent);color:#FFFFFF;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center}
+.nt-sb{flex:1;min-width:0}
+.nt-h{font-size:13px;color:var(--white);font-weight:600;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.nt-p{font-size:11.5px;color:var(--muted2);line-height:1.7;margin-top:3px}
+.nt-p code,.nt-sec code{font-family:var(--f-mono);font-size:11px;background:var(--bg4);padding:1px 5px;border-radius:4px;color:var(--text)}
+.nt-st{font-size:10.5px;font-weight:600;padding:2px 7px;border-radius:6px}
+.nt-st.ok{background:rgba(16,185,129,.14);color:var(--gain)} .nt-st.no{background:var(--bg4);color:var(--muted)}
+.nt-sec{margin-top:8px}
+.nt-sec-h{display:flex;gap:8px;align-items:center;font-size:11px;color:var(--muted);margin-bottom:4px;flex-wrap:wrap}
+.nt-sec-v{display:flex;gap:6px}
+.nt-sec-v input{flex:1;min-width:0;background:var(--bg4);border:1px solid var(--border2);color:var(--text);border-radius:8px;padding:7px 9px;font:inherit;font-family:var(--f-mono);font-size:11px}
+
 /* ══ v66 — Dividend tracker ══ */
 .dvt-top{display:grid;grid-template-columns:minmax(260px,1fr) 2fr;gap:12px;margin-bottom:16px}
 .dvt-inc{text-align:center;display:flex;flex-direction:column;gap:6px}
@@ -1330,6 +1376,11 @@ html.standalone .a2hs{display:none}
       <div class="sb-item" data-group="markets" onclick="switchGroup('markets')">
         <span class="sb-icon" aria-hidden="true">📡</span>ตลาด &amp; จังหวะ
       </div>
+      <div class="sb-section">ระบบ</div>
+      <div class="sb-item" data-group="notify" onclick="switchGroup('notify')">
+        <span class="sb-icon" aria-hidden="true">🔔</span>การแจ้งเตือน
+        <span class="sb-badge sb-badge-alert" id="notif-badge" style="display:none">0</span>
+      </div>
 
     </div>
     <div class="sb-bottom">
@@ -2180,6 +2231,13 @@ html.standalone .a2hs{display:none}
       <div id="cost-body"></div>
     </div>
 
+    <!-- ══ NOTIFICATIONS (v67) ══ -->
+    <div class="page" id="page-notify">
+      <div class="pg-hdr"><div><div class="pg-title">การแจ้งเตือน</div>
+        <div class="pg-sub">สรุปพอร์ต · ราคาเคลื่อนไหว · รายงานประจำเดือน · เหตุการณ์ในแอป — เก็บย้อนหลัง 180 วัน</div></div></div>
+      <div id="nt-body"></div>
+    </div>
+
     <!-- ══ DEEP RESEARCH (v66) ══ -->
     <div class="page" id="page-research">
       <div class="pg-hdr"><div><div class="pg-title">วิเคราะห์เจาะลึก</div>
@@ -2219,6 +2277,10 @@ html.standalone .a2hs{display:none}
     </div>
 
   </div><!-- /main-content -->
+
+  <!-- v67 — กระดิ่งมุมขวาบน (มือถือ) แบบแอปทั่วไป -->
+  <button type="button" class="notif-bell" id="notif-bell" onclick="switchPage('notify')" aria-label="การแจ้งเตือน">
+    <span aria-hidden="true">🔔</span><span class="notif-dot" id="notif-bell-n" hidden>0</span></button>
 
   <!-- v49 — แถบเมนูล่างสำหรับมือถือ -->
   <nav class="bnav" id="bnav" aria-label="เมนูหลัก">
@@ -3218,6 +3280,8 @@ function renderActionNeeded(ef){
   // v64 — มือถือ: เรื่องสีแดงขึ้นก่อน แล้วย่อให้เห็น 2 เรื่องแรก ที่เหลือกด "ดูอีก" (จอเล็กเดิมเต็มไปทั้งหน้าจอ)
   items.sort((a,b)=>(a.lv==='alert'?0:1)-(b.lv==='alert'?0:1));
   const ACT_SHOW = 2, nMore = Math.max(0, items.length-ACT_SHOW);
+  // v67 — เรื่องสีแดงเข้า inbox แจ้งเตือน (วันละครั้งต่อเรื่อง)
+  try{ items.filter(i=>i.lv==='alert').forEach(i=>notifyApp('act-'+String(i.t).replace(/[^A-Za-z0-9ก-๙]/g,'').slice(0,40), i.t, i.d||'', i.go||'overview')); }catch(e){}
   el.style.display='block';
   el.innerHTML = `
     <div class="act-box" style="background:${C[worst].g};border:1px solid ${C[worst].b};border-radius:12px;padding:14px 16px">
@@ -3847,6 +3911,9 @@ const BACKUP_KEYS = [
   'finOS_lastPrice',     // ราคาล่าสุดที่จำไว้ (กันพอร์ตกระตุกหลัง restore)
   'finOS_rebalTargets',  // v66 — เป้ารายตัวของหน้าปรับสมดุล
   'finOS_rebalOpts',     // v66 — หน่วยซื้อขายขั้นต่ำต่อกลุ่ม
+  'finOS_notifyKey',     // v67 — กุญแจถอดรหัส history แจ้งเตือน (ตรงกับ secret NOTIFY_KEY)
+  'finOS_vapidPub',      // v67 — กุญแจสาธารณะ Web Push
+  'finOS_notifRead',     // v67 — รายการที่อ่านแล้ว
 ];
 function exportSettings(){
   const data = {};
@@ -4005,7 +4072,7 @@ const VLOG_PURGED_KEY = 'finOS_valueLogPurged_v44';
 //   ฟังก์ชันหาย  → BLOCK  (แอปคำนวณผิดแน่นอน — นี่คือสิ่งที่ guard มีไว้จับ)
 //   เลขไม่ตรง    → WARN   (แค่ลืม bump — log ไว้ ไม่รบกวนผู้ใช้)
 // ฟังก์ชันที่ต้องมีคือสัญญาจริงระหว่างสองไฟล์ ส่วนสตริงเวอร์ชันเป็นแค่ป้าย
-const EXPECTED_SHARED_BUILD = 'v66';
+const EXPECTED_SHARED_BUILD = 'v67';
 const REQUIRED_SHARED_FNS = [
   'resolvePrices', 'pipelinePricesTHB', 'parseReconcileRows',
   'computeReconciliation', 'splitBalances', 'debtVsInvest', 'buildDebtPlan',
@@ -4021,6 +4088,7 @@ const REQUIRED_SHARED_FNS = [
   'valueLogJumps', 'cleanSheetSpikesV62',                     // v62 — ด่านคุณภาพ Value_Log
   'rebalancePlan', 'getRebalTargets', 'getRebalOpts', 'rebalLot',   // v66 — ปรับสมดุล
   'loadFundamentals', 'fetchFundamentals', 'fundOf', 'dividendCalendar', 'divFrequency',   // v66 — research/ปันผล
+  'notifyDecrypt', 'mergeNotifications', 'notifUnread', 'notifLocalAdd', 'notifCategory', 'b64ToBytes', 'bytesToB64',   // v67
   'loadBotPaper', 'fetchBotPaper', 'botStatus',   // v59 — หน้าบอทจำลอง
 ];
 function checkSharedVersion(){
@@ -4628,6 +4696,203 @@ function renderDividendTracker(){
     {label:'ประมาณการ', data:C.months.map(m=>Math.round(m.estimated)), backgroundColor:'rgba(59,130,246,.45)', borderRadius:4},
   ], true);
 }
+
+/* ══ v67 — การแจ้งเตือน (แทน LINE) ═══════════════════════════════════════
+   ต้นทาง 1: notifications.enc.json — Actions เข้ารหัส AES-256-GCM (scripts/notify_store.py)
+            ถอดด้วยกุญแจที่เก็บในเครื่อง (finOS_notifyKey = secret NOTIFY_KEY)
+   ต้นทาง 2: เหตุการณ์ในแอป (sync ล้ม · งบเกิน · เรื่องสีแดงใน "ต้องลงมือ") เก็บในเครื่อง
+   Push: service worker รับจาก Web Push → เด้งบนเครื่อง → กดแล้วมาหน้านี้ */
+const _nt = { items:[], remoteErr:null, cat:'all', open:new Set(), setup:false, loaded:false, sub:null };
+const _ls = { get(k,d){ try{ const v=localStorage.getItem(k); return v==null?d:JSON.parse(v); }catch(e){ return d; } },
+              set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} } };
+function _ntKey(){ try{ return localStorage.getItem(NOTIF_KEY_LS)||''; }catch(e){ return ''; } }
+function _ntRead(){ return new Set(_ls.get(NOTIF_READ_LS, [])); }
+async function _ntRebuild(){
+  let remote=[]; _nt.remoteErr=null;
+  const doc=_ls.get(NOTIF_CACHE_LS, null), key=_ntKey();
+  if(doc && key){ try{ remote=await notifyDecrypt(doc, key); }catch(e){ _nt.remoteErr='key'; } }
+  else if(doc && !key) _nt.remoteErr='nokey';
+  _nt.items=mergeNotifications(remote, _ls.get(NOTIF_LOCAL_LS, []));
+  _nt.loaded=true; _ntBadge();
+}
+async function fetchNotifications(){
+  try{
+    const r=await fetch('notifications.enc.json?t='+Math.floor(Date.now()/6e4), {cache:'no-store'});
+    if(r.ok){ const j=await r.json(); if(j && j.ct) _ls.set(NOTIF_CACHE_LS, j); }
+    else if(r.status!==404) console.warn('[notif] HTTP '+r.status);
+  }catch(e){ console.warn('[notif] ดึงไม่ได้ (ใช้ cache):', e.message); }
+  await _ntRebuild();
+  if(curPage==='notify') renderNotify();
+  return _nt.items;
+}
+function _ntBadge(){
+  const n=notifUnread(_nt.items, _ntRead());
+  const b=document.getElementById('notif-badge'), m=document.getElementById('notif-bell-n');
+  if(b){ b.style.display=n?'inline':'none'; b.textContent=n>99?'99+':n; }
+  if(m){ m.hidden=!n; m.textContent=n>99?'99+':n; }
+}
+function notifyApp(key, title, body, page){
+  const r=notifLocalAdd(_ls.get(NOTIF_LOCAL_LS, []), key, title, body, page);
+  if(!r.added) return;
+  _ls.set(NOTIF_LOCAL_LS, r.list);
+  _nt.items=mergeNotifications(_nt.items.filter(n=>n.kind!=='app'), r.list); _ntBadge();
+  if(curPage==='notify') renderNotify();
+}
+function ntMarkAllRead(){ const r=_ntRead(); _nt.items.forEach(n=>r.add(n.id)); _ls.set(NOTIF_READ_LS,[...r].slice(-800)); _ntBadge(); renderNotify(); }
+function ntToggle(id){
+  const r=_ntRead(); r.add(id); _ls.set(NOTIF_READ_LS,[...r].slice(-800));
+  _nt.open.has(id)?_nt.open.delete(id):_nt.open.add(id); _ntBadge(); renderNotify();
+}
+function _ntAgo(ts){
+  const s=(Date.now()-Date.parse(ts))/1000; if(!isFinite(s)) return '';
+  if(s<60) return _L('เมื่อสักครู่','just now');
+  if(s<3600) return _L(`${Math.floor(s/60)} นาทีก่อน`,`${Math.floor(s/60)}m ago`);
+  if(s<86400) return _L(`${Math.floor(s/3600)} ชม.ก่อน`,`${Math.floor(s/3600)}h ago`);
+  if(s<86400*7) return _L(`${Math.floor(s/86400)} วันก่อน`,`${Math.floor(s/86400)}d ago`);
+  return new Date(ts).toLocaleDateString(LOC,{day:'numeric',month:'short',year:'numeric'});
+}
+const NT_ICON={daily:'📊',weekly:'🗓',monthly:'📅',alert:'🚨',test:'🔔',system:'⚙️',app:'💡'};
+const NT_CATS=[['all','ทั้งหมด','All'],['portfolio','พอร์ต','Portfolio'],['price','ราคา','Price'],['system','ระบบ','System']];
+function renderNotify(){
+  const el=document.getElementById('nt-body'); if(!el) return;
+  if(!_nt.loaded){ el.innerHTML=`<div class="cc" style="color:var(--muted)">…</div>`; _ntRebuild().then(renderNotify); return; }
+  const read=_ntRead();
+  const list=_nt.items.filter(n=>_nt.cat==='all'||n.cat===_nt.cat);
+  const cnt=c=>_nt.items.filter(n=>(c==='all'||n.cat===c)&&!read.has(n.id)).length;
+  const warn=_nt.remoteErr==='key'
+    ? `<div class="nt-warn">🔑 ${_L('ถอดรหัส history จาก Actions ไม่ได้ — กุญแจในเครื่องนี้ไม่ตรงกับ secret NOTIFY_KEY (เปิด ⚙ ตั้งค่า → ใส่กุญแจเดียวกัน)','Cannot decrypt the history from Actions — this device key does not match the NOTIFY_KEY secret (open ⚙ Settings and enter the same key)')}</div>`
+    : _nt.remoteErr==='nokey'
+    ? `<div class="nt-warn">🔑 ${_L('มี history จาก Actions แต่เครื่องนี้ยังไม่มีกุญแจ — เปิด ⚙ ตั้งค่า แล้วใส่กุญแจ หรือเปิดลิงก์ตั้งค่าจากเครื่องที่ตั้งไว้แล้ว','There is history from Actions but this device has no key yet — open ⚙ Settings and enter it, or open the setup link from a configured device')}</div>` : '';
+  const rows=list.map(n=>{
+    const un=!read.has(n.id), op=_nt.open.has(n.id);
+    const body=String(n.body||'');
+    return `<div class="nt-it${un?' un':''}${op?' open':''}" role="button" tabindex="0" onclick="ntToggle('${escAttr(n.id)}')" onkeydown="if(event.key==='Enter')ntToggle('${escAttr(n.id)}')">
+      <div class="nt-ic" aria-hidden="true">${NT_ICON[n.kind]||'🔔'}</div>
+      <div class="nt-main"><div class="nt-top"><span class="nt-tt">${escHtml(n.title||'')}</span><span class="nt-tm">${_ntAgo(n.ts)}</span></div>
+        <div class="nt-bd">${escHtml(op?body:body.split('\n').map(x=>x.trim()).filter(x=>x && !/^[─━\-=·\s]+$/.test(x)).slice(0,2).join(' · '))}</div>
+        ${op&&n.page?`<button type="button" class="nt-go" onclick="event.stopPropagation();switchPage('${escAttr(n.page)}')">${_L('ไปที่หน้าที่เกี่ยวข้อง','Open related page')} ›</button>`:''}</div>
+      ${un?'<span class="nt-dot" aria-label="unread"></span>':''}</div>`;}).join('');
+  el.innerHTML=`${warn}
+    <div class="nt-bar">
+      <div class="nt-cats" role="tablist">${NT_CATS.map(([k,th,en])=>{const c=cnt(k);return `<button type="button" role="tab" aria-selected="${_nt.cat===k}" class="${_nt.cat===k?'active':''}" onclick="_nt.cat='${k}';renderNotify()">${_L(th,en)}${c?` <span class="nt-c">${c}</span>`:''}</button>`;}).join('')}</div>
+      <div class="nt-acts">
+        <button type="button" class="rb-btn" onclick="ntMarkAllRead()">✓ ${_L('อ่านทั้งหมด','Mark all read')}</button>
+        <button type="button" class="rb-btn" onclick="fetchNotifications()" title="${_L('ดึงล่าสุด','Refresh')}">↻</button>
+        <button type="button" class="rb-btn" onclick="_nt.setup=!_nt.setup;renderNotify()">⚙ ${_L('ตั้งค่า','Settings')}</button>
+      </div></div>
+    ${_nt.setup?'<div id="nt-setup"></div>':''}
+    <div class="cc nt-list">${rows||`<div class="nt-empty">🔕 ${_L('ยังไม่มีการแจ้งเตือน','No notifications yet')}${_ntKey()?'':`<div class="s">${_L('เริ่มจาก ⚙ ตั้งค่า เพื่อเปิดแจ้งเตือนบนเครื่องนี้','Start with ⚙ Settings to turn on notifications on this device')}</div>`}</div>`}</div>`;
+  if(_nt.setup) _ntSetup(document.getElementById('nt-setup'));
+}
+// ── ตั้งค่า: กุญแจ · เปิด push บนเครื่องนี้ · ทดสอบ ───────────────────────
+function _ntCopy(text, btn){
+  const done=()=>{ if(btn){ const o=btn.textContent; btn.textContent='✓ '+_L('คัดลอกแล้ว','Copied'); setTimeout(()=>btn.textContent=o,1800);} };
+  if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done).catch(()=>prompt('Copy:',text));
+  else prompt('Copy:',text);
+}
+function _ntEnv(){
+  const ios=/iPad|iPhone|iPod/.test(navigator.userAgent), standalone=window.matchMedia&&matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+  return { push:'PushManager' in window && 'serviceWorker' in navigator && 'Notification' in window,
+           perm: 'Notification' in window ? Notification.permission : 'unsupported', ios, standalone };
+}
+async function ntGenKeys(){
+  if(_ntKey() && !confirm(_L('สร้างกุญแจชุดใหม่? history เดิมที่เข้ารหัสด้วยกุญแจเก่าจะอ่านไม่ได้ และทุกเครื่องต้องลงทะเบียน push ใหม่','Create new keys? Existing history encrypted with the old key becomes unreadable, and every device must re-register for push'))) return;
+  const k=crypto.getRandomValues(new Uint8Array(32));
+  const kp=await crypto.subtle.generateKey({name:'ECDSA',namedCurve:'P-256'}, true, ['sign','verify']);
+  const jwk=await crypto.subtle.exportKey('jwk', kp.privateKey);
+  const pub=new Uint8Array(await crypto.subtle.exportKey('raw', kp.publicKey));
+  localStorage.setItem(NOTIF_KEY_LS, bytesToB64(k));
+  localStorage.setItem(VAPID_PUB_LS, bytesToB64(pub, true));
+  _nt.newVapidPriv=jwk.d;            // แสดงครั้งเดียว ไม่เก็บลงเครื่อง
+  await _ntRebuild(); renderNotify();
+}
+function ntSaveKey(){
+  const v=(document.getElementById('nt-key-in')||{}).value||'', p=(document.getElementById('nt-pub-in')||{}).value||'';
+  try{ if(b64ToBytes(v.trim()).length!==32) throw 0; }catch(e){ alert(_L('กุญแจต้องเป็น base64 ยาว 32 ไบต์','The key must be 32 bytes of base64')); return; }
+  localStorage.setItem(NOTIF_KEY_LS, v.trim()); if(p.trim()) localStorage.setItem(VAPID_PUB_LS, p.trim());
+  _ntRebuild().then(renderNotify);
+}
+async function ntSubscribe(){
+  const env=_ntEnv(), pub=localStorage.getItem(VAPID_PUB_LS);
+  if(!env.push){ alert(env.ios&&!env.standalone?_L('iPhone/iPad: กดปุ่มแชร์ → "เพิ่มไปยังหน้าจอโฮม" แล้วเปิดแอปจากไอคอนก่อน (iOS 16.4 ขึ้นไป)','iPhone/iPad: tap Share → "Add to Home Screen", then open the app from the icon (iOS 16.4+)'):_L('เบราว์เซอร์นี้ไม่รองรับการแจ้งเตือนแบบ push','This browser does not support push notifications')); return; }
+  if(!pub){ alert(_L('ยังไม่มีกุญแจ — ทำขั้นที่ 1 ก่อน','No keys yet — do step 1 first')); return; }
+  const perm=await Notification.requestPermission();
+  if(perm!=='granted'){ renderNotify(); return; }
+  const reg=await navigator.serviceWorker.ready;
+  let sub=await reg.pushManager.getSubscription();
+  if(sub){ const cur=sub.options&&sub.options.applicationServerKey?bytesToB64(new Uint8Array(sub.options.applicationServerKey),true):null;
+           if(cur && cur!==pub){ await sub.unsubscribe(); sub=null; } }
+  if(!sub) sub=await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:b64ToBytes(pub)});
+  _nt.sub=JSON.stringify(sub.toJSON()); renderNotify();
+}
+async function ntTestLocal(){
+  if(!('Notification' in window) || Notification.permission!=='granted'){ alert(_L('ยังไม่ได้อนุญาตการแจ้งเตือน — ทำขั้นที่ 2 ก่อน','Notifications are not allowed yet — do step 2 first')); return; }
+  const reg=await navigator.serviceWorker.ready;
+  await reg.showNotification(_L('ทดสอบการแจ้งเตือน','Test notification'), {body:_L('ถ้าเห็นข้อความนี้ เครื่องนี้พร้อมรับแจ้งเตือนแล้ว','If you can see this, this device is ready'), icon:'icon/icon-192x192.png', tag:'finos-test'});
+  notifyApp('test-local', _L('ทดสอบการแจ้งเตือน (ในเครื่อง)','Test notification (local)'), _L('แสดงบนเครื่องนี้สำเร็จ','Shown on this device'), null);
+}
+function ntSetupLink(btn){
+  const k=_ntKey(), p=localStorage.getItem(VAPID_PUB_LS)||'';
+  if(!k){ alert(_L('ยังไม่มีกุญแจ','No key yet')); return; }
+  const payload=bytesToB64(new TextEncoder().encode(JSON.stringify({k,p})), true);
+  _ntCopy(location.origin+location.pathname+'#nsetup='+payload, btn);
+}
+// ลิงก์ตั้งค่าอยู่หลัง # (ไม่ถูกส่งไป server/log) → บันทึกแล้วล้างทิ้ง
+(function ntApplySetupLink(){
+  const m=location.hash.match(/nsetup=([A-Za-z0-9\-_]+)/); if(!m) return;
+  try{ const o=JSON.parse(new TextDecoder().decode(b64ToBytes(m[1])));
+       if(o.k && b64ToBytes(o.k).length===32){ localStorage.setItem(NOTIF_KEY_LS,o.k); if(o.p) localStorage.setItem(VAPID_PUB_LS,o.p);
+         setTimeout(()=>alert(_L('ตั้งค่าการแจ้งเตือนจากลิงก์แล้ว — เปิดเมนูการแจ้งเตือน → ⚙ ขั้นที่ 2 เพื่อเปิด push บนเครื่องนี้','Notification settings applied — open Notifications → ⚙ step 2 to enable push on this device')),400); } }
+  catch(e){ console.warn('[notif] ลิงก์ตั้งค่าไม่ถูกต้อง'); }
+  history.replaceState(null,'',location.pathname+'#notify');
+})();
+async function _ntSetup(el){
+  if(!el) return;
+  const env=_ntEnv(), key=_ntKey(), pub=localStorage.getItem(VAPID_PUB_LS)||'';
+  if(!_nt.sub && env.push && Notification.permission==='granted'){
+    try{ const reg=await navigator.serviceWorker.getRegistration(); const s=reg&&await reg.pushManager.getSubscription(); if(s) _nt.sub=JSON.stringify(s.toJSON()); }catch(e){}
+  }
+  const st=(ok,th,en)=>`<span class="nt-st ${ok?'ok':'no'}">${ok?'✓':'•'} ${_L(th,en)}</span>`;
+  const secret=(name,val,note)=>`<div class="nt-sec"><div class="nt-sec-h"><code>${name}</code>${note?`<span>${note}</span>`:''}</div>
+      <div class="nt-sec-v"><input readonly value="${escAttr(val)}" onclick="this.select()"><button type="button" class="rb-btn" onclick="_ntCopy(this.previousElementSibling.value,this)">⧉ ${_L('คัดลอก','Copy')}</button></div></div>`;
+  const permTxt={granted:_L('อนุญาตแล้ว','allowed'),denied:_L('ถูกปฏิเสธ — แก้ในตั้งค่าเบราว์เซอร์/แอป','blocked — change it in browser/app settings'),default:_L('ยังไม่ได้ขอ','not asked yet'),unsupported:_L('ไม่รองรับ','unsupported')}[env.perm];
+  el.innerHTML=`<div class="cc nt-setup">
+    <div class="nt-step"><div class="nt-n">1</div><div class="nt-sb">
+      <div class="nt-h">${_L('กุญแจ (ทำครั้งเดียว)','Keys (one-time)')} ${st(!!key&&!!pub,'มีแล้ว','set')}</div>
+      <div class="nt-p">${_L('สร้างในเครื่องนี้ แล้วคัดลอกไปใส่ GitHub → Settings → Secrets and variables → Actions → New repository secret','Created on this device — copy them into GitHub → Settings → Secrets and variables → Actions → New repository secret')}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0">
+        <button type="button" class="rb-btn primary" onclick="ntGenKeys()">🔑 ${key?_L('สร้างกุญแจใหม่','Regenerate keys'):_L('สร้างกุญแจ','Create keys')}</button>
+        ${key?`<button type="button" class="rb-btn" onclick="ntSetupLink(this)">🔗 ${_L('คัดลอกลิงก์ตั้งค่า (ใช้กับเครื่องอื่น)','Copy setup link (for other devices)')}</button>`:''}
+      </div>
+      ${key?secret('NOTIFY_KEY',key,_L('ถอดรหัส history','decrypts history')):''}
+      ${_nt.newVapidPriv?secret('VAPID_PRIVATE_KEY',_nt.newVapidPriv,_L('⚠ แสดงครั้งเดียว — คัดลอกตอนนี้ ไม่ได้เก็บในเครื่อง','⚠ shown once — copy it now, it is not stored on this device')):''}
+      ${pub?`<div class="nt-p" style="margin-top:6px">${_L('ไม่บังคับ: secret','Optional: secret')} <code>VAPID_SUBJECT</code> = <code>mailto:อีเมลของคุณ</code></div>`:''}
+      <details class="nt-p" style="margin-top:6px"><summary>${_L('มีกุญแจอยู่แล้ว? ใส่เอง','Already have a key? Enter it')}</summary>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"><input id="nt-key-in" class="rb-amt" style="width:260px" placeholder="NOTIFY_KEY (base64)">
+        <input id="nt-pub-in" class="rb-amt" style="width:260px" placeholder="${_L('กุญแจสาธารณะ VAPID (ไม่บังคับ)','VAPID public key (optional)')}">
+        <button type="button" class="rb-btn" onclick="ntSaveKey()">${_L('บันทึก','Save')}</button></div></details>
+    </div></div>
+    <div class="nt-step"><div class="nt-n">2</div><div class="nt-sb">
+      <div class="nt-h">${_L('เปิดแจ้งเตือนบนเครื่องนี้','Enable push on this device')} ${st(!!_nt.sub,'ลงทะเบียนแล้ว','registered')}</div>
+      <div class="nt-p">${_L('สิทธิ์การแจ้งเตือน','Permission')}: <strong>${permTxt}</strong>
+        ${env.ios&&!env.standalone?`<br>📱 ${_L('iPhone/iPad: ต้อง "เพิ่มไปยังหน้าจอโฮม" แล้วเปิดจากไอคอนก่อน (iOS 16.4+)','iPhone/iPad: "Add to Home Screen" and open from the icon first (iOS 16.4+)')}`:''}</div>
+      <button type="button" class="rb-btn primary" style="margin:8px 0" onclick="ntSubscribe()">🔔 ${_L('เปิดการแจ้งเตือน','Turn on notifications')}</button>
+      ${_nt.sub?`<div class="nt-p">${_L('คัดลอกแล้วใส่ใน secret PUSH_SUBSCRIPTIONS — หลายเครื่องให้รวมเป็น array: [เครื่อง1, เครื่อง2]','Copy into the PUSH_SUBSCRIPTIONS secret — for several devices combine them as an array: [device1, device2]')}</div>${secret('PUSH_SUBSCRIPTIONS','['+_nt.sub+']','')}`:''}
+    </div></div>
+    <div class="nt-step"><div class="nt-n">3</div><div class="nt-sb">
+      <div class="nt-h">${_L('ทดสอบ','Test')}</div>
+      <button type="button" class="rb-btn" style="margin:6px 0" onclick="ntTestLocal()">🧪 ${_L('แจ้งเตือนทดสอบบนเครื่องนี้','Local test notification')}</button>
+      <div class="nt-p">${_L('ทดสอบจริงจาก Actions: แท็บ Actions → Notify → Run workflow → โหมด','End-to-end from Actions: Actions tab → Notify → Run workflow → mode')} <code>test</code></div>
+      <div class="nt-p">${_L('ใช้คู่ LINE ไปก่อน · พร้อมเลิก LINE แล้วตั้ง repo variable','Keep LINE in parallel for now · when ready, set the repo variable')} <code>NOTIFY_LINE</code> = <code>off</code></div>
+    </div></div></div>`;
+}
+// SW บอกว่ามี push ใหม่ / ผู้ใช้กดแจ้งเตือน → ดึงใหม่ + เปิดหน้านี้
+if('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', ev=>{
+  const t=ev.data&&ev.data.type;
+  if(t==='notif-refresh') fetchNotifications();
+  if(t==='notif-open'){ fetchNotifications(); try{ switchPage('notify'); }catch(e){} }
+});
+document.addEventListener('DOMContentLoaded', ()=>{ _ntRebuild(); if(/^#notify/.test(location.hash)) curPage='notify'; });
 
 /* ══ v66 — Deep Research ══════════════════════════════════════════════
    อ่านอย่างเดียวจาก fundamentals.json (fundOf) + สัญญาณเดิม (loadSignals/loadWatchlist)
@@ -5242,6 +5507,7 @@ async function gsSync(){
     gsScheduleAutoSync();
   } catch(e){
     gsSetStatus('❌ '+e.message,'err');
+    try{ notifyApp('sync-fail', _L('Sync Google Sheets ไม่สำเร็จ','Google Sheets sync failed'), String(e.message||e).slice(0,200), 'overview'); }catch(_){}
     console.error('[GS] Sync error:',e);
     if(/404|NOT_FOUND/.test(e.message)){
       alert('❌ หา Spreadsheet ไม่เจอ (404)\n\nสาเหตุเกือบทั้งหมด: Spreadsheet ID ไม่ถูกต้อง\nID ที่ใช้อยู่: '+GS_CONFIG.spreadsheetId+'\n\nกำลังเปิดหน้าตั้งค่าให้แก้ — วาง URL เต็มของชีตมาได้เลย ระบบสกัด ID ให้เอง');
@@ -5734,6 +6000,10 @@ async function refreshMarketFeeds(reason){
     // v66 — หน้า Deep Research / Dividend tracker · แยก catch เหตุผลเดียวกับ bot-paper.json
     (typeof fetchFundamentals === 'function'
       ? fetchFundamentals().catch(e=>{ console.warn('[feeds] fundamentals.json:', e.message); return null; })
+      : Promise.resolve(null)),
+    // v67 — history แจ้งเตือน (เข้ารหัส) · แยก catch เหมือนไฟล์อื่น
+    (typeof fetchNotifications === 'function'
+      ? fetchNotifications().catch(e=>{ console.warn('[feeds] notifications:', e.message); return null; })
       : Promise.resolve(null))
   ]);
   invalidateMarketCache();
@@ -6037,6 +6307,8 @@ function updateBudgetBadge(){
     else if(pct>=80) warnCount++;
   });
 
+  if(overCount>0) try{ notifyApp('budget-over', _L(`งบเกิน ${overCount} หมวดเดือนนี้`,`${overCount} budget categories over this month`),
+      _L('เปิดหน้างบประมาณเพื่อดูว่าหมวดไหนเกิน','Open the Budget page to see which categories are over'), 'budget'); }catch(e){}   // v67
   const total = overCount + warnCount;
   if(total===0){
     badge.style.display='none';
@@ -7633,7 +7905,7 @@ let pageRenderFns={
   // v53
   signals:renderSignals,
   // v59 — ภาพรวมตลาด (watchlist 25 ตัว) + บอทจำลอง
-  watch:renderWatch, bot:renderBot, research:renderResearch
+  watch:renderWatch, bot:renderBot, research:renderResearch, notify:renderNotify
 };
 /* ══ v49 — Analyst Desk ═══════════════════════════════════════════════
    ตัวเชื่อมระหว่าง state ของแอปกับ analystDesk() ที่เป็น pure function
@@ -7838,6 +8110,7 @@ const NAV_GROUPS = [
   {id:'dividends', pages:[['dividends','ปันผล']]},
   {id:'markets',   pages:[['signals','สัญญาณรายตัว'],['research','วิเคราะห์เจาะลึก'],['watch','ภาพรวมตลาด'],
                           ['bot','บอทจำลอง'],['market','ตลาดวันนี้']]},
+  {id:'notify',    pages:[['notify','การแจ้งเตือน']]},   // v67 — เมนูที่ 10
 ];
 const PAGE_DEPS = { portfolio:['overview'], accounts:['overview'], goals:['overview','dividends'] };
 const _lastTab = {};
