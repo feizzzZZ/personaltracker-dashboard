@@ -105,7 +105,8 @@ if have_wp:
         if kw["subscription_info"]["endpoint"].endswith("dead"):
             raise WebPushException("gone", response=R())
     subs = [SUB, {**SUB, "endpoint": "https://push.example/dead"}]
-    with mock.patch.dict(os.environ, {"PUSH_SUBSCRIPTIONS": json.dumps(subs), "VAPID_PRIVATE_KEY": "k"}), \
+    K = base64.urlsafe_b64encode(os.urandom(32)).decode().rstrip("=")   # d แบบสุ่ม (P-256 รับได้แทบทุกค่า)
+    with mock.patch.dict(os.environ, {"PUSH_SUBSCRIPTIONS": json.dumps(subs), "VAPID_PRIVATE_KEY": K}), \
             mock.patch("pywebpush.webpush", fake):
         r = ns.push("หัวข้อ", "บรรทัด 1\n───\nบรรทัด 2", "alert", "id1")
     check("ส่งได้ 1 · หมดอายุ 1 (410)", r["sent"] == 1 and r["expired"] == ["https://push.example/dead"], r)
@@ -114,6 +115,74 @@ if have_wp:
           and payload["url"] == "./#notify", payload)
 else:
     print("  — ข้ามเทสต์ส่งจริง: ไม่มี pywebpush")
+
+if have_wp:
+    print("\n═══ v67.1 — กุญแจ VAPID ทุกรูปแบบ + รหัสตรวจ ═══")
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric import ec
+
+    def b64u(b):
+        return base64.urlsafe_b64encode(b).decode().rstrip("=")
+    priv = ec.generate_private_key(ec.SECP256R1())
+    d = priv.private_numbers().private_value.to_bytes(32, "big")
+    PUB = b64u(priv.public_key().public_bytes(serialization.Encoding.X962,
+                                              serialization.PublicFormat.UncompressedPoint))
+    D = b64u(d)                                                  # รูปแบบเดียวกับ jwk.d ที่แอปสร้าง
+    pem = priv.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8,
+                             serialization.NoEncryption()).decode()
+    for label, raw in [("แบบแอป (b64url)", D), ("มีเครื่องหมายคำพูด", f'"{D}"'), ("มีช่องว่าง/ขึ้นบรรทัด", f"  {D}\n"),
+                       ("base64 ปกติ", base64.b64encode(d).decode()), ("JWK JSON", json.dumps({"d": D})), ("PEM", pem)]:
+        v, p, why = ns.parse_vapid(raw)
+        check(f"รับได้: {label}", v is not None and p == PUB, why)
+    v, p, why = ns.parse_vapid(PUB)
+    check("วางกุญแจสาธารณะ → บอกว่าเป็นกุญแจสาธารณะ", v is None and "สาธารณะ" in why, why)
+    nk = base64.b64encode(os.urandom(16)).decode()
+    with mock.patch.dict(os.environ, {"NOTIFY_KEY": nk}):
+        v, p, why = ns.parse_vapid(nk)
+    check("ความยาวผิด + ซ้ำ NOTIFY_KEY → บอกวางผิดช่อง", v is None and "16 ไบต์" in why and "ผิดช่อง" in why, why)
+    v, p, why = ns.parse_vapid("not a key!!")
+    check("ขยะ → ข้อความวินิจฉัย ไม่ throw", v is None and why, why)
+    check("รหัสตรวจ = 8 ตัวท้ายกุญแจสาธารณะ", ns.fingerprint(PUB) == PUB[-8:])
+
+    print("\n═══ v67.1 — ส่งด้วยกุญแจจริง / กุญแจไม่ตรง ═══")
+    # subscription ของ "เบราว์เซอร์" จำลอง (p256dh/auth จริง) → pywebpush เข้ารหัส+เซ็นจริง แค่ไม่ยิงเน็ต
+    ua = ec.generate_private_key(ec.SECP256R1())
+    real = {"endpoint": "https://web.push.apple.com/ok", "keys": {
+        "p256dh": b64u(ua.public_key().public_bytes(serialization.Encoding.X962,
+                                                    serialization.PublicFormat.UncompressedPoint)),
+        "auth": b64u(os.urandom(16))}}
+    posted = []
+
+    class Resp:
+        def __init__(self, code, text=""):
+            self.status_code, self.text, self.headers, self.reason = code, text, {}, ""
+            self.content = text.encode()
+
+    def fake_post(url, data=None, headers=None, timeout=None, **kw):
+        posted.append((url, headers))
+        if url.endswith("/mm"):
+            return Resp(400, '{"reason":"VapidPkHashMismatch"}')
+        return Resp(201)
+    subs = [{**real, "vapidPub": PUB},
+            {**real, "endpoint": "https://web.push.apple.com/other", "vapidPub": "B" + PUB[1:-8] + "XXXXXXXX"},
+            {**real, "endpoint": "https://web.push.apple.com/mm"}]
+    with mock.patch.dict(os.environ, {"PUSH_SUBSCRIPTIONS": json.dumps(subs), "VAPID_PRIVATE_KEY": f'"{D}"\n',
+                                      "VAPID_SUBJECT": "me@example.com"}), \
+            mock.patch("requests.post", fake_post):
+        r = ns.push("หัวข้อ", "เนื้อหา", "test", "id2")
+    check("ส่งจริงผ่าน 1 (กุญแจมี quote ก็อ่านได้)", r["sent"] == 1, r)
+    check("vapidPub ไม่ตรง → ข้าม ไม่ยิง", all(not u.endswith("/other") for u, _ in posted), posted)
+    check("400 VapidPkHashMismatch → นับเป็นกุญแจไม่ตรง", r["mismatch"] == 2 and r["failed"] == 2, r)
+    check("รหัสตรวจใน log ตรงกับแอป", r["fingerprint"] == PUB[-8:], r)
+    auth = (posted[0][1] or {}).get("Authorization", "")
+    check("header แบบ RFC 8292 (vapid t=…, k=กุญแจสาธารณะเดียวกัน) — Apple บังคับ",
+          auth.startswith("vapid ") and PUB in auth.replace("=", ""), auth[:80])
+    tok = auth.split("t=")[1].split(",")[0]
+    claims = json.loads(base64.urlsafe_b64decode(tok.split(".")[1] + "=="))
+    check("subject ผิดรูป → ใช้ mailto: ค่าเริ่มต้น", claims.get("sub", "").startswith("mailto:"), claims)
+    with mock.patch.dict(os.environ, {"PUSH_SUBSCRIPTIONS": json.dumps(subs), "VAPID_PRIVATE_KEY": PUB}):
+        r = ns.push("t", "b")
+    check("VAPID เป็นกุญแจสาธารณะ → ไม่ส่งเลย + มีเหตุผล", r["sent"] == 0 and "สาธารณะ" in (r["skipped"] or ""), r)
 
 print("─────────────────────────────────────────────")
 if FAIL:

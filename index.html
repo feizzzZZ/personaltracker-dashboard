@@ -4072,7 +4072,7 @@ const VLOG_PURGED_KEY = 'finOS_valueLogPurged_v44';
 //   ฟังก์ชันหาย  → BLOCK  (แอปคำนวณผิดแน่นอน — นี่คือสิ่งที่ guard มีไว้จับ)
 //   เลขไม่ตรง    → WARN   (แค่ลืม bump — log ไว้ ไม่รบกวนผู้ใช้)
 // ฟังก์ชันที่ต้องมีคือสัญญาจริงระหว่างสองไฟล์ ส่วนสตริงเวอร์ชันเป็นแค่ป้าย
-const EXPECTED_SHARED_BUILD = 'v67';
+const EXPECTED_SHARED_BUILD = 'v67.1';
 const REQUIRED_SHARED_FNS = [
   'resolvePrices', 'pipelinePricesTHB', 'parseReconcileRows',
   'computeReconciliation', 'splitBalances', 'debtVsInvest', 'buildDebtPlan',
@@ -4796,7 +4796,7 @@ function _ntEnv(){
            perm: 'Notification' in window ? Notification.permission : 'unsupported', ios, standalone };
 }
 async function ntGenKeys(){
-  if(_ntKey() && !confirm(_L('สร้างกุญแจชุดใหม่? history เดิมที่เข้ารหัสด้วยกุญแจเก่าจะอ่านไม่ได้ และทุกเครื่องต้องลงทะเบียน push ใหม่','Create new keys? Existing history encrypted with the old key becomes unreadable, and every device must re-register for push'))) return;
+  if(_ntKey() && !confirm(_L('สร้างกุญแจชุดใหม่?\n• history เดิมที่เข้ารหัสด้วยกุญแจเก่าจะอ่านไม่ได้\n• ต้องอัปเดต secrets ทั้ง 3 ตัว: NOTIFY_KEY · VAPID_PRIVATE_KEY · PUSH_SUBSCRIPTIONS\n• ทุกเครื่องต้องกด "เปิดการแจ้งเตือน" ใหม่','Create new keys?\n• History encrypted with the old key becomes unreadable\n• Update all 3 secrets: NOTIFY_KEY · VAPID_PRIVATE_KEY · PUSH_SUBSCRIPTIONS\n• Every device must press "Turn on notifications" again'))) return;
   const k=crypto.getRandomValues(new Uint8Array(32));
   const kp=await crypto.subtle.generateKey({name:'ECDSA',namedCurve:'P-256'}, true, ['sign','verify']);
   const jwk=await crypto.subtle.exportKey('jwk', kp.privateKey);
@@ -4804,6 +4804,7 @@ async function ntGenKeys(){
   localStorage.setItem(NOTIF_KEY_LS, bytesToB64(k));
   localStorage.setItem(VAPID_PUB_LS, bytesToB64(pub, true));
   _nt.newVapidPriv=jwk.d;            // แสดงครั้งเดียว ไม่เก็บลงเครื่อง
+  _nt.sub=null;                      // subscription เดิมผูกกับกุญแจเก่า → ต้องลงทะเบียนใหม่ (ขั้น 2)
   await _ntRebuild(); renderNotify();
 }
 function ntSaveKey(){
@@ -4819,12 +4820,21 @@ async function ntSubscribe(){
   const perm=await Notification.requestPermission();
   if(perm!=='granted'){ renderNotify(); return; }
   const reg=await navigator.serviceWorker.ready;
-  let sub=await reg.pushManager.getSubscription();
-  if(sub){ const cur=sub.options&&sub.options.applicationServerKey?bytesToB64(new Uint8Array(sub.options.applicationServerKey),true):null;
-           if(cur && cur!==pub){ await sub.unsubscribe(); sub=null; } }
-  if(!sub) sub=await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:b64ToBytes(pub)});
-  _nt.sub=JSON.stringify(sub.toJSON()); renderNotify();
+  // v67.1 — ลงทะเบียนใหม่ทุกครั้ง: subscription เก่าอาจผูกกับกุญแจคนละชุด (Apple ตอบ VapidPkHashMismatch)
+  // และ iOS อ่าน options.applicationServerKey ไม่ได้เสมอไป จึงเช็คจากตรงนั้นไม่ได้
+  try{ const old=await reg.pushManager.getSubscription(); if(old) await old.unsubscribe(); }catch(e){}
+  let sub;
+  try{ sub=await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:b64ToBytes(pub)}); }
+  catch(e){ alert(_L('ลงทะเบียน push ไม่สำเร็จ: ','Push registration failed: ')+(e&&e.message||e)); return; }
+  _nt.sub=_ntSubJson(sub, pub); renderNotify();
 }
+// แนบกุญแจสาธารณะที่ใช้ลงทะเบียน → Actions เทียบกับ VAPID_PRIVATE_KEY ได้ก่อนส่ง (pywebpush ไม่สนใจฟิลด์นี้)
+function _ntSubJson(sub, pub){
+  const o=sub.toJSON(); delete o.expirationTime;
+  if(pub) o.vapidPub=pub;
+  return JSON.stringify(o);
+}
+const _ntFp=p=>p?'…'+p.slice(-8):'—';
 async function ntTestLocal(){
   if(!('Notification' in window) || Notification.permission!=='granted'){ alert(_L('ยังไม่ได้อนุญาตการแจ้งเตือน — ทำขั้นที่ 2 ก่อน','Notifications are not allowed yet — do step 2 first')); return; }
   const reg=await navigator.serviceWorker.ready;
@@ -4850,7 +4860,8 @@ async function _ntSetup(el){
   if(!el) return;
   const env=_ntEnv(), key=_ntKey(), pub=localStorage.getItem(VAPID_PUB_LS)||'';
   if(!_nt.sub && env.push && Notification.permission==='granted'){
-    try{ const reg=await navigator.serviceWorker.getRegistration(); const s=reg&&await reg.pushManager.getSubscription(); if(s) _nt.sub=JSON.stringify(s.toJSON()); }catch(e){}
+    try{ const reg=await navigator.serviceWorker.getRegistration(); const s=reg&&await reg.pushManager.getSubscription();
+      if(s){ const k=s.options&&s.options.applicationServerKey; _nt.sub=_ntSubJson(s, k?bytesToB64(new Uint8Array(k),true):null); } }catch(e){}
   }
   const st=(ok,th,en)=>`<span class="nt-st ${ok?'ok':'no'}">${ok?'✓':'•'} ${_L(th,en)}</span>`;
   const secret=(name,val,note)=>`<div class="nt-sec"><div class="nt-sec-h"><code>${name}</code>${note?`<span>${note}</span>`:''}</div>
@@ -4866,6 +4877,8 @@ async function _ntSetup(el){
       </div>
       ${key?secret('NOTIFY_KEY',key,_L('ถอดรหัส history','decrypts history')):''}
       ${_nt.newVapidPriv?secret('VAPID_PRIVATE_KEY',_nt.newVapidPriv,_L('⚠ แสดงครั้งเดียว — คัดลอกตอนนี้ ไม่ได้เก็บในเครื่อง','⚠ shown once — copy it now, it is not stored on this device')):''}
+      ${pub?`<div class="nt-p" style="margin-top:6px">${_L('รหัสตรวจกุญแจ','Key check code')}: <code>${_ntFp(pub)}</code> — ${_L('log ของ Actions ต้องขึ้นเลขเดียวกัน (VAPID รหัสตรวจ)','the Actions log must show the same code (VAPID รหัสตรวจ)')}</div>`:''}
+      ${_nt.newVapidPriv?`<div class="nt-p nt-warn">⚠ ${_L('อัปเดต secrets ให้ครบทั้ง 3 ตัว (NOTIFY_KEY · VAPID_PRIVATE_KEY · PUSH_SUBSCRIPTIONS จากขั้น 2) — วางค่าตามที่คัดลอก ไม่ต้องใส่เครื่องหมายคำพูด','Update all 3 secrets (NOTIFY_KEY · VAPID_PRIVATE_KEY · PUSH_SUBSCRIPTIONS from step 2) — paste exactly as copied, without quotes')}</div>`:''}
       ${pub?`<div class="nt-p" style="margin-top:6px">${_L('ไม่บังคับ: secret','Optional: secret')} <code>VAPID_SUBJECT</code> = <code>mailto:อีเมลของคุณ</code></div>`:''}
       <details class="nt-p" style="margin-top:6px"><summary>${_L('มีกุญแจอยู่แล้ว? ใส่เอง','Already have a key? Enter it')}</summary>
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"><input id="nt-key-in" class="rb-amt" style="width:260px" placeholder="NOTIFY_KEY (base64)">
@@ -4877,6 +4890,9 @@ async function _ntSetup(el){
       <div class="nt-p">${_L('สิทธิ์การแจ้งเตือน','Permission')}: <strong>${permTxt}</strong>
         ${env.ios&&!env.standalone?`<br>📱 ${_L('iPhone/iPad: ต้อง "เพิ่มไปยังหน้าจอโฮม" แล้วเปิดจากไอคอนก่อน (iOS 16.4+)','iPhone/iPad: "Add to Home Screen" and open from the icon first (iOS 16.4+)')}`:''}</div>
       <button type="button" class="rb-btn primary" style="margin:8px 0" onclick="ntSubscribe()">🔔 ${_L('เปิดการแจ้งเตือน','Turn on notifications')}</button>
+      ${_nt.sub?(()=>{ let sp=null; try{ sp=JSON.parse(_nt.sub).vapidPub||null; }catch(e){}
+        return sp&&pub&&sp!==pub?`<div class="nt-p nt-warn">⚠ ${_L('เครื่องนี้ลงทะเบียนด้วยกุญแจ','This device registered with key')} <code>${_ntFp(sp)}</code> ${_L('แต่กุญแจปัจจุบันคือ','but the current key is')} <code>${_ntFp(pub)}</code> — ${_L('กด "เปิดการแจ้งเตือน" ใหม่','press "Turn on notifications" again')}</div>`
+          :`<div class="nt-p">${_L('รหัสตรวจของ subscription นี้','This subscription\'s check code')}: <code>${_ntFp(sp)}</code>${sp?'':' — '+_L('ไม่ทราบ: กด "เปิดการแจ้งเตือน" อีกครั้งเพื่อให้แนบกุญแจ','unknown: press "Turn on notifications" again to attach it')}</div>`; })():''}
       ${_nt.sub?`<div class="nt-p">${_L('คัดลอกแล้วใส่ใน secret PUSH_SUBSCRIPTIONS — หลายเครื่องให้รวมเป็น array: [เครื่อง1, เครื่อง2]','Copy into the PUSH_SUBSCRIPTIONS secret — for several devices combine them as an array: [device1, device2]')}</div>${secret('PUSH_SUBSCRIPTIONS','['+_nt.sub+']','')}`:''}
     </div></div>
     <div class="nt-step"><div class="nt-n">3</div><div class="nt-sb">
