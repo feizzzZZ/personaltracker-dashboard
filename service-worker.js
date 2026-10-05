@@ -22,7 +22,7 @@
 // หน้านั้นถูกยุบเข้า index.html และลบออกจาก repo แล้ว ถ้ายังอยู่ในลิสต์
 // ทุกครั้งที่ install จะ log "ข้ามไฟล์ที่หาไม่เจอ" ซึ่งเป็น noise ที่จะกลบ
 // warning จริงในอนาคต (กลไกข้ามไฟล์หายทำงานถูกแล้ว — แต่ต้องไม่มีของหายตั้งแต่แรก)
-const CACHE_NAME = 'finance-os-v67-1';  // bump version so old cache is cleared on deploy
+const CACHE_NAME = 'finance-os-v67-2';  // bump version so old cache is cleared on deploy
 const BASE = '/personaltracker-dashboard';
 
 // App shell — files to pre-cache on install
@@ -189,6 +189,18 @@ self.addEventListener('push', event => {
     self.clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then(cs => cs.forEach(c => c.postMessage({ type: 'notif-refresh' }))),
   ]));
+});
+
+// v67.2 — browser เปลี่ยน/ยกเลิก subscription เอง (นาน ๆ ครั้ง) → ลงทะเบียนต่อด้วยกุญแจเดิมทันที
+// endpoint ใหม่ยังต้องคัดลอกไป secret: หน้าแอปตรวจตอนเปิด (ntCheckPush) แล้วเตือนในกล่องแจ้งเตือน
+self.addEventListener('pushsubscriptionchange', event => {
+  const old = event.oldSubscription;
+  const key = old && old.options && old.options.applicationServerKey;
+  if (!key) return;
+  event.waitUntil(
+    self.registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key })
+      .catch(e => console.warn('[SW] resubscribe failed', e))
+  );
 });
 
 self.addEventListener('notificationclick', event => {

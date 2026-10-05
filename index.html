@@ -4072,7 +4072,7 @@ const VLOG_PURGED_KEY = 'finOS_valueLogPurged_v44';
 //   ฟังก์ชันหาย  → BLOCK  (แอปคำนวณผิดแน่นอน — นี่คือสิ่งที่ guard มีไว้จับ)
 //   เลขไม่ตรง    → WARN   (แค่ลืม bump — log ไว้ ไม่รบกวนผู้ใช้)
 // ฟังก์ชันที่ต้องมีคือสัญญาจริงระหว่างสองไฟล์ ส่วนสตริงเวอร์ชันเป็นแค่ป้าย
-const EXPECTED_SHARED_BUILD = 'v67.1';
+const EXPECTED_SHARED_BUILD = 'v67.2';
 const REQUIRED_SHARED_FNS = [
   'resolvePrices', 'pipelinePricesTHB', 'parseReconcileRows',
   'computeReconciliation', 'splitBalances', 'debtVsInvest', 'buildDebtPlan',
@@ -4804,7 +4804,7 @@ async function ntGenKeys(){
   localStorage.setItem(NOTIF_KEY_LS, bytesToB64(k));
   localStorage.setItem(VAPID_PUB_LS, bytesToB64(pub, true));
   _nt.newVapidPriv=jwk.d;            // แสดงครั้งเดียว ไม่เก็บลงเครื่อง
-  _nt.sub=null;                      // subscription เดิมผูกกับกุญแจเก่า → ต้องลงทะเบียนใหม่ (ขั้น 2)
+  _nt.sub=null; localStorage.removeItem('finOS_pushReg');  // ผูกกับกุญแจเก่า → ขั้น 2 ใหม่
   await _ntRebuild(); renderNotify();
 }
 function ntSaveKey(){
@@ -4813,21 +4813,52 @@ function ntSaveKey(){
   localStorage.setItem(NOTIF_KEY_LS, v.trim()); if(p.trim()) localStorage.setItem(VAPID_PUB_LS, p.trim());
   _ntRebuild().then(renderNotify);
 }
-async function ntSubscribe(){
+async function ntSubscribe(force){
   const env=_ntEnv(), pub=localStorage.getItem(VAPID_PUB_LS);
   if(!env.push){ alert(env.ios&&!env.standalone?_L('iPhone/iPad: กดปุ่มแชร์ → "เพิ่มไปยังหน้าจอโฮม" แล้วเปิดแอปจากไอคอนก่อน (iOS 16.4 ขึ้นไป)','iPhone/iPad: tap Share → "Add to Home Screen", then open the app from the icon (iOS 16.4+)'):_L('เบราว์เซอร์นี้ไม่รองรับการแจ้งเตือนแบบ push','This browser does not support push notifications')); return; }
   if(!pub){ alert(_L('ยังไม่มีกุญแจ — ทำขั้นที่ 1 ก่อน','No keys yet — do step 1 first')); return; }
   const perm=await Notification.requestPermission();
   if(perm!=='granted'){ renderNotify(); return; }
   const reg=await navigator.serviceWorker.ready;
-  // v67.1 — ลงทะเบียนใหม่ทุกครั้ง: subscription เก่าอาจผูกกับกุญแจคนละชุด (Apple ตอบ VapidPkHashMismatch)
-  // และ iOS อ่าน options.applicationServerKey ไม่ได้เสมอไป จึงเช็คจากตรงนั้นไม่ได้
-  try{ const old=await reg.pushManager.getSubscription(); if(old) await old.unsubscribe(); }catch(e){}
+  // v67.2 — ลงทะเบียนครั้งเดียวแล้วใช้ตลอด: ถ้าเครื่องนี้ลงทะเบียนด้วยกุญแจชุดปัจจุบันอยู่แล้ว → ใช้อันเดิม
+  // (secret PUSH_SUBSCRIPTIONS ไม่ต้องแก้) · ลงทะเบียนใหม่เฉพาะเมื่อกุญแจเปลี่ยน/ไม่รู้ว่าผูกกับกุญแจไหน/สั่ง force
+  // ไม่รู้ = subscription จากก่อน v67.1 (iOS อ่าน options.applicationServerKey ไม่ได้เสมอไป) → ต้องทำใหม่หนึ่งครั้ง
+  let old=null; try{ old=await reg.pushManager.getSubscription(); }catch(e){}
+  if(old && !force && _ntSubPub(old)===pub){
+    _ntRegSave(old, pub); _nt.sub=_ntSubJson(old, pub); _nt.reused=true; renderNotify(); return;
+  }
+  try{ if(old) await old.unsubscribe(); }catch(e){}
   let sub;
   try{ sub=await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:b64ToBytes(pub)}); }
   catch(e){ alert(_L('ลงทะเบียน push ไม่สำเร็จ: ','Push registration failed: ')+(e&&e.message||e)); return; }
-  _nt.sub=_ntSubJson(sub, pub); renderNotify();
+  _ntRegSave(sub, pub); _nt.sub=_ntSubJson(sub, pub); _nt.reused=false; _nt.changed=false; renderNotify();
 }
+// กุญแจที่ subscription นี้ผูกอยู่: จากที่บันทึกตอนลงทะเบียน (endpoint ตรงกัน) หรือจาก browser ถ้าอ่านได้
+const PUSH_REG_LS='finOS_pushReg';
+function _ntSubPub(sub){
+  const r=_ls.get(PUSH_REG_LS, null);
+  if(r && r.endpoint===sub.endpoint && r.pub) return r.pub;
+  const k=sub.options&&sub.options.applicationServerKey;
+  return k?bytesToB64(new Uint8Array(k),true):null;
+}
+function _ntRegSave(sub, pub){ _ls.set(PUSH_REG_LS, {endpoint:sub.endpoint, pub, at:new Date().toISOString()}); }
+// เปิดแอปแต่ละครั้ง: แค่ "ตรวจ" ไม่ลงทะเบียนใหม่ — ถ้า browser เปลี่ยน/ยกเลิก subscription เอง (เกิดได้นาน ๆ ครั้ง) ค่อยเตือน
+async function ntCheckPush(){
+  const r=_ls.get(PUSH_REG_LS, null);
+  if(!r || !('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  try{
+    const reg=await navigator.serviceWorker.ready, cur=await reg.pushManager.getSubscription();
+    if(cur && cur.endpoint===r.endpoint) return;                     // ปกติ: ใช้ได้ต่อ ไม่ต้องทำอะไร
+    _nt.changed=true;
+    if(cur && _ntSubPub(cur)===null && r.pub){ _ntRegSave(cur, r.pub); }  // SW ลงทะเบียนต่อให้ด้วยกุญแจเดิม
+    notifyApp('push-changed-'+(cur?cur.endpoint.slice(-12):'none'),
+      _L('การลงทะเบียนแจ้งเตือนของเครื่องนี้เปลี่ยน','This device\'s push registration changed'),
+      cur?_L('ระบบลงทะเบียนต่อให้แล้ว — เปิด ⚙ ขั้น 2 คัดลอกไปแทน secret PUSH_SUBSCRIPTIONS ครั้งเดียว','It was renewed automatically — open ⚙ step 2 and copy it into the PUSH_SUBSCRIPTIONS secret once')
+         :_L('เปิด ⚙ ขั้น 2 กด "เปิดการแจ้งเตือน" แล้วคัดลอกไปแทน secret PUSH_SUBSCRIPTIONS','Open ⚙ step 2, press "Turn on notifications" and copy it into the PUSH_SUBSCRIPTIONS secret'),
+      'notify');
+  }catch(e){ console.warn('[notif] ตรวจ push ไม่ได้:', e.message); }
+}
+setTimeout(ntCheckPush, 4000);
 // แนบกุญแจสาธารณะที่ใช้ลงทะเบียน → Actions เทียบกับ VAPID_PRIVATE_KEY ได้ก่อนส่ง (pywebpush ไม่สนใจฟิลด์นี้)
 function _ntSubJson(sub, pub){
   const o=sub.toJSON(); delete o.expirationTime;
@@ -4861,7 +4892,7 @@ async function _ntSetup(el){
   const env=_ntEnv(), key=_ntKey(), pub=localStorage.getItem(VAPID_PUB_LS)||'';
   if(!_nt.sub && env.push && Notification.permission==='granted'){
     try{ const reg=await navigator.serviceWorker.getRegistration(); const s=reg&&await reg.pushManager.getSubscription();
-      if(s){ const k=s.options&&s.options.applicationServerKey; _nt.sub=_ntSubJson(s, k?bytesToB64(new Uint8Array(k),true):null); } }catch(e){}
+      if(s) _nt.sub=_ntSubJson(s, _ntSubPub(s)); }catch(e){}
   }
   const st=(ok,th,en)=>`<span class="nt-st ${ok?'ok':'no'}">${ok?'✓':'•'} ${_L(th,en)}</span>`;
   const secret=(name,val,note)=>`<div class="nt-sec"><div class="nt-sec-h"><code>${name}</code>${note?`<span>${note}</span>`:''}</div>
@@ -4889,7 +4920,14 @@ async function _ntSetup(el){
       <div class="nt-h">${_L('เปิดแจ้งเตือนบนเครื่องนี้','Enable push on this device')} ${st(!!_nt.sub,'ลงทะเบียนแล้ว','registered')}</div>
       <div class="nt-p">${_L('สิทธิ์การแจ้งเตือน','Permission')}: <strong>${permTxt}</strong>
         ${env.ios&&!env.standalone?`<br>📱 ${_L('iPhone/iPad: ต้อง "เพิ่มไปยังหน้าจอโฮม" แล้วเปิดจากไอคอนก่อน (iOS 16.4+)','iPhone/iPad: "Add to Home Screen" and open from the icon first (iOS 16.4+)')}`:''}</div>
-      <button type="button" class="rb-btn primary" style="margin:8px 0" onclick="ntSubscribe()">🔔 ${_L('เปิดการแจ้งเตือน','Turn on notifications')}</button>
+      ${(()=>{ let sp=null; try{ sp=_nt.sub&&JSON.parse(_nt.sub).vapidPub; }catch(e){}
+        const ok=!!sp&&sp===pub&&!_nt.changed;
+        return ok
+          ? `<div class="nt-p" style="margin:8px 0">✅ ${_L('เครื่องนี้ลงทะเบียนเรียบร้อย — ใช้ได้ตลอด ไม่ต้องทำซ้ำทุกครั้งที่เปิดแอป · secret PUSH_SUBSCRIPTIONS ใส่ครั้งเดียวพอ','This device is registered — it keeps working; no need to redo it each time you open the app · set the PUSH_SUBSCRIPTIONS secret once')}${_nt.reused?' · '+_L('(กดซ้ำ = ใช้อันเดิม ค่าไม่เปลี่ยน)','(pressing again reuses it — value unchanged)'):''}</div>
+             <button type="button" class="rb-btn" style="margin:0 0 8px" onclick="ntSubscribe()">🔔 ${_L('ตรวจ / แสดงอีกครั้ง','Check / show again')}</button>
+             <details class="nt-p"><summary>${_L('มีปัญหา? ลงทะเบียนใหม่ทั้งหมด','Trouble? Re-register from scratch')}</summary>${_L('ค่าที่ใส่ใน secret เดิมจะใช้ไม่ได้ ต้องคัดลอกใหม่','The value in the secret stops working; copy the new one')}
+               <button type="button" class="rb-btn" style="margin:6px 0" onclick="if(confirm(_L('ลงทะเบียนใหม่? ต้องอัปเดต PUSH_SUBSCRIPTIONS อีกครั้ง','Re-register? You must update PUSH_SUBSCRIPTIONS again')))ntSubscribe(true)">↻ ${_L('ลงทะเบียนใหม่','Re-register')}</button></details>`
+          : `<button type="button" class="rb-btn primary" style="margin:8px 0" onclick="ntSubscribe()">🔔 ${_L('เปิดการแจ้งเตือน','Turn on notifications')}</button>`; })()}
       ${_nt.sub?(()=>{ let sp=null; try{ sp=JSON.parse(_nt.sub).vapidPub||null; }catch(e){}
         return sp&&pub&&sp!==pub?`<div class="nt-p nt-warn">⚠ ${_L('เครื่องนี้ลงทะเบียนด้วยกุญแจ','This device registered with key')} <code>${_ntFp(sp)}</code> ${_L('แต่กุญแจปัจจุบันคือ','but the current key is')} <code>${_ntFp(pub)}</code> — ${_L('กด "เปิดการแจ้งเตือน" ใหม่','press "Turn on notifications" again')}</div>`
           :`<div class="nt-p">${_L('รหัสตรวจของ subscription นี้','This subscription\'s check code')}: <code>${_ntFp(sp)}</code>${sp?'':' — '+_L('ไม่ทราบ: กด "เปิดการแจ้งเตือน" อีกครั้งเพื่อให้แนบกุญแจ','unknown: press "Turn on notifications" again to attach it')}</div>`; })():''}
