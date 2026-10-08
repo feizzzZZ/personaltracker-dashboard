@@ -41,7 +41,7 @@ function setPipeline(obj) {
 }
 
 console.log('build =', api.APP_BUILD);
-chk('APP_BUILD เป็นรูปแบบ vNN', /^v\d+$/.test(api.APP_BUILD), api.APP_BUILD);   // v64 — เดิม hardcode 'v51' แดงทุกครั้งที่ bump
+chk('APP_BUILD เป็นรูปแบบ vNN[.N]', /^v\d+(\.\d+)?$/.test(api.APP_BUILD), api.APP_BUILD);   // v64 — เดิม hardcode 'v51' แดงทุกครั้งที่ bump
 
 console.log('\n═══ 1. computeRegime — ตัดสัญญาณที่เก่าเกิน ═══');
 {

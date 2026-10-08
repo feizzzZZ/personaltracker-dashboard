@@ -2417,10 +2417,21 @@ let reconMap={};   // v44 — ชีต Reconcile: { ชื่อบัญชี
    ถ้าปล่อยให้หน้า Debt ใช้ยอดจริงแต่หน้าอื่นใช้ยอดคำนวณ ตัวเลขจะขัดกันเอง
    ระหว่างหน้า — ซึ่งแย่กว่าผิดพร้อมกันทั้งแอป จึงต้องรวมมาที่นี่ที่เดียว */
 function effectiveBals(){
-  try{ return applyReconciliation(bankBals, reconMap).bals; }
+  try{ return applyReconciliation(bankBals, reconMap, null, txRows).bals; }
   catch(e){ return bankBals; }
 }
 function effectiveSplit(){ return splitBalances(effectiveBals()); }
+/* v68 #3 — กำไรที่ยังไม่ขาย = มูลค่า − ต้นทุน "เฉพาะตัวที่มีราคา"
+   ตัวที่ราคาขึ้น #N/A มูลค่าเป็น ฿0 แต่ต้นทุนยังอยู่ → เดิมกลายเป็นขาดทุนปลอมทั้งก้อน
+   และหน้าต้นทุน (ตัดตัวไม่มีราคาออก) ได้คนละตัวเลขกับ Overview/พอร์ต */
+function unrealizedOf(list){
+  const L=(list||[]).filter(a=>a && a.qty>1e-8);
+  const priced=L.filter(a=>a.val>0);
+  const val=priced.reduce((s,a)=>s+a.val,0), cost=priced.reduce((s,a)=>s+(a.cost||0),0);
+  const unpriced=L.filter(a=>!(a.val>0));
+  return { val, cost, pnl: val-cost, pct: cost>0 ? (val-cost)/cost*100 : null,
+           nUnpriced: unpriced.length, unpricedCost: unpriced.reduce((s,a)=>s+(a.cost||0),0) };
+}
 let insPolicies=[],insCoverage=[];
 let totalFee=0,availableMonths=[],curMonthIdx=0,cfFilter='all',cfPage=0,pfFilter='all';
 let charts={},flowPeriod='monthly';
@@ -2560,10 +2571,10 @@ function renderOverview(){
   const cashAssets=_sb.cash, liabTotal=_sb.liabilities;
   const allCash=_sb.net;      // = ค่าเดิมทุกประการ (ใช้ต่อในสูตรที่เหลือ)
   const portVal=assets.reduce((s,a)=>s+a.val,0);
-  const portCost=assets.reduce((s,a)=>s+a.cost,0);
-  const portPnl=portVal-portCost;
+  const _ur=unrealizedOf(assets);          // v68 #3
+  const portPnl=_ur.pnl;
   const totalDiv=tracker.filter(r=>TX_DIV.includes(r.txType)).reduce((s,r)=>s+r.amtTHB,0);
-  const insCV=insPolicies.reduce((s,p)=>s+(p.surrender||0),0);
+  const insCV=insCashValue();   // v68 #8
 
   // Net Worth = Cash − Liabilities + Portfolio + Insurance Cash Value
   const netWorth=cashAssets-liabTotal+portVal+insCV;
@@ -2588,7 +2599,8 @@ function renderOverview(){
   }
   document.getElementById('ov-portval').textContent=fmt(portVal);
   const ppEl=document.getElementById('ov-portpnl-sub');
-  ppEl.textContent=fmtSign(portPnl)+' unrealized';   // v56 — ชื่อตามนิยาม (v55 #3)ppEl.style.color=portPnl>=0?'var(--gain)':'var(--loss)';
+  ppEl.textContent=fmtSign(portPnl)+' unrealized'+(_ur.nUnpriced?' · '+_L(`${_ur.nUnpriced} ตัวไม่มีราคา`,`${_ur.nUnpriced} unpriced`):'');   // v56 — ชื่อตามนิยาม (v55 #3)
+  ppEl.style.color=portPnl>=0?'var(--gain)':'var(--loss)';   // v68 #11 — เดิมคำสั่งนี้ไปติดท้ายคอมเมนต์ สีจึงไม่เคยขึ้น
   const insEl=document.getElementById('ov-inscv');
   if(insEl) insEl.textContent=fmt(insCV);
   _ovEl('ov-div').textContent=fmt(totalDiv);
@@ -2874,26 +2886,27 @@ function _renderOverviewRest(){
   document.getElementById('ov-donut-val').textContent=fmt(tv);
   mkDonut('ov-alloc-chart',labels,values,colors);
   document.getElementById('ov-alloc-legend').innerHTML=sorted.map(([g,v],i)=>`
-    <div class="ar"><div class="al-left"><div class="al-dot" style="background:${colors[i]}"></div><span>${g}</span></div>
+    <div class="ar"><div class="al-left"><div class="al-dot" style="background:${colors[i]}"></div><span>${escHtml(g)}</span></div>
     <div class="al-pct">${tv>0?(v/tv*100).toFixed(1):0}%</div></div>`).join('');
 
   // group bars
   const grpMap={};
-  assets.forEach(a=>{if(!grpMap[a.group])grpMap[a.group]={val:0,cost:0,n:0};
-    grpMap[a.group].val+=a.val;grpMap[a.group].cost+=a.cost;grpMap[a.group].n++;});
+  assets.forEach(a=>{if(!grpMap[a.group])grpMap[a.group]={val:0,cost:0,pcost:0,n:0};
+    grpMap[a.group].val+=a.val;grpMap[a.group].cost+=a.cost;grpMap[a.group].n++;
+    if(a.val>0) grpMap[a.group].pcost+=a.cost;});   // v68 #3 — กำไรเทียบเฉพาะตัวที่มีราคา
   const gsorted=Object.entries(grpMap).sort((a,b)=>b[1].val-a[1].val);
   const maxV=Math.max(...gsorted.map(([,v])=>v.val),1);
   document.getElementById('ov-group-list').innerHTML=gsorted.map(([g,v])=>{
     const noPrice=v.val===0&&v.cost>0;
-    const pnl=v.val-v.cost;
-    const pct=noPrice?null:(v.cost>0?(pnl/v.cost*100).toFixed(1):0);
+    const pnl=v.val-v.pcost;
+    const pct=noPrice?null:(v.pcost>0?(pnl/v.pcost*100).toFixed(1):0);
     const bw=clampPct(maxV>0?Math.round(v.val/maxV*100):0),col=GC[g]||'#555';
     const cls=noPrice?'':(pnl>0?'gain':pnl<0?'loss':'');
     const pnlStr=noPrice
       ?`<span style="color:var(--muted);font-size:10px">ไม่มีราคา</span>`
       :`<span class="${cls}">${pnl>=0?'+':''}${fmt(pnl)} (${pct}%)</span>`;
     return `<div class="gr"><div class="gr-top">
-      <div class="gr-name"><div class="gr-dot" style="background:${col}"></div>${g}<span style="color:var(--muted);font-size:10px">${v.n}</span></div>
+      <div class="gr-name"><div class="gr-dot" style="background:${col}"></div>${escHtml(g)}<span style="color:var(--muted);font-size:10px">${v.n}</span></div>
       <div style="display:flex;gap:10px;font-size:11px"><span style="color:var(--white)">${noPrice?'฿—':fmt(v.val)}</span>
       ${pnlStr}</div></div>
       <div class="bt"><div class="bf" style="width:${bw}%;background:${col}"></div></div></div>`;
@@ -2930,7 +2943,8 @@ function _renderOverviewRest(){
   /* #4 — was Math.abs(s.savings): a month that overspent (savings −10,000 on
      income 50,000) reported a POSITIVE 20% savings rate instead of −20%. */
   const sr=s.savRate;   // v55 — นิยามสากลจาก computeSummary
-  healthItems.push({s:sr>=20?'g':sr>=10?'y':'r',title:`Saving rate: ${sr}%`,desc:sr>=20?'ดีเยี่ยม':sr>=10?'พอใช้':'ต่ำกว่าเป้าหมาย'});
+  if(s.savRateUndef) healthItems.push({s:'y',title:'Saving rate: —',desc:'เดือนนี้ไม่มีรายรับ จึงคำนวณไม่ได้'});   // v68 #12
+  else healthItems.push({s:sr>=20?'g':sr>=10?'y':'r',title:`Saving rate: ${sr}%`,desc:sr>=20?'ดีเยี่ยม':sr>=10?'พอใช้':'ต่ำกว่าเป้าหมาย'});
   _ovEl('ov-health').innerHTML=healthItems.map(it=>`
     <div class="hi"><div class="hs ${it.s}"></div>
     <div><div class="hi-title">${escHtml(it.title)}</div><div class="hi-desc">${escHtml(it.desc)}</div></div></div>`).join('');
@@ -3003,15 +3017,23 @@ function sparkbars(vals, opts){
 /* P2-1c — ประวัติเงินสด สร้างจากธุรกรรมจริง ไม่ต้องรอเก็บ snapshot
    cash สิ้นเดือน M = cash ปัจจุบัน − ผลรวม net ของทุกเดือนหลัง M
    ทำได้เพราะ net ต่อเดือน = การเปลี่ยนแปลงเงินสดพอดี (income+expense+savings+debt) */
+/* v68 #16 — ย้อนด้วย "การเคลื่อนไหวในบัญชีเงินสด" จริงรายเดือน (r.acct) ไม่ใช่ net ของทุกประเภท
+   net รวมยอดรูดบัตร (Debt) ซึ่งเพิ่มหนี้ ไม่ได้ลดเงินสด · และไม่รวมการโอนจ่ายบัตรซึ่งลดเงินสดจริง
+   → กราฟเงินสดย้อนหลังเดิมเพี้ยนทั้งสองทาง · บัญชีเงินสด = ฝั่ง cash ของ splitBalances ชุดเดียวกับ currentCash */
 function deriveCashHistory(currentCash, nMonths){
   try{
     const ms = (availableMonths||[]).slice().sort();
     if(ms.length < 2) return [];
+    const cashNames = new Set(effectiveSplit().cashAccounts.map(b=>b.name));
+    const moveByM = {};
+    (txRows||[]).forEach(r=>{ if(!r.acct) return;
+      let v=0; for(const k in r.acct) if(cashNames.has(k)) v+=Number(r.acct[k])||0;
+      if(v) moveByM[r.month]=(moveByM[r.month]||0)+v; });
     const out = new Array(ms.length);
     let bal = nz(currentCash);
     for(let i = ms.length-1; i >= 0; i--){
       out[i] = bal;
-      bal -= nz(computeSummary(txRows.filter(r=>r.month===ms[i])).net);
+      bal -= nz(moveByM[ms[i]]);
     }
     return out.slice(-(nMonths||12));
   }catch(e){ return []; }
@@ -3107,8 +3129,7 @@ function renderEmergencyFund(){
    แทนการคัดลอกบล็อกทั้งก้อนมาไว้ที่ Overview (ต้นเหตุของข้อมูลซ้ำ) */
 function renderOverviewTiles(s, mk, portVal){
   const el=document.getElementById('ov-tiles'); if(!el) return;
-  const cost=(assets||[]).reduce((t,a)=>t+(a.cost||0),0);
-  const upnl=portVal-cost;
+  const _ur=unrealizedOf(assets), cost=_ur.cost, upnl=_ur.pnl;   // v68 #3
   const R=(typeof loadRisk==='function')?loadRisk():null;
   const RL={normal:['ปกติ','var(--gain)'],elevated:['เริ่มเสี่ยง','var(--debt)'],
             high:['เสี่ยงสูง','var(--loss)'],unknown:['ไม่มีข้อมูล','var(--muted2)']};
@@ -3163,7 +3184,7 @@ function renderActionNeeded(ef){
 
   // ④ reconciliation — ยอดบัญชียัง verify ไม่ได้
   try{
-    const rc = computeReconciliation(bankBals, reconMap);
+    const rc = computeReconciliation(bankBals, reconMap, null, txRows);
     if(!rc.checkedCount) items.push({lv:'warn',
       t:'ยอดบัญชียังไม่เคย verify กับธนาคาร',
       d:`${rc.totalCount} บัญชี · ยอดที่เห็นคือผลรวมธุรกรรมที่กรอกมือ ${(txRows||[]).length.toLocaleString(LOC)} แถว — สร้างชีต Reconcile เพื่อจับรายการตกหล่น`,
@@ -3208,8 +3229,8 @@ function renderActionNeeded(ef){
   // ⑦ เบี้ยประกันที่ครบกำหนดภายใน 30 วัน
   try{
     const now = new Date(); now.setHours(0,0,0,0);
-    const soon = (insPolicies||[]).map(pl=>{
-      const d = pl.renewal instanceof Date ? pl.renewal : null;
+    const soon = (insPolicies||[]).filter(insIsActive).map(pl=>{   // v68 #8 — กรมธรรม์ที่จบแล้วไม่ต้องจ่ายเบี้ย
+      const d = insDate(pl.renewal);   // กู้จาก cache = string → เดิมหลุดเงียบ
       if(!d || isNaN(d)) return null;
       // ใช้ปีปัจจุบันเป็นรอบต่ออายุถัดไป (กรมธรรม์ต่ออายุรายปี)
       const nx = new Date(now.getFullYear(), d.getMonth(), d.getDate());
@@ -3303,6 +3324,15 @@ function renderActionNeeded(ef){
     </div>`;
 }
 
+/* v68 #7 — รายจ่ายตามหมวดแบบมีเครื่องหมาย: เงินคืน (Expense/Bills ยอดบวก) หักออกจากหมวดนั้น
+   เดิมทุกจุด Math.abs ทีละแถว → คืนเงิน ฿500 กลายเป็นรายจ่ายเพิ่ม ฿500 */
+function expenseByKey(rows, keyFn){
+  const m={};
+  (rows||[]).forEach(r=>{ if(r.type!=='Expense'&&r.type!=='Bills') return;
+    const k=keyFn(r); m[k]=(m[k]||0)-(Number(r.amount)||0); });
+  Object.keys(m).forEach(k=>{ if(!(m[k]>0.005)) delete m[k]; });
+  return m;
+}
 function computeSummary(rows){
   let income=0,incomeCount=0,expense=0,expenseCount=0,savings=0,savingsCount=0,debt=0,debtCount=0;
   rows.forEach(r=>{
@@ -3317,8 +3347,14 @@ function computeSummary(rows){
      และไม่นับเงินที่เหลืออยู่ในบัญชีเป็นเงินออม */
   const _sv=savingFromSummary({income,expense,debt});
   const savRate=_sv.rate==null?0:Math.round(_sv.rate);
+  // v68 #12 — savRateUndef: ไม่มีรายรับ = "คำนวณไม่ได้" ไม่ใช่ 0% สีแดง
   return{income,incomeCount,expense,expenseCount,savings,savingsCount,debt,debtCount,net,savRate,
-         spend:_sv.spend, saved:_sv.saved};
+         savRateUndef:_sv.rate==null, spend:_sv.spend, saved:_sv.saved};
+}
+const _srTxt=s=>s.savRateUndef?'—':s.savRate+'%';
+function _srCol(s){
+  if(s.savRateUndef) return 'var(--muted)';
+  return s.savRate>=20?'var(--gain)':s.savRate>=10?'var(--debt)':'var(--loss)';
 }
 
 /* v57 BUGFIX — dropdown เดือนว่างเปล่าเมื่อเปิดแอปจาก cache
@@ -3357,8 +3393,8 @@ function renderCashflow(){
   const netEl=document.getElementById('cf-net');netEl.textContent=fmtSign(s.net);netEl.className='sc-val '+(s.net>=0?'gain':'loss');
   document.getElementById('cf-net-s').textContent=s.net>=0?'surplus':'deficit';
   document.getElementById('cf-debt').textContent=fmt(s.debt);document.getElementById('cf-debt-s').textContent=`${s.debtCount} transactions`;
-  const srEl=document.getElementById('cf-savrate');srEl.textContent=s.savRate+'%';
-  srEl.style.color=s.savRate>=20?'var(--gain)':s.savRate>=10?'var(--debt)':'var(--loss)';
+  const srEl=document.getElementById('cf-savrate');srEl.textContent=_srTxt(s);
+  srEl.style.color=_srCol(s); srEl.title=s.savRateUndef?_L('เดือนนี้ไม่มีรายรับ จึงคำนวณอัตราการออมไม่ได้','No income this month — saving rate is undefined'):'';
 
   // daily chart
   const byDay={};
@@ -3370,13 +3406,12 @@ function renderCashflow(){
   const days=Object.keys(byDay).sort();
   mkBarChart('cf-daily-chart',days.map(d=>d.slice(8)),[
     {label:'Income',data:days.map(d=>byDay[d].inc),backgroundColor:'rgba(0,212,160,.7)',borderRadius:3,borderSkipped:false},
-    {label:'Expense',data:days.map(d=>Math.abs(byDay[d].exp)),backgroundColor:'rgba(255,64,96,.7)',borderRadius:3,borderSkipped:false}
+    {label:'Expense',data:days.map(d=>Math.max(0,-byDay[d].exp)),backgroundColor:'rgba(255,64,96,.7)',borderRadius:3,borderSkipped:false}
   ]);
   document.getElementById('cf-daily-range').textContent=`${days.length} days`;
 
   // donut
-  const catMap={};
-  rows.forEach(r=>{if(r.type!=='Expense'&&r.type!=='Bills')return;catMap[r.category||'Other']=(catMap[r.category||'Other']||0)+Math.abs(r.amount);});
+  const catMap=expenseByKey(rows, r=>r.category||'Other');   // v68 #7
   const cSorted=Object.entries(catMap).sort((a,b)=>b[1]-a[1]);
   const cTotal=cSorted.reduce((s,[,v])=>s+v,0);
   document.getElementById('cf-donut-val').textContent=fmt(cTotal);
@@ -3384,15 +3419,14 @@ function renderCashflow(){
     const cl=cSorted.map(([k])=>k),cv=cSorted.map(([,v])=>v),cc=cl.map((_,i)=>EXP_COLORS[i%EXP_COLORS.length]);
     mkDonut('cf-donut-chart',cl,cv,cc);
     document.getElementById('cf-donut-legend').innerHTML=cSorted.slice(0,8).map(([cat,val],i)=>`
-      <div class="ar"><div class="al-left"><div class="al-dot" style="background:${cc[i]}"></div><span>${cat}</span></div>
+      <div class="ar"><div class="al-left"><div class="al-dot" style="background:${cc[i]}"></div><span>${escHtml(cat)}</span></div>
       <div class="al-pct" style="font-size:11px;color:var(--text)">${fmt(val)}</div></div>`).join('');
   }
 
   // top 3 spend days
   const MONTHS_SHORT=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const fmtTopDate=ds=>{const[,m,d]=ds.split('-');return MONTHS_SHORT[+m-1]+'-'+d;};
-  const dayExp={};
-  rows.forEach(r=>{if(r.type==='Expense'||r.type==='Bills')dayExp[r.dateStr]=(dayExp[r.dateStr]||0)+Math.abs(r.amount);});
+  const dayExp=expenseByKey(rows, r=>r.dateStr);   // v68 #7
   const top3=Object.entries(dayExp).sort((a,b)=>b[1]-a[1]).slice(0,3);
   const maxA=top3[0]?.[1]||1;
   document.getElementById('cf-top-days').innerHTML=top3.map(([date,amt],i)=>
@@ -3451,10 +3485,10 @@ function renderYearly(){
   // All-years table
   document.getElementById('yr-body').innerHTML=years.map(yr=>{
     const s=computeSummary(txRows.filter(r=>r.year===yr));
-    const rc=s.savRate>=20?'var(--gain)':s.savRate>=10?'var(--debt)':'var(--loss)';
+    const rc=_srCol(s);   // v68 #12
     /* #4 — savRate can now legitimately be negative (overspending month).
        Clamp to 0 so we never emit an invalid CSS `width:-40%`. */
-    const bw=clampPct(s.savRate*2);   // #11 unified on clampPct (savRate may be negative)
+    const bw=s.savRateUndef?0:clampPct(s.savRate*2);   // #11 unified on clampPct (savRate may be negative)
     return `<tr>
       <td>${yr}</td>
       <td style="color:var(--gain)">${fmt(s.income)}</td>
@@ -3463,7 +3497,7 @@ function renderYearly(){
       <td style="color:var(--debt)" title="${(()=>{const d=debtSplit(txRows.filter(r=>r.year===yr),bankBals);
         return `รูดบัตร ${fmt(Math.abs(d.card))} · ผ่อน/ใช้หนี้ ${fmt(Math.abs(d.loan))}`;})()}">${fmt(Math.abs(s.debt))}</td>
       <td class="${s.net>=0?'pp':'pn'}">${fmtSign(s.net)}</td>
-      <td><div style="color:${rc}">${s.savRate}%</div><div class="savrate-bar"><div class="savrate-fill" style="width:${bw}%"></div></div></td>
+      <td><div style="color:${rc}">${_srTxt(s)}</div><div class="savrate-bar"><div class="savrate-fill" style="width:${bw}%"></div></div></td>
     </tr>`;
   }).join('');
 
@@ -3494,12 +3528,11 @@ function renderYearlySelected(yr){
   { const d=debtSplit(rows,bankBals);
     document.getElementById('yrs-debt-s').textContent=
       `รูดบัตร ${fmt(Math.abs(d.card))} · ผ่อน/ใช้หนี้ ${fmt(Math.abs(d.loan))}`; }
-  const srEl=document.getElementById('yrs-savrate');srEl.textContent=s.savRate+'%';
-  srEl.style.color=s.savRate>=20?'var(--gain)':s.savRate>=10?'var(--debt)':'var(--loss)';
+  const srEl=document.getElementById('yrs-savrate');srEl.textContent=_srTxt(s);
+  srEl.style.color=_srCol(s);   // v68 #12
 
   // Expense breakdown donut
-  const catMap={};
-  rows.forEach(r=>{if(r.type!=='Expense'&&r.type!=='Bills')return;catMap[r.category||'Other']=(catMap[r.category||'Other']||0)+Math.abs(r.amount);});
+  const catMap=expenseByKey(rows, r=>r.category||'Other');   // v68 #7
   const cSorted=Object.entries(catMap).sort((a,b)=>b[1]-a[1]);
   const cTotal=cSorted.reduce((s,[,v])=>s+v,0);
   document.getElementById('yrs-donut-val').textContent=fmt(cTotal);
@@ -3507,7 +3540,7 @@ function renderYearlySelected(yr){
     const cl=cSorted.map(([k])=>k),cv=cSorted.map(([,v])=>v),cc=cl.map((_,i)=>EXP_COLORS[i%EXP_COLORS.length]);
     mkDonut('yrs-donut',cl,cv,cc);
     document.getElementById('yrs-donut-legend').innerHTML=cSorted.slice(0,8).map(([cat,val],i)=>`
-      <div class="ar"><div class="al-left"><div class="al-dot" style="background:${cc[i]}"></div><span>${cat}</span></div>
+      <div class="ar"><div class="al-left"><div class="al-dot" style="background:${cc[i]}"></div><span>${escHtml(cat)}</span></div>
       <div class="al-pct" style="font-size:11px;color:var(--text)">${fmt(val)}</div></div>`).join('');
   }
 
@@ -3534,7 +3567,7 @@ function renderReconciliation(){
   const el = document.getElementById('acc-recon');
   if(!el) return null;
 
-  const r = computeReconciliation(bankBals, reconMap);
+  const r = computeReconciliation(bankBals, reconMap, null, txRows);
 
   /* BUGFIX v48 #15 — ถ้าผู้ใช้กรอกชีต Reconcile แล้วแต่สะกดชื่อบัญชีไม่ตรงกับ
      หัวคอลัมน์ในชีต Transaction ระบบจะทิ้งแถวนั้นเงียบ แล้วยังขึ้นข้อความ
@@ -3578,7 +3611,7 @@ function renderReconciliation(){
     return `<tr>
       <td style="padding:7px 10px">${escHtml(a.name)}
         ${a.note?`<div style="font-size:10px;color:var(--muted2)">${escHtml(a.note)}</div>`:''}</td>
-      <td class="nr" style="padding:7px 10px">${fmt(a.computed)}</td>
+      <td class="nr" style="padding:7px 10px">${fmt(a.computed)}${a.after?`<div style="font-size:9.5px;color:var(--muted2)">${_L('ณ','as of')} ${escHtml(a.date||'')} · ${_L('หลังจากนั้น','since')} ${fmtSign(a.after)}</div>`:''}</td>
       <td class="nr" style="padding:7px 10px">${fmt(a.actual)}</td>
       <td class="nr" style="padding:7px 10px;color:${dc};font-weight:${a.ok?'400':'600'}">
         ${a.ok?'✓':fmtSign(a.diff)}</td></tr>`;
@@ -3600,7 +3633,7 @@ function renderReconciliation(){
       <table style="width:100%;border-collapse:collapse;font-size:12px">
         <thead><tr style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted2)">
           <th style="text-align:left;padding:8px 10px;font-weight:600">บัญชี</th>
-          <th style="text-align:right;padding:8px 10px;font-weight:600">คำนวณได้</th>
+          <th style="text-align:right;padding:8px 10px;font-weight:600" title="ยอดคำนวณ ณ วันที่จดยอดจริง (ไม่นับรายการหลังวันนั้น)">คำนวณได้</th>
           <th style="text-align:right;padding:8px 10px;font-weight:600">ยอดจริง</th>
           <th style="text-align:right;padding:8px 10px;font-weight:600">ต่าง</th>
         </tr></thead>
@@ -3618,14 +3651,15 @@ function renderReconciliation(){
 
 function renderAccounts(){
   // v48 — ยอดรวมต้องเป็นชุดเดียวกับที่ Overview/Debt ใช้ ไม่งั้นสองหน้าไม่ตรงกัน
-  const total=effectiveBals().reduce((s,b)=>s+b.balance,0);
+  const _eff=effectiveBals();   // v68 #4 — การ์ด · โดนัท · กราฟสิ้นปี ใช้ชุดเดียวกับยอดรวม
+  const total=_eff.reduce((s,b)=>s+b.balance,0);
   document.getElementById('acc-total').textContent=fmt(total);
   document.getElementById('acc-total').style.color=total<0?'var(--loss)':'var(--income)';
-  try{ const _sb=splitBalances(effectiveBals()); const _sub=document.getElementById('acc-total-sub');
+  try{ const _sb=splitBalances(_eff); const _sub=document.getElementById('acc-total-sub');
        if(_sub) _sub.textContent=_sb.liabilities>0
          ? `เงินสด ${fmt(_sb.cash)} − หนี้ในบัญชี ${fmt(_sb.liabilities)}` : 'ไม่มีหนี้ค้างในบัญชี'; }catch(e){}
   try{ renderReconciliation(); }catch(e){ console.warn('[v44] recon:', e.message); }
-  const active=bankBals.filter(b=>b.balance!==0);
+  const active=_eff.filter(b=>b.balance!==0);
   // Assign accent color + badge style by account type
   const BANK_ACCENT={
     'Bank Account':  {color:'#4cc9f0', badge:'background:rgba(76,201,240,.15);color:#4cc9f0;border:1px solid rgba(76,201,240,.3)', icon:'🏦'},
@@ -3672,7 +3706,7 @@ function renderAccounts(){
         <span class="bank-type-badge" style="${meta.badge}">${accType==='Bank Account'?'BANK':accType==='Credit Card'?'CREDIT':accType==='E-Wallet'?'WALLET':accType==='Loan'?'LOAN':'TRAVEL'}</span>
       </div>
       <div class="bank-val" style="color:${valColor}">${fmt(b.balance)}</div>
-      <div class="bank-type" style="color:${meta.color};opacity:.7">${meta.icon} ${accType}</div>
+      <div class="bank-type" style="color:${meta.color};opacity:.7">${meta.icon} ${accType}${b.reconDate?` · <span title="${escAttr(_L('ยอดจริงจากชีต Reconcile วันที่ ','Bank balance from the Reconcile sheet on ')+b.reconDate)}">✓</span>`:''}</div>
     </div>`;
   }).join('');
 
@@ -3689,7 +3723,7 @@ function renderAccounts(){
 
   // ── Year-end balance calculation ──
   // Reconstruct year-end cash by working backwards from current balance
-  const current=bankBals.reduce((s,b)=>s+b.balance,0);
+  const current=total;
 
   // Sum net flows per year — Transfer excluded (internal account moves, net=0 by definition)
   const flowByYear={};
@@ -3852,7 +3886,7 @@ function renderLocationGrid(){
       const more = v.tickers.length > 5 ? ` +${v.tickers.length-5}` : '';
       return `<div style="padding:8px 0;border-bottom:0.5px solid var(--border)">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-          <span style="font-size:12px;color:var(--white);font-weight:500">${plat}</span>
+          <span style="font-size:12px;color:var(--white);font-weight:500">${escHtml(plat)}</span>
           <div style="display:flex;align-items:center;gap:8px">
             <span style="font-size:11px;color:var(--muted2)">${pct}%</span>
             <span style="font-size:12px;color:var(--white);font-weight:500">${fmt(v.val)}</span>
@@ -3861,7 +3895,7 @@ function renderLocationGrid(){
         <div style="height:3px;background:var(--border);border-radius:2px;overflow:hidden;margin-bottom:4px">
           <div style="height:3px;width:${barW}%;background:${col};border-radius:2px"></div>
         </div>
-        <div style="font-size:10px;color:var(--muted)">${tickers}${more}</div>
+        <div style="font-size:10px;color:var(--muted)">${escHtml(tickers)}${more}</div>
       </div>`;
     }).join('');
 
@@ -3981,8 +4015,10 @@ function buildPerfFlows(){
   const flows=[], byTk={};
   tracker.forEach(r=>{
     let cf=null;
-    if(r.txType==='Buy') cf=-Math.abs(r.amtTHB);
-    else if(r.txType==='Sell') cf=+Math.abs(r.amtTHB);
+    // v68 #10 — เงินออกจริงรวมค่าธรรมเนียม (trueCost) · เงินเข้าจริงหลังหักค่าธรรมเนียมขาย (netProceeds)
+    //           เดิมใช้ยอดในชีตตรง ๆ → ค่าธรรมเนียมที่แยกช่องหายไปจาก XIRR/TWR/เงินลงไป
+    if(r.txType==='Buy') cf=-Math.abs(r.trueCost||r.amtTHB);
+    else if(r.txType==='Sell') cf=+(r.netProceeds!=null?r.netProceeds:Math.abs(r.amtTHB));
     else if(r.txType==='Dividend Payout') cf=+Math.abs(r.amtTHB);
     if(cf===null || cf===0 || !r.date) return;
     const item={t:r.date.getTime(), v:cf};
@@ -4032,7 +4068,7 @@ function logValueSnapshot(totalVal){
        เพื่อไม่ให้ computeTWR / benchmark ที่อ่านอยู่แล้วเปลี่ยนพฤติกรรม */
     try{
       const _s = effectiveSplit();
-      const _insCV = (insPolicies||[]).reduce((s,pl)=>s+(pl.surrender||0), 0);
+      const _insCV = insCashValue();   // v68 #8
       const _nw = _s.cash - _s.liabilities + totalVal + _insCV;
       if(isFinite(_nw)){ entry.nw = Math.round(_nw);
                          entry.cash = Math.round(_s.cash);
@@ -4072,7 +4108,7 @@ const VLOG_PURGED_KEY = 'finOS_valueLogPurged_v44';
 //   ฟังก์ชันหาย  → BLOCK  (แอปคำนวณผิดแน่นอน — นี่คือสิ่งที่ guard มีไว้จับ)
 //   เลขไม่ตรง    → WARN   (แค่ลืม bump — log ไว้ ไม่รบกวนผู้ใช้)
 // ฟังก์ชันที่ต้องมีคือสัญญาจริงระหว่างสองไฟล์ ส่วนสตริงเวอร์ชันเป็นแค่ป้าย
-const EXPECTED_SHARED_BUILD = 'v67';
+const EXPECTED_SHARED_BUILD = 'v68';
 const REQUIRED_SHARED_FNS = [
   'resolvePrices', 'pipelinePricesTHB', 'parseReconcileRows',
   'computeReconciliation', 'splitBalances', 'debtVsInvest', 'buildDebtPlan',
@@ -4088,6 +4124,7 @@ const REQUIRED_SHARED_FNS = [
   'valueLogJumps', 'cleanSheetSpikesV62',                     // v62 — ด่านคุณภาพ Value_Log
   'rebalancePlan', 'getRebalTargets', 'getRebalOpts', 'rebalLot',   // v66 — ปรับสมดุล
   'loadFundamentals', 'fetchFundamentals', 'fundOf', 'dividendCalendar', 'divFrequency',   // v66 — research/ปันผล
+  'runningCostBasis', 'sellFeeToDeduct', 'movementAfter',   // v68 — ต้นทุนถือครอง · ค่าธรรมเนียมขาย · reconcile
   'notifyDecrypt', 'mergeNotifications', 'notifUnread', 'notifLocalAdd', 'notifCategory', 'b64ToBytes', 'bytesToB64',   // v67
   'loadBotPaper', 'fetchBotPaper', 'botStatus',   // v59 — หน้าบอทจำลอง
 ];
@@ -4288,14 +4325,16 @@ function renderPerformance(totalVal){
 function renderPortfolio(){
   const totalVal=assets.reduce((s,a)=>s+a.val,0);
   const totalCost=assets.reduce((s,a)=>s+a.cost,0);
-  const unrealPnl=totalVal-totalCost;
+  const _ur=unrealizedOf(assets);           // v68 #3 — เทียบเฉพาะตัวที่มีราคา
+  const unrealPnl=_ur.pnl;
   const realPnl=realized.reduce((s,r)=>s+r.pnl,0);
   document.getElementById('pf-val').textContent=fmt(totalVal);
   document.getElementById('pf-assets').textContent=`${assets.length} assets`;
   document.getElementById('pf-cost').textContent=fmt(totalCost);
   document.getElementById('pf-fee-sub').textContent=`ค่าธรรมเนียมฝั่งซื้อ ${fmt(feeStats(tracker).buyFees)}`;
   const upEl=document.getElementById('pf-upnl');upEl.textContent=fmtSign(unrealPnl);upEl.className='sc-val '+(unrealPnl>=0?'gain':'loss');
-  document.getElementById('pf-upnl-pct').textContent=fmtPct(totalCost?unrealPnl/totalCost*100:0);
+  document.getElementById('pf-upnl-pct').textContent=fmtPct(_ur.pct||0)
+    +(_ur.nUnpriced?' · '+_L(`ไม่นับ ${_ur.nUnpriced} ตัวที่ไม่มีราคา (ทุน ${fmt(_ur.unpricedCost)})`,`excl. ${_ur.nUnpriced} unpriced (cost ${fmt(_ur.unpricedCost)})`):'');
   const rpEl=document.getElementById('pf-rpnl');rpEl.textContent=fmtSign(realPnl);rpEl.className='sc-val '+(realPnl>=0?'gain':'loss');
   document.getElementById('pf-rpnl-s').textContent=`${realized.length} sell tx`;
   try{ renderPerformance(totalVal); }catch(e){ console.error('[Perf]', e); }
@@ -4314,7 +4353,7 @@ function renderPortfolio(){
   const pTotal=pSorted.reduce((s,[,v])=>s+v.val,0);
   document.getElementById('pf-plat-grid').innerHTML=pSorted.map(([p,v])=>{
     const pct=pTotal>0?(v.val/pTotal*100).toFixed(1):0;
-    return `<div class="plat-card"><div class="bank-name">${p}</div>
+    return `<div class="plat-card"><div class="bank-name">${escHtml(p)}</div>
       <div class="bank-val ${v.val>=0?'':''}" style="font-size:15px;color:var(--white)">${fmt(v.val)}</div>
       <div style="font-size:10px;color:var(--muted2);margin-top:2px;display:flex;justify-content:space-between"><span>${v.n} assets</span><span>${pct}%</span></div>
       <div class="plat-bar-wrap"><div class="plat-bar" style="width:${clampPct(pct)}%"></div></div></div>`;
@@ -4342,8 +4381,8 @@ function renderAssetTable(){
     return `<tr>
       <td class="tk">${escHtml(a.ticker)}${bs}</td>
       <td><span class="tp ${BADGE[a.group]||'badge-other'}">${escHtml(a.group)}</span></td>
-      <td style="font-size:11px;color:var(--muted2)">${a.platform}</td>
-      <td class="ind" title="${a.industry}">${a.industry}</td>
+      <td style="font-size:11px;color:var(--muted2)">${escHtml(a.platform)}</td>
+      <td class="ind" title="${escAttr(a.industry)}">${escHtml(a.industry)}</td>
       <td class="nr">${a.qty%1===0?a.qty.toLocaleString(LOC):fmtN(a.qty)}</td>
       <td class="nr">${a.wacc>0?fmtN(a.wacc):'—'}</td>
       <td class="nr">${a.cur>0?fmtN(a.cur):'—'}</td>
@@ -4445,11 +4484,18 @@ function buildEngineMonths(){
     // (เดิม Math.abs เฉพาะ Expense/Bills → ไม่นับยอดรูดบัตร และนับเงินคืนเป็นรายจ่าย)
     else if(SPEND_TX_TYPES.includes(r.type)) m.exp+=-r.amount;
   });
-  tracker.filter(r=>TX_BUY.includes(r.txType)).forEach(r=>{
-    if(!r.date) return;
-    const mk=`${r.date.getFullYear()}-${String(r.date.getMonth()+1).padStart(2,'0')}`;
-    touch(mk).invested+=Math.abs(r.amtTHB);
-  });
+  /* v68 #5 — "ลงทุนจริง" = เงินใหม่ที่ใส่เข้าพอร์ต ไม่ใช่ยอดซื้อทั้งหมด
+     ขาย A ฿100k แล้วซื้อ B ฿100k เดิมนับเป็นลงทุนเพิ่ม ฿100k → invest rate เกินจริง
+     ตอนนี้ยอดขาย (สุทธิ) เข้า "กองเงินรอซื้อ" ก่อน การซื้อครั้งถัดไปใช้กองนี้ก่อน ส่วนที่เกินจึงเป็นเงินใหม่ */
+  let pool=0;
+  tracker.filter(r=>r.date && (TX_BUY.includes(r.txType)||TX_SELL.includes(r.txType)))
+    .slice().sort((a,b)=>a.date-b.date).forEach(r=>{
+      const mk=`${r.date.getFullYear()}-${String(r.date.getMonth()+1).padStart(2,'0')}`;
+      if(TX_SELL.includes(r.txType)){ pool+=r.netProceeds!=null?r.netProceeds:Math.abs(r.amtTHB); return; }
+      const amt=Math.abs(r.trueCost||r.amtTHB||0), fromPool=Math.min(pool,amt);
+      pool-=fromPool;
+      touch(mk).invested+=amt-fromPool;
+    });
   return Object.values(byM).sort((a,b)=>a.mk.localeCompare(b.mk)).map(m=>{
     const surplus=m.inc-m.exp;
     return {...m, surplus,
@@ -4473,7 +4519,7 @@ function renderEngine(){
   setT('we-sav', savR.toFixed(1)+'%');
   setT('we-sav-s', `เก็บได้ ${fmt(sur12)} จากรายได้ ${fmt(inc12)} · เดือนล่าสุด ${last.savRate.toFixed(0)}%`);
   setT('we-inv', invR.toFixed(1)+'%');
-  setT('we-inv-s', `ลงทุนจริง ${fmt(inv12)} · เฉลี่ย ${fmt(inv12/L12.length)}/เดือน`);
+  setT('we-inv-s', `เงินใหม่ที่ลงทุน ${fmt(inv12)} · เฉลี่ย ${fmt(inv12/L12.length)}/เดือน (ไม่นับเงินจากการขายที่ซื้อวนใหม่)`);
   setT('we-gap', fmt(Math.max(0,idle12/L12.length))+'/เดือน');
   setT('we-gap-s', idle12>0
     ? `รวม 12 เดือน ${fmt(idle12)} = ${(savR-invR).toFixed(1)}pp ของรายได้ที่ยังไม่ได้ทำงาน`
@@ -4501,12 +4547,13 @@ function renderEngine(){
   const pv=assets.reduce((s,a)=>s+a.val,0);
   const goalAmt=nextMilestone(pv);          // หมุดหมายถัดไป (ไม่ใช่เลข hardcode)
   const monthlyNow=inv12/L12.length, monthlyIfDeploy=monthlyNow+Math.max(0,idle12/L12.length);
-  const r=cfg.expectedReturn/100/12;        // สมมติฐานเดียวกับ Overview
+  // v68 #17 — monthsToGoal() สูตรเดียวกับ Overview/FIRE Analyst (ดอกเบี้ยรายเดือนแบบทบต้นจริง)
+  //           เดิมใช้ r/12 ตรง ๆ → ETA หน้านี้เร็วกว่าหน้าอื่นเล็กน้อย
   const monthsTo=(pmt)=>{
+    if(pv>=goalAmt) return 0;
     if(pmt<=0) return Infinity;
-    let v=pv, n=0;
-    while(v<goalAmt && n<1200){ v=v*(1+r)+pmt; n++; }
-    return n;
+    const m=monthsToGoal({netWorth:pv, goal:goalAmt, contrib:pmt, annualPct:cfg.expectedReturn, investedShare:1, max:1200});
+    return m==null?Infinity:m;
   };
   const mNow=monthsTo(monthlyNow), mDeploy=monthsTo(monthlyIfDeploy);
   const el=document.getElementById('we-insight');
@@ -4796,7 +4843,7 @@ function _ntEnv(){
            perm: 'Notification' in window ? Notification.permission : 'unsupported', ios, standalone };
 }
 async function ntGenKeys(){
-  if(_ntKey() && !confirm(_L('สร้างกุญแจชุดใหม่? history เดิมที่เข้ารหัสด้วยกุญแจเก่าจะอ่านไม่ได้ และทุกเครื่องต้องลงทะเบียน push ใหม่','Create new keys? Existing history encrypted with the old key becomes unreadable, and every device must re-register for push'))) return;
+  if(_ntKey() && !confirm(_L('สร้างกุญแจชุดใหม่?\n• history เดิมที่เข้ารหัสด้วยกุญแจเก่าจะอ่านไม่ได้\n• ต้องอัปเดต secrets ทั้ง 3 ตัว: NOTIFY_KEY · VAPID_PRIVATE_KEY · PUSH_SUBSCRIPTIONS\n• ทุกเครื่องต้องกด "เปิดการแจ้งเตือน" ใหม่','Create new keys?\n• History encrypted with the old key becomes unreadable\n• Update all 3 secrets: NOTIFY_KEY · VAPID_PRIVATE_KEY · PUSH_SUBSCRIPTIONS\n• Every device must press "Turn on notifications" again'))) return;
   const k=crypto.getRandomValues(new Uint8Array(32));
   const kp=await crypto.subtle.generateKey({name:'ECDSA',namedCurve:'P-256'}, true, ['sign','verify']);
   const jwk=await crypto.subtle.exportKey('jwk', kp.privateKey);
@@ -4804,6 +4851,7 @@ async function ntGenKeys(){
   localStorage.setItem(NOTIF_KEY_LS, bytesToB64(k));
   localStorage.setItem(VAPID_PUB_LS, bytesToB64(pub, true));
   _nt.newVapidPriv=jwk.d;            // แสดงครั้งเดียว ไม่เก็บลงเครื่อง
+  _nt.sub=null; localStorage.removeItem('finOS_pushReg');  // ผูกกับกุญแจเก่า → ขั้น 2 ใหม่
   await _ntRebuild(); renderNotify();
 }
 function ntSaveKey(){
@@ -4812,19 +4860,59 @@ function ntSaveKey(){
   localStorage.setItem(NOTIF_KEY_LS, v.trim()); if(p.trim()) localStorage.setItem(VAPID_PUB_LS, p.trim());
   _ntRebuild().then(renderNotify);
 }
-async function ntSubscribe(){
+async function ntSubscribe(force){
   const env=_ntEnv(), pub=localStorage.getItem(VAPID_PUB_LS);
   if(!env.push){ alert(env.ios&&!env.standalone?_L('iPhone/iPad: กดปุ่มแชร์ → "เพิ่มไปยังหน้าจอโฮม" แล้วเปิดแอปจากไอคอนก่อน (iOS 16.4 ขึ้นไป)','iPhone/iPad: tap Share → "Add to Home Screen", then open the app from the icon (iOS 16.4+)'):_L('เบราว์เซอร์นี้ไม่รองรับการแจ้งเตือนแบบ push','This browser does not support push notifications')); return; }
   if(!pub){ alert(_L('ยังไม่มีกุญแจ — ทำขั้นที่ 1 ก่อน','No keys yet — do step 1 first')); return; }
   const perm=await Notification.requestPermission();
   if(perm!=='granted'){ renderNotify(); return; }
   const reg=await navigator.serviceWorker.ready;
-  let sub=await reg.pushManager.getSubscription();
-  if(sub){ const cur=sub.options&&sub.options.applicationServerKey?bytesToB64(new Uint8Array(sub.options.applicationServerKey),true):null;
-           if(cur && cur!==pub){ await sub.unsubscribe(); sub=null; } }
-  if(!sub) sub=await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:b64ToBytes(pub)});
-  _nt.sub=JSON.stringify(sub.toJSON()); renderNotify();
+  // v67.2 — ลงทะเบียนครั้งเดียวแล้วใช้ตลอด: ถ้าเครื่องนี้ลงทะเบียนด้วยกุญแจชุดปัจจุบันอยู่แล้ว → ใช้อันเดิม
+  // (secret PUSH_SUBSCRIPTIONS ไม่ต้องแก้) · ลงทะเบียนใหม่เฉพาะเมื่อกุญแจเปลี่ยน/ไม่รู้ว่าผูกกับกุญแจไหน/สั่ง force
+  // ไม่รู้ = subscription จากก่อน v67.1 (iOS อ่าน options.applicationServerKey ไม่ได้เสมอไป) → ต้องทำใหม่หนึ่งครั้ง
+  let old=null; try{ old=await reg.pushManager.getSubscription(); }catch(e){}
+  if(old && !force && _ntSubPub(old)===pub){
+    _ntRegSave(old, pub); _nt.sub=_ntSubJson(old, pub); _nt.reused=true; renderNotify(); return;
+  }
+  try{ if(old) await old.unsubscribe(); }catch(e){}
+  let sub;
+  try{ sub=await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:b64ToBytes(pub)}); }
+  catch(e){ alert(_L('ลงทะเบียน push ไม่สำเร็จ: ','Push registration failed: ')+(e&&e.message||e)); return; }
+  _ntRegSave(sub, pub); _nt.sub=_ntSubJson(sub, pub); _nt.reused=false; _nt.changed=false; renderNotify();
 }
+// กุญแจที่ subscription นี้ผูกอยู่: จากที่บันทึกตอนลงทะเบียน (endpoint ตรงกัน) หรือจาก browser ถ้าอ่านได้
+const PUSH_REG_LS='finOS_pushReg';
+function _ntSubPub(sub){
+  const r=_ls.get(PUSH_REG_LS, null);
+  if(r && r.endpoint===sub.endpoint && r.pub) return r.pub;
+  const k=sub.options&&sub.options.applicationServerKey;
+  return k?bytesToB64(new Uint8Array(k),true):null;
+}
+function _ntRegSave(sub, pub){ _ls.set(PUSH_REG_LS, {endpoint:sub.endpoint, pub, at:new Date().toISOString()}); }
+// เปิดแอปแต่ละครั้ง: แค่ "ตรวจ" ไม่ลงทะเบียนใหม่ — ถ้า browser เปลี่ยน/ยกเลิก subscription เอง (เกิดได้นาน ๆ ครั้ง) ค่อยเตือน
+async function ntCheckPush(){
+  const r=_ls.get(PUSH_REG_LS, null);
+  if(!r || !('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  try{
+    const reg=await navigator.serviceWorker.ready, cur=await reg.pushManager.getSubscription();
+    if(cur && cur.endpoint===r.endpoint) return;                     // ปกติ: ใช้ได้ต่อ ไม่ต้องทำอะไร
+    _nt.changed=true;
+    if(cur && _ntSubPub(cur)===null && r.pub){ _ntRegSave(cur, r.pub); }  // SW ลงทะเบียนต่อให้ด้วยกุญแจเดิม
+    notifyApp('push-changed-'+(cur?cur.endpoint.slice(-12):'none'),
+      _L('การลงทะเบียนแจ้งเตือนของเครื่องนี้เปลี่ยน','This device\'s push registration changed'),
+      cur?_L('ระบบลงทะเบียนต่อให้แล้ว — เปิด ⚙ ขั้น 2 คัดลอกไปแทน secret PUSH_SUBSCRIPTIONS ครั้งเดียว','It was renewed automatically — open ⚙ step 2 and copy it into the PUSH_SUBSCRIPTIONS secret once')
+         :_L('เปิด ⚙ ขั้น 2 กด "เปิดการแจ้งเตือน" แล้วคัดลอกไปแทน secret PUSH_SUBSCRIPTIONS','Open ⚙ step 2, press "Turn on notifications" and copy it into the PUSH_SUBSCRIPTIONS secret'),
+      'notify');
+  }catch(e){ console.warn('[notif] ตรวจ push ไม่ได้:', e.message); }
+}
+setTimeout(ntCheckPush, 4000);
+// แนบกุญแจสาธารณะที่ใช้ลงทะเบียน → Actions เทียบกับ VAPID_PRIVATE_KEY ได้ก่อนส่ง (pywebpush ไม่สนใจฟิลด์นี้)
+function _ntSubJson(sub, pub){
+  const o=sub.toJSON(); delete o.expirationTime;
+  if(pub) o.vapidPub=pub;
+  return JSON.stringify(o);
+}
+const _ntFp=p=>p?'…'+p.slice(-8):'—';
 async function ntTestLocal(){
   if(!('Notification' in window) || Notification.permission!=='granted'){ alert(_L('ยังไม่ได้อนุญาตการแจ้งเตือน — ทำขั้นที่ 2 ก่อน','Notifications are not allowed yet — do step 2 first')); return; }
   const reg=await navigator.serviceWorker.ready;
@@ -4850,7 +4938,8 @@ async function _ntSetup(el){
   if(!el) return;
   const env=_ntEnv(), key=_ntKey(), pub=localStorage.getItem(VAPID_PUB_LS)||'';
   if(!_nt.sub && env.push && Notification.permission==='granted'){
-    try{ const reg=await navigator.serviceWorker.getRegistration(); const s=reg&&await reg.pushManager.getSubscription(); if(s) _nt.sub=JSON.stringify(s.toJSON()); }catch(e){}
+    try{ const reg=await navigator.serviceWorker.getRegistration(); const s=reg&&await reg.pushManager.getSubscription();
+      if(s) _nt.sub=_ntSubJson(s, _ntSubPub(s)); }catch(e){}
   }
   const st=(ok,th,en)=>`<span class="nt-st ${ok?'ok':'no'}">${ok?'✓':'•'} ${_L(th,en)}</span>`;
   const secret=(name,val,note)=>`<div class="nt-sec"><div class="nt-sec-h"><code>${name}</code>${note?`<span>${note}</span>`:''}</div>
@@ -4866,6 +4955,8 @@ async function _ntSetup(el){
       </div>
       ${key?secret('NOTIFY_KEY',key,_L('ถอดรหัส history','decrypts history')):''}
       ${_nt.newVapidPriv?secret('VAPID_PRIVATE_KEY',_nt.newVapidPriv,_L('⚠ แสดงครั้งเดียว — คัดลอกตอนนี้ ไม่ได้เก็บในเครื่อง','⚠ shown once — copy it now, it is not stored on this device')):''}
+      ${pub?`<div class="nt-p" style="margin-top:6px">${_L('รหัสตรวจกุญแจ','Key check code')}: <code>${_ntFp(pub)}</code> — ${_L('log ของ Actions ต้องขึ้นเลขเดียวกัน (VAPID รหัสตรวจ)','the Actions log must show the same code (VAPID รหัสตรวจ)')}</div>`:''}
+      ${_nt.newVapidPriv?`<div class="nt-p nt-warn">⚠ ${_L('อัปเดต secrets ให้ครบทั้ง 3 ตัว (NOTIFY_KEY · VAPID_PRIVATE_KEY · PUSH_SUBSCRIPTIONS จากขั้น 2) — วางค่าตามที่คัดลอก ไม่ต้องใส่เครื่องหมายคำพูด','Update all 3 secrets (NOTIFY_KEY · VAPID_PRIVATE_KEY · PUSH_SUBSCRIPTIONS from step 2) — paste exactly as copied, without quotes')}</div>`:''}
       ${pub?`<div class="nt-p" style="margin-top:6px">${_L('ไม่บังคับ: secret','Optional: secret')} <code>VAPID_SUBJECT</code> = <code>mailto:อีเมลของคุณ</code></div>`:''}
       <details class="nt-p" style="margin-top:6px"><summary>${_L('มีกุญแจอยู่แล้ว? ใส่เอง','Already have a key? Enter it')}</summary>
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"><input id="nt-key-in" class="rb-amt" style="width:260px" placeholder="NOTIFY_KEY (base64)">
@@ -4876,7 +4967,17 @@ async function _ntSetup(el){
       <div class="nt-h">${_L('เปิดแจ้งเตือนบนเครื่องนี้','Enable push on this device')} ${st(!!_nt.sub,'ลงทะเบียนแล้ว','registered')}</div>
       <div class="nt-p">${_L('สิทธิ์การแจ้งเตือน','Permission')}: <strong>${permTxt}</strong>
         ${env.ios&&!env.standalone?`<br>📱 ${_L('iPhone/iPad: ต้อง "เพิ่มไปยังหน้าจอโฮม" แล้วเปิดจากไอคอนก่อน (iOS 16.4+)','iPhone/iPad: "Add to Home Screen" and open from the icon first (iOS 16.4+)')}`:''}</div>
-      <button type="button" class="rb-btn primary" style="margin:8px 0" onclick="ntSubscribe()">🔔 ${_L('เปิดการแจ้งเตือน','Turn on notifications')}</button>
+      ${(()=>{ let sp=null; try{ sp=_nt.sub&&JSON.parse(_nt.sub).vapidPub; }catch(e){}
+        const ok=!!sp&&sp===pub&&!_nt.changed;
+        return ok
+          ? `<div class="nt-p" style="margin:8px 0">✅ ${_L('เครื่องนี้ลงทะเบียนเรียบร้อย — ใช้ได้ตลอด ไม่ต้องทำซ้ำทุกครั้งที่เปิดแอป · secret PUSH_SUBSCRIPTIONS ใส่ครั้งเดียวพอ','This device is registered — it keeps working; no need to redo it each time you open the app · set the PUSH_SUBSCRIPTIONS secret once')}${_nt.reused?' · '+_L('(กดซ้ำ = ใช้อันเดิม ค่าไม่เปลี่ยน)','(pressing again reuses it — value unchanged)'):''}</div>
+             <button type="button" class="rb-btn" style="margin:0 0 8px" onclick="ntSubscribe()">🔔 ${_L('ตรวจ / แสดงอีกครั้ง','Check / show again')}</button>
+             <details class="nt-p"><summary>${_L('มีปัญหา? ลงทะเบียนใหม่ทั้งหมด','Trouble? Re-register from scratch')}</summary>${_L('ค่าที่ใส่ใน secret เดิมจะใช้ไม่ได้ ต้องคัดลอกใหม่','The value in the secret stops working; copy the new one')}
+               <button type="button" class="rb-btn" style="margin:6px 0" onclick="if(confirm(_L('ลงทะเบียนใหม่? ต้องอัปเดต PUSH_SUBSCRIPTIONS อีกครั้ง','Re-register? You must update PUSH_SUBSCRIPTIONS again')))ntSubscribe(true)">↻ ${_L('ลงทะเบียนใหม่','Re-register')}</button></details>`
+          : `<button type="button" class="rb-btn primary" style="margin:8px 0" onclick="ntSubscribe()">🔔 ${_L('เปิดการแจ้งเตือน','Turn on notifications')}</button>`; })()}
+      ${_nt.sub?(()=>{ let sp=null; try{ sp=JSON.parse(_nt.sub).vapidPub||null; }catch(e){}
+        return sp&&pub&&sp!==pub?`<div class="nt-p nt-warn">⚠ ${_L('เครื่องนี้ลงทะเบียนด้วยกุญแจ','This device registered with key')} <code>${_ntFp(sp)}</code> ${_L('แต่กุญแจปัจจุบันคือ','but the current key is')} <code>${_ntFp(pub)}</code> — ${_L('กด "เปิดการแจ้งเตือน" ใหม่','press "Turn on notifications" again')}</div>`
+          :`<div class="nt-p">${_L('รหัสตรวจของ subscription นี้','This subscription\'s check code')}: <code>${_ntFp(sp)}</code>${sp?'':' — '+_L('ไม่ทราบ: กด "เปิดการแจ้งเตือน" อีกครั้งเพื่อให้แนบกุญแจ','unknown: press "Turn on notifications" again to attach it')}</div>`; })():''}
       ${_nt.sub?`<div class="nt-p">${_L('คัดลอกแล้วใส่ใน secret PUSH_SUBSCRIPTIONS — หลายเครื่องให้รวมเป็น array: [เครื่อง1, เครื่อง2]','Copy into the PUSH_SUBSCRIPTIONS secret — for several devices combine them as an array: [device1, device2]')}</div>${secret('PUSH_SUBSCRIPTIONS','['+_nt.sub+']','')}`:''}
     </div></div>
     <div class="nt-step"><div class="nt-n">3</div><div class="nt-sb">
@@ -5714,6 +5815,8 @@ function gsParseAssetTracker(rows){
     const commTHB=parseFloat(r[AT.commTHB])||0;
     // ตรวจรายแถวว่า commission รวมมาแล้วหรือยัง (ดูหมายเหตุที่ feeToAdd)
     const trueCost=Math.abs(amtTHB)+feeToAdd(amtTHB,qty,parseFloat(r[AT.price])||0,fx,commTHB);
+    // v68 #9 — ยอดขายสุทธิหลังค่าธรรมเนียมฝั่งขาย (ถ้าในชีตยังไม่ได้หัก)
+    const sellFee=TX_SELL.includes(txType)?sellFeeToDeduct(amtTHB,qty,parseFloat(r[AT.price])||0,fx,commTHB):0;
     const platform=r[AT.platform]?String(r[AT.platform]).trim():'Unknown';
     const assetTypeRaw=r[AT.assetType]?String(r[AT.assetType]).trim():'';
     const group=resolveGroup(assetTypeRaw, ticker, platform);
@@ -5729,6 +5832,7 @@ function gsParseAssetTracker(rows){
       year:d.getFullYear(),ticker,txType,group,platform,industry,
       assetTypeRaw,          // v52 — ค่าดิบจากชีต ห้ามเขียน group กลับลงไป
       fx,qty,amtTHB,commTHB,trueCost,
+      sellFee, netProceeds: TX_SELL.includes(txType) ? Math.max(0, Math.abs(amtTHB)-sellFee) : null,
       price:parseFloat(r[AT.price])||0,
       sheetRow:i+1});     // v49 — เลขแถวจริงในชีต (1-based) ไว้แก้/ลบ
   }
@@ -5745,7 +5849,11 @@ function gsParseAssetTracker(rows){
   if(_atb) _atb.style.display = 'inline-flex';
   console.log('[AT] schema พร้อม — รายการสุดท้ายแถว', atSheetMeta.lastRow);
   fxMap={};for(const[t,v]of Object.entries(fxAcc))fxMap[t]=parseFloat((v.reduce((s,x)=>s+x,0)/v.length).toFixed(2));
-  waccMap={};for(const[t,v]of Object.entries(waccAcc2))waccMap[t]=v.qty>0?v.cost/v.qty:0;
+  // v68 #1 — ต้นทุนเฉลี่ยของที่ถืออยู่ = running WACC (ชุดเดียวกับ Realized) ไม่ใช่เฉลี่ยยอดซื้อทุกครั้ง
+  const _rcb=runningCostBasis(trackerRows2, IS_COST, TX_SELL);
+  waccMap={};
+  Object.keys(waccAcc2).forEach(t=>{ const h=_rcb.holdings[t]; waccMap[t]=h&&h.wacc>0?h.wacc:0; });
+  Object.entries(_rcb.holdings).forEach(([t,h])=>{ if(!(t in waccMap) && h.wacc>0) waccMap[t]=h.wacc; });
   // BUGFIX v48 #14 — platMap ต้องมาจากจำนวนที่ถือจริงต่อ platform (qtyByPlatform) ไม่ใช่ platform ของแถวสุดท้าย
   platMap={};
   {
@@ -5760,7 +5868,7 @@ function gsParseAssetTracker(rows){
   }
   totalFee=feeStats(trackerRows2).fees;   // v55 — รวมค่าธรรมเนียมตอนขายด้วย (เดิมนับแค่ Buy/Split)
   // Realized P&L — running-WACC ต่อ ticker (กัน look-ahead bias) — ดู shared.js
-  realized=computeRunningWaccRealized(trackerRows2, IS_COST, TX_SELL);
+  realized=_rcb.realized;
   // v44: เส้นทาง Sync ต้องผ่าน resolvePrices เหมือนเส้นทางอัปโหลดไฟล์
   // (เดิมสองเส้นทางนี้แยกกัน ทำให้แก้ที่เดียวแล้วอีกทางยังพังอยู่)
   const cpMap=(()=>{ const _r=resolvePrices(window._gsCurPriceMap||{});
@@ -6095,7 +6203,7 @@ function generateMonthlyPDF(){
   const portRet  = portCost>0?(portPnl/portCost*100).toFixed(1):'—';
 
   // Saving rate color
-  const srColor = s.savRate>=20?'#00c78c':s.savRate>=10?'#ff9500':'#ff4060';
+  const srColor = s.savRateUndef?'#8080a0':s.savRate>=20?'#00c78c':s.savRate>=10?'#ff9500':'#ff4060';   // v68 #12
   const netColor = s.net>=0?'#00c78c':'#ff4060';
 
   const html = `<!DOCTYPE html>
@@ -6194,7 +6302,7 @@ body{font-family:'Sarabun',sans-serif;font-size:13px;color:#1a1a2e;background:#f
     </div>
     <div class="net-item">
       <div class="net-lbl">Saving Rate</div>
-      <div class="net-val" style="color:${srColor}">${s.savRate}%</div>
+      <div class="net-val" style="color:${srColor}">${_srTxt(s)}</div>
     </div>
     <div class="net-item">
       <div class="net-lbl">Debt</div>
@@ -6815,7 +6923,7 @@ function renderDebt(){
      ชีต Reconcile มียอดจริงจากแอปธนาคารอยู่แล้ว แต่ไม่เคยถูกใช้กับตัวเลขหนี้
      ตอนนี้: มียอดจริงและไม่เก่าเกิน 45 วัน → ใช้ยอดจริง · ไม่มี → ใช้ยอดคำนวณ
      และบอกบนจอเสมอว่าตัวเลขที่เห็นมาจากทางไหน */
-  const _rc = applyReconciliation(bankBals, reconMap);
+  const _rc = applyReconciliation(bankBals, reconMap, null, txRows);
   const sb=splitBalances(_rc.bals);
   const hasDebt=sb.liabilities>0;
   document.getElementById('debt-empty').style.display=hasDebt?'none':'block';
@@ -6883,7 +6991,7 @@ function renderDebt(){
       <div style="font-family:var(--f-sans);font-size:14px;font-weight:600;color:var(--white);margin-bottom:8px">
         ${win.length?'💡 จ่ายหนี้ก่อน — ชนะการลงทุนชัดเจน':'✅ ดอกเบี้ยต่ำกว่าผลตอบแทนคาดหวัง — ลงทุนก่อนได้'}</div>
       <div style="font-size:12px;line-height:1.95;color:var(--text)">
-        ${win.length?`หนี้ ${fmt(winAmt)} ที่ดอกเบี้ยสูงสุด <strong style="color:var(--loss)">${topApr}%/ปี</strong>
+        ${win.length?`หนี้ ${fmt(winAmt)} ที่ดอกเบี้ยสูงสุด <strong style="color:var(--loss)">${topApr.toFixed(1)}%/ปี</strong>
         ให้ผลตอบแทน <strong>รับประกัน ${topApr.toFixed(1)}% ปลอดภาษี ปลอดความผันผวน</strong>
         ขณะที่พอร์ตคุณตั้งเป้าไว้ที่ ${di.expectedReturn}%/ปี <em>ก่อน</em>ภาษีและความเสี่ยง<br>
         → ส่วนต่าง <strong style="color:var(--gain)">+${(topApr-di.expectedReturn).toFixed(1)} จุด</strong>
@@ -7231,9 +7339,10 @@ function renderCost(){
       <div style="font-size:12px;color:var(--muted2);line-height:1.85">
         ${fx>0?`USD/THB ตอนนี้ <strong style="color:var(--text)">${fx.toFixed(2)}</strong> · `:''}
         ถ้าบาทแข็งขึ้น 5% พอร์ตส่วนดอลลาร์จะลดลงราว
-        <strong style="color:${IA_LOSS}">${fmt(usdVal*0.05)}</strong> โดยที่ราคาสินทรัพย์ไม่ได้เปลี่ยนเลย<br>
-        <span style="font-size:11px">เทียบให้เห็นภาพ: มากกว่าปันผลที่คุณได้รับมาทั้งหมด
-        ${totalDiv>0?`(${fmt(totalDiv)})`:''} — ค่าเงินจึงเป็นตัวแปรที่ใหญ่กว่าที่คนส่วนใหญ่คิด</span>
+        <strong style="color:${IA_LOSS}">${fmt(usdVal*0.05)}</strong> โดยที่ราคาสินทรัพย์ไม่ได้เปลี่ยนเลย
+        ${totalDiv>0?`<br><span style="font-size:11px">เทียบให้เห็นภาพ: ${usdVal*0.05>totalDiv
+          ?`<strong>มากกว่า</strong>ปันผลที่คุณได้รับมาทั้งหมด (${fmt(totalDiv)}) — ค่าเงินจึงเป็นตัวแปรที่ใหญ่กว่าที่คนส่วนใหญ่คิด`
+          :`เท่ากับ ${(usdVal*0.05/totalDiv*100).toFixed(0)}% ของปันผลที่คุณได้รับมาทั้งหมด (${fmt(totalDiv)})`}</span>`:''}
       </div>
     </div>
 
@@ -7968,7 +8077,7 @@ function buildAnalystCtx(){
   }catch(e){ console.warn('[analyst] debt:',e.message); }
 
   const ef=computeEmergencyFund(6);
-  const insCV=(insPolicies||[]).reduce((s,pl)=>s+(pl.surrender||0),0);
+  const insCV=insCashValue();   // v68 #8
   const netWorth=sb.cash-sb.liabilities+totalVal+insCV;
 
   // v62 — เงินเข้าความมั่งคั่งต่อเดือน: monthlyWealthContrib() ตัวเดียวกับหน้าเป้าหมาย
@@ -7984,7 +8093,7 @@ function buildAnalystCtx(){
   }catch(e){}
 
   let reconVerified=false;
-  try{ const rc=applyReconciliation(bankBals,reconMap);
+  try{ const rc=applyReconciliation(bankBals,reconMap,null,txRows);
        reconVerified=sb.liabAccounts.length>0 && sb.liabAccounts.every(b=>rc.source[b.name]==='bank');
   }catch(e){}
 
@@ -8380,17 +8489,17 @@ function computeGoalProgress(g){
     return{pct,remaining,etaText,etaClass,type:'amount'};
   } else {
     const now=new Date();
-    const fromDate=g.rateFrom?new Date(g.rateFrom+'-01'):new Date(now.getFullYear(),now.getMonth()-5,1);
-    const rel=txRows.filter(r=>r.date>=fromDate);
-    const byM={};
-    rel.forEach(r=>{
-      if(!byM[r.month])byM[r.month]={inc:0,sav:0,label:monthLabel(r.month).split(' ')[0]};
-      if(r.type==='Income')byM[r.month].inc+=r.amount;
-      if(r.type==='Savings')byM[r.month].sav+=Math.abs(r.amount);
-    });
-    const months=Object.keys(byM).sort().slice(-6);
-    const rates=months.map(m=>byM[m].inc>0?Math.round(byM[m].sav/byM[m].inc*100):0);
-    const labels=months.map(m=>byM[m].label);
+    /* v68 #18 — new Date('YYYY-MM-01') เป็นเวลา UTC = 07:00 ในไทย → รายการวันที่ 1 (เที่ยงคืน) ถูกตัดทิ้ง
+       ใช้ "เดือน" เทียบเป็นข้อความแทน ไม่ต้องยุ่งกับเขตเวลา */
+    const fromMk=g.rateFrom?String(g.rateFrom).slice(0,7):monthKey(new Date(now.getFullYear(),now.getMonth()-5,1));
+    /* v68 #6 — นิยามเดียวกับ Overview/กระแสเงินสด/Engine: (รายได้ − รายจ่ายรวมหนี้) ÷ รายได้
+       เดิมใช้ "ยอดโอนเข้า Savings ÷ รายได้" → เป้าเดียวกันได้ % คนละตัวกับหน้าอื่น
+       เดือนที่ไม่มีรายรับ = คำนวณไม่ได้ ข้าม (เดิมนับเป็น 0% ดึงค่าเฉลี่ยลง) */
+    const months=[...new Set(txRows.filter(r=>r.month>=fromMk).map(r=>r.month))].sort()
+      .map(mk=>({mk, s:computeSummary(txRows.filter(r=>r.month===mk))}))
+      .filter(x=>x.s.income>0).slice(-6);
+    const rates=months.map(x=>Math.round(x.s.saved/x.s.income*100));
+    const labels=months.map(x=>monthLabel(x.mk).split(' ')[0]);
     const avg=rates.length?Math.round(rates.reduce((s,v)=>s+v,0)/rates.length):0;
     const latest=rates.length?rates[rates.length-1]:0;
     const target=g.rateTarget||20;
@@ -8630,6 +8739,11 @@ const INS_UNIT_LABEL={
 
 let insSelectedCov=null;
 
+/* v68 #8 — กรมธรรม์ที่ขาดอายุ/ยกเลิก/เวนคืน/ครบสัญญาแล้ว ไม่มีความคุ้มครองและไม่มีมูลค่าเวนคืนให้ใช้
+   เดิมความคุ้มครองรวมและ Cash Value ที่บวกเข้า Net Worth นับทุกกรมธรรม์ */
+const INS_ENDED_RE=/laps|terminat|surrender|cancel|matur|expir|claim(ed)? ?out|ขาดอายุ|ยกเลิก|เวนคืน|ครบ(กำหนด|สัญญา)|สิ้นสุด/i;
+function insIsActive(p){ return !!p && !INS_ENDED_RE.test(String(p.status||'')); }
+function insCashValue(){ return (insPolicies||[]).filter(insIsActive).reduce((s,p)=>s+(p.surrender||0),0); }
 function insStatusClass(status){
   const s=(status||'').toLowerCase();
   if(s.includes('in-force')||s.includes('inforce')||s==='active') return 'inforce';
@@ -8652,7 +8766,7 @@ function renderInsurance(){
   // ── Overview cards ──
   const activePolicies=insPolicies.filter(p=>insStatusClass(p.status)==='inforce');
   const totalPremium=activePolicies.reduce((s,p)=>s+p.premium,0);
-  const totalSurrender=insPolicies.reduce((s,p)=>s+p.surrender,0);
+  const totalSurrender=insCashValue();   // v68 #8 — เฉพาะกรมธรรม์ที่ยังมีผล
   // Nearest renewal
   const now=new Date();
   // ใช้ insDate() ทุกจุด — เดิมเทียบ string กับ Date ตรงๆ ได้ false เสมอ
@@ -8669,7 +8783,7 @@ function renderInsurance(){
     {lbl:'Total Cash Value',val:fmt(totalSurrender),sub:'มูลค่าเวนคืนรวม',color:'var(--savings)',onclick:null},
     {lbl:'Next Renewal',
       val:nearestRd?MONTH_ABBR[nearestRd.getMonth()]+' '+nearestRd.getDate():'—',
-      sub:nearest?`${nearest.policyId} · เหลือ ${daysToRenewal} วัน`:'ไม่มีกำหนด',
+      sub:nearest?`${escHtml(nearest.policyId)} · เหลือ ${daysToRenewal} วัน`:'ไม่มีกำหนด',
       color:daysToRenewal!==null&&daysToRenewal<=30?'var(--debt)':'var(--text)',onclick:null},
   ];
   document.getElementById('ins-overview').innerHTML=ovCards.map(c=>`
@@ -8688,13 +8802,13 @@ function renderInsurance(){
     return `<div class="ins-mypolicy-card">
       <div class="ins-mypolicy-top">
         <div>
-          <div class="ins-mypolicy-name">${p.planName}</div>
-          <div class="ins-mypolicy-provider">${p.provider} · ${escHtml(p.category)}</div>
+          <div class="ins-mypolicy-name">${escHtml(p.planName)}</div>
+          <div class="ins-mypolicy-provider">${escHtml(p.provider)} · ${escHtml(p.category)}</div>
         </div>
-        <span class="ins-status-pill ${stCls}">${p.status||'—'}</span>
+        <span class="ins-status-pill ${stCls}">${escHtml(p.status||'—')}</span>
       </div>
       <div class="ins-mypolicy-rows">
-        <div class="ins-mypolicy-row"><span>Policy ID</span><span>${p.policyId}</span></div>
+        <div class="ins-mypolicy-row"><span>Policy ID</span><span>${escHtml(p.policyId)}</span></div>
         <div class="ins-mypolicy-row"><span>Premium/year</span><span>${p.premium>0?fmt(p.premium):'—'}</span></div>
         <div class="ins-mypolicy-row"><span>Renewal</span><span>${renewalStr}</span></div>
         <div class="ins-mypolicy-row"><span>Cash Value</span><span>${p.surrender>0?fmt(p.surrender):'—'}</span></div>
@@ -8704,7 +8818,9 @@ function renderInsurance(){
 
   // ── Coverage score cards — group by Coverage_Type ──
   const covByType={};
-  insCoverage.forEach(c=>{
+  const _polById={}; insPolicies.forEach(p=>{ _polById[p.policyId]=p; });
+  // v68 #8 — นับเฉพาะความคุ้มครองของกรมธรรม์ที่ยังมีผล (ไม่รู้จัก policy → ไม่ตัดทิ้ง)
+  insCoverage.filter(c=>{ const p=_polById[c.policyId]; return !p || insIsActive(p); }).forEach(c=>{
     const k = insCovKey(c.covType);   // v61 — รวมชื่อพ้อง · ชื่อที่ไม่รู้จักคงชื่อจริงไว้
     if(!covByType[k])covByType[k]={amount:0,target:0,unit:c.unit,items:[]};
     covByType[k].amount+=c.amount;
@@ -8881,7 +8997,7 @@ function insRenderDetail(covType,data){
   const meta=insCovMeta(covType);
   const panel=document.getElementById('ins-detail-panel');
   panel.classList.add('show');
-  document.getElementById('ins-detail-title-text').textContent=`${meta.icon} ${escHtml(meta.label)} — breakdown ตาม policy`;
+  document.getElementById('ins-detail-title-text').textContent=`${meta.icon} ${meta.label} — breakdown ตาม policy`;
 
   const unitLabel=INS_UNIT_LABEL[data.unit]||'บาท';
   document.getElementById('ins-detail-body').innerHTML=data.items.map(item=>{
@@ -8889,8 +9005,8 @@ function insRenderDetail(covType,data){
     const planName=policy?policy.planName:item.policyId;
     return `<div class="ins-detail-row">
       <div class="ins-detail-left">
-        ${planName}
-        <small>${item.policyId}${item.benefit?' · '+item.benefit:''}</small>
+        ${escHtml(planName)}
+        <small>${escHtml(item.policyId)}${item.benefit?' · '+escHtml(item.benefit):''}</small>
       </div>
       <div class="ins-detail-right">${item.amount.toLocaleString(LOC)} ${unitLabel}</div>
     </div>`;

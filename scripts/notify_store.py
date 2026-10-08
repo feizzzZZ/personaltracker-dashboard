@@ -26,6 +26,7 @@ import hashlib
 import json
 import os
 import sys
+import urllib.parse
 from datetime import datetime, timedelta, timezone
 
 AAD = b"finos-notify-v1"
@@ -143,11 +144,71 @@ def preview(body: str, n: int = 170) -> str:
     return s if len(s) <= n else s[: n - 1] + "…"
 
 
+# ══ v67.1 — อ่านกุญแจ VAPID ให้ทนทุกรูปแบบ + บอกเหตุผลเป็นภาษาคน ═══════════════
+# อาการจริง: "Could not deserialize key data" (secret มีเครื่องหมายคำพูด/ช่องว่าง หรือวางผิดช่อง)
+#           และ Apple ตอบ 400 VapidPkHashMismatch (กุญแจลับคนละชุดกับที่ iPhone ใช้ลงทะเบียน)
+# รับได้: base64url/base64 ของค่า d 32 ไบต์ (แบบที่แอปสร้าง) · JWK JSON · PEM · DER (PKCS8/SEC1)
+def fingerprint(pub_b64url: str | None) -> str:
+    """รหัสตรวจ = 8 ตัวท้ายของกุญแจสาธารณะ — แอปแสดงเลขเดียวกัน ให้เทียบด้วยตา"""
+    return (pub_b64url or "")[-8:] or "—"
+
+
+def parse_vapid(raw: str):
+    """คืน (Vapid | None, กุญแจสาธารณะ base64url | None, ข้อความวินิจฉัย | None)"""
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric import ec
+    from py_vapid import Vapid02   # RFC 8292 "vapid t=…,k=…" — Apple ไม่รับแบบ draft (Vapid01)
+    v = (raw or "").strip().strip('"').strip("'").strip()
+    if not v:
+        return None, None, "ยังไม่ได้ตั้ง VAPID_PRIVATE_KEY"
+    key = None
+    try:
+        if v.startswith("{"):
+            v = str(json.loads(v).get("d") or "")
+        if "-----BEGIN" in v:
+            key = serialization.load_pem_private_key(v.encode(), password=None)
+        else:
+            b = _b64d("".join(v.split()))
+            if len(b) == 32:
+                key = ec.derive_private_key(int.from_bytes(b, "big"), ec.SECP256R1())
+            elif len(b) == 65 and b[0] == 4:
+                return None, None, ("VAPID_PRIVATE_KEY เป็นกุญแจ \"สาธารณะ\" (65 ไบต์ ขึ้นต้น 0x04) — "
+                                    "ต้องใช้กุญแจลับที่แอปแสดงครั้งเดียวตอนกด \"สร้างกุญแจ\"")
+            elif len(b) > 60:
+                key = serialization.load_der_private_key(b, password=None)
+            else:
+                same = v == os.environ.get("NOTIFY_KEY", "").strip()
+                return None, None, (f"VAPID_PRIVATE_KEY ถอด base64 ได้ {len(b)} ไบต์ (ต้องเป็น 32)"
+                                    + (" — ค่าเดียวกับ NOTIFY_KEY: วางผิดช่อง" if same else
+                                       " — ตรวจว่าคัดลอกครบและไม่มีตัวอักษรอื่นปน"))
+    except Exception as e:                                       # noqa: BLE001
+        return None, None, f"อ่าน VAPID_PRIVATE_KEY ไม่ได้ ({type(e).__name__}) — คัดลอกใหม่จากแอป"
+    if not isinstance(key, ec.EllipticCurvePrivateKey) or key.curve.name != "secp256r1":
+        return None, None, "VAPID_PRIVATE_KEY ไม่ใช่กุญแจ EC P-256"
+    pub = key.public_key().public_bytes(serialization.Encoding.X962,
+                                        serialization.PublicFormat.UncompressedPoint)
+    return Vapid02(key), base64.urlsafe_b64encode(pub).decode().rstrip("="), None
+
+
+def vapid_subject() -> str:
+    s = os.environ.get("VAPID_SUBJECT", "").strip().strip('"').strip("'")
+    if s and not (s.startswith("mailto:") or s.startswith("https://")):
+        print(f"::warning::VAPID_SUBJECT ต้องขึ้นต้นด้วย mailto: หรือ https:// (ได้ \"{s[:30]}\") — "
+              "Apple จะปฏิเสธ (BadJwtToken) จึงใช้ค่าเริ่มต้นแทน", file=sys.stderr)
+        s = ""
+    return s or "mailto:finance-os@users.noreply.github.com"
+
+
+MISMATCH_HELP = ("กุญแจลับใน secret ไม่ใช่คู่ของกุญแจที่เครื่องนี้ใช้ลงทะเบียน — "
+                 "แก้: ในแอป 🔔 → ⚙ ขั้น 2 กด \"เปิดการแจ้งเตือน\" ใหม่บนเครื่องที่สร้างกุญแจชุดปัจจุบัน "
+                 "แล้วคัดลอกไปแทน PUSH_SUBSCRIPTIONS (หรือใส่ VAPID_PRIVATE_KEY ชุดที่ตรง)")
+
+
 def push(title: str, body: str, kind: str = "system", item_id: str | None = None) -> dict:
     """ส่ง Web Push ทุก subscription · คืน {"sent":n, "expired":[endpoint…], "failed":n, "skipped":เหตุผล}"""
     subs = load_subscriptions()
-    vapid = os.environ.get("VAPID_PRIVATE_KEY", "").strip()
-    if not subs or not vapid:
+    raw = os.environ.get("VAPID_PRIVATE_KEY", "")
+    if not subs or not raw.strip():
         why = "ยังไม่ได้ตั้ง PUSH_SUBSCRIPTIONS" if not subs else "ยังไม่ได้ตั้ง VAPID_PRIVATE_KEY"
         print(f"— ข้าม push: {why}")
         return {"sent": 0, "expired": [], "failed": 0, "skipped": why}
@@ -156,22 +217,45 @@ def push(title: str, body: str, kind: str = "system", item_id: str | None = None
     except ImportError:
         print("::warning::ไม่มี pywebpush — ข้าม push (workflow ต้อง pip install pywebpush)", file=sys.stderr)
         return {"sent": 0, "expired": [], "failed": 0, "skipped": "no pywebpush"}
-    claims = {"sub": os.environ.get("VAPID_SUBJECT") or "mailto:finance-os@users.noreply.github.com"}
+    try:
+        vapid, pub, why = parse_vapid(raw)
+    except ImportError as e:
+        vapid, pub, why = None, None, f"ไม่มีไลบรารี ({e})"
+    if not vapid:
+        print(f"::error title=push: กุญแจ VAPID ใช้ไม่ได้::{why}", file=sys.stderr)
+        return {"sent": 0, "expired": [], "failed": len(subs), "skipped": why}
+    print(f"  VAPID รหัสตรวจ …{fingerprint(pub)}  (ต้องตรงกับที่แอปแสดงในขั้น 1/2)")
+    claims = {"sub": vapid_subject()}
     data = json.dumps({"title": title, "body": preview(body), "kind": kind, "id": item_id,
                        "url": "./#notify"}, ensure_ascii=False)
-    sent, failed, expired = 0, 0, []
+    sent, failed, expired, mismatch = 0, 0, [], 0
     for s in subs:
+        host = urllib.parse.urlsplit(s["endpoint"]).netloc
+        sp = s.get("vapidPub")
+        if sp and sp != pub:
+            # รู้ล่วงหน้าว่าจะโดนปฏิเสธ — ไม่ต้องยิง (เครื่องที่ลงทะเบียนตั้งแต่ v67.1 แนบกุญแจที่ใช้มาด้วย)
+            mismatch += 1; failed += 1
+            print(f"::warning::push ข้าม {host}: เครื่องนี้ลงทะเบียนด้วยกุญแจ …{fingerprint(sp)} "
+                  f"แต่ secret คือ …{fingerprint(pub)} — {MISMATCH_HELP}", file=sys.stderr)
+            continue
+        info = {"endpoint": s["endpoint"], "keys": s["keys"]}
         try:
-            webpush(subscription_info=s, data=data, vapid_private_key=vapid,
+            webpush(subscription_info=info, data=data, vapid_private_key=vapid,
                     vapid_claims=dict(claims), ttl=86400)
             sent += 1
         except WebPushException as e:
-            code = getattr(getattr(e, "response", None), "status_code", None)
+            resp = getattr(e, "response", None)
+            code = getattr(resp, "status_code", None)
+            text = (getattr(resp, "text", "") or str(e))[:300]
             if code in (404, 410):
                 expired.append(s["endpoint"])
+            elif "VapidPkHashMismatch" in text or "BadJwtToken" in text and "subject" not in text.lower():
+                mismatch += 1; failed += 1
+                print(f"::warning::push ถูก {host} ปฏิเสธ ({code}) — {MISMATCH_HELP} "
+                      f"[secret รหัสตรวจ …{fingerprint(pub)}]", file=sys.stderr)
             else:
                 failed += 1
-                print(f"::warning::push ล้ม ({code}): {str(e)[:160]}", file=sys.stderr)
+                print(f"::warning::push ล้ม {host} ({code}): {text[:200]}", file=sys.stderr)
         except Exception as e:                                   # noqa: BLE001
             failed += 1
             print(f"::warning::push ล้ม ({type(e).__name__}): {str(e)[:160]}", file=sys.stderr)
@@ -179,4 +263,5 @@ def push(title: str, body: str, kind: str = "system", item_id: str | None = None
         print(f"::warning::subscription หมดอายุ — ลบออกจาก PUSH_SUBSCRIPTIONS: …{ep[-24:]}")
     print(f"✓ push: ส่ง {sent}/{len(subs)} เครื่อง" + (f" · หมดอายุ {len(expired)}" if expired else "")
           + (f" · ล้ม {failed}" if failed else ""))
-    return {"sent": sent, "expired": expired, "failed": failed, "skipped": None}
+    return {"sent": sent, "expired": expired, "failed": failed, "skipped": None, "mismatch": mismatch,
+            "fingerprint": fingerprint(pub)}
