@@ -16,7 +16,7 @@ window.LOC = window.LOC || 'th-TH-u-ca-gregory';
 //   • XIRR engine
 // กติกา: ไฟล์นี้ห้ามแตะ DOM ของหน้าใดหน้าหนึ่ง — pure data layer เท่านั้น
 // ═══════════════════════════════════════════════════════════════════
-const APP_BUILD = 'v67.2';
+const APP_BUILD = 'v68';
 console.log('[Finance OS shared] build', APP_BUILD);
 window.SHARED_BUILD = APP_BUILD;   // v45 — ให้ index.html ตรวจได้ว่าเวอร์ชันตรงกัน
  
@@ -377,9 +377,23 @@ function parseReconcileRows(rows){
   return out;
 }
  
+// v68 #2 — ยอดที่เคลื่อนไหวในบัญชีหลังวันที่จดยอดจริง (ไม่นับวันเดียวกัน:
+// ยอดใน Reconcile = ยอด ณ สิ้นวันที่จด รายการวันนั้นรวมอยู่ในยอดจริงแล้ว)
+// rows = txRows ที่มี {dateStr, acct:{ชื่อบัญชี: จำนวน}}
+function movementAfter(rows, name, date){
+  if(!date || !rows) return 0;
+  let s = 0;
+  for(const r of rows){
+    if(!r || !r.acct || !(r.dateStr > date)) continue;
+    const v = Number(r.acct[name]); if(isFinite(v)) s += v;
+  }
+  return Math.round(s*100)/100;
+}
 // เทียบยอดคำนวณ vs ยอดจริง → คืนรายการที่ต่างกัน + สถานะรวม
 // tolerance: ต่างไม่เกิน 1 บาท = ถือว่าตรง (ปัดเศษ/ดอกเบี้ยเล็กน้อย)
-function computeReconciliation(bals, reconMap, tolerance){
+// v68 #2 — เทียบ "ณ วันที่จด": ยอดคำนวณ − รายการหลังวันนั้น · เดิมเทียบกับยอดวันนี้
+//          พอกรอกรายจ่ายหลังวันจด หน้าจอฟ้องว่าต่างทั้งที่ตรงกัน (ส่ง rows = txRows)
+function computeReconciliation(bals, reconMap, tolerance, rows){
   const tol = tolerance == null ? 1 : tolerance;
   const map = reconMap || {};
   const accounts = [];
@@ -388,11 +402,13 @@ function computeReconciliation(bals, reconMap, tolerance){
   (bals||[]).forEach(b=>{
     const rec = map[b.name];
     if(!rec){ accounts.push({name:b.name, computed:b.balance, checked:false}); return; }
-    const diff = rec.actual - b.balance;          // + = มีเงินมากกว่าที่บันทึก
+    const after = movementAfter(rows, b.name, rec.date);
+    const computedAt = b.balance - after;         // ยอดคำนวณ ณ วันที่จด
+    const diff = rec.actual - computedAt;         // + = มีเงินมากกว่าที่บันทึก
     const ok = Math.abs(diff) <= tol;
     if(!ok){ unmatched++; totalDrift += Math.abs(diff); }
     if(rec.date && (!worstDate || rec.date < worstDate)) worstDate = rec.date;
-    accounts.push({name:b.name, computed:b.balance, actual:rec.actual,
+    accounts.push({name:b.name, computed:computedAt, computedNow:b.balance, after, actual:rec.actual,
                    diff, ok, checked:true, date:rec.date, note:rec.note});
   });
  
@@ -1787,7 +1803,8 @@ function budgetSpendMap(rows, bals){
     if(!r) return;
     const cat = r.category || 'Other';
     if(r.type === 'Expense' || r.type === 'Bills'){
-      map[cat] = (map[cat] || 0) + Math.abs(Number(r.amount) || 0);
+      // v68 #7 — มีเครื่องหมาย: รายการบวก (เงินคืน/refund) หักออกจากหมวด · เดิม Math.abs นับเป็นรายจ่ายเพิ่ม
+      map[cat] = (map[cat] || 0) - (Number(r.amount) || 0);
       return;
     }
     if(r.type !== 'Debt') return;
@@ -1798,6 +1815,8 @@ function budgetSpendMap(rows, bals){
     card[cat] = (card[cat] || 0) - a;
     cardTotal -= a;
   });
+  // หมวดที่เงินคืนมากกว่าจ่าย = ใช้ไป 0 (ไม่ติดลบ)
+  Object.keys(map).forEach(k => { map[k] = Math.max(0, Math.round(map[k]*100)/100); });
   return { map, card, cardTotal };
 }
 
@@ -1894,7 +1913,9 @@ const RECON_TRUST_DAYS = 45;   // ยอดจริงเก่าเกิน�
 // คืนชุดยอดบัญชีที่ "ใช้ยอดจริงจากธนาคารเมื่อมี และยังไม่เก่าเกินไป"
 // คืน { bals, source:{name:'bank'|'computed'|'stale'}, nBank, nStale, asOf }
 // หมายเหตุ: ไม่แก้ bals ต้นฉบับ — คืนชุดใหม่เสมอ
-function applyReconciliation(bals, reconMap, maxAgeDays){
+// v68 #2 — ยอดที่ใช้ = ยอดจริง ณ วันที่จด + รายการที่กรอกหลังวันนั้น (ส่ง rows = txRows)
+//          เดิมใช้ยอดจริงค้างไว้ 45 วัน ไม่สนรายจ่ายที่กรอกตามมา → เงินสด/หนี้/Net Worth ค้างที่วันจด
+function applyReconciliation(bals, reconMap, maxAgeDays, rows){
   const maxAge = maxAgeDays == null ? RECON_TRUST_DAYS : maxAgeDays;
   const map = reconMap || {};
   const source = {};
@@ -1908,8 +1929,9 @@ function applyReconciliation(bals, reconMap, maxAgeDays){
     if(age != null && age > maxAge){ source[b.name]='stale'; nStale++; return {...b}; }
     if(rec.date && (!newest || rec.date > newest)) newest = rec.date;
     source[b.name]='bank'; nBank++;
-    return {...b, balance: rec.actual, computedBalance: b.balance,
-            reconDate: rec.date||null, reconDiff: rec.actual - b.balance};
+    const bal = Math.round((rec.actual + movementAfter(rows, b.name, rec.date))*100)/100;
+    return {...b, balance: bal, computedBalance: b.balance,
+            reconDate: rec.date||null, reconDiff: bal - b.balance};
   });
  
   return { bals: out, source, nBank, nStale,
@@ -2003,40 +2025,74 @@ function debtComposition(txRows, accountNames, monthKey){
   return out;
 }
  
-// ═══ Realized P&L — running-WACC ═══
-// waccMap (เฉลี่ยจากยอดซื้อทั้งหมด) ใช้ประเมิน cost basis ของ "หุ้นที่ถืออยู่ตอนนี้" ได้ถูกต้อง
-// (เพราะ WACC เฉลี่ยไม่เปลี่ยนตอนขาย) แต่ใช้ค่าเดียวนี้ย้อนไปคำนวณ P&L ของการขายในอดีต "ผิด"
-// เพราะการซื้อที่เกิดขึ้นทีหลังการขายไม่ควรมีผลย้อนหลังต่อ cost basis ของการขายนั้น (look-ahead bias)
-// ฟังก์ชันนี้ไล่ตามลำดับวันที่ต่อ ticker แล้วใช้ WACC ณ เวลาที่ขายจริงแทน
-function computeRunningWaccRealized(trackerRows, isCostTx, sellTxTypes){
+// ═══ Realized P&L + ต้นทุนของที่ถืออยู่ — running-WACC (v68) ═══
+// ไล่ตามลำดับวันที่ต่อ ticker ครั้งเดียว ได้ทั้ง "กำไรที่ขายแล้ว" และ "ต้นทุนของหน่วยที่ยังถือ"
+// v68 BUGFIX #1 — เดิมต้นทุนของที่ถืออยู่ (waccMap) = ยอดซื้อ "ทุกครั้ง" ÷ หน่วยที่ซื้อทั้งหมด
+//   ซึ่งถูกเฉพาะเมื่อไม่เคยขายแล้วซื้อเพิ่ม · ซื้อ 10@100 → ขาย 5 → ซื้อ 5@200
+//   เดิมได้ ฿133/หน่วย (ต้นทุน 1,333) · ที่ถูกคือ ฿150 (ต้นทุน 1,500) → Unrealized เกินจริง ฿167
+//   และ Realized + Unrealized ≠ เงินที่ได้จริง เพราะสองตัวใช้คนละสูตร — ตอนนี้ใช้ชุดเดียวกัน
+// ประเภทรายการ:
+//   Buy/Split (isCostTx)  + หน่วย + ต้นทุน
+//   Stake                 + หน่วย ต้นทุน 0 (รางวัล staking · v68 #19 เดิมเพิ่มหน่วยแต่ไม่เข้าสูตรเฉลี่ย)
+//   Sell (sellTxTypes)    − หน่วย − ต้นทุนตาม WACC ณ ตอนขาย → บันทึกกำไร
+//   Used                  − หน่วย − ต้นทุนตาม WACC (ใช้จ่ายไป ไม่ใช่การขาย จึงไม่บันทึกกำไร)
+//   Send/Recieved         โอนระหว่างกระเป๋าตัวเอง: ไม่กระทบต้นทุน · ส่วนที่รับ "เกิน" ส่ง (airdrop)
+//                         = หน่วยต้นทุน 0 · ส่ง "เกิน" รับ (โอนออกไปเลย) = หักตาม WACC
+// รายได้จากการขายใช้ r.netProceeds ถ้ามี (หักค่าธรรมเนียมฝั่งขายแล้ว — ดู sellFeeToDeduct)
+function runningCostBasis(trackerRows, isCostTx, sellTxTypes){
   const byTicker = {};
-  (trackerRows||[]).forEach(r=>{
-    (byTicker[r.ticker] ||= []).push(r);
-  });
-  const realized = [];
-  Object.values(byTicker).forEach(rowsForTicker=>{
+  (trackerRows||[]).forEach(r=>{ if(r && r.ticker) (byTicker[r.ticker] ||= []).push(r); });
+  const realized = [], holdings = {};
+  Object.entries(byTicker).forEach(([tk, rowsForTicker])=>{
     const rows = rowsForTicker.slice().sort((a,b)=>a.date-b.date);
-    let runQty = 0, runCost = 0;
+    let runQty = 0, runCost = 0, xfer = 0;
+    const take = q => {                       // หักหน่วยตาม WACC ปัจจุบัน คืนต้นทุนที่หักออก
+      const wacc = runQty>0 ? runCost/runQty : 0;
+      const qq = Math.min(q, runQty), cb = qq*wacc;
+      runQty = Math.max(0, runQty - qq); runCost = Math.max(0, runCost - cb);
+      if(runQty < 1e-12){ runQty = 0; runCost = 0; }
+      return { wacc, cb: q*wacc };
+    };
     rows.forEach(r=>{
-      if(isCostTx.has(r.txType) && r.qty>0){
-        runCost += r.trueCost;
-        runQty += r.qty;
+      const q = Math.abs(Number(r.qty)||0);
+      if(isCostTx.has(r.txType) && q>0){
+        runCost += Number(r.trueCost)||0; runQty += q;
+      } else if(r.txType==='Stake' && q>0){
+        runQty += q;
       } else if(sellTxTypes.includes(r.txType)){
-        const wacc = runQty>0 ? runCost/runQty : 0;
-        const costBasis = r.qty*wacc;
+        const { wacc, cb } = take(q);
+        const proceeds = r.netProceeds != null ? r.netProceeds : Math.abs(r.amtTHB);
         realized.push({
           date: isoLocal(r.date), ticker:r.ticker, group:r.group,   // v61 — ไม่ใช่ toISOString (UTC)
-          qty:r.qty, wacc,
-          proceeds: Math.abs(r.amtTHB),
-          costBasis,
-          pnl: Math.abs(r.amtTHB)-costBasis
+          qty:q, wacc, proceeds, fee: r.sellFee || 0,
+          costBasis: cb,
+          pnl: proceeds - cb
         });
-        runQty = Math.max(0, runQty - r.qty);
-        runCost = Math.max(0, runCost - costBasis);
-      }
+      } else if(r.txType==='Used' && q>0){
+        take(q);
+      } else if(r.txType==='Recieved') xfer += q;
+      else if(r.txType==='Send') xfer -= q;
     });
+    if(xfer > 1e-12) runQty += xfer;          // รับเกินส่ง = ได้มาฟรี (ต้นทุน 0)
+    else if(xfer < -1e-12) take(-xfer);       // ส่งเกินรับ = ออกจากพอร์ตไปแล้ว
+    holdings[tk] = { qty: runQty, cost: runCost, wacc: runQty>0 ? runCost/runQty : 0 };
   });
-  return realized;
+  return { realized, holdings };
+}
+// คงชื่อเดิมไว้ให้ผู้เรียกเก่า/เทสต์
+function computeRunningWaccRealized(trackerRows, isCostTx, sellTxTypes){
+  return runningCostBasis(trackerRows, isCostTx, sellTxTypes).realized;
+}
+// v68 #9 — ค่าธรรมเนียมฝั่งขายที่ยังไม่ได้หักออกจากยอดขาย
+// ฝั่งซื้อ (feeToAdd) "รวมแล้ว" = ยอด ≈ ฐาน + ค่าธรรมเนียม · ฝั่งขาย "หักแล้ว" = ยอด ≈ ฐาน − ค่าธรรมเนียม
+// ไม่มีฐานให้เทียบ (ไม่มีราคา/จำนวน) → ถือว่ายังไม่หัก
+function sellFeeToDeduct(amtTHB, qty, price, fx, comm){
+  const c = Math.abs(comm||0);
+  if(!(c > 0)) return 0;
+  const base = Math.abs(qty||0) * Math.abs(price||0) * Math.abs(fx||1);
+  if(!(base > 0)) return c;
+  const already = Math.abs((base - Math.abs(amtTHB||0)) - c) <= Math.max(0.02, c*0.05);
+  return already ? 0 : c;
 }
  
 // ═══ DEBT CONFIG — ดอกเบี้ย/ขั้นต่ำต่อบัญชี (ผู้ใช้กรอกเอง เก็บในเครื่อง) ═══
