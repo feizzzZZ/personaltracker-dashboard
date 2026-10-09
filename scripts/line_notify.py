@@ -28,6 +28,7 @@ ENV ที่ต้องมี
 import argparse
 import json
 import os
+import re
 import sys
 import time
 import urllib.error
@@ -81,6 +82,19 @@ def load_state() -> dict:
         return {}
 
 
+# v70 — สูตรคำนวณพอร์ตเปลี่ยน (อ่านค่าดิบ · running WACC): ฐานที่บันทึกด้วยสูตรเก่าใช้เทียบ "มูลค่า" ไม่ได้
+# ไม่งั้นรอบแรกหลังอัปเดตจะขึ้น "เทียบรอบก่อน +฿200,000 (+100%)" ทั้งที่พอร์ตไม่ได้โตจริง
+# ราคาต่อหน่วย (prices) ไม่กระทบ → ยังใช้เทียบราคาขยับได้ตามเดิม
+CALC_VERSION = 70
+
+
+def compat_base(b: dict | None) -> dict:
+    b = b or {}
+    if b.get("calc", 0) >= CALC_VERSION:
+        return b
+    return {"prices": b.get("prices", {})} if b else {}
+
+
 def save_state(st: dict) -> None:
     with open(STATE, "w", encoding="utf-8") as f:
         json.dump(st, f, ensure_ascii=False, indent=1)
@@ -105,12 +119,48 @@ CRYPTO_PLATFORM = ("binance", "okx", "bitkub", "bitazza", "coinbase", "kraken",
                    "ledger", "wallet")
 
 
+# v70 — จับกลุ่มให้ตรงกับ resolveGroup() ในแอป (v59): ไม่สนตัวพิมพ์/ช่องว่าง/ขีด + ชื่อเรียกอื่น
+# เดิมเทียบตรงเป๊ะ 'Thai_Stock' — แถวที่เขียน 'Thai Stock' / 'gold' ตก 'อื่นๆ' ใน LINE แต่อยู่ถูกกลุ่มในแอป
+def _norm_key(v) -> str:
+    return re.sub(r"[\s_\-.]+", "", str(v or "").lower())
+
+
+_TM_DISPLAY = {"Thai_Stock": "Thai Stock", "US_Stock": "US Stock", "Cryptocurrency": "Crypto",
+               "Mutual_Fund": "Mutual Fund", "Provident_Fund": "Provident Fund", "Gold": "Gold"}
+_TM_NORM = {}
+for _raw, _disp in _TM_DISPLAY.items():
+    _TM_NORM[_norm_key(_raw)] = TM[_raw]
+    _TM_NORM[_norm_key(_disp)] = TM[_raw]
+_EN2TH = {d: TM[r] for r, d in _TM_DISPLAY.items()}
+_TYPE_ALIASES = {k: _EN2TH[v] for k, v in {
+    "gold": "Gold", "goldspot": "Gold", "goldbar": "Gold", "goldetf": "Gold",
+    "goldfutures": "Gold", "goldsaving": "Gold", "physicalgold": "Gold",
+    "xau": "Gold", "xauusd": "Gold",
+    "ทอง": "Gold", "ทองคำ": "Gold", "ทองคํา": "Gold",
+    "ทองคำแท่ง": "Gold", "ทองแท่ง": "Gold", "ทองรูปพรรณ": "Gold", "ออมทอง": "Gold",
+    "usstocks": "US Stock", "usequity": "US Stock",
+    "thaistocks": "Thai Stock", "setstock": "Thai Stock",
+    "crypto": "Crypto", "cryptocurrencies": "Crypto", "digitalasset": "Crypto", "coin": "Crypto",
+    "mutualfunds": "Mutual Fund", "fund": "Mutual Fund",
+    "pvd": "Provident Fund", "providentfunds": "Provident Fund",
+}.items()}
+GOLD_TICKERS = {"GOLD", "XAU", "XAUUSD", "GC=F", "GLD", "ทอง", "ทองคำ"}
+
+
 def resolve_group(asset_type, ticker, platform) -> str:
-    t = (asset_type or "").strip()
+    t = (str(asset_type) if asset_type is not None else "").strip()
     if t in TM:
         return TM[t]
-    if (ticker or "").strip().upper() in CRYPTO_TICKERS:
+    n = _norm_key(t)
+    if n and n in _TM_NORM:
+        return _TM_NORM[n]
+    if n and n in _TYPE_ALIASES:
+        return _TYPE_ALIASES[n]
+    tk = (str(ticker) if ticker is not None else "").strip().upper()
+    if tk in CRYPTO_TICKERS:
         return "คริปโต"
+    if tk in GOLD_TICKERS:
+        return "ทอง"
     p = (platform or "").lower()
     if any(k in p for k in CRYPTO_PLATFORM):
         return "คริปโต"
@@ -131,8 +181,17 @@ def fee_to_add(amt_thb, qty, price, fx, comm) -> float:
 
 
 def _f(v) -> float:
+    if isinstance(v, bool):
+        return 0.0
+    if isinstance(v, (int, float)):
+        return float(v)
+    # ค่าที่จัดรูปแบบ (เผื่อแถวเก่า/เทสต์): ตัดสัญลักษณ์สกุลเงิน ช่องว่าง และคอมมา
+    # เดิม "฿1,234" แปลงไม่ได้ → 0 เงียบ ๆ
     try:
-        return float(str(v).replace(",", "").strip())
+        t = re.sub(r"[฿$€£,\s]", "", str(v)).replace("\u2212", "-")
+        if t.startswith("(") and t.endswith(")"):
+            t = "-" + t[1:-1]
+        return float(t)
     except (TypeError, ValueError):
         return 0.0
 
@@ -291,7 +350,10 @@ def fetch_asset_tracker_dx() -> tuple[list | None, str]:
             return json.loads(r.read()).get("values", [])
 
     try:
-        rows = read_tab(SHEET_TAB)
+        # v70 — ต้องอ่าน "ค่าดิบ" เหมือน Sync ของแอป (gsSync: UNFORMATTED_VALUE + SERIAL_NUMBER)
+        # เดิมอ่านค่าที่จัดรูปแบบแล้ว → จำนวนหน่วยถูกปัดตามรูปแบบเซลล์ (0.0000234 BTC → "0.00")
+        # DCA คริปโต/เศษหุ้น US จึงหายเกือบหมด: LINE ได้คริปโต ฿4,783 ขณะที่แอปได้ ฿122,071
+        rows = read_tab(SHEET_TAB, raw=True)
     except urllib.error.HTTPError as e:
         body = e.read().decode("utf-8", "replace")[:400]
         if e.code == 403 and "disabled" in body.lower():
@@ -316,7 +378,7 @@ def fetch_asset_tracker_dx() -> tuple[list | None, str]:
     # (อย่าให้การขาดราคากองทุนทำให้ไม่ได้สรุปพอร์ตเลย)
     global _live_price_rows
     try:
-        _live_price_rows = read_tab(PRICE_TAB)
+        _live_price_rows = read_tab(PRICE_TAB, raw=True)   # v70 — ราคาเต็มทศนิยม ไม่ใช่ "฿12.35"
     except Exception as e:                                  # noqa: BLE001
         _live_price_rows = []
         print(f"⚠️  อ่าน {PRICE_TAB} ไม่ได้ ({type(e).__name__}) — "
@@ -432,6 +494,43 @@ def resolve_prices(market: dict, sheet_px: dict, usdthb: float):
     return price, src, out
 
 
+def running_unit_cost(rows: list) -> float:
+    """ต้นทุนต่อหน่วยของที่ถืออยู่ — ตรรกะเดียวกับ runningCostBasis() ใน shared.js (v68)
+
+    เดิมเฉลี่ยยอดซื้อทุกครั้ง ซึ่งผิดเมื่อขายแล้วซื้อเพิ่ม (ซื้อ 10@100 → ขาย 5 → ซื้อ 5@200
+    ได้ 133 แทน 150) · Stake = หน่วยต้นทุน 0 · Used หักตาม WACC · Send/Recieved คู่กันไม่กระทบ
+    rows: [(date, tx, qty, true_cost)]
+    """
+    run_q = run_c = xfer = 0.0
+
+    def take(q):
+        nonlocal run_q, run_c
+        w = run_c / run_q if run_q > 0 else 0.0
+        qq = min(q, run_q)
+        run_q = max(0.0, run_q - qq)
+        run_c = max(0.0, run_c - qq * w)
+        if run_q < 1e-12:
+            run_q = run_c = 0.0
+
+    for _d, tx, q, tc in sorted(rows, key=lambda x: x[0]):
+        if tx in IS_COST and q > 0:
+            run_c += tc
+            run_q += q
+        elif tx == "Stake" and q > 0:
+            run_q += q
+        elif tx in ("Sell", "Used") and q > 0:
+            take(q)
+        elif tx == "Recieved":
+            xfer += q
+        elif tx == "Send":
+            xfer -= q
+    if xfer > 1e-12:
+        run_q += xfer
+    elif xfer < -1e-12:
+        take(-xfer)
+    return run_c / run_q if run_q > 0 else 0.0
+
+
 def build_portfolio(rows: list, market: dict,
                     sheet_prices_rows: list | None = None) -> dict | None:
     """คืน {total, cost, groups:{name:{value,cost}}, holdings:{ticker:{...}}}"""
@@ -460,7 +559,8 @@ def build_portfolio(rows: list, market: dict,
         i = C[k]
         return r[i] if 0 <= i < len(r) else ""
 
-    net_qty, wacc, groups_of, div_total = {}, {}, {}, 0.0
+    net_qty, groups_of, div_total = {}, {}, 0.0
+    by_tk: dict = {}                 # v70 — แถวตามลำดับวันที่ต่อ ticker สำหรับ running WACC
     skipped_rows: list = []
     for r in rows[1:]:
         ticker = str(cell(r, "ticker")).strip()
@@ -471,6 +571,7 @@ def build_portfolio(rows: list, market: dict,
         if parse_date(cell(r, "date")) is None:
             skipped_rows.append(ticker)
             continue
+        d = parse_date(cell(r, "date"))
         tx = str(cell(r, "tx")).strip()
         fx = _f(cell(r, "fx")) or 1.0
         qty = abs(_f(cell(r, "qty")))
@@ -480,11 +581,8 @@ def build_portfolio(rows: list, market: dict,
         groups_of[ticker] = resolve_group(cell(r, "atype"), ticker, cell(r, "platform"))
         if tx == "Dividend Payout":
             div_total += abs(amt)
-        if tx in IS_COST and qty > 0:
-            true_cost = abs(amt) + fee_to_add(amt, qty, price, fx, comm)
-            a = wacc.setdefault(ticker, {"cost": 0.0, "qty": 0.0})
-            a["cost"] += true_cost
-            a["qty"] += qty
+        true_cost = abs(amt) + fee_to_add(amt, qty, price, fx, comm) if tx in IS_COST else 0.0
+        by_tk.setdefault(ticker, []).append((d, tx, qty, true_cost))
         s = SIGN.get(tx, 0)
         if s:
             net_qty[ticker] = net_qty.get(ticker, 0.0) + qty * s
@@ -497,6 +595,7 @@ def build_portfolio(rows: list, market: dict,
                                  else _live_price_rows)
     price, srcmap, detail = resolve_prices(market, sheet_px, usdthb)
 
+    unit_cost_of = {tk: running_unit_cost(rs) for tk, rs in by_tk.items()}
     holdings, groups = {}, {}
     total = cost_total = 0.0
     for tk, q in net_qty.items():
@@ -506,9 +605,7 @@ def build_portfolio(rows: list, market: dict,
         if thb <= 0:
             continue                       # ไม่มีราคา → ข้าม ดีกว่านับเป็น ฿0 เงียบๆ
         val = q * thb
-        w = wacc.get(tk, {})
-        unit_cost = (w["cost"] / w["qty"]) if w.get("qty") else 0.0
-        cst = q * unit_cost
+        cst = q * unit_cost_of.get(tk, 0.0)
         g = groups_of.get(tk, "อื่นๆ")
         d = detail.get(tk, {})
         holdings[tk] = {"qty": q, "price": thb, "value": val, "cost": cst,
@@ -1040,15 +1137,15 @@ def main() -> int:
         if not mv:
             print("— ไม่มีตัวไหนขยับเกินเกณฑ์")
     elif a.mode == "weekly":
-        sent = deliver("weekly", period_message(port, market, state.get("week", {}), "รายสัปดาห์"),
+        sent = deliver("weekly", period_message(port, market, compat_base(state.get("week")), "รายสัปดาห์"),
                        a.dry_run)
     elif a.mode == "monthly":
         # v57 — Monthly report (รายรับ-รายจ่ายเดือนที่แล้ว + พอร์ต) รวมเป็นข้อความเดียว
-        sent = deliver("monthly", monthly_report(port, market, state.get("month", {}),
+        sent = deliver("monthly", monthly_report(port, market, compat_base(state.get("month")),
                                                  parse_transactions(_tx_rows)), a.dry_run)
     else:
         sent = deliver("daily",
-            daily_message(port, market, state.get("last", {}),
+            daily_message(port, market, compat_base(state.get("last")),
                           "" if reason == "ok" else reason), a.dry_run)
 
     # ── อัปเดต state ─────────────────────────────────────────────────
@@ -1056,6 +1153,7 @@ def main() -> int:
     if port and not a.dry_run:
         snap = {
             "at": NOW.isoformat(),
+            "calc": CALC_VERSION,
             "total": port["total"],
             "groups": {k: {"value": v["value"]} for k, v in port["groups"].items()},
             # เก็บ [ราคาสกุลเดิม, สกุล] — ต้องมีสกุลกำกับ ไม่งั้นรอบหน้าที่
@@ -1063,9 +1161,10 @@ def main() -> int:
             "prices": {k: [v["native"], v["ccy"]] for k, v in port["holdings"].items()},
         }
         state["last"] = snap
-        if a.mode == "weekly" or "week" not in state:
+        # ฐานสัปดาห์/เดือนที่คิดด้วยสูตรเก่า → แทนด้วยรอบนี้ (เทียบมูลค่ากับสูตรเก่าไม่ได้)
+        if a.mode == "weekly" or "week" not in state or not compat_base(state.get("week")).get("total"):
             state["week"] = snap
-        if a.mode == "monthly" or "month" not in state:
+        if a.mode == "monthly" or "month" not in state or not compat_base(state.get("month")).get("total"):
             state["month"] = snap
         save_state(state)
 
