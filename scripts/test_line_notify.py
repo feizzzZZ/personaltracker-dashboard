@@ -311,6 +311,75 @@ with _m.patch.dict(os.environ, {"NOTIFY_LINE": "on"}), _m.patch.object(LN, "send
     assert sl.called
 print("✓ NOTIFY_LINE=off ปิด LINE · ช่องทางใหม่ล้มไม่กระทบ LINE")
 
+print("\n═══ v70 ตัวเลขตรงกับแอป ═══")
+# 1) อ่านชีตแบบค่าดิบ (UNFORMATTED) ทั้ง Asset_Tracker และแท็บราคา — เหมือน Sync ของแอป
+_urls = []
+
+
+class _Resp:
+    def __init__(self, body): self.body = body
+    def __enter__(self): return self
+    def __exit__(self, *a): return False
+    def read(self): return self.body
+
+
+def _fake_urlopen(req, timeout=30):
+    _urls.append(req.full_url)
+    vals = ROWS if "Asset_Tracker" in req.full_url else PRICE_ROWS
+    return _Resp(json.dumps({"values": vals}).encode())
+
+
+_sa = json.dumps({"type": "service_account", "private_key": "k", "client_email": "x@y"})
+import types as _types                                               # noqa: E402
+_ga = _types.ModuleType("google.auth"); _ga.crypt = _ga.jwt = object()   # token ถูก mock แล้ว ไม่ต้องใช้จริง
+_g = _types.ModuleType("google"); _g.auth = _ga
+with _m.patch.dict(os.environ, {"GS_SHEET_ID": "abc", "GOOGLE_SA_KEY": _sa}), \
+        _m.patch.dict(sys.modules, {"google": _g, "google.auth": _ga}), \
+        _m.patch.object(LN, "_access_token", return_value="tok"), \
+        _m.patch("urllib.request.urlopen", _fake_urlopen):
+    _rows, _why = LN.fetch_asset_tracker_dx()
+assert _why == "ok", _why
+assert all("valueRenderOption=UNFORMATTED_VALUE" in u for u in _urls), _urls
+print("✓ อ่าน Asset_Tracker + แท็บราคาแบบค่าดิบ (ไม่โดนปัดตามรูปแบบเซลล์)")
+
+# 2) DCA คริปโตจำนวนเล็กมาก — ค่าดิบต้องถูกนับครบ (เดิมรูปแบบเซลล์ "0.00" → หายทั้งก้อน)
+_dca = [HEAD] + [[45900 + i, "Buy", "BTC", "Cryptocurrency", "—", "Binance", 33,
+                  0.00001234, 3_900_000, 0, 48.13] for i in range(100)]
+_p_dca = LN.build_portfolio(_dca, MARKET, [])
+_q = _p_dca["holdings"]["BTC"]["qty"]
+near(_q, 0.001234, 1e-9)
+near(_p_dca["holdings"]["BTC"]["value"], 0.001234 * 118500 * 33.25, 0.01)
+print(f"✓ DCA 100 ครั้ง × 0.00001234 BTC = {_q:.6f} BTC (วันที่แบบ serial ก็อ่านได้)")
+
+# 3) ตัวเลขที่จัดรูปแบบ (แถวเก่า/คัดลอกมา) ยังแปลงได้
+assert LN._f("฿1,234.50") == 1234.5 and LN._f("$12") == 12 and LN._f(5) == 5.0 and LN._f("(300)") == -300
+assert LN._f("#N/A") == 0.0
+print("✓ _f รับ ฿/$/คอมมา/วงเล็บ · #N/A = 0")
+
+# 4) จับกลุ่มเหมือน resolveGroup ในแอป
+for raw, want in [("Thai Stock", "หุ้นไทย"), ("thai_stock", "หุ้นไทย"), ("gold", "ทอง"), ("ทองคำ", "ทอง"),
+                  ("PVD", "กองทุนสำรองฯ"), ("Crypto", "คริปโต"), ("US Stock", "หุ้น US")]:
+    assert LN.resolve_group(raw, "X", "") == want, (raw, LN.resolve_group(raw, "X", ""))
+assert LN.resolve_group("", "XAU", "") == "ทอง"
+print("✓ Asset_Type สะกดต่าง/ชื่อเรียกอื่น เข้ากลุ่มเดียวกับแอป")
+
+# 5) ต้นทุนต่อหน่วย = running WACC เหมือน runningCostBasis() (v68)
+_d0 = _dt.date(2026, 1, 1)
+_uc = LN.running_unit_cost([(_d0, "Buy", 10, 1000), (_d0 + _dt.timedelta(days=30), "Sell", 5, 0),
+                            (_d0 + _dt.timedelta(days=60), "Buy", 5, 1000)])
+near(_uc, 150, 1e-9), _uc
+near(LN.running_unit_cost([(_d0, "Buy", 10, 1000), (_d0, "Stake", 1, 0)]), 1000 / 11, 1e-9)
+near(LN.running_unit_cost([(_d0, "Buy", 2, 2000), (_d0, "Send", 2, 0), (_d0, "Recieved", 2, 0)]), 1000, 1e-9)
+print("✓ ขายแล้วซื้อเพิ่ม = 150/หน่วย (เดิม 133) · Stake ต้นทุน 0 · โอนระหว่างกระเป๋าไม่กระทบ")
+
+# 6) ฐานรอบก่อนที่คิดด้วยสูตรเก่า → ไม่เอามาเทียบมูลค่า (กัน "+฿200,000 (+100%)" ปลอม) แต่ราคายังเทียบได้
+_old = {"total": 201671, "groups": {"คริปโต": {"value": 4783}}, "prices": {"BTC": [100000, "USD"]}}
+_cb = LN.compat_base(_old)
+assert "total" not in _cb and "groups" not in _cb and _cb["prices"] == _old["prices"], _cb
+assert LN.compat_base({**_old, "calc": LN.CALC_VERSION}) == {**_old, "calc": LN.CALC_VERSION}
+assert "เทียบรอบก่อน" not in LN.daily_message(port, MARKET, _cb)
+print("✓ ฐานจากสูตรเก่าไม่ถูกใช้เทียบมูลค่า · ราคาต่อหน่วยยังเทียบได้")
+
 print("\n═══ ความยาวข้อความ ═══")
 for name, msg in [("daily", LN.daily_message(port, MARKET, prev)),
                   ("alert", LN.alert_message(mv, port)),
