@@ -16,7 +16,7 @@ window.LOC = window.LOC || 'th-TH-u-ca-gregory';
 //   • XIRR engine
 // กติกา: ไฟล์นี้ห้ามแตะ DOM ของหน้าใดหน้าหนึ่ง — pure data layer เท่านั้น
 // ═══════════════════════════════════════════════════════════════════
-const APP_BUILD = 'v68';
+const APP_BUILD = 'v69';
 console.log('[Finance OS shared] build', APP_BUILD);
 window.SHARED_BUILD = APP_BUILD;   // v45 — ให้ index.html ตรวจได้ว่าเวอร์ชันตรงกัน
  
@@ -949,8 +949,9 @@ function dividendCalendar(holdings, fund, received, fx, today){
 // ตัวคำนวณล้วน (ไม่แตะ DOM) · ทดสอบใน scripts/test_rebalance.cjs
 // holdings: [{ticker, group, qty, price(บาท/หน่วย), val, cost}] · targets: {ticker: %}
 // mode: 'topup' (ซื้ออย่างเดียว) · 'withdraw' (ขายอย่างเดียว) · 'rebalance' (ซื้อ+ขายให้ถึงเป้า)
-// หลัก: กองที่ขายไม่ได้ (ALLOC_META illiquid เช่น Provident Fund) ไม่อยู่ในสมการเลย —
-//       แบบเดียวกับ computeDeviations() ไม่งั้นจะแนะนำให้ "ขาย PVD" ซึ่งทำไม่ได้
+// หลัก: กองที่ขายไม่ได้ (ALLOC_META illiquid เช่น Provident Fund) ไม่ถูกซื้อ/ขาย — ไม่งั้นจะแนะนำให้ "ขาย PVD" ซึ่งทำไม่ได้
+// v69 — แต่ "นับอยู่ในพอร์ต": มูลค่ารวม · สัดส่วนในพอร์ต คิดบนฐานทั้งพอร์ตรวม PVD และ PVD แสดงเป็นแถว locked
+//       เป้ารายตัวของกองที่ซื้อขายได้ = สัดส่วนของ "ส่วนที่เหลือหลังหัก PVD" (PVD ขยับไม่ได้ จึงต้องให้กองอื่นเติมเต็ม)
 const REBAL_TARGETS_KEY = 'finOS_rebalTargets';
 const REBAL_OPTS_KEY    = 'finOS_rebalOpts';
 // หน่วยซื้อขายขั้นต่ำต่อกลุ่ม: หุ้นไทยซื้อทีละ 100 หุ้น (board lot) · อื่น ๆ ซื้อเป็นเศษได้
@@ -999,7 +1000,11 @@ function rebalancePlan(holdings, targets, amount, mode, opts){
                                        ((targets||{})[h.ticker] > 0 || h.val > 0));
   const tSum = H.reduce((s,h)=>s+(Number(targets[h.ticker])||0), 0);
   const cur  = H.reduce((s,h)=>s+(h.val||0), 0);
-  const empty = { rows:[], totalBuy:0, totalSell:0, leftover:amount, totalBefore:cur, totalAfter:cur, targetSum:tSum };
+  // v69 — กองที่ขายไม่ได้: นับมูลค่าเข้าฐานพอร์ต แต่ไม่อยู่ในสมการซื้อขาย
+  const L = (holdings||[]).filter(h => _rbIlliquid(h) && (h.val||0) > 0);
+  const lockedVal = L.reduce((s,h)=>s+(h.val||0), 0);
+  const empty = { rows:[], totalBuy:0, totalSell:0, leftover:amount, totalBefore:cur+lockedVal, totalAfter:cur+lockedVal,
+                  liquidBefore:cur, liquidAfter:cur, lockedVal, targetSum:tSum };
   if(!H.length || tSum <= 0) return empty;
   const tw = h => (Number(targets[h.ticker])||0) / tSum;          // สัดส่วนเป้า (normalize เผื่อรวมไม่ถึง 100)
   const after = mode==='withdraw' ? Math.max(0, cur-amount) : cur+amount;
@@ -1060,20 +1065,35 @@ function rebalancePlan(holdings, targets, amount, mode, opts){
     }
   }
   const gOf = {}; H.forEach(h => { gOf[h.group] = gOf[h.group] || {val:0, tgt:0}; gOf[h.group].val += h.val; gOf[h.group].tgt += tw(h); });
+  const totalBuy  = H.reduce((s,h)=>s+Math.max(0, units[h.ticker]*h.price),0);
+  const totalSell = H.reduce((s,h)=>s+Math.max(0,-units[h.ticker]*h.price),0);
+  const liqAfter  = cur + totalBuy - totalSell;
+  const fullNow = cur + lockedVal, fullAfter = liqAfter + lockedVal;   // ฐานทั้งพอร์ต (รวม PVD)
+  const liqShareAfter = fullAfter > 0 ? after/(after+lockedVal) : 1;   // ส่วนที่ซื้อขายได้ ณ เป้าหลังปรับ
   const rows = H.map(h => {
     const tradeUnits = units[h.ticker], tradeTHB = tradeUnits*h.price, valAfter = h.val + tradeTHB;
     const g = gOf[h.group];
     return { ticker:h.ticker, label:h.label||h.ticker, group:h.group, qty:h.qty, price:h.price, val:h.val, cost:h.cost||0,
       gain:(h.val||0)-(h.cost||0), gainPct: h.cost>0 ? ((h.val||0)-h.cost)/h.cost*100 : null,
-      shareNow: cur>0 ? h.val/cur*100 : 0, shareTarget: tw(h)*100,
-      shareAfter: after>0 ? valAfter/after*100 : 0,
+      shareNow: fullNow>0 ? h.val/fullNow*100 : 0, shareTarget: tw(h)*liqShareAfter*100,
+      shareAfter: fullAfter>0 ? valAfter/fullAfter*100 : 0,
+      liqShareNow: cur>0 ? h.val/cur*100 : 0, liqShareTarget: tw(h)*100,   // สัดส่วนในส่วนที่ซื้อขายได้ (แบบเดิม)
       catShareNow: g.val>0 ? h.val/g.val*100 : 0, catTarget: g.tgt>0 ? tw(h)/g.tgt*100 : 0,
-      lot: rebalLot(h.group, opts), tradeUnits, tradeTHB };
+      lot: rebalLot(h.group, opts), tradeUnits, tradeTHB, locked:false };
   });
-  const totalBuy  = rows.reduce((s,r)=>s+Math.max(0,r.tradeTHB),0);
-  const totalSell = rows.reduce((s,r)=>s+Math.max(0,-r.tradeTHB),0);
+  // v69 — แถวกองที่ขายไม่ได้: แสดงให้ครบพอร์ต · ไม่มีคำสั่งซื้อขาย · สัดส่วนหลังปรับเปลี่ยนตามฐานที่โตขึ้น/ลดลง
+  const lgOf = {}; L.forEach(h => { lgOf[h.group] = (lgOf[h.group]||0) + h.val; });
+  L.forEach(h => rows.push({ ticker:h.ticker, label:h.label||h.ticker, group:h.group, qty:h.qty, price:h.price||0, val:h.val, cost:h.cost||0,
+      gain:(h.val||0)-(h.cost||0), gainPct: h.cost>0 ? ((h.val||0)-h.cost)/h.cost*100 : null,
+      shareNow: fullNow>0 ? h.val/fullNow*100 : 0,
+      shareTarget: (after+lockedVal)>0 ? h.val/(after+lockedVal)*100 : 0,
+      shareAfter: fullAfter>0 ? h.val/fullAfter*100 : 0,
+      liqShareNow: null, liqShareTarget: null,
+      catShareNow: lgOf[h.group]>0 ? h.val/lgOf[h.group]*100 : 0, catTarget: lgOf[h.group]>0 ? h.val/lgOf[h.group]*100 : 0,
+      lot: 0, tradeUnits: 0, tradeTHB: 0, locked: true }));
   const leftover  = mode==='withdraw' ? totalSell-amount : amount - totalBuy + totalSell;
-  return { rows, totalBuy, totalSell, leftover, totalBefore:cur, totalAfter:cur+totalBuy-totalSell, targetSum:tSum, mode };
+  return { rows, totalBuy, totalSell, leftover, totalBefore:fullNow, totalAfter:fullAfter,
+           liquidBefore:cur, liquidAfter:liqAfter, lockedVal, targetSum:tSum, mode };
 }
 
 // ═══ Market bridge — ชีต → localStorage (ทั้ง Excel และ Sheets sync) ═══

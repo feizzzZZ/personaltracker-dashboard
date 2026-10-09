@@ -192,7 +192,7 @@ const DICT = {
   'รายงานประจำเดือน':'Monthly report', 'ทดสอบการแจ้งเตือน':'Test notification', 'แจ้งเตือนระบบ':'System notice',
   // v66 — หน้าใหม่
   'ปรับสมดุล':'Rebalance', 'ปรับสมดุลพอร์ต':'Portfolio rebalancing',
-  'คำนวณว่าต้องซื้อ/ขายตัวไหนกี่หน่วย ให้สัดส่วนกลับไปตามเป้า — กองที่ขายไม่ได้ (Provident Fund) ไม่นับ':'Works out how many units of each asset to buy or sell to get back to your targets — funds you cannot sell (Provident Fund) are excluded',
+  'คำนวณว่าต้องซื้อ/ขายตัวไหนกี่หน่วย ให้สัดส่วนกลับไปตามเป้า — นับทั้งพอร์ตรวม Provident Fund (กองที่ขายไม่ได้แสดงเป็น 🔒 ไม่มีคำสั่งซื้อขาย)':'Works out how many units of each asset to buy or sell to get back to your targets — the whole portfolio counts, including the Provident Fund (funds you cannot sell show as 🔒 with no trade)',
   'วิเคราะห์เจาะลึก':'Deep research',
   'งบการเงินรายปี · ปันผล · ข่าว รายบริษัท — ข้อมูลจาก pipeline (Yahoo · SEC EDGAR) ไม่ใช่คำแนะนำการลงทุน':'Annual financials · dividends · news per company — from the pipeline (Yahoo · SEC EDGAR), not investment advice',
   'ประวัติที่ได้รับจริง':'Dividends actually received',

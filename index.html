@@ -2220,7 +2220,7 @@ html.standalone .a2hs{display:none}
     <!-- ══ REBALANCE (v66) ══ -->
     <div class="page" id="page-rebalance">
       <div class="pg-hdr"><div><div class="pg-title">ปรับสมดุลพอร์ต</div>
-        <div class="pg-sub">คำนวณว่าต้องซื้อ/ขายตัวไหนกี่หน่วย ให้สัดส่วนกลับไปตามเป้า — กองที่ขายไม่ได้ (Provident Fund) ไม่นับ</div></div></div>
+        <div class="pg-sub">คำนวณว่าต้องซื้อ/ขายตัวไหนกี่หน่วย ให้สัดส่วนกลับไปตามเป้า — นับทั้งพอร์ตรวม Provident Fund (กองที่ขายไม่ได้แสดงเป็น 🔒 ไม่มีคำสั่งซื้อขาย)</div></div></div>
       <div id="rb-body"></div>
     </div>
 
@@ -4108,7 +4108,7 @@ const VLOG_PURGED_KEY = 'finOS_valueLogPurged_v44';
 //   ฟังก์ชันหาย  → BLOCK  (แอปคำนวณผิดแน่นอน — นี่คือสิ่งที่ guard มีไว้จับ)
 //   เลขไม่ตรง    → WARN   (แค่ลืม bump — log ไว้ ไม่รบกวนผู้ใช้)
 // ฟังก์ชันที่ต้องมีคือสัญญาจริงระหว่างสองไฟล์ ส่วนสตริงเวอร์ชันเป็นแค่ป้าย
-const EXPECTED_SHARED_BUILD = 'v68';
+const EXPECTED_SHARED_BUILD = 'v69';
 const REQUIRED_SHARED_FNS = [
   'resolvePrices', 'pipelinePricesTHB', 'parseReconcileRows',
   'computeReconciliation', 'splitBalances', 'debtVsInvest', 'buildDebtPlan',
@@ -7215,14 +7215,19 @@ function renderRebalance(){
   const n2=v=>(+v).toLocaleString(LOC,{maximumFractionDigits:v>=100?0:v>=1?2:6});
   const pct=v=>v.toFixed(2)+'%';
   const modeBtn=(m,th,en)=>`<button type="button" class="${_rb.mode===m?'active':''}" onclick="_rb.mode='${m}';_rb.done.clear();renderRebalance()">${_L(th,en)}</button>`;
-  const tSum=Object.entries(T).filter(([k])=>H.some(h=>h.ticker===k)).reduce((s,[,v])=>s+(+v||0),0);
+  const tSum=Object.entries(T).filter(([k])=>H.some(h=>h.ticker===k && !(ALLOC_META[h.group]||{}).illiquid)).reduce((s,[,v])=>s+(+v||0),0);
+  const lockedPct=p.totalBefore>0?p.lockedVal/p.totalBefore*100:0;   // v69 — ส่วนของพอร์ตที่ขายไม่ได้
   const setup=_rb.setup?`<div class="cc rb-setup">
       <div class="ct">${_L('ตั้งค่าเป้าหมายรายตัว','Per-asset targets')}<span>${_L('รวม','Total')} ${tSum.toFixed(1)}%${Math.abs(tSum-100)>0.5?' · '+_L('ระบบจะปรับสัดส่วนให้รวม 100% เอง','normalized to 100% automatically'):''}</span></div>
-      <div class="tw" style="border:none"><table class="rb-table"><thead><tr><th>${_L('สินทรัพย์','Asset')}</th><th>${_L('หมวด','Category')}</th><th>${_L('สัดส่วนตอนนี้','Now')}</th><th>${_L('เป้า %','Target %')}</th></tr></thead><tbody>
-      ${H.filter(h=>!(ALLOC_META[h.group]||{}).illiquid).map(h=>{const r=p.rows.find(x=>x.ticker===h.ticker);
+      ${p.lockedVal>0?`<div class="rb-note" style="margin:0 0 8px">🔒 ${_L(
+        `เป้า % ด้านล่างคือสัดส่วนใน "ส่วนที่ซื้อขายได้" — Provident Fund ${fmt(p.lockedVal)} (${lockedPct.toFixed(1)}% ของพอร์ต) นับอยู่ในพอร์ตแต่ขยับไม่ได้ ส่วนที่เหลือ ${(100-lockedPct).toFixed(1)}% จึงแบ่งตามเป้านี้`,
+        `Targets below are shares of the tradable part — the Provident Fund ${fmt(p.lockedVal)} (${lockedPct.toFixed(1)}% of the portfolio) counts in the portfolio but cannot move, so the remaining ${(100-lockedPct).toFixed(1)}% is split by these targets`)}</div>`:''}
+      <div class="tw" style="border:none"><table class="rb-table"><thead><tr><th>${_L('สินทรัพย์','Asset')}</th><th>${_L('หมวด','Category')}</th><th>${_L('สัดส่วนตอนนี้ (ส่วนที่ซื้อขายได้)','Now (tradable part)')}</th><th>${_L('เป้า %','Target %')}</th></tr></thead><tbody>
+      ${H.map(h=>{const r=p.rows.find(x=>x.ticker===h.ticker); const lk=(ALLOC_META[h.group]||{}).illiquid;
         return `<tr><td class="rb-asset tk">${escHtml(h.ticker)}</td><td data-l="${_L('หมวด','Category')}">${escHtml(h.group)}</td>
-        <td data-l="${_L('ตอนนี้','Now')}">${r?pct(r.shareNow):'—'}</td>
-        <td data-l="${_L('เป้า %','Target %')}"><input type="number" min="0" max="100" step="0.1" data-rbt="${escAttr(h.ticker)}" value="${+(T[h.ticker]||0)}"></td></tr>`;}).join('')}
+        <td data-l="${_L('ตอนนี้','Now')}">${lk?(r?pct(r.shareNow)+' '+_L('ของพอร์ต','of portfolio'):'—'):(r&&r.liqShareNow!=null?pct(r.liqShareNow):'—')}</td>
+        <td data-l="${_L('เป้า %','Target %')}">${lk?`<span style="color:var(--muted2)">🔒 ${_L('ขายไม่ได้','Locked')}</span>`
+          :`<input type="number" min="0" max="100" step="0.1" data-rbt="${escAttr(h.ticker)}" value="${+(T[h.ticker]||0)}">`}</td></tr>`;}).join('')}
       </tbody></table></div>
       <div class="ct" style="margin-top:14px">${_L('หน่วยซื้อขายขั้นต่ำต่อหมวด','Minimum trading unit per category')}</div>
       <div style="display:flex;flex-wrap:wrap;gap:12px">${[...new Set(H.map(h=>h.group))].filter(g=>!(ALLOC_META[g]||{}).illiquid).map(g=>
@@ -7244,7 +7249,8 @@ function renderRebalance(){
       <td data-l="${_L('สัดส่วนในพอร์ต','Share in portfolio')}">${pct(r.shareNow)}<div class="sub">${_L('เป้า','target')} ${pct(r.shareTarget)}</div></td>
       <td class="rb-hide-m">${escHtml(r.group)}</td>
       <td data-l="${_L('สัดส่วนในหมวด','Share in category')}">${pct(r.catShareNow)}<div class="sub">${_L('เป้า','target')} ${pct(r.catTarget)}</div></td>
-      <td data-l="${act?_L('ต้อง','To')+' '+act.toLowerCase():_L('ต้องซื้อ/ขาย','To buy/sell')}" class="rb-trade ${cls}">${r.tradeUnits?`${act} ${n2(Math.abs(r.tradeUnits))} ${_L('หน่วย','units')}<div class="sub">${fmt(Math.abs(r.tradeTHB))}</div>`:'—'}</td>
+      <td data-l="${act?_L('ต้อง','To')+' '+act.toLowerCase():_L('ต้องซื้อ/ขาย','To buy/sell')}" class="rb-trade ${cls}">${r.locked?`<span style="color:var(--muted2)">🔒 ${_L('ขายไม่ได้','Locked')}</span><div class="sub">${_L('นับในพอร์ต ไม่ซื้อขาย','counted, not traded')}</div>`
+        :r.tradeUnits?`${act} ${n2(Math.abs(r.tradeUnits))} ${_L('หน่วย','units')}<div class="sub">${fmt(Math.abs(r.tradeTHB))}</div>`:'—'}</td>
       <td class="rb-done"><input type="checkbox" class="rb-chk" ${done?'checked':''} ${r.tradeUnits?'':'disabled'} aria-label="${_L('ทำแล้ว','Done')}"
           onchange="this.checked?_rb.done.add('${escAttr(r.ticker)}'):_rb.done.delete('${escAttr(r.ticker)}');this.closest('tr').classList.toggle('done',this.checked)"></td>
     </tr>`;}).join('');
@@ -7263,7 +7269,7 @@ function renderRebalance(){
       <div class="sc"><div class="sc-lbl">${_L('ยอดซื้อรวม','Total purchase')}</div><div class="sc-val" style="color:var(--gain)">${fmt(p.totalBuy)}</div></div>
       <div class="sc"><div class="sc-lbl">${_L('ยอดขายรวม','Total sale')}</div><div class="sc-val" style="color:var(--loss)">${fmt(p.totalSell)}</div></div>
       <div class="sc"><div class="sc-lbl">${_rb.mode==='withdraw'?_L('ได้เกินที่ถอน','Surplus over withdrawal'):_L('เงินเหลือจากการปัดหน่วย','Left after rounding')}</div><div class="sc-val">${fmt(p.leftover)}</div></div>
-      <div class="sc"><div class="sc-lbl">${_L('มูลค่าหลังปรับ','Value after')}</div><div class="sc-val">${fmt(p.totalAfter)}</div><div class="sc-sub">${_L('ก่อน','before')} ${fmt(p.totalBefore)}</div></div>
+      <div class="sc"><div class="sc-lbl">${_L('มูลค่าพอร์ตหลังปรับ','Portfolio after')}</div><div class="sc-val">${fmt(p.totalAfter)}</div><div class="sc-sub">${_L('ก่อน','before')} ${fmt(p.totalBefore)}${p.lockedVal>0?' · '+_L('รวม Provident Fund','incl. Provident Fund')+' '+fmt(p.lockedVal)+' 🔒':''}</div></div>
     </div>
     <div class="cc" style="padding:0"><div class="tw" style="border:none"><table class="rb-table">
       <thead><tr><th>#</th><th>${_L('สินทรัพย์','Asset')}</th><th>${_L('ต้นทุน','Cost basis')}</th><th>${_L('มูลค่าปัจจุบัน','Current cost')}</th><th>${_L('กำไร','Gain')}</th>
@@ -7291,8 +7297,8 @@ function rbResetSetup(){
 function rbExportCSV(){
   const p=_rb.plan; if(!p) return;
   const q=v=>'"'+String(v).replace(/"/g,'""')+'"';
-  const lines=[['ticker','group','qty','price_thb','value_thb','share_now_pct','share_target_pct','trade_units','trade_thb'].join(',')]
-    .concat(p.rows.map(r=>[q(r.ticker),q(r.group),r.qty,r.price.toFixed(4),r.val.toFixed(2),r.shareNow.toFixed(2),r.shareTarget.toFixed(2),r.tradeUnits,r.tradeTHB.toFixed(2)].join(',')));
+  const lines=[['ticker','group','qty','price_thb','value_thb','share_now_pct','share_target_pct','trade_units','trade_thb','locked'].join(',')]
+    .concat(p.rows.map(r=>[q(r.ticker),q(r.group),r.qty,r.price.toFixed(4),r.val.toFixed(2),r.shareNow.toFixed(2),r.shareTarget.toFixed(2),r.tradeUnits,r.tradeTHB.toFixed(2),r.locked?1:0].join(',')));
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob(['\ufeff'+lines.join('\n')],{type:'text/csv;charset=utf-8'}));
   a.download=`rebalance-${_rb.mode}-${isoLocal(new Date())}.csv`; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
