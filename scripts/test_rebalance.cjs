@@ -1,4 +1,4 @@
-/* ทดสอบ rebalancePlan() ใน shared.js (v66)
+/* ทดสอบ rebalancePlan() ใน shared.js (v66 · v69 นับ PVD ในฐานพอร์ต)
  *   node scripts/test_rebalance.cjs shared.js
  */
 const fs = require('fs');
@@ -15,13 +15,19 @@ const H = [
   {ticker:'GOLD',  group:'Gold',           qty:1,    price:60000, val:60000,  cost:50000},
   {ticker:'PVD',   group:'Provident Fund', qty:1000, price:100,   val:100000, cost:90000},
 ];
-const T = { VOO:40, KBANK:30, BTC:10, GOLD:20, PVD:50 };   // PVD ต้องถูกตัดทิ้ง (illiquid)
+const T = { VOO:40, KBANK:30, BTC:10, GOLD:20, PVD:50 };   // PVD ขายไม่ได้ (illiquid): นับในพอร์ต แต่ไม่ซื้อขาย · เป้าที่ใส่ถูกเมิน
 const by = (p,t) => p.rows.find(r=>r.ticker===t);
 
 console.log('\n═══ Top up ═══');
 {
   const p = rebalancePlan(H, T, 50000, 'topup');
-  chk('ไม่มีกอง illiquid (PVD)', !by(p,'PVD'));
+  // v69 — PVD นับเข้าพอร์ต (แถว locked) แต่ไม่มีคำสั่งซื้อขาย
+  chk('PVD อยู่ในตาราง แบบ locked ไม่ซื้อขาย', by(p,'PVD') && by(p,'PVD').locked && by(p,'PVD').tradeUnits === 0);
+  chk('มูลค่าก่อนปรับ = ทั้งพอร์ตรวม PVD (450,000)', near(p.totalBefore, 450000, 0.01) && near(p.liquidBefore, 350000, 0.01), p.totalBefore);
+  chk('มูลค่าหลังปรับรวม PVD', near(p.totalAfter, 450000 + p.totalBuy, 0.01), p.totalAfter);
+  chk('สัดส่วน PVD ตอนนี้ = 100k/450k = 22.2%', near(by(p,'PVD').shareNow, 22.22, 0.01), by(p,'PVD').shareNow);
+  chk('สัดส่วน VOO ตอนนี้คิดบนทั้งพอร์ต (180k/450k = 40%)', near(by(p,'VOO').shareNow, 40, 0.01), by(p,'VOO').shareNow);
+  chk('สัดส่วนตอนนี้รวม 100', near(p.rows.reduce((s,r)=>s+r.shareNow,0), 100, 0.01));
   chk('ไม่ขายอะไรเลย', p.rows.every(r=>r.tradeTHB >= 0));
   chk('ใช้เงินไม่เกินที่เติม', p.totalBuy <= 50000 + 0.01, p.totalBuy.toFixed(2));
   chk('ใช้เงินเกือบหมด (เหลือ < 1 lot หุ้นไทย)', p.leftover < 150*100, p.leftover.toFixed(2));
@@ -55,6 +61,7 @@ console.log('\n═══ Rebalance ═══');
 console.log('\n═══ ขอบเขต ═══');
 {
   chk('ไม่มีเป้า → ว่าง ไม่ throw', rebalancePlan(H, {}, 1000, 'topup').rows.length === 0);
+  chk('ไม่มีเป้า → ยังบอกมูลค่าทั้งพอร์ตรวม PVD', rebalancePlan(H, {}, 1000, 'topup').totalBefore === 450000);
   chk('holdings ว่าง', rebalancePlan([], T, 1000, 'topup').rows.length === 0);
   const d = defaultRebalTargets(H);
   chk('เป้าเริ่มต้นรวม ~100 และไม่มี PVD', near(Object.values(d).reduce((a,b)=>a+b,0), 100, 0.3) && !('PVD' in d), JSON.stringify(d));
