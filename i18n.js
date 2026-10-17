@@ -229,6 +229,17 @@ const DICT = {
   'โอนเข้าบัญชี':'Transfer to account', 'คำนวณให้':'Auto-calculated', 'ไม่บังคับ':'Optional',
   'เช่น CPALL, AAPL, BTC':'e.g. CPALL, AAPL, BTC', 'เช่น Food, Transport':'e.g. Food, Transport',
   'docs.google.com/spreadsheets/d/【ส่วนนี้】/edit':'docs.google.com/spreadsheets/d/【this part】/edit',
+  // ── v71 — คลังเอกสาร (ป้ายที่ JS สร้างใช้ _L() อยู่แล้ว ที่นี่เป็นเฉพาะ markup คงที่) ──
+  'เอกสาร':'Documents', 'หมวดเอกสาร':'Document categories', 'เพิ่มเอกสาร':'Add document', 'แก้ไข':'Edit',
+  'แก้ไขรายละเอียด':'Edit details', 'ปิด (Esc)':'Close (Esc)',
+  'ใบยื่นภาษี · สลิปเงินเดือน · บิลบัตรเครดิต · ใบยืนยันซื้อขายหุ้น — ไฟล์จริงอยู่ใน Google Drive ของคุณ':'Tax filings · salary slips · credit card bills · trade confirmations — the files themselves live in your Google Drive',
+  'วันที่เอกสาร':'Document date', 'ชื่อเอกสาร':'Document title', 'ลิงก์ไฟล์ (Google Drive)':'File link (Google Drive)',
+  'ผู้ออกเอกสาร':'Issuer', 'ปี (ปีภาษี)':'Year (tax year)', 'แท็ก':'Tags', 'หมายเหตุ':'Note',
+  'เช่น Tax':'e.g. Tax', 'เช่น ภ.ง.ด.90 ปีภาษี 2025':'e.g. PND 90, tax year 2025', 'เช่น กรมสรรพากร, KBank':'e.g. Revenue Department, KBank',
+  'ตามวันที่':'From the date', 'คั่นด้วย ,':'Comma-separated',
+  'อัปโหลดไฟล์เข้า':'Upload the file to',
+  'แล้ว คลิกขวา → แชร์ → คัดลอกลิงก์ มาวาง · ให้สิทธิ์เป็น “จำกัด (Restricted)” ไว้ — เปิดได้เฉพาะบัญชีคุณ':'then right-click → Share → Copy link and paste it here · keep access “Restricted” so only your account can open it',
+  'รายการจะถูกเพิ่มต่อท้ายแท็บ Documents ในชีต':'Appended to the end of the Documents tab',
 };
 
 // ป้ายที่มีตัวเลข/ชื่อแทรก — regex ต้องครอบทั้งข้อความ (^…$)

@@ -16,7 +16,7 @@ window.LOC = window.LOC || 'th-TH-u-ca-gregory';
 //   • XIRR engine
 // กติกา: ไฟล์นี้ห้ามแตะ DOM ของหน้าใดหน้าหนึ่ง — pure data layer เท่านั้น
 // ═══════════════════════════════════════════════════════════════════
-const APP_BUILD = 'v69';
+const APP_BUILD = 'v71';
 console.log('[Finance OS shared] build', APP_BUILD);
 window.SHARED_BUILD = APP_BUILD;   // v45 — ให้ index.html ตรวจได้ว่าเวอร์ชันตรงกัน
  
@@ -2573,4 +2573,204 @@ function analystDesk(ctx){
     catch(e){ console.warn('[analyst]',fn.name,e.message);
       return _mk(fn.name,'—','เกิดข้อผิดพลาด','⚠',[{s:'y',t:'วิเคราะห์ไม่สำเร็จ',d:e.message}],[]); }
   });
+}
+
+// ═══ v71 — คลังเอกสาร (ภาษี · สลิปเงินเดือน · บิลบัตร · ซื้อขายหุ้น ฯลฯ) ═══════════
+// ไฟล์จริงอยู่ใน Google Drive · ชีตแท็บ Documents เก็บแค่ "บัตรรายการ" (metadata + ลิงก์)
+// เหตุผล: แอปเป็นหน้าเว็บ static บน repo สาธารณะ ไม่มี backend · localStorage จุได้ไม่กี่ MB
+// และเอกสารภาษี/สลิปเป็นข้อมูลอ่อนไหว → ให้ Drive (สิทธิ์ Restricted) เป็นคนคุมสิทธิ์เข้าถึง
+// ฟังก์ชันกลุ่มนี้ pure ทั้งหมด — ทดสอบด้วย scripts/test_docs.cjs
+const DOC_CATEGORIES = [
+  {id:'tax',       icon:'🏛', th:'ภาษี',              en:'Tax',
+   alias:['tax','taxes','ภาษี','ภงด','ภ.ง.ด','pnd','50ทวิ','50 ทวิ','ลดหย่อน','withholding']},
+  {id:'salary',    icon:'💼', th:'สลิปเงินเดือน',      en:'Salary slip',
+   alias:['salary','salaryslip','salary slip','payslip','pay slip','สลิป','สลิปเงินเดือน','เงินเดือน']},
+  {id:'card',      icon:'💳', th:'บิลบัตรเครดิต',      en:'Credit card',
+   alias:['card','creditcard','credit card','credit card statement','statement','บัตร','บัตรเครดิต','บิลบัตรเครดิต']},
+  {id:'trade',     icon:'📈', th:'ซื้อขายหุ้น',        en:'Trade confirmation',
+   alias:['trade','trades','stock','stocks','broker','brokerage','trade confirmation','confirmation','หุ้น','ซื้อขายหุ้น','ใบยืนยันซื้อขาย','โบรก']},
+  {id:'receipt',   icon:'🧾', th:'ใบเสร็จ',            en:'Receipt',
+   alias:['receipt','receipts','invoice','ใบเสร็จ','ใบแจ้งหนี้','ใบกำกับภาษี']},
+  {id:'insurance', icon:'🛡', th:'ประกัน',             en:'Insurance',
+   alias:['insurance','policy','ประกัน','กรมธรรม์']},
+  {id:'other',     icon:'📄', th:'อื่น ๆ',             en:'Other',
+   alias:['other','others','misc','อื่น','อื่นๆ','อื่น ๆ']},
+];
+const _docKey = s => String(s ?? '').toLowerCase().replace(/[\s_\-.]+/g, '');
+
+// ข้อความหมวดจากชีต → {id, label} · หมวดที่ไม่รู้จักกลายเป็นหมวดใหม่ของผู้ใช้เอง (ไม่ตกไป other เงียบ ๆ)
+function docCategoryOf(raw){
+  const k = _docKey(raw);
+  if(!k) return {id:'other', label:''};
+  for(const c of DOC_CATEGORIES){
+    if(_docKey(c.id) === k || _docKey(c.th) === k || _docKey(c.en) === k
+       || c.alias.some(a => _docKey(a) === k)) return {id:c.id, label:''};
+  }
+  return {id:'x:' + k, label:String(raw).trim()};
+}
+
+// ลิงก์ที่กดได้ต้องเป็น http(s) เท่านั้น — กัน javascript:/data: จากเซลล์ในชีต
+function docSafeUrl(u){
+  const s = String(u ?? '').trim();
+  return /^https?:\/\/[^\s"'<>]+$/i.test(s) ? s : '';
+}
+
+// รหัสไฟล์ Google Drive จากลิงก์ทุกรูปแบบที่ Drive แจกให้
+function driveFileId(u){
+  const s = docSafeUrl(u); if(!s) return '';
+  if(!/^https:\/\/(drive|docs)\.google\.com\//i.test(s)) return '';
+  const m = s.match(/\/d\/([A-Za-z0-9_-]{10,})/) || s.match(/[?&]id=([A-Za-z0-9_-]{10,})/);
+  return m ? m[1] : '';
+}
+
+// ภาพตัวอย่าง: ไฟล์ใน Drive ใช้ thumbnail ของ Drive (เห็นเฉพาะคนที่ล็อกอิน Google และมีสิทธิ์ไฟล์)
+// ลิงก์ที่เป็นรูปตรง ๆ ใช้รูปนั้น · อย่างอื่นคืน '' → หน้าเว็บวาดกระดาษจำลองแทน
+function docThumbUrl(u, w){
+  const id = driveFileId(u);
+  if(id) return 'https://drive.google.com/thumbnail?id=' + id + '&sz=w' + (w || 400);
+  const s = docSafeUrl(u);
+  return /\.(png|jpe?g|webp|gif)(\?|#|$)/i.test(s) ? s : '';
+}
+function docEmbedUrl(u){
+  const id = driveFileId(u);
+  return id ? 'https://drive.google.com/file/d/' + id + '/preview' : '';
+}
+function docFileKind(u){
+  const s = String(u || '').toLowerCase();
+  if(/\.pdf(\?|#|$)/.test(s)) return 'PDF';
+  if(/\.(png|jpe?g|webp|gif|heic)(\?|#|$)/.test(s)) return 'IMG';
+  if(/docs\.google\.com\/spreadsheets|\.xlsx?(\?|#|$)|\.csv(\?|#|$)/.test(s)) return 'SHEET';
+  if(/docs\.google\.com\/document|\.docx?(\?|#|$)/.test(s)) return 'DOC';
+  if(/drive\.google\.com/.test(s)) return 'DRIVE';
+  return s ? 'LINK' : '';
+}
+
+// วันที่จากชีต: serial (UNFORMATTED_VALUE) · YYYY-MM-DD · DD/MM/YYYY (ปี พ.ศ. แปลงให้) → 'YYYY-MM-DD'
+function docDateIso(v){
+  if(v == null || v === '') return '';
+  if(typeof v === 'number' && isFinite(v) && v > 0){
+    const d = new Date(Math.round((v - 25569) * 864e5));
+    return d.toISOString().slice(0, 10);
+  }
+  const s = String(v).trim();
+  let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  let y, mo, da;
+  if(m){ y = +m[1]; mo = +m[2]; da = +m[3]; }
+  else if((m = s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/))){ da = +m[1]; mo = +m[2]; y = +m[3]; }
+  else if((m = s.match(/^(\d{4})$/))) return '';
+  else return '';
+  if(y > 2400) y -= 543;
+  if(mo < 1 || mo > 12 || da < 1 || da > 31) return '';
+  return y + '-' + String(mo).padStart(2,'0') + '-' + String(da).padStart(2,'0');
+}
+
+const DOC_FIELDS = {
+  cat:    ['category','cat','type','หมวด','หมวดหมู่','ประเภท'],
+  title:  ['title','name','document','ชื่อ','ชื่อเอกสาร','เอกสาร'],
+  date:   ['date','issuedate','issue date','วันที่','วันที่ออก'],
+  issuer: ['issuer','from','company','source','ผู้ออก','จาก','บริษัท'],
+  amount: ['amount','total','value','จำนวนเงิน','ยอด','ยอดเงิน'],
+  tags:   ['tags','tag','labels','แท็ก','ป้าย'],
+  url:    ['fileurl','file url','file','url','link','ลิงก์','ไฟล์'],
+  note:   ['note','notes','memo','หมายเหตุ','บันทึก'],
+  year:   ['year','taxyear','tax year','ปี','ปีภาษี'],
+};
+const DOC_HEADER = ['Category','Title','Date','Issuer','Amount','Tags','File URL','Note','Year'];
+
+// แถวหัวตาราง → {field: colIndex} · หาหัวใน 5 แถวแรก (เผื่อมีชื่อชีตอยู่บรรทัดบน)
+function docHeaderMap(rows){
+  for(let r = 0; r < Math.min(5, (rows || []).length); r++){
+    const row = rows[r] || [], cols = {};
+    row.forEach((h, i) => {
+      const k = _docKey(h);
+      for(const [f, names] of Object.entries(DOC_FIELDS))
+        if(cols[f] == null && names.some(n => _docKey(n) === k)) cols[f] = i;
+    });
+    if(cols.title != null && (cols.url != null || cols.cat != null)) return {headerRow:r, cols};
+  }
+  return null;
+}
+
+function _docNum(v){
+  if(typeof v === 'number') return isFinite(v) ? v : null;
+  const s = String(v ?? '').replace(/[฿$,\s]/g, '');
+  if(!s) return null;
+  const neg = /^\(.*\)$/.test(s);
+  const n = parseFloat(s.replace(/[()]/g, ''));
+  return isFinite(n) ? (neg ? -n : n) : null;
+}
+
+// ชีต Documents (array 2 มิติ) → {docs, meta} · meta.cols ใช้ตอนเขียนกลับ
+function parseDocumentRows(rows){
+  const hm = docHeaderMap(rows);
+  if(!hm) return {docs:[], meta:null};
+  const {headerRow, cols} = hm, at = (r, f) => (cols[f] == null ? '' : r[cols[f]]);
+  const docs = [];
+  let lastRow = headerRow + 1;
+  for(let i = headerRow + 1; i < rows.length; i++){
+    const r = rows[i] || [];
+    const title = String(at(r,'title') ?? '').trim();
+    const rawUrl = String(at(r,'url') ?? '').trim();
+    if(!title && !rawUrl) continue;
+    lastRow = i + 1;
+    const c = docCategoryOf(at(r,'cat'));
+    const date = docDateIso(at(r,'date'));
+    const yRaw = String(at(r,'year') ?? '').trim();
+    let year = /^\d{4}$/.test(yRaw) ? +yRaw : (date ? +date.slice(0,4) : null);
+    if(year && year > 2400) year -= 543;
+    const tags = String(at(r,'tags') ?? '').split(/[,;|#\n]+/).map(t => t.trim()).filter(Boolean);
+    docs.push({
+      row: i + 1,                       // แถวจริงในชีต (1-based) สำหรับแก้ไข
+      cat: c.id, catLabel: c.label,
+      rawCat: String(at(r,'cat') ?? '').trim(),
+      title: title || rawUrl,
+      date, year,
+      issuer: String(at(r,'issuer') ?? '').trim(),
+      amount: _docNum(at(r,'amount')),
+      tags,
+      url: docSafeUrl(rawUrl), rawUrl,
+      note: String(at(r,'note') ?? '').trim(),
+    });
+  }
+  docs.sort((a, b) => (b.date || '').localeCompare(a.date || '') || b.row - a.row);
+  return {docs, meta:{headerRow: headerRow + 1, cols, lastRow, width: Math.max(...Object.values(cols)) + 1}};
+}
+
+// ค้นหา: ทุกคำต้องเจอ (AND) ในชื่อ ผู้ออก แท็ก หมายเหตุ ปี วันที่ ยอดเงิน หรือชื่อหมวด
+function docSearch(docs, q){
+  const terms = String(q || '').toLowerCase().split(/\s+/).filter(Boolean);
+  if(!terms.length) return docs.slice();
+  return docs.filter(d => {
+    const cat = DOC_CATEGORIES.find(c => c.id === d.cat);
+    const hay = [d.title, d.issuer, d.tags.join(' '), d.note, d.year, d.date, d.catLabel,
+                 cat ? cat.th + ' ' + cat.en : '', d.amount != null ? String(d.amount) : '']
+      .join(' ').toLowerCase();
+    return terms.every(t => hay.includes(t));
+  });
+}
+
+// รายการหมวดที่ใช้จริง (หมวดมาตรฐานเรียงตาม DOC_CATEGORIES แล้วตามด้วยหมวดของผู้ใช้)
+function docCategoryList(docs){
+  const count = {};
+  const custom = {};
+  (docs || []).forEach(d => {
+    count[d.cat] = (count[d.cat] || 0) + 1;
+    if(d.cat.startsWith('x:')) custom[d.cat] = d.catLabel;
+  });
+  const std = DOC_CATEGORIES.map(c => ({id:c.id, icon:c.icon, th:c.th, en:c.en, n:count[c.id] || 0}));
+  const cus = Object.keys(custom).sort().map(id => ({id, icon:'📁', th:custom[id], en:custom[id], n:count[id]}));
+  return std.concat(cus);
+}
+
+// ฟิลด์ฟอร์ม → แถวที่จะเขียนลงชีตตามตำแหน่งคอลัมน์จริง (คอลัมน์ที่ชีตไม่มี ข้ามไป)
+function docRowValues(meta, f){
+  const out = new Array(meta.width).fill(null);
+  const put = (k, v) => { if(meta.cols[k] != null) out[meta.cols[k]] = v; };
+  put('cat', f.cat || ''); put('title', f.title || ''); put('date', f.date || '');
+  put('issuer', f.issuer || '');
+  put('amount', f.amount === '' || f.amount == null ? '' : Number(f.amount));
+  put('tags', (Array.isArray(f.tags) ? f.tags : String(f.tags || '').split(','))
+                .map(t => t.trim()).filter(Boolean).join(', '));
+  put('url', f.url || ''); put('note', f.note || ''); put('year', f.year || '');
+  return out;
 }

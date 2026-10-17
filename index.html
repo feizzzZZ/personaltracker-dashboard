@@ -1303,6 +1303,127 @@ html.standalone .a2hs{display:none}
   .wv-warn-btn{order:2}
   .wv-warn-x{order:3;margin-left:auto}
 }
+/* ══ v71 — คลังเอกสาร ══════════════════════════════════════════════ */
+/* เมนูย่อยใต้ "เอกสาร" ในแถบข้าง — โผล่เฉพาะตอนอยู่ในกลุ่มนี้ */
+.sb-subnav{display:none;flex-direction:column;gap:1px;margin:2px 0 6px 20px;padding-left:10px;border-left:1px solid var(--border)}
+.sb-item[data-group="docs"].active + .sb-subnav{display:flex}
+.sb-subitem{display:flex;align-items:center;gap:7px;padding:5px 8px;border-radius:6px;cursor:pointer;font-size:11.5px;
+  color:var(--muted2);background:none;border:none;font-family:inherit;text-align:left;width:100%}
+.sb-subitem:hover{background:var(--bg3);color:var(--text)}
+.sb-subitem.active{color:var(--white);background:var(--bg3)}
+.sb-subitem:focus-visible{outline:2px solid var(--income);outline-offset:-2px}
+.sb-subitem .n{margin-left:auto;font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums}
+.sb-mini .sb-subnav{display:none!important}
+/* แท็บหมวดในหน้า — ใช้แทนเมนูย่อยเมื่อแถบข้างซ่อน (มือถือ) หรือถูกย่อ */
+.docs-tabs{display:none}
+@media(max-width:768px){.docs-tabs{display:flex;margin-bottom:14px}}
+body.sb-mini .docs-tabs{display:flex}
+
+.docs-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;margin-bottom:20px}
+.docs-tile{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 12px;cursor:pointer;
+  display:grid;grid-template-columns:auto 1fr auto;grid-template-rows:auto auto;column-gap:10px;align-items:center;
+  text-align:left;font:inherit;color:var(--text);min-width:0}
+.docs-tile:hover{border-color:var(--border2)}
+.docs-tile:focus-visible{outline:2px solid var(--income);outline-offset:2px}
+.docs-tile-ic{font-size:18px;grid-row:1/3}
+.docs-tile-n{font-size:18px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--white);grid-column:3;grid-row:1/3}
+.docs-tile-lbl{font-size:12.5px;font-weight:600;color:var(--white);grid-column:2;grid-row:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.docs-tile-sub{font-size:10.5px;color:var(--muted2);grid-column:2;grid-row:2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.docs-tile.empty .docs-tile-n{color:var(--muted)}
+
+.docs-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.docs-search{flex:1 1 260px;max-width:420px;display:flex;align-items:center;gap:8px;background:var(--bg3);
+  border:1px solid var(--border);border-radius:8px;padding:0 10px}
+.docs-search:focus-within{border-color:var(--income)}
+.docs-search input{flex:1;min-width:0;background:none;border:none;outline:none;color:var(--text);font:inherit;font-size:13px;padding:9px 0}
+.docs-search .ic{color:var(--muted);font-size:13px}
+.docs-sel{background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 10px;font:inherit;font-size:12px}
+.docs-spacer{flex:1}
+.docs-ibtn{background:var(--bg3);border:1px solid var(--border);color:var(--muted2);border-radius:8px;min-width:36px;height:36px;
+  padding:0 10px;cursor:pointer;font:inherit;font-size:14px;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.docs-ibtn:hover{color:var(--text);border-color:var(--border2)}
+.docs-ibtn.on{color:var(--white);border-color:var(--white)}
+.docs-ibtn.primary{background:var(--income);border-color:var(--income);color:var(--on-accent);font-weight:600;font-size:12px}
+.docs-ibtn:focus-visible{outline:2px solid var(--income);outline-offset:1px}
+.docs-count{font-size:11px;color:var(--muted2);margin:-6px 0 12px}
+
+.docs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+.doc-card{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:16px;cursor:pointer;
+  display:flex;flex-direction:column;gap:8px;text-align:left;font:inherit;color:var(--text);min-width:0;transition:border-color .15s}
+.doc-card:hover{border-color:var(--border2)}
+.doc-card:focus-visible{outline:2px solid var(--income);outline-offset:2px}
+.doc-card.sel{border-color:var(--income)}
+.doc-title{font-size:13.5px;font-weight:600;color:var(--white);line-height:1.35;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.doc-desc{font-size:11.5px;color:var(--muted2);line-height:1.5;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.doc-tags{display:flex;gap:6px;overflow:hidden;margin-top:auto;padding-top:4px;
+  -webkit-mask-image:linear-gradient(to right,#000 85%,transparent);mask-image:linear-gradient(to right,#000 85%,transparent)}
+.doc-tag{flex:0 0 auto;font-family:var(--f-mono);font-size:10px;color:var(--muted2);background:var(--bg4);border-radius:999px;padding:3px 9px;white-space:nowrap}
+
+/* ภาพตัวอย่าง: thumbnail จริงจาก Drive ถ้าโหลดได้ · ไม่ได้ก็เป็นกระดาษจำลอง */
+.doc-thumb{width:62px;height:84px;border-radius:3px;background:#FFFFFF;border:1px solid var(--border2);position:relative;
+  overflow:hidden;flex:0 0 auto;box-shadow:var(--card-shadow)}
+.doc-thumb img{width:100%;height:100%;object-fit:cover;object-position:top;display:block}
+.doc-thumb .paper{position:absolute;inset:0;padding:9px 7px;display:flex;flex-direction:column;gap:4px}
+.doc-thumb .paper i{display:block;height:2px;background:#D5DAE1;border-radius:1px}
+.doc-thumb .paper i:nth-child(1){width:55%;height:3px;background:#94A3B8}
+.doc-thumb .paper i:nth-child(3){width:70%}.doc-thumb .paper i:nth-child(5){width:40%}
+.doc-thumb .kind{position:absolute;right:3px;bottom:3px;font-family:var(--f-mono);font-size:7px;font-weight:700;
+  color:#FFFFFF;background:#0F172A;border-radius:2px;padding:1px 3px;letter-spacing:.04em}
+.doc-thumb .cat-ic{position:absolute;right:4px;top:4px;font-size:10px}
+.doc-thumb.has-img .paper{display:none}
+
+/* มุมมองรายการ */
+.docs-list{border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.docs-list table{width:100%;border-collapse:collapse;font-size:12px}
+.docs-list th{font-weight:500;text-align:left;color:var(--muted2);font-size:11px;padding:10px 12px;border-bottom:1px solid var(--border);background:var(--bg2)}
+.docs-list td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+.docs-list tr:last-child td{border-bottom:none}
+.docs-list tbody tr{cursor:pointer}
+.docs-list tbody tr:hover{background:var(--hover)}
+.docs-list tbody tr:focus-visible{outline:2px solid var(--income);outline-offset:-2px}
+.docs-list .t{color:var(--white);font-weight:500}
+.docs-list .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+@media(max-width:640px){.docs-list .hide-sm{display:none}}
+
+.docs-empty{border:1px dashed var(--border2);border-radius:12px;padding:28px 22px;color:var(--muted2);font-size:13px;line-height:1.7}
+.docs-empty h3{color:var(--white);font-size:15px;margin-bottom:6px}
+.docs-empty ol{margin:8px 0 14px 20px}
+.docs-empty code{font-family:var(--f-mono);font-size:11.5px;background:var(--bg4);padding:1px 6px;border-radius:4px;color:var(--text)}
+
+/* แผงรายละเอียดเลื่อนออกมาจากขวา */
+.doc-drawer-bd{position:fixed;inset:0;background:var(--overlay);z-index:180;opacity:0;pointer-events:none;transition:opacity .18s}
+.doc-drawer-bd.show{opacity:1;pointer-events:auto}
+.doc-drawer{position:fixed;top:0;right:0;bottom:0;width:min(520px,100vw);background:var(--bg2);border-left:1px solid var(--border2);
+  z-index:190;transform:translateX(100%);transition:transform .2s ease;display:flex;flex-direction:column;box-shadow:var(--pop-shadow)}
+.doc-drawer.show{transform:none}
+@media(prefers-reduced-motion:reduce){.doc-drawer,.doc-drawer-bd{transition:none}}
+.doc-dr-top{display:flex;align-items:center;gap:8px;padding:calc(14px + env(safe-area-inset-top,0px)) 18px 12px;border-bottom:1px solid var(--border)}
+.doc-dr-top .cat{font-size:11px;color:var(--muted2);flex:1;min-width:0}
+.doc-dr-body{flex:1;overflow-y:auto;padding:22px 26px 26px;overscroll-behavior:contain}
+.doc-dr-title{font-family:var(--f-mono);font-size:18px;font-weight:600;color:var(--white);line-height:1.35;margin-bottom:4px;word-break:break-word}
+.doc-dr-sub{font-size:12px;color:var(--muted2);margin-bottom:18px}
+.doc-preview{border:1px solid var(--border);border-radius:8px;background:var(--bg3);overflow:hidden;margin-bottom:20px;
+  display:flex;align-items:center;justify-content:center;min-height:220px;position:relative}
+.doc-preview img{max-width:100%;max-height:420px;display:block}
+.doc-preview iframe{width:100%;height:520px;border:0;display:block;background:#FFFFFF}
+.doc-preview .doc-thumb{width:150px;height:200px;margin:24px}
+.doc-preview.has-img>.doc-thumb{display:none}
+.doc-preview .doc-thumb .paper{padding:20px 16px;gap:8px}
+.doc-preview .doc-thumb .paper i{height:4px}
+.doc-preview .doc-thumb .kind{font-size:10px;padding:2px 5px}
+.doc-meta{display:grid;grid-template-columns:110px 1fr;gap:9px 14px;font-family:var(--f-mono);font-size:12px;margin-bottom:20px}
+.doc-meta dt{color:var(--muted2)}
+.doc-meta dd{color:var(--text);word-break:break-word;white-space:pre-wrap}
+.doc-meta dd.amt{font-size:15px;font-weight:600;color:var(--white)}
+.doc-dr-foot{border-top:1px solid var(--border);padding:12px 18px calc(12px + env(safe-area-inset-bottom,0px));display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.doc-open{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--white);color:var(--bg);
+  border-radius:8px;padding:10px 14px;font-size:13px;font-weight:600;text-decoration:none;min-width:160px}
+.doc-open:hover{opacity:.9}
+.doc-open:focus-visible{outline:2px solid var(--income);outline-offset:2px}
+.doc-open.disabled{background:var(--bg4);color:var(--muted);pointer-events:none}
+.doc-note{font-size:11px;color:var(--muted2);line-height:1.6;margin-top:6px}
 </style>
 </head>
 <body>
@@ -1376,6 +1497,12 @@ html.standalone .a2hs{display:none}
       <div class="sb-item" data-group="markets" onclick="switchGroup('markets')">
         <span class="sb-icon" aria-hidden="true">📡</span>ตลาด &amp; จังหวะ
       </div>
+      <!-- v71 — คลังเอกสาร · เมนูย่อยตามหมวด (#sb-docs-sub) สร้างจากข้อมูลจริงใน renderDocsNav() -->
+      <div class="sb-section">เอกสาร</div>
+      <div class="sb-item" data-group="docs" onclick="docsGo('all')">
+        <span class="sb-icon" aria-hidden="true">🗂</span>เอกสาร
+      </div>
+      <div class="sb-subnav" id="sb-docs-sub" role="group" aria-label="หมวดเอกสาร"></div>
       <div class="sb-section">ระบบ</div>
       <div class="sb-item" data-group="notify" onclick="switchGroup('notify')">
         <span class="sb-icon" aria-hidden="true">🔔</span>การแจ้งเตือน
@@ -2276,6 +2403,14 @@ html.standalone .a2hs{display:none}
       <div id="market-body"></div>
     </div>
 
+    <!-- ══ DOCUMENTS (v71) ══ -->
+    <div class="page" id="page-docs">
+      <div class="pg-hdr"><div><div class="pg-title" id="docs-title">เอกสาร</div>
+        <div class="pg-sub" id="docs-sub">ใบยื่นภาษี · สลิปเงินเดือน · บิลบัตรเครดิต · ใบยืนยันซื้อขายหุ้น — ไฟล์จริงอยู่ใน Google Drive ของคุณ</div></div></div>
+      <div class="grp-tabs docs-tabs" id="docs-tabs" role="tablist"></div>
+      <div id="docs-body"></div>
+    </div>
+
   </div><!-- /main-content -->
 
   <!-- v67 — กระดิ่งมุมขวาบน (มือถือ) แบบแอปทั่วไป -->
@@ -2433,6 +2568,7 @@ function unrealizedOf(list){
            nUnpriced: unpriced.length, unpricedCost: unpriced.reduce((s,a)=>s+(a.cost||0),0) };
 }
 let insPolicies=[],insCoverage=[];
+let docsList=[], docSheetMeta=null;   // v71 — แท็บ Documents (บัตรรายการเอกสาร · ไฟล์จริงอยู่ใน Drive)
 let totalFee=0,availableMonths=[],curMonthIdx=0,cfFilter='all',cfPage=0,pfFilter='all';
 let charts={},flowPeriod='monthly';
 const PAGE_SIZE=15;
@@ -4108,7 +4244,7 @@ const VLOG_PURGED_KEY = 'finOS_valueLogPurged_v44';
 //   ฟังก์ชันหาย  → BLOCK  (แอปคำนวณผิดแน่นอน — นี่คือสิ่งที่ guard มีไว้จับ)
 //   เลขไม่ตรง    → WARN   (แค่ลืม bump — log ไว้ ไม่รบกวนผู้ใช้)
 // ฟังก์ชันที่ต้องมีคือสัญญาจริงระหว่างสองไฟล์ ส่วนสตริงเวอร์ชันเป็นแค่ป้าย
-const EXPECTED_SHARED_BUILD = 'v69';
+const EXPECTED_SHARED_BUILD = 'v71';
 const REQUIRED_SHARED_FNS = [
   'resolvePrices', 'pipelinePricesTHB', 'parseReconcileRows',
   'computeReconciliation', 'splitBalances', 'debtVsInvest', 'buildDebtPlan',
@@ -4127,6 +4263,7 @@ const REQUIRED_SHARED_FNS = [
   'runningCostBasis', 'sellFeeToDeduct', 'movementAfter',   // v68 — ต้นทุนถือครอง · ค่าธรรมเนียมขาย · reconcile
   'notifyDecrypt', 'mergeNotifications', 'notifUnread', 'notifLocalAdd', 'notifCategory', 'b64ToBytes', 'bytesToB64',   // v67
   'loadBotPaper', 'fetchBotPaper', 'botStatus',   // v59 — หน้าบอทจำลอง
+  'parseDocumentRows', 'docSearch', 'docCategoryList', 'docThumbUrl', 'docEmbedUrl', 'docSafeUrl', 'docRowValues',   // v71 — คลังเอกสาร
 ];
 function checkSharedVersion(){
   const missing = REQUIRED_SHARED_FNS.filter(f=>typeof window[f] !== 'function');
@@ -5568,7 +5705,7 @@ async function gsSync(){
     console.log('[GS] Required:', Object.keys(map));
 
     // Optional sheets (skip if missing)
-    const OPT = ['Insurance_Policies','Insurance_Coverage','Market_Data','Value_Log','Reconcile'];
+    const OPT = ['Insurance_Policies','Insurance_Coverage','Market_Data','Value_Log','Reconcile','Documents'];   // v71 + Documents
     for(const s of OPT){
       try{
         // v62 — Reconcile โตครั้งละ 10 แถว (บัญชีละแถว) และ Value_Log วันละแถว
@@ -5736,6 +5873,9 @@ function gsProcessData(map){
     insPolicies=[]; insCoverage=[];
     if(map['Insurance_Policies']) gsParseInsPolicy(map['Insurance_Policies']);
     if(map['Insurance_Coverage']) gsParseInsCoverage(map['Insurance_Coverage']);
+
+    // ─ Documents (v71) ─ ไม่มีแท็บ = คลังว่าง (หน้าเอกสารแสดงวิธีตั้งค่า)
+    { const p = parseDocumentRows(map['Documents']||[]); docsList = p.docs; docSheetMeta = p.meta; }
 
     // Show dashboard
     console.log('[GS] txRows:', txRows.length, 'assets:', assets.length, 'months:', availableMonths);
@@ -6655,6 +6795,7 @@ function saveDataCache(){
     const payload={ savedAt:Date.now(), syncedAt:_syncedAt, txRows, tracker, assets, bankBals, realized,
                     reconMap, waccMap, fxMap, platMap,
                     insPolicies, insCoverage, totalFee,
+                    docsList, docSheetMeta,   // v71
                     // v49 — ต้อง cache ด้วย ไม่งั้นเปิดแอปครั้งถัดไปปุ่ม + จะกดไม่ได้
                     // จนกว่า sync จะเสร็จ (ออฟไลน์ = บันทึกอะไรไม่ได้เลย)
                     txSheetMeta, atSheetMeta };   // ★ ชื่อตัวแปรจริง (เดิมเขียนผิดเป็น insurance/coverage → ข้อมูลประกันหาย)
@@ -6687,6 +6828,7 @@ function restoreDataCache(){
     insPolicies = (p.insPolicies||[]).map(r=>({...r,
       renewal:_d(r.renewal), policyDate:_d(r.policyDate), maturity:_d(r.maturity)}));
     insCoverage = p.insCoverage||[];
+    docsList = Array.isArray(p.docsList) ? p.docsList : []; docSheetMeta = p.docSheetMeta || null;   // v71
     if(typeof p.totalFee==='number') totalFee = p.totalFee;
     // v49 — กู้ layout ชีตกลับมาด้วย แล้วเปิดปุ่มเพิ่มรายการให้ใช้ได้ทันที
     if(p.txSheetMeta) txSheetMeta = p.txSheetMeta;
@@ -8005,6 +8147,363 @@ function renderMarket(){
     </div>`;
 }
 
+/* ══ v71 — คลังเอกสาร ═════════════════════════════════════════════════
+   ไฟล์จริงอยู่ใน Google Drive · แท็บ Documents ในชีตเก็บบัตรรายการ (หมวด ชื่อ วันที่ ลิงก์ …)
+   ตรรกะอ่าน/ค้นหาอยู่ใน shared.js (parseDocumentRows · docSearch …) ไฟล์นี้ทำแค่ UI + เขียนชีต
+   docsCat: 'all' | id หมวด (tax · salary · card · trade · receipt · insurance · other · x:<ของผู้ใช้>) */
+const DOCS_VIEW_KEY = 'finOS_docsView';
+let docsCat = 'all', docsQuery = '', docsYear = '', docsOpenRow = null, docsEditRow = null, _docsLastFocus = null;
+let docsView = 'grid';
+try{ if(localStorage.getItem(DOCS_VIEW_KEY) === 'list') docsView = 'list'; }catch(e){}
+
+function _docCatInfo(id){
+  const std = DOC_CATEGORIES.find(c => c.id === id);
+  if(std) return {id, icon:std.icon, label:_L(std.th, std.en)};
+  const d = docsList.find(x => x.cat === id);
+  return {id, icon:'📁', label:(d && d.catLabel) || id.replace(/^x:/, '')};
+}
+const _docFmtDate = iso => {
+  if(!iso) return '';
+  const d = new Date(iso + 'T00:00:00');
+  return isNaN(d) ? iso : d.toLocaleDateString(LOC, {day:'numeric', month:'short', year:'numeric'});
+};
+
+// เข้าหน้าเอกสาร (จากเมนูข้าง / เมนูย่อย / แท็บ)
+function docsGo(cat){
+  docsCat = cat || 'all'; docsQuery = ''; docsYear = '';
+  switchPage('docs');
+  renderDocs();
+}
+
+function renderDocsNav(){
+  const cats = docCategoryList(docsList);
+  const items = [{id:'all', icon:'▦', label:_L('ทั้งหมด','All'), n:docsList.length}]
+    .concat(cats.map(c => ({id:c.id, icon:c.icon, label:_L(c.th, c.en), n:c.n})));
+  const sub = document.getElementById('sb-docs-sub');
+  if(sub) sub.innerHTML = items.map(c =>
+    `<button type="button" class="sb-subitem${c.id===docsCat?' active':''}" onclick="docsGo('${escHtml(c.id)}')"
+       ${c.id===docsCat?'aria-current="page"':''}><span aria-hidden="true">${c.icon}</span><span>${escHtml(c.label)}</span>
+       <span class="n">${c.n || ''}</span></button>`).join('');
+  const tabs = document.getElementById('docs-tabs');
+  if(tabs){
+    tabs.innerHTML = items.filter(c => c.id === 'all' || c.n || c.id === docsCat).map(c =>
+      `<button type="button" role="tab" class="grp-tab${c.id===docsCat?' active':''}" aria-selected="${c.id===docsCat}"
+         onclick="docsGo('${escHtml(c.id)}')">${escHtml(c.label)}</button>`).join('');
+    const act = tabs.querySelector('.grp-tab.active');
+    if(act) tabs.scrollLeft = Math.max(0, act.offsetLeft - (tabs.clientWidth - act.offsetWidth) / 2);
+  }
+}
+
+function renderDocs(){
+  const body = document.getElementById('docs-body'); if(!body) return;
+  renderDocsNav();
+  const info = docsCat === 'all' ? null : _docCatInfo(docsCat);
+  const t = document.getElementById('docs-title');
+  if(t) t.textContent = info ? info.label : _L('เอกสาร', 'Documents');
+
+  // ยังไม่มีแท็บ Documents ในชีต → วิธีตั้งค่า + คำแนะนำที่เก็บไฟล์
+  if(!docSheetMeta && !docsList.length){
+    body.innerHTML = `<div class="docs-empty">
+      <h3>${_L('ยังไม่มีแท็บ Documents ในชีต','No Documents tab in your sheet yet')}</h3>
+      ${_L('แนะนำให้เก็บ <b>ไฟล์จริงใน Google Drive</b> แล้วให้แอปเก็บแค่รายละเอียด + ลิงก์ไว้ในแท็บ <code>Documents</code> ของชีตเดิม',
+           'Keep the <b>actual files in Google Drive</b>; the app only stores details + a link in a <code>Documents</code> tab of the same sheet')}
+      <ol>
+        <li>${_L('สร้างโฟลเดอร์ใน Drive แยกตามหมวด เช่น <code>Tax/2025</code> · <code>Salary</code> · <code>Credit card</code> · <code>Broker</code>',
+                 'Create Drive folders per category, e.g. <code>Tax/2025</code> · <code>Salary</code> · <code>Credit card</code> · <code>Broker</code>')}</li>
+        <li>${_L('อัปโหลดไฟล์ ตั้งสิทธิ์แชร์เป็น “จำกัด (Restricted)” — ลิงก์เปิดได้เฉพาะบัญชี Google ของคุณ',
+                 'Upload files and keep sharing as “Restricted” — only your Google account can open the link')}</li>
+        <li>${_L('กด <b>+ เพิ่มเอกสาร</b> แล้ววางลิงก์ — แอปจะสร้างแท็บ Documents ให้อัตโนมัติ (หรือสร้างเองด้วยหัวตาราง ',
+                 'Press <b>+ Add document</b> and paste the link — the app creates the Documents tab for you (or create it with the headers ')}
+            <code>${DOC_HEADER.join(' | ')}</code>)</li>
+      </ol>
+      <button type="button" class="docs-ibtn primary" onclick="docsOpenForm()">＋ ${_L('เพิ่มเอกสาร','Add document')}</button>
+    </div>`;
+    return;
+  }
+
+  let html = '';
+  if(docsCat === 'all'){
+    const cats = docCategoryList(docsList);
+    html += `<div class="docs-tiles">` + cats.map(c => {
+      const latest = docsList.find(d => d.cat === c.id);
+      return `<button type="button" class="docs-tile${c.n?'':' empty'}" onclick="docsGo('${escHtml(c.id)}')">
+        <span class="docs-tile-ic" aria-hidden="true">${c.icon}</span>
+        <span class="docs-tile-n">${c.n}</span>
+        <span class="docs-tile-lbl">${escHtml(_L(c.th, c.en))}</span>
+        <span class="docs-tile-sub">${latest ? escHtml(_L('ล่าสุด ','Latest ') + (_docFmtDate(latest.date) || latest.title)) : _L('ยังไม่มีเอกสาร','No documents')}</span>
+      </button>`;
+    }).join('') + `</div>`;
+  }
+  const pool = docsCat === 'all' ? docsList : docsList.filter(d => d.cat === docsCat);
+  const years = [...new Set(pool.map(d => d.year).filter(Boolean))].sort((a, b) => b - a);
+  if(docsYear && !years.includes(+docsYear)) docsYear = '';
+  html += `<div class="docs-bar">
+      <label class="docs-search"><span class="ic" aria-hidden="true">⌕</span>
+        <input id="docs-q" type="search" value="${escHtml(docsQuery)}" oninput="docsOnSearch(this.value)"
+          placeholder="${escHtml(_L('ค้นหาชื่อ ผู้ออก แท็ก ปี หรือยอดเงิน','Search title, issuer, tag, year or amount'))}"
+          aria-label="${escHtml(_L('ค้นหาเอกสาร','Search documents'))}" autocomplete="off"></label>
+      ${years.length > 1 ? `<select class="docs-sel" onchange="docsYear=this.value;renderDocsResults()" aria-label="${escHtml(_L('ปี','Year'))}">
+        <option value="">${_L('ทุกปี','All years')}</option>
+        ${years.map(y => `<option value="${y}"${String(y)===String(docsYear)?' selected':''}>${y}</option>`).join('')}</select>` : ''}
+      <span class="docs-spacer"></span>
+      <button type="button" class="docs-ibtn${docsView==='grid'?' on':''}" onclick="docsSetView('grid')" aria-pressed="${docsView==='grid'}"
+        title="${escHtml(_L('แบบการ์ด','Grid view'))}" aria-label="${escHtml(_L('แบบการ์ด','Grid view'))}">▦</button>
+      <button type="button" class="docs-ibtn${docsView==='list'?' on':''}" onclick="docsSetView('list')" aria-pressed="${docsView==='list'}"
+        title="${escHtml(_L('แบบรายการ','List view'))}" aria-label="${escHtml(_L('แบบรายการ','List view'))}">☰</button>
+      <button type="button" class="docs-ibtn primary" onclick="docsOpenForm()">＋ ${_L('เพิ่มเอกสาร','Add document')}</button>
+    </div>
+    <div class="docs-count" id="docs-count" aria-live="polite"></div>
+    <div id="docs-results"></div>`;
+  body.innerHTML = html;
+  renderDocsResults();
+}
+
+function docsOnSearch(v){ docsQuery = v; renderDocsResults(); }
+function docsSetView(v){
+  docsView = v === 'list' ? 'list' : 'grid';
+  try{ localStorage.setItem(DOCS_VIEW_KEY, docsView); }catch(e){}
+  renderDocs();
+}
+
+// noImg: วาดแค่กระดาษจำลอง (แผงรายละเอียดวางรูปใหญ่ซ้อนเอง แล้วถอยมาใช้ตัวนี้ถ้ารูปโหลดไม่ได้)
+function _docThumbHtml(d, w, noImg){
+  const src = noImg ? '' : docThumbUrl(d.url || d.rawUrl, w);
+  const kind = docFileKind(d.url || d.rawUrl);
+  const ic = _docCatInfo(d.cat).icon;
+  return `<span class="doc-thumb${src?' has-img':''}" aria-hidden="true">
+    <span class="paper"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+    ${src ? `<img src="${escHtml(src)}" alt="" loading="lazy" referrerpolicy="no-referrer"
+         onerror="this.parentNode.classList.remove('has-img');this.remove()">` : `<span class="cat-ic">${ic}</span>`}
+    ${kind ? `<span class="kind">${kind}</span>` : ''}</span>`;
+}
+function _docDesc(d){
+  const bits = [];
+  if(d.issuer) bits.push(d.issuer);
+  if(d.date) bits.push(_docFmtDate(d.date));
+  if(d.amount != null) bits.push(fmt(d.amount));
+  return bits.join(' · ') || d.note || '';
+}
+
+function renderDocsResults(){
+  const box = document.getElementById('docs-results'); if(!box) return;
+  let list = docsCat === 'all' ? docsList : docsList.filter(d => d.cat === docsCat);
+  if(docsYear) list = list.filter(d => String(d.year) === String(docsYear));
+  const total = list.length;
+  list = docSearch(list, docsQuery);
+  const cnt = document.getElementById('docs-count');
+  if(cnt) cnt.textContent = (docsQuery || docsYear)
+    ? _L(`พบ ${list.length} จาก ${total} รายการ`, `${list.length} of ${total} documents`)
+    : _L(`${total} รายการ`, `${total} documents`);
+  if(!list.length){
+    box.innerHTML = `<div class="docs-empty">${total
+      ? _L('ไม่พบเอกสารที่ตรงกับคำค้น — ลองคำอื่น หรือเลือก “ทุกปี”','No documents match — try another word or “All years”')
+      : _L('ยังไม่มีเอกสารในหมวดนี้ — กด <b>＋ เพิ่มเอกสาร</b> เพื่อเริ่ม','No documents in this category yet — press <b>＋ Add document</b> to start')}</div>`;
+    return;
+  }
+  if(docsView === 'list'){
+    box.innerHTML = `<div class="docs-list"><table>
+      <thead><tr><th>${_L('เอกสาร','Document')}</th><th class="hide-sm">${_L('หมวด','Category')}</th>
+        <th class="hide-sm">${_L('ผู้ออก','Issuer')}</th><th>${_L('วันที่','Date')}</th><th class="num">${_L('จำนวนเงิน','Amount')}</th></tr></thead>
+      <tbody>${list.map(d => `<tr tabindex="0" onclick="docsOpenDetail(${d.row})" onkeydown="if(event.key==='Enter')docsOpenDetail(${d.row})"
+          class="${d.row===docsOpenRow?'sel':''}">
+        <td class="t">${escHtml(d.title)}</td>
+        <td class="hide-sm">${escHtml(_docCatInfo(d.cat).label)}</td>
+        <td class="hide-sm">${escHtml(d.issuer || '—')}</td>
+        <td style="white-space:nowrap">${escHtml(_docFmtDate(d.date) || (d.year || '—'))}</td>
+        <td class="num">${d.amount != null ? fmt(d.amount) : '—'}</td></tr>`).join('')}</tbody></table></div>`;
+    return;
+  }
+  box.innerHTML = `<div class="docs-grid">` + list.map(d => `
+    <button type="button" class="doc-card${d.row===docsOpenRow?' sel':''}" onclick="docsOpenDetail(${d.row})">
+      ${_docThumbHtml(d, 200)}
+      <span class="doc-title">${escHtml(d.title)}</span>
+      <span class="doc-desc">${escHtml(_docDesc(d))}</span>
+      <span class="doc-tags">${[docsCat==='all' ? _docCatInfo(d.cat).label : null, d.year && !String(d.date).startsWith(d.year) ? String(d.year) : null]
+        .concat(d.tags).filter(Boolean).map(t => `<span class="doc-tag">${escHtml(t)}</span>`).join('')}</span>
+    </button>`).join('') + `</div>`;
+}
+
+// ── แผงรายละเอียด ─────────────────────────────────────────────────────
+function docsOpenDetail(row){
+  const d = docsList.find(x => x.row === row); if(!d) return;
+  _docsLastFocus = document.activeElement;
+  docsOpenRow = row;
+  const info = _docCatInfo(d.cat);
+  document.getElementById('doc-dr-cat').textContent = info.icon + '  ' + info.label;
+  const big = docThumbUrl(d.url || d.rawUrl, 1000);
+  const embed = docEmbedUrl(d.url);
+  const rows = [
+    [_L('วันที่','Date'), _docFmtDate(d.date)],
+    [_L('ปี','Year'), d.year],
+    [_L('ผู้ออก','Issuer'), d.issuer],
+    [_L('จำนวนเงิน','Amount'), d.amount != null ? fmt(d.amount) : '', 'amt'],
+    [_L('แท็ก','Tags'), d.tags.join(', ')],
+    [_L('หมายเหตุ','Note'), d.note],
+    [_L('ไฟล์','File'), docFileKind(d.url || d.rawUrl)],
+  ].filter(r => r[1] !== '' && r[1] != null);
+  document.getElementById('doc-dr-body').innerHTML = `
+    <div class="doc-dr-title" id="doc-dr-title">${escHtml(d.title)}</div>
+    <div class="doc-dr-sub">${escHtml(_L('แถว ','Row ') + d.row + _L(' ในแท็บ Documents',' of the Documents tab'))}</div>
+    <div class="doc-preview${big?' has-img':''}" id="doc-preview">
+      ${_docThumbHtml(d, 0, true)}
+      ${big ? `<img src="${escHtml(big)}" alt="${escHtml(_L('ตัวอย่างเอกสาร','Document preview'))}" referrerpolicy="no-referrer"
+          onerror="this.parentNode.classList.remove('has-img');this.remove()">` : ''}
+    </div>
+    ${embed ? `<button type="button" class="docs-ibtn" style="margin:-8px 0 18px" onclick="docsEmbed('${escHtml(embed)}')">👁 ${_L('แสดงไฟล์เต็มในหน้านี้','Show the full file here')}</button>` : ''}
+    <dl class="doc-meta">${rows.map(([k, v, cls]) => `<dt>${escHtml(k)}</dt><dd${cls?` class="${cls}"`:''}>${escHtml(v)}</dd>`).join('')}</dl>
+    ${!d.url && d.rawUrl ? `<div class="doc-note" style="color:var(--expense)">⚠ ${_L('ลิงก์ในชีตไม่ใช่ http(s) จึงไม่เปิดให้ — แก้ลิงก์ในแท็บ Documents','The link in the sheet is not http(s), so it is not opened — fix it in the Documents tab')}</div>` : ''}
+    <div class="doc-note">${_L('ภาพตัวอย่างจาก Drive จะขึ้นเมื่อเบราว์เซอร์นี้ล็อกอินบัญชี Google ที่มีสิทธิ์ไฟล์ · ไฟล์ไม่ได้ถูกเก็บในแอป',
+      'Drive previews appear when this browser is signed in to a Google account that can open the file · files are not stored in the app')}</div>`;
+  document.getElementById('doc-dr-foot').innerHTML = d.url
+    ? `<a class="doc-open" href="${escHtml(d.url)}" target="_blank" rel="noopener noreferrer">↗ ${_L('เปิดไฟล์ต้นฉบับ','Open original file')}</a>
+       <button type="button" class="docs-ibtn" onclick="docsCopyLink(this)" data-url="${escHtml(d.url)}">⧉ ${_L('คัดลอกลิงก์','Copy link')}</button>`
+    : `<span class="doc-open disabled">${_L('ยังไม่มีลิงก์ไฟล์','No file link yet')}</span>`;
+  document.getElementById('doc-dr-edit').style.display = gsTokenValid() ? '' : 'none';
+  const dr = document.getElementById('doc-drawer');
+  dr.classList.add('show'); dr.setAttribute('aria-hidden', 'false');
+  document.getElementById('doc-drawer-bd').classList.add('show');
+  renderDocsResults();
+  setTimeout(() => { const b = dr.querySelector('.doc-dr-top button:last-child'); if(b) b.focus(); }, 30);
+}
+function docsEmbed(src){
+  const box = document.getElementById('doc-preview');
+  if(box) box.innerHTML = `<iframe src="${escHtml(src)}" title="${escHtml(_L('ไฟล์เอกสาร','Document file'))}" allow="autoplay"></iframe>`;
+}
+function docsCloseDetail(){
+  const dr = document.getElementById('doc-drawer'); if(!dr || !dr.classList.contains('show')) return;
+  dr.classList.remove('show'); dr.setAttribute('aria-hidden', 'true');
+  document.getElementById('doc-drawer-bd').classList.remove('show');
+  docsOpenRow = null;
+  setTimeout(() => { const b = document.getElementById('doc-dr-body'); if(b) b.innerHTML = ''; }, 220);  // หยุด iframe
+  renderDocsResults();
+  if(_docsLastFocus && document.body.contains(_docsLastFocus)) try{ _docsLastFocus.focus(); }catch(e){}
+}
+function docsCopyLink(btn){
+  const u = btn.dataset.url;
+  const done = () => { const o = btn.innerHTML; btn.textContent = '✓ ' + _L('คัดลอกแล้ว','Copied'); setTimeout(() => btn.innerHTML = o, 1400); };
+  if(navigator.clipboard) navigator.clipboard.writeText(u).then(done).catch(() => prompt('URL', u));
+  else prompt('URL', u);
+}
+document.addEventListener('keydown', e => {
+  if(e.key !== 'Escape') return;
+  const m = document.getElementById('doc-modal');
+  if(m && m.classList.contains('show')){ docsCloseForm(); return; }
+  docsCloseDetail();
+});
+
+// ── ฟอร์มเพิ่ม/แก้ไข → เขียนลงแท็บ Documents ─────────────────────────
+function docsOpenForm(row){
+  const d = row != null ? docsList.find(x => x.row === row) : null;
+  docsEditRow = d ? d.row : null;
+  document.getElementById('doc-modal-title').textContent = d ? _L('แก้ไขเอกสาร','Edit document') : _L('เพิ่มเอกสาร','Add document');
+  const dl = document.getElementById('doc-cat-list');
+  dl.innerHTML = docCategoryList(docsList).map(c => `<option value="${escHtml(c.id.startsWith('x:') ? c.th : c.en)}">${escHtml(c.th)}</option>`).join('');
+  const preset = d ? (d.rawCat || '') : (docsCat !== 'all' ? (DOC_CATEGORIES.find(c => c.id === docsCat)?.en || _docCatInfo(docsCat).label) : '');
+  const v = (id, val) => { document.getElementById(id).value = val == null ? '' : val; };
+  v('doc-f-cat', preset); v('doc-f-title', d?.title); v('doc-f-date', d?.date); v('doc-f-url', d?.rawUrl);
+  v('doc-f-issuer', d?.issuer); v('doc-f-amount', d?.amount); v('doc-f-year', d && d.year && !String(d.date).startsWith(d.year) ? d.year : '');
+  v('doc-f-tags', d ? d.tags.join(', ') : ''); v('doc-f-note', d?.note);
+  document.getElementById('doc-f-status').textContent = d
+    ? _L(`จะเขียนทับแถว ${d.row} ในแท็บ Documents`, `Overwrites row ${d.row} of the Documents tab`)
+    : _L('รายการจะถูกเพิ่มต่อท้ายแท็บ Documents ในชีต', 'Appended to the end of the Documents tab');
+  document.getElementById('doc-f-save').disabled = false;
+  document.getElementById('doc-modal').classList.add('show');
+  setTimeout(() => document.getElementById(d ? 'doc-f-title' : (preset ? 'doc-f-title' : 'doc-f-cat')).focus(), 30);
+}
+function docsEditCurrent(){ if(docsOpenRow != null){ const r = docsOpenRow; docsCloseDetail(); docsOpenForm(r); } }
+function docsCloseForm(){ document.getElementById('doc-modal').classList.remove('show'); docsEditRow = null; }
+
+async function _docsApi(path, opt){
+  const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${GS_CONFIG.spreadsheetId}${path}`,
+    Object.assign({headers:{'Authorization':'Bearer '+gsAccessToken, 'Content-Type':'application/json'}}, opt || {}));
+  if(!res.ok){
+    const body = await res.text().catch(() => '');
+    if(res.status === 401 || res.status === 403)
+      throw new Error(_L('ไม่มีสิทธิ์เขียน — กด Sync เพื่อเข้าสู่ระบบใหม่','No write permission — press Sync to sign in again'));
+    throw new Error('HTTP ' + res.status + ' · ' + body.slice(0, 140));
+  }
+  return res.json();
+}
+// อ่านแท็บ Documents สด ๆ (ไม่ต้อง sync ทั้งแอป)
+async function docsReload(){
+  const j = await _docsApi('/values/' + encodeURIComponent('Documents!A1:Z')
+    + '?valueRenderOption=UNFORMATTED_VALUE&dateTimeRenderOption=SERIAL_NUMBER');
+  const p = parseDocumentRows(j.values || []);
+  docsList = p.docs; docSheetMeta = p.meta;
+  try{   // อัปเดตเฉพาะส่วนเอกสารใน cache — ไม่แตะเวลา sync ของข้อมูลอื่น
+    const raw = localStorage.getItem(CACHE_KEY);
+    if(raw){ const c = JSON.parse(raw); c.docsList = docsList; c.docSheetMeta = docSheetMeta; localStorage.setItem(CACHE_KEY, JSON.stringify(c)); }
+  }catch(e){}
+}
+// ให้แน่ใจว่ามีแท็บ Documents พร้อมหัวตาราง ก่อนเขียนครั้งแรก
+async function docsEnsureSheet(){
+  if(docSheetMeta) return docSheetMeta;
+  const j = await _docsApi('?fields=' + encodeURIComponent('sheets(properties(title))'));
+  const has = (j.sheets || []).some(s => s.properties && s.properties.title === 'Documents');
+  if(!has) await _docsApi(':batchUpdate', {method:'POST', body:JSON.stringify({requests:[{addSheet:{properties:{
+    title:'Documents', gridProperties:{frozenRowCount:1}}}}]})});
+  await docsReload();
+  if(docSheetMeta) return docSheetMeta;
+  // แท็บมีอยู่แต่ไม่มีหัวตาราง — เขียนหัวให้เฉพาะเมื่อแถว 1 ว่าง (ไม่ทับข้อมูลผู้ใช้)
+  const r1 = await _docsApi('/values/' + encodeURIComponent('Documents!A1:Z1'));
+  if((r1.values || []).some(r => r.some(c => String(c).trim())))
+    throw new Error(_L('แท็บ Documents มีข้อมูลอยู่แล้วแต่หาหัวตารางไม่เจอ — ใส่หัว ', 'The Documents tab has data but no header row — add ') + DOC_HEADER.join(' | '));
+  await _docsApi('/values/' + encodeURIComponent('Documents!A1') + '?valueInputOption=RAW',
+    {method:'PUT', body:JSON.stringify({values:[DOC_HEADER]})});
+  await docsReload();
+  if(!docSheetMeta) throw new Error(_L('สร้างหัวตาราง Documents ไม่สำเร็จ','Could not create the Documents header'));
+  return docSheetMeta;
+}
+
+async function docsSubmitForm(){
+  const g = id => document.getElementById(id).value.trim();
+  const st = document.getElementById('doc-f-status'), btn = document.getElementById('doc-f-save');
+  const f = {cat:g('doc-f-cat'), title:g('doc-f-title'), date:g('doc-f-date'), url:g('doc-f-url'),
+             issuer:g('doc-f-issuer'), amount:g('doc-f-amount'), year:g('doc-f-year'), tags:g('doc-f-tags'), note:g('doc-f-note')};
+  if(!f.title){ st.textContent = '⚠ ' + _L('ใส่ชื่อเอกสารก่อน','Enter a document title'); document.getElementById('doc-f-title').focus(); return; }
+  if(f.url && !docSafeUrl(f.url)){ st.textContent = '⚠ ' + _L('ลิงก์ต้องขึ้นต้นด้วย https://','The link must start with https://'); document.getElementById('doc-f-url').focus(); return; }
+  if(!f.url) f.url = '';
+  // หมวดที่รู้จักเขียนเป็นชื่อมาตรฐาน (Tax · Salary slip …) ให้ชีตสม่ำเสมอ · หมวดใหม่เขียนตามที่พิมพ์
+  const c = docCategoryOf(f.cat);
+  if(!c.id.startsWith('x:') && f.cat) f.cat = DOC_CATEGORIES.find(x => x.id === c.id).en;
+  if(!f.cat) f.cat = 'Other';
+  if(!GS_CONFIG.spreadsheetId || !gsTokenValid()){
+    st.textContent = '🔑 ' + _L('Session หมดอายุ — กด Sync เพื่อเข้าสู่ระบบใหม่ แล้วลองอีกครั้ง','Session expired — press Sync to sign in, then try again');
+    return;
+  }
+  btn.disabled = true; st.textContent = '⏳ ' + _L('กำลังบันทึก...','Saving...');
+  try{
+    const meta = await docsEnsureSheet();
+    if(docsEditRow != null){
+      const orig = docsList.find(x => x.row === docsEditRow);
+      // กันเขียนผิดแถว: ถ้ามีคนแก้ชีตจนแถวเลื่อน ชื่อในแถวนั้นจะไม่ตรงแล้ว
+      const titleCol = txColLetter(meta.cols.title);
+      const chk = await _docsApi('/values/' + encodeURIComponent(`Documents!${titleCol}${docsEditRow}`));
+      const now = String(((chk.values || [])[0] || [])[0] || '').trim();
+      if(!orig || now !== orig.title)
+        throw new Error(_L('แถวในชีตเปลี่ยนไปแล้ว — กด Sync แล้วลองใหม่','The sheet row has moved — press Sync and try again'));
+      const vals = docRowValues(meta, f);   // null = ไม่แตะช่องนั้น (คอลัมน์อื่นของผู้ใช้ปลอดภัย)
+      await _docsApi('/values/' + encodeURIComponent(`Documents!A${docsEditRow}:${txColLetter(meta.width - 1)}${docsEditRow}`)
+        + '?valueInputOption=USER_ENTERED', {method:'PUT', body:JSON.stringify({values:[vals]})});
+    } else {
+      const vals = docRowValues(meta, f).map(v => v == null ? '' : v);
+      await _docsApi('/values/' + encodeURIComponent('Documents!A' + meta.headerRow) + ':append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS',
+        {method:'POST', body:JSON.stringify({values:[vals]})});
+    }
+    const wasEdit = docsEditRow;
+    await docsReload();
+    docsCloseForm();
+    if(!wasEdit){ const k = docCategoryOf(f.cat).id; if(docsCat !== 'all' && docsCat !== k) docsCat = k; }
+    renderDocs();
+    const hit = wasEdit != null ? docsList.find(x => x.row === wasEdit)
+              : docsList.reduce((a, b) => (!a || b.row > a.row ? b : a), null);
+    if(hit) docsOpenDetail(hit.row);
+  }catch(e){
+    st.textContent = '❌ ' + e.message;
+    console.error('[Docs] save failed:', e);
+  }finally{ btn.disabled = false; }
+}
+
 let pageRenderFns={
   overview:renderOverview,cashflow:renderCashflow,yearly:renderYearly,
   accounts:renderAccounts,portfolio:renderPortfolio,
@@ -8020,7 +8519,8 @@ let pageRenderFns={
   // v53
   signals:renderSignals,
   // v59 — ภาพรวมตลาด (watchlist 25 ตัว) + บอทจำลอง
-  watch:renderWatch, bot:renderBot, research:renderResearch, notify:renderNotify
+  watch:renderWatch, bot:renderBot, research:renderResearch, notify:renderNotify,
+  docs:renderDocs   // v71 — คลังเอกสาร
 };
 /* ══ v49 — Analyst Desk ═══════════════════════════════════════════════
    ตัวเชื่อมระหว่าง state ของแอปกับ analystDesk() ที่เป็น pure function
@@ -8226,6 +8726,7 @@ const NAV_GROUPS = [
   {id:'markets',   pages:[['signals','สัญญาณรายตัว'],['research','วิเคราะห์เจาะลึก'],['watch','ภาพรวมตลาด'],
                           ['bot','บอทจำลอง'],['market','ตลาดวันนี้']]},
   {id:'notify',    pages:[['notify','การแจ้งเตือน']]},   // v67 — เมนูที่ 10
+  {id:'docs',      pages:[['docs','เอกสาร']]},           // v71 — คลังเอกสาร (หมวดย่อยอยู่ในเมนูข้าง/แท็บของหน้าเอง)
 ];
 const PAGE_DEPS = { portfolio:['overview'], accounts:['overview'], goals:['overview','dividends'] };
 const _lastTab = {};
@@ -9998,6 +10499,76 @@ document.addEventListener('DOMContentLoaded', () => {
       <button class="tx-del-btn" id="tx-f-del" onclick="txDeleteCurrent()" hidden>ลบรายการ</button>
       <button class="gs-save-btn" id="tx-f-save" onclick="txSubmitForm()">บันทึกลงชีต</button>
       <button class="gs-cancel-btn" onclick="txCloseForm()">ยกเลิก</button>
+    </div>
+  </div>
+</div>
+
+<!-- v71 — แผงรายละเอียดเอกสาร -->
+<div class="doc-drawer-bd" id="doc-drawer-bd" onclick="docsCloseDetail()"></div>
+<aside class="doc-drawer" id="doc-drawer" role="dialog" aria-modal="true" aria-labelledby="doc-dr-title" aria-hidden="true">
+  <div class="doc-dr-top">
+    <span class="cat" id="doc-dr-cat"></span>
+    <button type="button" class="docs-ibtn" id="doc-dr-edit" onclick="docsEditCurrent()" title="แก้ไขรายละเอียด">✎<span class="sb-lbl"> แก้ไข</span></button>
+    <button type="button" class="docs-ibtn" onclick="docsCloseDetail()" aria-label="ปิด" title="ปิด (Esc)">✕</button>
+  </div>
+  <div class="doc-dr-body" id="doc-dr-body"></div>
+  <div class="doc-dr-foot" id="doc-dr-foot"></div>
+</aside>
+
+<!-- v71 — ฟอร์มเพิ่ม/แก้ไขเอกสาร (เขียนลงแท็บ Documents) -->
+<div id="doc-modal" class="gs-modal-overlay">
+  <div class="gs-modal" style="max-width:520px;max-height:92vh;overflow-y:auto">
+    <div class="gs-modal-close" onclick="docsCloseForm()">&#10005;</div>
+    <div class="gs-modal-title" id="doc-modal-title">เพิ่มเอกสาร</div>
+    <div class="tx-g2">
+      <div class="gs-field">
+        <div class="gs-label">หมวด</div>
+        <input id="doc-f-cat" class="gs-input" list="doc-cat-list" placeholder="เช่น Tax" autocomplete="off">
+        <datalist id="doc-cat-list"></datalist>
+      </div>
+      <div class="gs-field">
+        <div class="gs-label">วันที่เอกสาร</div>
+        <input id="doc-f-date" class="gs-input" type="date">
+      </div>
+    </div>
+    <div class="gs-field">
+      <div class="gs-label">ชื่อเอกสาร</div>
+      <input id="doc-f-title" class="gs-input" type="text" placeholder="เช่น ภ.ง.ด.90 ปีภาษี 2025" autocomplete="off">
+    </div>
+    <div class="gs-field">
+      <div class="gs-label">ลิงก์ไฟล์ (Google Drive)</div>
+      <input id="doc-f-url" class="gs-input" type="url" placeholder="https://drive.google.com/file/d/…/view" autocomplete="off">
+      <div class="doc-note">อัปโหลดไฟล์เข้า <a href="https://drive.google.com/drive/my-drive" target="_blank" rel="noopener noreferrer" style="color:var(--income)">Google Drive ↗</a>
+        แล้ว คลิกขวา → แชร์ → คัดลอกลิงก์ มาวาง · ให้สิทธิ์เป็น “จำกัด (Restricted)” ไว้ — เปิดได้เฉพาะบัญชีคุณ</div>
+    </div>
+    <div class="tx-g2">
+      <div class="gs-field">
+        <div class="gs-label">ผู้ออกเอกสาร</div>
+        <input id="doc-f-issuer" class="gs-input" type="text" placeholder="เช่น กรมสรรพากร, KBank" autocomplete="off">
+      </div>
+      <div class="gs-field">
+        <div class="gs-label">จำนวนเงิน (บาท)</div>
+        <input id="doc-f-amount" class="gs-input" type="number" inputmode="decimal" step="0.01" placeholder="ไม่บังคับ">
+      </div>
+    </div>
+    <div class="tx-g2">
+      <div class="gs-field">
+        <div class="gs-label">ปี (ปีภาษี)</div>
+        <input id="doc-f-year" class="gs-input" type="number" inputmode="numeric" min="1990" max="2100" placeholder="ตามวันที่">
+      </div>
+      <div class="gs-field">
+        <div class="gs-label">แท็ก</div>
+        <input id="doc-f-tags" class="gs-input" type="text" placeholder="คั่นด้วย , " autocomplete="off">
+      </div>
+    </div>
+    <div class="gs-field">
+      <div class="gs-label">หมายเหตุ</div>
+      <input id="doc-f-note" class="gs-input" type="text" placeholder="ไม่บังคับ" autocomplete="off">
+    </div>
+    <div class="gs-status-row"><span id="doc-f-status">รายการจะถูกเพิ่มต่อท้ายแท็บ Documents ในชีต</span></div>
+    <div class="gs-modal-actions">
+      <button class="gs-save-btn" id="doc-f-save" onclick="docsSubmitForm()">บันทึกลงชีต</button>
+      <button class="gs-cancel-btn" onclick="docsCloseForm()">ยกเลิก</button>
     </div>
   </div>
 </div>
