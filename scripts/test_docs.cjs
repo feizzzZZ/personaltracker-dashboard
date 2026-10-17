@@ -19,9 +19,11 @@ global.window = {};
 global.document = { getElementById: () => null, querySelector: () => null };
 const src = fs.readFileSync(FILE, 'utf8');
 const api = new Function(src + '; return {parseDocumentRows,docCategoryOf,docSafeUrl,driveFileId,' +
-  'docThumbUrl,docEmbedUrl,docDateIso,docSearch,docCategoryList,docRowValues,DOC_HEADER};')();
+  'docThumbUrl,docEmbedUrl,docDateIso,docSearch,docCategoryList,docRowValues,DOC_HEADER,' +
+  'driveFolderId,docDateFromName,docGuessFromFile,docDriveIds};')();
 const { parseDocumentRows, docCategoryOf, docSafeUrl, driveFileId, docThumbUrl, docEmbedUrl,
-        docDateIso, docSearch, docCategoryList, docRowValues, DOC_HEADER } = api;
+        docDateIso, docSearch, docCategoryList, docRowValues, DOC_HEADER,
+        driveFolderId, docDateFromName, docGuessFromFile, docDriveIds } = api;
 
 console.log('หมวด');
 chk('Tax → tax', docCategoryOf('Tax').id === 'tax');
@@ -90,6 +92,39 @@ const meta2 = parseDocumentRows([['Title', 'Note', 'Link']]).meta;
 const out2 = docRowValues(meta2, { cat: 'Tax', title: 'T', url: 'https://x.com', note: 'n' });
 chk('ชีตเรียงคอลัมน์ต่างไปก็เขียนถูกช่อง', out2.length === 3 && out2[0] === 'T' && out2[1] === 'n' && out2[2] === 'https://x.com');
 chk('DOC_HEADER 9 คอลัมน์', DOC_HEADER.length === 9);
+
+console.log('นำเข้าจากโฟลเดอร์ Drive');
+const FID = '1FoLdErIdAbCdEfGhIjKlMn';
+chk('folder URL', driveFolderId(`https://drive.google.com/drive/folders/${FID}?usp=sharing`) === FID);
+chk('folder URL /u/0/', driveFolderId(`https://drive.google.com/drive/u/0/folders/${FID}`) === FID);
+chk('id เปล่า', driveFolderId(FID) === FID);
+chk('โดเมนอื่น → ว่าง', driveFolderId(`https://evil.com/drive/folders/${FID}`) === '');
+const dt = n => JSON.stringify(docDateFromName(n));
+chk('2024-03-15', docDateFromName('slip_2024-03-15.pdf'.replace('.pdf','')).date === '2024-03-15');
+chk('20240315', docDateFromName('KBank_20240315').date === '2024-03-15', dt('KBank_20240315'));
+chk('15-03-2567 (พ.ศ.)', docDateFromName('ใบเสร็จ 15-03-2567').date === '2024-03-15', dt('ใบเสร็จ 15-03-2567'));
+chk('2024-03 → วันที่ 1', docDateFromName('statement 2024-03').date === '2024-03-01');
+chk('Mar 2024', docDateFromName('Payslip Mar 2024').date === '2024-03-01', dt('Payslip Mar 2024'));
+chk('มี.ค. 2567', docDateFromName('สลิป มี.ค. 2567').date === '2024-03-01', dt('สลิป มี.ค. 2567'));
+chk('มีนาคม 67', docDateFromName('สลิปเงินเดือน มีนาคม 67').date === '2024-03-01', dt('สลิปเงินเดือน มีนาคม 67'));
+chk('ปีเดี่ยว', docDateFromName('ภงด90_2566').year === 2023 && docDateFromName('ภงด90_2566').date === '');
+chk('ไม่มีวันที่', docDateFromName('scan').year === null);
+chk('เลขบัญชียาวไม่ถูกอ่านเป็นวันที่', docDateFromName('acct 123202403159999').date === '');
+let g = docGuessFromFile({id:'abc123', name:'ภงด90_2566.pdf'}, ['เอกสารการเงิน','Tax','2023']);
+chk('หมวดจากโฟลเดอร์ Tax', g.cat === 'Tax' && g.year === 2023, JSON.stringify(g));
+chk('ชื่อจากไฟล์', g.title === 'ภงด90 2566');
+chk('ลิงก์ Drive', g.url === 'https://drive.google.com/file/d/abc123/view');
+g = docGuessFromFile({id:'x', name:'KBank_statement_2024-05.pdf', webViewLink:'https://drive.google.com/file/d/x/view?usp=drivesdk'}, ['Docs','Banks','KBank']);
+chk('หมวดจากคำในชื่อไฟล์ + โฟลเดอร์เหลือเป็นแท็ก', g.cat === 'Credit card' && g.tags === 'Banks, KBank' && g.date === '2024-05-01', JSON.stringify(g));
+chk('ใช้ webViewLink', g.url.includes('usp=drivesdk'));
+g = docGuessFromFile({id:'y', name:'scan001.jpg'}, ['Docs','Car loan','2023']);
+chk('โฟลเดอร์ย่อยที่ไม่รู้จัก → หมวดใหม่', g.cat === 'Car loan' && g.year === 2023 && g.tags === '', JSON.stringify(g));
+g = docGuessFromFile({id:'z', name:'scan002.jpg'}, ['Salary']);
+chk('โฟลเดอร์ที่เลือกเองเป็นหมวด', g.cat === 'Salary slip');
+g = docGuessFromFile({id:'z', name:'scan003.jpg'}, ['Inbox'], 'Receipt');
+chk('ค่าเริ่มต้นเมื่อเดาไม่ได้', g.cat === 'Receipt' && g.year === '');
+const ids = docDriveIds(docs);
+chk('id ที่มีแล้ว', ids.has(ID) && ids.size === 1);
 
 console.log(FAIL ? `\n✗ ไม่ผ่าน ${FAIL} ข้อ` : '\n✓ ผ่านทั้งหมด');
 process.exit(FAIL ? 1 : 0);
