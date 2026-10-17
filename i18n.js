@@ -240,6 +240,12 @@ const DICT = {
   'อัปโหลดไฟล์เข้า':'Upload the file to',
   'แล้ว คลิกขวา → แชร์ → คัดลอกลิงก์ มาวาง · ให้สิทธิ์เป็น “จำกัด (Restricted)” ไว้ — เปิดได้เฉพาะบัญชีคุณ':'then right-click → Share → Copy link and paste it here · keep access “Restricted” so only your account can open it',
   'รายการจะถูกเพิ่มต่อท้ายแท็บ Documents ในชีต':'Appended to the end of the Documents tab',
+  'นำเข้าเอกสารจาก Google Drive':'Import documents from Google Drive',
+  'จัดไฟล์ในเครื่องเป็นโฟลเดอร์ตามหมวด/ปี เช่น':'Sort local files into folders by category/year, e.g.',
+  'เปิด Google Drive → ใหม่ → อัปโหลดโฟลเดอร์ (หรือลากทั้งโฟลเดอร์ใส่) — ครั้งเดียวได้ทุกไฟล์':'Open Google Drive → New → Folder upload (or drag the whole folder in) — every file in one go',
+  'คัดลอกลิงก์ของโฟลเดอร์บนสุดมาวาง แล้วกดสแกน · แอปอ่านแค่ชื่อไฟล์และลิงก์ ไม่อ่านเนื้อหา ไม่แก้อะไรใน Drive':'Copy the top folder link, paste it and scan · the app only reads file names and links — never contents, and changes nothing in Drive',
+  'ลิงก์โฟลเดอร์ Google Drive':'Google Drive folder link', 'หมวดเมื่อเดาไม่ได้':'Category when unsure',
+  'สแกนโฟลเดอร์':'Scan folder', 'นำเข้าลงชีต':'Import to sheet',
 };
 
 // ป้ายที่มีตัวเลข/ชื่อแทรก — regex ต้องครอบทั้งข้อความ (^…$)

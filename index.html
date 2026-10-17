@@ -1424,6 +1424,26 @@ body.sb-mini .docs-tabs{display:flex}
 .doc-open:focus-visible{outline:2px solid var(--income);outline-offset:2px}
 .doc-open.disabled{background:var(--bg4);color:var(--muted);pointer-events:none}
 .doc-note{font-size:11px;color:var(--muted2);line-height:1.6;margin-top:6px}
+/* นำเข้าจาก Drive */
+.imp-steps{font-size:12px;color:var(--muted2);line-height:1.7;margin:0 0 14px 18px}
+.imp-steps code{font-family:var(--f-mono);font-size:11px;background:var(--bg4);padding:1px 5px;border-radius:4px;color:var(--text)}
+.imp-row{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end}
+.imp-row .gs-field{margin-bottom:0}
+.imp-tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--muted2);margin:14px 0 8px}
+.imp-tools label{display:inline-flex;gap:6px;align-items:center}
+.imp-sp{flex:1}
+.imp-table{max-height:46vh;overflow:auto;border:1px solid var(--border);border-radius:8px}
+.imp-table table{width:100%;border-collapse:collapse;font-size:12px}
+.imp-table th{position:sticky;top:0;background:var(--bg2);text-align:left;font-weight:500;color:var(--muted2);font-size:11px;padding:8px;border-bottom:1px solid var(--border);z-index:1}
+.imp-table td{padding:5px 8px;border-bottom:1px solid var(--border);vertical-align:middle}
+.imp-table tr.off td{opacity:.45}
+.imp-table .docs-sel{padding:5px 6px;font-size:11.5px;max-width:150px}
+.imp-table .path{color:var(--muted2);font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.imp-in{width:100%;min-width:140px;background:transparent;border:1px solid transparent;border-radius:6px;color:var(--text);font:inherit;font-size:12px;padding:5px 6px}
+.imp-in:hover{border-color:var(--border)}
+.imp-in:focus{outline:none;border-color:var(--income);background:var(--bg3)}
+.imp-in.yr{width:68px;min-width:0;font-variant-numeric:tabular-nums}
+@media(max-width:640px){.imp-table .hide-sm{display:none}}
 </style>
 </head>
 <body>
@@ -4264,6 +4284,7 @@ const REQUIRED_SHARED_FNS = [
   'notifyDecrypt', 'mergeNotifications', 'notifUnread', 'notifLocalAdd', 'notifCategory', 'b64ToBytes', 'bytesToB64',   // v67
   'loadBotPaper', 'fetchBotPaper', 'botStatus',   // v59 — หน้าบอทจำลอง
   'parseDocumentRows', 'docSearch', 'docCategoryList', 'docThumbUrl', 'docEmbedUrl', 'docSafeUrl', 'docRowValues',   // v71 — คลังเอกสาร
+  'driveFolderId', 'docGuessFromFile', 'docDriveIds',   // v71 — นำเข้าจาก Drive
 ];
 function checkSharedVersion(){
   const missing = REQUIRED_SHARED_FNS.filter(f=>typeof window[f] !== 'function');
@@ -8216,7 +8237,13 @@ function renderDocs(){
                  'Press <b>+ Add document</b> and paste the link — the app creates the Documents tab for you (or create it with the headers ')}
             <code>${DOC_HEADER.join(' | ')}</code>)</li>
       </ol>
-      <button type="button" class="docs-ibtn primary" onclick="docsOpenForm()">＋ ${_L('เพิ่มเอกสาร','Add document')}</button>
+      <b>${_L('มีเอกสารเก่าเยอะ?','Lots of old documents?')}</b>
+      ${_L('จัดไฟล์ในเครื่องเป็นโฟลเดอร์ตามหมวด/ปี (เช่น <code>เอกสาร/Tax/2023</code> · <code>เอกสาร/Salary/2024</code>) ลากทั้งโฟลเดอร์ขึ้น Drive ครั้งเดียว แล้วกด <b>⇪ นำเข้าจาก Drive</b> — แอปเดาหมวด/ปีจากชื่อโฟลเดอร์และชื่อไฟล์ให้ ตรวจแล้วนำเข้าทีเดียวทั้งหมด',
+           'Sort local files into folders by category/year (e.g. <code>Docs/Tax/2023</code> · <code>Docs/Salary/2024</code>), drag the whole folder into Drive once, then press <b>⇪ Import from Drive</b> — the app guesses category/year from folder and file names; review and import everything at once')}
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
+        <button type="button" class="docs-ibtn primary" onclick="docsOpenImport()">⇪ ${_L('นำเข้าจาก Drive','Import from Drive')}</button>
+        <button type="button" class="docs-ibtn" onclick="docsOpenForm()">＋ ${_L('เพิ่มทีละรายการ','Add one by one')}</button>
+      </div>
     </div>`;
     return;
   }
@@ -8250,6 +8277,7 @@ function renderDocs(){
         title="${escHtml(_L('แบบการ์ด','Grid view'))}" aria-label="${escHtml(_L('แบบการ์ด','Grid view'))}">▦</button>
       <button type="button" class="docs-ibtn${docsView==='list'?' on':''}" onclick="docsSetView('list')" aria-pressed="${docsView==='list'}"
         title="${escHtml(_L('แบบรายการ','List view'))}" aria-label="${escHtml(_L('แบบรายการ','List view'))}">☰</button>
+      <button type="button" class="docs-ibtn" onclick="docsOpenImport()" title="${escHtml(_L('นำเข้าทั้งโฟลเดอร์จาก Google Drive','Import a whole Google Drive folder'))}">⇪ ${_L('นำเข้าจาก Drive','Import from Drive')}</button>
       <button type="button" class="docs-ibtn primary" onclick="docsOpenForm()">＋ ${_L('เพิ่มเอกสาร','Add document')}</button>
     </div>
     <div class="docs-count" id="docs-count" aria-live="polite"></div>
@@ -8386,6 +8414,8 @@ function docsCopyLink(btn){
 }
 document.addEventListener('keydown', e => {
   if(e.key !== 'Escape') return;
+  const im = document.getElementById('doc-imp-modal');
+  if(im && im.classList.contains('show')){ docsCloseImport(); return; }
   const m = document.getElementById('doc-modal');
   if(m && m.classList.contains('show')){ docsCloseForm(); return; }
   docsCloseDetail();
@@ -8502,6 +8532,193 @@ async function docsSubmitForm(){
     st.textContent = '❌ ' + e.message;
     console.error('[Docs] save failed:', e);
   }finally{ btn.disabled = false; }
+}
+
+
+/* ── v71 — นำเข้าเอกสารเก่าทั้งโฟลเดอร์จาก Google Drive ─────────────────
+   ขอสิทธิ์ drive.metadata.readonly แยกจาก token ของชีต (ขอเฉพาะตอนกดนำเข้า · เก็บในหน่วยความจำเท่านั้น)
+   อ่านแค่ "ชื่อไฟล์/โฟลเดอร์ + ลิงก์" — ไม่อ่านเนื้อหาไฟล์ ไม่แก้ ไม่ย้ายอะไรใน Drive */
+const DOCS_DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.metadata.readonly';
+const DOCS_IMPORT_KEY = 'finOS_docsImportFolder';
+const DOCS_IMPORT_MAX = 3000;
+let _docsDriveTok = null, _docsDriveExp = 0, docsImportRows = [], _docsImportBusy = false;
+
+function docsDriveAuth(){
+  return new Promise((resolve, reject) => {
+    if(_docsDriveTok && Date.now() < _docsDriveExp - 60e3) return resolve(_docsDriveTok);
+    if(!GS_CONFIG.clientId) return reject(new Error(_L('ยังไม่ได้ตั้งค่า Client ID — กด ⚙ ก่อน','No Client ID yet — open ⚙ settings first')));
+    if(!(window.google && google.accounts && google.accounts.oauth2))
+      return reject(new Error(_L('โหลดระบบ login ของ Google ไม่สำเร็จ — รีเฟรชหน้าแล้วลองใหม่','Google sign-in did not load — refresh and try again')));
+    const client = google.accounts.oauth2.initTokenClient({
+      client_id: GS_CONFIG.clientId, scope: DOCS_DRIVE_SCOPE,
+      callback: r => {
+        if(r.error) return reject(new Error(r.error));
+        if(!google.accounts.oauth2.hasGrantedAllScopes(r, DOCS_DRIVE_SCOPE))
+          return reject(new Error(_L('ยังไม่ได้ติ๊กอนุญาตให้ดูรายชื่อไฟล์ใน Drive','Permission to list Drive files was not granted')));
+        _docsDriveTok = r.access_token; _docsDriveExp = Date.now() + r.expires_in * 1000;
+        resolve(_docsDriveTok);
+      },
+      error_callback: e => reject(new Error((e && e.type) === 'popup_closed'
+        ? _L('ปิดหน้าต่าง login ไปก่อน','The sign-in window was closed') : _L('ขอสิทธิ์ Drive ไม่สำเร็จ','Drive permission failed') + ' (' + ((e && e.type) || '?') + ')')),
+    });
+    client.requestAccessToken({prompt:''});
+  });
+}
+async function _docsDrive(path, tok){
+  const res = await fetch('https://www.googleapis.com/drive/v3/' + path, {headers:{'Authorization':'Bearer ' + tok}});
+  if(!res.ok){
+    const body = await res.text().catch(() => '');
+    if(/accessNotConfigured|SERVICE_DISABLED|has not been used/i.test(body))
+      throw new Error(_L('ยังไม่ได้เปิด Google Drive API ในโปรเจกต์ Google Cloud เดียวกับ Client ID — เปิดที่ console.cloud.google.com/apis/library/drive.googleapis.com แล้วลองใหม่',
+                         'Google Drive API is not enabled in the Google Cloud project of your Client ID — enable it at console.cloud.google.com/apis/library/drive.googleapis.com and retry'));
+    if(res.status === 404) throw new Error(_L('หาโฟลเดอร์ไม่เจอ หรือบัญชีนี้ไม่มีสิทธิ์','Folder not found, or this account has no access'));
+    if(res.status === 401) _docsDriveTok = null;
+    throw new Error('Drive HTTP ' + res.status + ' · ' + body.slice(0, 140));
+  }
+  return res.json();
+}
+// ไล่ทุกโฟลเดอร์ย่อย (BFS) → [{file, path}] · path = ชื่อโฟลเดอร์จากโฟลเดอร์ที่เลือกลงมา
+async function docsDriveListTree(rootId, tok, onProgress){
+  const root = await _docsDrive('files/' + rootId + '?fields=id,name,mimeType&supportsAllDrives=true', tok);
+  if(root.mimeType !== 'application/vnd.google-apps.folder')
+    throw new Error(_L('ลิงก์นี้เป็นไฟล์ ไม่ใช่โฟลเดอร์ — ใช้ลิงก์ของโฟลเดอร์','This link is a file, not a folder — use the folder link'));
+  const out = [], queue = [{id:root.id, path:[root.name]}];
+  let folders = 0;
+  while(queue.length && out.length < DOCS_IMPORT_MAX){
+    const f = queue.shift(); folders++;
+    let page = '';
+    do{
+      const q = encodeURIComponent(`'${f.id}' in parents and trashed = false`);
+      const j = await _docsDrive(`files?q=${q}&pageSize=1000&fields=${encodeURIComponent('nextPageToken,files(id,name,mimeType,webViewLink)')}`
+        + `&supportsAllDrives=true&includeItemsFromAllDrives=true&orderBy=name${page ? '&pageToken=' + page : ''}`, tok);
+      (j.files || []).forEach(x => {
+        if(x.mimeType === 'application/vnd.google-apps.folder') queue.push({id:x.id, path:f.path.concat(x.name)});
+        else if(x.mimeType !== 'application/vnd.google-apps.shortcut') out.push({file:x, path:f.path});
+      });
+      page = j.nextPageToken || '';
+    } while(page && out.length < DOCS_IMPORT_MAX);
+    if(onProgress) onProgress(out.length, folders);
+  }
+  return out;
+}
+
+function docsOpenImport(){
+  let last = ''; try{ last = localStorage.getItem(DOCS_IMPORT_KEY) || ''; }catch(e){}
+  document.getElementById('doc-imp-url').value = last;
+  const sel = document.getElementById('doc-imp-default');
+  sel.innerHTML = DOC_CATEGORIES.map(c => `<option value="${escHtml(c.en)}"${c.id==='other'?' selected':''}>${escHtml(_L(c.th, c.en))}</option>`).join('');
+  docsImportRows = [];
+  document.getElementById('doc-imp-list').innerHTML = '';
+  document.getElementById('doc-imp-go').hidden = true;
+  _docsImpStatus(last ? _L('กดสแกนอีกครั้งเพื่อดึงเฉพาะไฟล์ใหม่ — ไฟล์ที่นำเข้าแล้วจะถูกข้ามให้เอง','Scan again to pick up only new files — already-imported files are skipped') : '');
+  document.getElementById('doc-imp-modal').classList.add('show');
+  setTimeout(() => document.getElementById('doc-imp-url').focus(), 30);
+}
+function docsCloseImport(){ if(_docsImportBusy) return; document.getElementById('doc-imp-modal').classList.remove('show'); }
+function _docsImpStatus(t){ document.getElementById('doc-imp-status').textContent = t; }
+
+async function docsImportScan(){
+  if(_docsImportBusy) return;
+  const raw = document.getElementById('doc-imp-url').value.trim();
+  const fid = driveFolderId(raw);
+  if(!fid){ _docsImpStatus('⚠ ' + _L('วางลิงก์โฟลเดอร์ เช่น https://drive.google.com/drive/folders/…','Paste a folder link, e.g. https://drive.google.com/drive/folders/…')); return; }
+  _docsImportBusy = true;
+  const btn = document.getElementById('doc-imp-scan'); btn.disabled = true;
+  document.getElementById('doc-imp-go').hidden = true;
+  try{
+    _docsImpStatus('🔑 ' + _L('ขอสิทธิ์ดูรายชื่อไฟล์ใน Drive...','Requesting permission to list Drive files...'));
+    const tok = await docsDriveAuth();
+    _docsImpStatus('⏳ ' + _L('กำลังสแกนโฟลเดอร์...','Scanning folders...'));
+    const files = await docsDriveListTree(fid, tok, (n, f) =>
+      _docsImpStatus('⏳ ' + _L(`สแกนแล้ว ${f} โฟลเดอร์ · พบ ${n} ไฟล์`, `Scanned ${f} folders · ${n} files`)));
+    try{ localStorage.setItem(DOCS_IMPORT_KEY, raw); }catch(e){}
+    const have = docDriveIds(docsList), def = document.getElementById('doc-imp-default').value;
+    const all = files.map(({file, path}) => ({...docGuessFromFile(file, path, def), path:path.slice(1).join(' / '), on:true}));
+    docsImportRows = all.filter(r => !have.has(r.driveId));
+    const skipped = all.length - docsImportRows.length;
+    renderDocsImportList();
+    _docsImpStatus(docsImportRows.length
+      ? _L(`พบไฟล์ใหม่ ${docsImportRows.length} ไฟล์`, `${docsImportRows.length} new files`) + (skipped ? _L(` · ข้าม ${skipped} ไฟล์ที่มีในชีตแล้ว`, ` · ${skipped} already in the sheet`) : '')
+        + (files.length >= DOCS_IMPORT_MAX ? _L(` · ⚠ หยุดที่ ${DOCS_IMPORT_MAX} ไฟล์ — นำเข้าทีละโฟลเดอร์ย่อย`, ` · ⚠ stopped at ${DOCS_IMPORT_MAX} files — import one subfolder at a time`) : '')
+        + _L(' · ตรวจหมวด/ปี แล้วกดนำเข้า', ' · check category/year, then import')
+      : (all.length ? _L(`ทั้ง ${all.length} ไฟล์มีในชีตแล้ว — ไม่มีอะไรใหม่`, `All ${all.length} files are already in the sheet`) : _L('โฟลเดอร์นี้ไม่มีไฟล์','This folder has no files')));
+  }catch(e){
+    _docsImpStatus('❌ ' + e.message);
+    console.error('[Docs] import scan:', e);
+  }finally{ _docsImportBusy = false; btn.disabled = false; }
+}
+
+function renderDocsImportList(){
+  const box = document.getElementById('doc-imp-list');
+  const go = document.getElementById('doc-imp-go');
+  if(!docsImportRows.length){ box.innerHTML = ''; go.hidden = true; return; }
+  const cats = [...new Set(DOC_CATEGORIES.map(c => c.en).concat(docsImportRows.map(r => r.cat)))];
+  const n = docsImportRows.filter(r => r.on).length;
+  box.innerHTML = `<div class="imp-tools">
+      <label><input type="checkbox" ${n===docsImportRows.length?'checked':''} onchange="docsImpAll(this.checked)"> ${_L('เลือกทั้งหมด','Select all')}</label>
+      <span class="imp-sp"></span>
+      <label>${_L('ตั้งหมวดให้ที่เลือก','Set category for selected')}
+        <select class="docs-sel" onchange="docsImpBulkCat(this.value);this.value=''"><option value="">—</option>
+        ${cats.map(c => `<option value="${escHtml(c)}">${escHtml(c)}</option>`).join('')}</select></label>
+    </div>
+    <div class="imp-table"><table>
+    <thead><tr><th></th><th>${_L('ไฟล์','File')}</th><th>${_L('หมวด','Category')}</th><th>${_L('ปี','Year')}</th><th class="hide-sm">${_L('วันที่','Date')}</th><th class="hide-sm">${_L('โฟลเดอร์','Folder')}</th></tr></thead>
+    <tbody>${docsImportRows.map((r, i) => `<tr class="${r.on?'':'off'}">
+      <td><input type="checkbox" ${r.on?'checked':''} onchange="docsImpSet(${i},'on',this.checked)" aria-label="${escHtml(r.title)}"></td>
+      <td class="t"><input class="imp-in" value="${escHtml(r.title)}" onchange="docsImpSet(${i},'title',this.value)" aria-label="${escHtml(_L('ชื่อเอกสาร','Document title'))}"></td>
+      <td><select class="docs-sel" onchange="docsImpSet(${i},'cat',this.value)" aria-label="${escHtml(_L('หมวด','Category'))}">
+        ${cats.map(c => `<option${c===r.cat?' selected':''}>${escHtml(c)}</option>`).join('')}</select></td>
+      <td><input class="imp-in yr" type="number" min="1990" max="2100" value="${escHtml(r.year)}" onchange="docsImpSet(${i},'year',this.value)" aria-label="${escHtml(_L('ปี','Year'))}"></td>
+      <td class="hide-sm" style="white-space:nowrap">${escHtml(r.date || '—')}</td>
+      <td class="hide-sm path">${escHtml(r.path || '—')}</td></tr>`).join('')}</tbody></table></div>`;
+  go.hidden = false;
+  go.disabled = !n;
+  go.textContent = _L(`นำเข้า ${n} รายการลงชีต`, `Import ${n} to the sheet`);
+}
+function docsImpSet(i, k, v){
+  const r = docsImportRows[i]; if(!r) return;
+  r[k] = k === 'on' ? !!v : String(v).trim();
+  if(k === 'on') renderDocsImportList();
+}
+function docsImpAll(on){ docsImportRows.forEach(r => r.on = on); renderDocsImportList(); }
+function docsImpBulkCat(c){ if(!c) return; docsImportRows.forEach(r => { if(r.on) r.cat = c; }); renderDocsImportList(); }
+
+async function docsImportCommit(){
+  if(_docsImportBusy) return;
+  const pick = docsImportRows.filter(r => r.on && r.title);
+  if(!pick.length) return;
+  if(!GS_CONFIG.spreadsheetId || !gsTokenValid()){
+    _docsImpStatus('🔑 ' + _L('Session ชีตหมดอายุ — กด Sync เพื่อเข้าสู่ระบบใหม่ แล้วกดนำเข้าอีกครั้ง (รายการที่สแกนยังอยู่)',
+                               'Sheet session expired — press Sync to sign in, then import again (the scan is kept)'));
+    return;
+  }
+  _docsImportBusy = true;
+  const go = document.getElementById('doc-imp-go'); go.disabled = true;
+  try{
+    const meta = await docsEnsureSheet();
+    // อ่านชีตสดก่อนเขียน — กันซ้ำถ้าระหว่างนั้นมีการนำเข้าจากอีกเครื่อง/อีกแท็บ
+    const have = docDriveIds(docsList);
+    const rows = pick.filter(r => !have.has(r.driveId));
+    const CH = 500;
+    for(let i = 0; i < rows.length; i += CH){
+      _docsImpStatus('⏳ ' + _L(`กำลังเขียน ${Math.min(i + CH, rows.length)}/${rows.length}...`, `Writing ${Math.min(i + CH, rows.length)}/${rows.length}...`));
+      const values = rows.slice(i, i + CH).map(r => docRowValues(meta, r).map(v => v == null ? '' : v));
+      await _docsApi('/values/' + encodeURIComponent('Documents!A' + meta.headerRow) + ':append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS',
+        {method:'POST', body:JSON.stringify({values})});
+    }
+    await docsReload();
+    _docsImportBusy = false;
+    docsCloseImport();
+    docsCat = 'all'; docsQuery = ''; docsYear = '';
+    renderDocs();
+    const cnt = document.getElementById('docs-count');
+    if(cnt) cnt.textContent = '✓ ' + _L(`นำเข้า ${rows.length} รายการจาก Google Drive แล้ว · รวม ${docsList.length} รายการ`,
+                                        `Imported ${rows.length} documents from Google Drive · ${docsList.length} in total`);
+  }catch(e){
+    _docsImpStatus('❌ ' + e.message + _L(' — ส่วนที่เขียนไปแล้วไม่ซ้ำเมื่อกดใหม่',' — rows already written are not duplicated on retry'));
+    console.error('[Docs] import commit:', e);
+    try{ await docsReload(); const h = docDriveIds(docsList); docsImportRows = docsImportRows.filter(r => !h.has(r.driveId)); renderDocsImportList(); }catch(_){}
+  }finally{ _docsImportBusy = false; go.disabled = false; }
 }
 
 let pageRenderFns={
@@ -10514,6 +10731,37 @@ document.addEventListener('DOMContentLoaded', () => {
   <div class="doc-dr-body" id="doc-dr-body"></div>
   <div class="doc-dr-foot" id="doc-dr-foot"></div>
 </aside>
+
+<!-- v71 — นำเข้าเอกสารเก่าทั้งโฟลเดอร์จาก Google Drive -->
+<div id="doc-imp-modal" class="gs-modal-overlay">
+  <div class="gs-modal" style="max-width:880px;width:94%;max-height:92vh;overflow-y:auto">
+    <div class="gs-modal-close" onclick="docsCloseImport()">&#10005;</div>
+    <div class="gs-modal-title">นำเข้าเอกสารจาก Google Drive</div>
+    <ol class="imp-steps">
+      <li>จัดไฟล์ในเครื่องเป็นโฟลเดอร์ตามหมวด/ปี เช่น <code>เอกสาร/Tax/2023</code> · <code>เอกสาร/Salary/2024</code> · <code>เอกสาร/Credit card/KBank</code></li>
+      <li>เปิด Google Drive → ใหม่ → อัปโหลดโฟลเดอร์ (หรือลากทั้งโฟลเดอร์ใส่) — ครั้งเดียวได้ทุกไฟล์</li>
+      <li>คัดลอกลิงก์ของโฟลเดอร์บนสุดมาวาง แล้วกดสแกน · แอปอ่านแค่ชื่อไฟล์และลิงก์ ไม่อ่านเนื้อหา ไม่แก้อะไรใน Drive</li>
+    </ol>
+    <div class="imp-row">
+      <div class="gs-field" style="flex:1 1 320px">
+        <div class="gs-label">ลิงก์โฟลเดอร์ Google Drive</div>
+        <input id="doc-imp-url" class="gs-input" type="url" placeholder="https://drive.google.com/drive/folders/…" autocomplete="off"
+          onkeydown="if(event.key==='Enter')docsImportScan()">
+      </div>
+      <div class="gs-field" style="flex:0 1 200px">
+        <div class="gs-label">หมวดเมื่อเดาไม่ได้</div>
+        <select id="doc-imp-default" class="gs-input"></select>
+      </div>
+      <button type="button" class="gs-save-btn" id="doc-imp-scan" style="flex:0 0 auto;height:38px" onclick="docsImportScan()">สแกนโฟลเดอร์</button>
+    </div>
+    <div class="gs-status-row" aria-live="polite"><span id="doc-imp-status"></span></div>
+    <div id="doc-imp-list"></div>
+    <div class="gs-modal-actions">
+      <button class="gs-save-btn" id="doc-imp-go" onclick="docsImportCommit()" hidden>นำเข้าลงชีต</button>
+      <button class="gs-cancel-btn" onclick="docsCloseImport()">ปิด</button>
+    </div>
+  </div>
+</div>
 
 <!-- v71 — ฟอร์มเพิ่ม/แก้ไขเอกสาร (เขียนลงแท็บ Documents) -->
 <div id="doc-modal" class="gs-modal-overlay">

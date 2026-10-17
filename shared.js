@@ -2774,3 +2774,106 @@ function docRowValues(meta, f){
   put('url', f.url || ''); put('note', f.note || ''); put('year', f.year || '');
   return out;
 }
+
+// ═══ v71 — นำเข้าเอกสารเก่าทั้งโฟลเดอร์จาก Google Drive ═══════════════════
+// อัปโหลดทั้งโฟลเดอร์ขึ้น Drive ครั้งเดียว → แอปสแกน → เดาหมวด/ปี/วันที่จากชื่อโฟลเดอร์และชื่อไฟล์
+// ผู้ใช้ตรวจในตารางก่อนกดนำเข้า · ไฟล์ที่มีในชีตแล้ว (เทียบ Drive file id) ข้ามเสมอ → กดซ้ำได้ ดึงแค่ไฟล์ใหม่
+function driveFolderId(u){
+  const s = String(u ?? '').trim();
+  if(/^[A-Za-z0-9_-]{20,}$/.test(s)) return s;                 // วาง id เปล่า ๆ มาก็ได้
+  if(!/^https:\/\/drive\.google\.com\//i.test(s)) return '';
+  const m = s.match(/\/folders\/([A-Za-z0-9_-]{10,})/) || s.match(/[?&]id=([A-Za-z0-9_-]{10,})/);
+  return m ? m[1] : '';
+}
+
+const _DOC_MONTHS = [
+  ['jan','january','ม.ค.','มค','มกราคม'], ['feb','february','ก.พ.','กพ','กุมภาพันธ์'], ['mar','march','มี.ค.','มีค','มีนาคม'],
+  ['apr','april','เม.ย.','เมย','เมษายน'], ['may','พ.ค.','พค','พฤษภาคม'], ['jun','june','มิ.ย.','มิย','มิถุนายน'],
+  ['jul','july','ก.ค.','กค','กรกฎาคม'], ['aug','august','ส.ค.','สค','สิงหาคม'], ['sep','sept','september','ก.ย.','กย','กันยายน'],
+  ['oct','october','ต.ค.','ตค','ตุลาคม'], ['nov','november','พ.ย.','พย','พฤศจิกายน'], ['dec','december','ธ.ค.','ธค','ธันวาคม'],
+];
+const _docYr = y => { y = +y; if(y >= 2500 && y <= 2700) y -= 543; return (y >= 1990 && y <= 2100) ? y : null; };
+const _docIso = (y, m, d) => (y && m >= 1 && m <= 12 && d >= 1 && d <= 31)
+  ? y + '-' + String(m).padStart(2,'0') + '-' + String(d).padStart(2,'0') : '';
+
+// วันที่จากชื่อไฟล์ → {date:'YYYY-MM-DD'|'', year:number|null}
+// รองรับ 2024-03-15 · 20240315 · 15-03-2024 · 15/03/2567 · 2024-03 · Mar 2024 · มี.ค. 2567 · มีนาคม 67 · เดี่ยว ๆ 2024
+function docDateFromName(name){
+  const s = String(name || '');
+  let m;
+  if((m = s.match(/(?:^|\D)((?:19|20)\d{2}|25\d{2})[-_. ]?(0[1-9]|1[0-2])[-_. ]?(0[1-9]|[12]\d|3[01])(?!\d)/))){
+    const y = _docYr(m[1]), iso = _docIso(y, +m[2], +m[3]);
+    if(iso) return {date:iso, year:y};
+  }
+  if((m = s.match(/(?:^|\D)(0?[1-9]|[12]\d|3[01])[-_./](0?[1-9]|1[0-2])[-_./]((?:19|20)\d{2}|25\d{2})(?!\d)/))){
+    const y = _docYr(m[3]), iso = _docIso(y, +m[2], +m[1]);
+    if(iso) return {date:iso, year:y};
+  }
+  if((m = s.match(/(?:^|\D)((?:19|20)\d{2}|25\d{2})[-_.](0[1-9]|1[0-2])(?!\d)/))){
+    const y = _docYr(m[1]); if(y) return {date:_docIso(y, +m[2], 1), year:y};
+  }
+  const low = s.toLowerCase();
+  for(let i = 0; i < 12; i++){
+    for(const mn of _DOC_MONTHS[i]){
+      const esc = mn.replace(/[.]/g, '\\.');
+      const re = /^[a-z]/.test(mn)
+        ? new RegExp('(?:^|[^a-z])' + esc + '[a-z]*[-_. ]*((?:19|20)\\d{2}|25\\d{2}|\\d{2})(?!\\d)')
+        : new RegExp(esc + '[-_. ]*((?:19|20)\\d{2}|25\\d{2}|\\d{2})(?!\\d)');
+      if((m = low.match(re))){
+        let y = m[1].length === 2 ? (/^[a-z]/.test(mn) ? 2000 + +m[1] : 2500 + +m[1]) : +m[1];
+        y = _docYr(y);
+        if(y) return {date:_docIso(y, i + 1, 1), year:y};
+      }
+    }
+  }
+  if((m = s.match(/(?:^|\D)((?:19|20)\d{2}|25\d{2})(?!\d)/))){ const y = _docYr(m[1]); if(y) return {date:'', year:y}; }
+  return {date:'', year:null};
+}
+
+// คำในชื่อไฟล์ที่บอกหมวดได้ (ใช้เมื่อชื่อโฟลเดอร์บอกไม่ได้)
+const _DOC_NAME_HINTS = [
+  ['tax',    /ภ\.?ง\.?ด|pnd ?9[01]|50 ?ทวิ|ทวิ ?50|withholding|ลดหย่อน|tax/i],
+  ['salary', /payslip|pay ?slip|salary|สลิป|เงินเดือน/i],
+  ['card',   /statement|credit ?card|บัตรเครดิต|ใบแจ้งยอด/i],
+  ['trade',  /confirm|contract ?note|trade|ซื้อขาย|ยืนยันการ/i],
+  ['insurance', /insurance|policy|กรมธรรม์|ประกัน/i],
+  ['receipt',/receipt|invoice|ใบเสร็จ|ใบกำกับ/i],
+];
+
+// ไฟล์หนึ่งไฟล์ → ฟิลด์แบบเดียวกับฟอร์ม (ป้อน docRowValues ได้ตรง ๆ)
+//   path = ชื่อโฟลเดอร์จากโฟลเดอร์ที่เลือก (ตัวแรก) ลงไปถึงโฟลเดอร์ที่มีไฟล์
+function docGuessFromFile(file, path, defaultCat){
+  path = (path || []).map(p => String(p || '').trim()).filter(Boolean);
+  const name = String(file && file.name || '');
+  const base = name.replace(/\.[A-Za-z0-9]{2,5}$/, '');
+  const title = base.replace(/[_]+/g, ' ').replace(/\s{2,}/g, ' ').trim() || name;
+  const isYear = p => /^((19|20)\d{2}|25\d{2})$/.test(p);
+  const used = new Set();
+  // หมวด: โฟลเดอร์ที่ลึกที่สุดที่ตรงหมวดมาตรฐาน → คำในชื่อไฟล์ → โฟลเดอร์ย่อยชั้นแรกเป็นหมวดใหม่ → ค่าเริ่มต้น
+  let cat = '';
+  for(let i = path.length - 1; i >= 0 && !cat; i--){
+    if(isYear(path[i])) continue;
+    const c = docCategoryOf(path[i]);
+    if(!c.id.startsWith('x:')){ cat = DOC_CATEGORIES.find(x => x.id === c.id).en; used.add(i); }
+  }
+  if(!cat){ const h = _DOC_NAME_HINTS.find(([, re]) => re.test(name)); if(h) cat = DOC_CATEGORIES.find(x => x.id === h[0]).en; }
+  if(!cat){ const i = path.findIndex((p, k) => k > 0 && !isYear(p)); if(i > 0){ cat = path[i]; used.add(i); } }
+  if(!cat) cat = defaultCat || 'Other';
+  // ปี: ชื่อไฟล์ก่อน (เจาะจงกว่า) แล้วค่อยโฟลเดอร์ปีที่ลึกที่สุด
+  const dn = docDateFromName(base);
+  let year = dn.year;
+  for(let i = path.length - 1; i >= 0; i--) if(isYear(path[i])){ used.add(i); if(!year) year = _docYr(path[i]); break; }
+  const tags = path.filter((p, i) => i > 0 && !used.has(i) && !isYear(p));
+  const id = file && file.id;
+  return {
+    cat, title, date:dn.date, year: year || '',
+    tags: tags.join(', '),
+    url: docSafeUrl(file && file.webViewLink) || (id ? 'https://drive.google.com/file/d/' + id + '/view' : ''),
+    issuer:'', amount:'', note:'', driveId:id || '',
+  };
+}
+
+// Drive file id ที่มีในชีตแล้ว — ใช้ข้ามตอนนำเข้าซ้ำ
+function docDriveIds(docs){
+  return new Set((docs || []).map(d => driveFileId(d.url || d.rawUrl)).filter(Boolean));
+}
