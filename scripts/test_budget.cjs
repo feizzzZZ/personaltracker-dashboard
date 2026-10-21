@@ -58,6 +58,14 @@ console.log('\n═══ budgetSpendMap ═══');
   const d=debtSplit(rows,bals), r=budgetSpendMap(rows,bals);
   chk('สอดคล้องกับ debtSplit (ยอดรูดบัตร)', Math.abs(d.card)===r.cardTotal, `debtSplit.card=${d.card} cardTotal=${r.cardTotal}`);
 }
+{
+  // v73 — keyFn: กราฟรายวันหน้ารายเดือนจัดกลุ่มตามวัน เกณฑ์รูดบัตรเดียวกับงบ
+  const rows=[{...tx('Expense','Foods & Drinks',{KBank:-300}),dateStr:'2026-10-01'},
+              {...tx('Debt','Travel',{KTC:-700}),dateStr:'2026-10-01'},
+              {...tx('Debt','Car loan',{KBank:-6500}),dateStr:'2026-10-02'}];
+  const r=budgetSpendMap(rows,bals,x=>x.dateStr);
+  chk('keyFn จัดกลุ่มตามวัน (รวมรูดบัตร ไม่รวมค่างวด)', r.map['2026-10-01']===1000 && !r.map['2026-10-02'] && r.cardTotal===700, JSON.stringify(r.map));
+}
 chk('ข้อมูลว่างไม่ throw', (()=>{ try{ const r=budgetSpendMap(null,null); return r.cardTotal===0; }catch(e){ return false; } })());
 
 console.log(fail?`\n❌ ไม่ผ่าน ${fail} ข้อ`:'\n✅ ผ่านทั้งหมด');

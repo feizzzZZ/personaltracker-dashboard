@@ -36,7 +36,12 @@ def series(start, n=260, drift=0.0004, amp=0.02):
     return [start * (1 + drift) ** i * (1 + amp * math.sin(i / 9)) for i in range(n)]
 
 
-DATES = [f"2026-{(i // 28) % 12 + 1:02d}-{i % 28 + 1:02d}" for i in range(260)]
+# v72 — วันที่ต้องจบที่ "วันนี้" ไม่ใช่วันตายตัว
+# เดิมจบ 2026-10-08 พอเลยไป 7 วัน (SIGNAL_MAX_DAYS) สัญญาณทุกตัวกลายเป็น "เก่า"
+# → risk = unknown แล้วเทสต์ความเสี่ยง 4 ข้อล้มเองทั้งที่โค้ดไม่ได้เปลี่ยน
+import datetime as _dt
+_D0 = _dt.datetime.now(_dt.timezone.utc).date() - _dt.timedelta(days=259)
+DATES = [(_D0 + _dt.timedelta(days=i)).isoformat() for i in range(260)]
 
 YIELD_LAST = {"^IRX": 3.978, "2YY=F": 4.416, "^FVX": 4.856,
               "^TNX": 4.998, "^TYX": 5.331}

@@ -74,11 +74,41 @@ def load_market() -> dict:
         return {}
 
 
+# v72 — ฐานเทียบ (มูลค่าพอร์ตรวม · รายกลุ่ม · ราคาต่อหน่วยของที่ถือ) ถูก commit ลง repo ทุกวัน
+# repo เป็นสาธารณะ → เดิมใครก็เปิดดูประวัติมูลค่าพอร์ตได้จาก git history
+# ตอนนี้เข้ารหัสด้วย NOTIFY_KEY (AES-256-GCM) แบบเดียวกับ notifications.enc.json — คนละ AAD
+# อ่านไฟล์เก่าแบบไม่เข้ารหัสได้ (รอบแรกหลังอัปเดต) · ไม่มี NOTIFY_KEY = เขียนแบบเดิมพร้อมเตือน
+STATE_AAD = b"finos-notify-state-v1"
+
+
+def _state_key():
+    try:
+        import notify_store as ns
+        return ns.load_key()
+    except Exception:          # noqa: BLE001 — ไม่มี cryptography/กุญแจ = ทำงานแบบเดิม
+        return None
+
+
 def load_state() -> dict:
     try:
         with open(STATE, encoding="utf-8") as f:
-            return json.load(f)
+            doc = json.load(f)
     except (OSError, json.JSONDecodeError):
+        return {}
+    if not (isinstance(doc, dict) and doc.get("enc") == "aesgcm"):
+        return doc if isinstance(doc, dict) else {}
+    key = _state_key()
+    if not key:
+        print("⚠️  notify-state.json ถูกเข้ารหัสแต่ไม่มี NOTIFY_KEY — เริ่มฐานเทียบใหม่", file=sys.stderr)
+        return {}
+    try:
+        import base64
+        from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+        pt = AESGCM(key).decrypt(base64.b64decode(doc["iv"]), base64.b64decode(doc["ct"]), STATE_AAD)
+        st = json.loads(pt.decode("utf-8"))
+        return st if isinstance(st, dict) else {}
+    except Exception as e:     # noqa: BLE001 — กุญแจไม่ตรง/ไฟล์เสีย → ฐานใหม่ ไม่ล้มทั้งงาน
+        print(f"⚠️  ถอดรหัส notify-state.json ไม่ได้ ({type(e).__name__}) — เริ่มฐานเทียบใหม่", file=sys.stderr)
         return {}
 
 
@@ -96,8 +126,20 @@ def compat_base(b: dict | None) -> dict:
 
 
 def save_state(st: dict) -> None:
+    key = _state_key()
+    if key:
+        import base64
+        from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+        iv = os.urandom(12)
+        pt = json.dumps(st, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+        doc = {"enc": "aesgcm", "v": 1, "iv": base64.b64encode(iv).decode(),
+               "ct": base64.b64encode(AESGCM(key).encrypt(iv, pt, STATE_AAD)).decode()}
+    else:
+        print("⚠️  ไม่มี NOTIFY_KEY — notify-state.json ถูกเขียนแบบไม่เข้ารหัส "
+              "(มูลค่าพอร์ตจะเห็นได้ใน repo)", file=sys.stderr)
+        doc = st
     with open(STATE, "w", encoding="utf-8") as f:
-        json.dump(st, f, ensure_ascii=False, indent=1)
+        json.dump(doc, f, ensure_ascii=False, indent=1)
 
 
 # ══════════════════════════════════════════════════════════════════════
