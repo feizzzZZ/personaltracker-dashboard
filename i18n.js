@@ -83,7 +83,7 @@ const DICT = {
   'บัญชีที่ type = Credit Card หรือยอดติดลบจะถูกนับเป็นหนี้อัตโนมัติ':'Accounts with type = Credit Card or a negative balance are counted as debt automatically',
   'ยอดหนี้รวม':'Total debt', 'ดอกเบี้ยที่จ่ายอยู่':'Interest being paid', 'ต่อเดือน':'per month',
   'ยอดค้าง':'Balance', 'ปลอดดอกเบี้ย':'Interest-free', 'คิดดอกจริง':'Interest-bearing',
-  'ดอกเบี้ย %/ปี':'Interest %/yr', 'ดอกเบี้ย/เดือน':'Interest/mo', 'ขั้นต่ำ/เดือน':'Minimum/mo',
+  'ดอกเบี้ย %/ปี':'Interest %/yr', 'ดอกเบี้ย/เดือน':'Interest/mo', 'ขั้นต่ำ / ค่างวด':'Minimum / installment',
   'ใส่ดอกเบี้ยด้านล่างก่อน':'Enter interest rates below first',
   '⚠️ ยังไม่ได้ใส่ดอกเบี้ย':'⚠️ Interest rates not set',
   '⚠ ยอดหนี้บางส่วนยังไม่ถูกตรวจสอบ':'⚠ Some debt balances are unverified',
@@ -246,6 +246,23 @@ const DICT = {
   'คัดลอกลิงก์ของโฟลเดอร์บนสุดมาวาง แล้วกดสแกน · แอปอ่านแค่ชื่อไฟล์และลิงก์ ไม่อ่านเนื้อหา ไม่แก้อะไรใน Drive':'Copy the top folder link, paste it and scan · the app only reads file names and links — never contents, and changes nothing in Drive',
   'ลิงก์โฟลเดอร์ Google Drive':'Google Drive folder link', 'หมวดเมื่อเดาไม่ได้':'Category when unsure',
   'สแกนโฟลเดอร์':'Scan folder', 'นำเข้าลงชีต':'Import to sheet',
+
+  // ── v73 — UX: งบ · เงินเข้า-ออก · หนี้ · ปันผล · อ่านเพิ่ม ─────────────
+  'เดือนก่อน':'Previous month', 'เดือนถัดไป':'Next month', 'เลือกเดือน':'Choose month',
+  'ไม่ตั้งงบ':'No budget', 'ปิดงบหมวดนี้':'Budget off', 'ไม่ตั้ง target':'No target', 'ค่าตั้งต้น':'Default',
+  'ไม่ติดตามหมวดนี้ (ไม่นับในงบรวม ไม่เตือน)':'Stop tracking this category (not counted in the total, no alerts)',
+  'กลับไปใช้ค่าตั้งต้นของแอป':'Go back to the app default',
+  'ยังไม่มีรายจ่ายเดือนนี้':'No spending yet this month',
+  'รูดบัตร':'Card', 'ผ่อน/ใช้หนี้':'Loan payments',
+  '⚠️ ยังไม่ได้ใส่ดอกเบี้ยเลย':'⚠️ No interest rates set yet',
+  '— ก้อนใหญ่สุดที่ยังไม่มีดอกเบี้ย ยอด':'— the largest debt still missing a rate, balance',
+  'ขั้นต่ำ':'Minimum', 'ค่างวด':'Installment', 'ดอกเบี้ย %/ปี — กรอกตรงนี้':'Interest %/yr — enter here',
+  'Yield ย้อนหลัง 12 เดือน':'Trailing 12-month yield',
+  'ปันผลที่ได้รับจริง 12 เดือน ÷ มูลค่าพอร์ตปัจจุบัน':'Dividends actually received (12m) ÷ current portfolio value',
+  'ⓘ อ่านเพิ่ม — สัญญาณมาจากไหน ตัดของเก่ายังไง':'ⓘ Read more — where the signals come from, how stale ones are dropped',
+  'ⓘ อ่านเพิ่ม — ทำไมเลิกใช้คะแนนรวม · ข้อจำกัดที่ต้องรู้':'ⓘ Read more — why the combined score was retired · limitations',
+  'ขนาดไม้พลิกประตูไม่ได้':'Sizing can never flip the gate',
+  'ตัวเลขทั้งหมดอธิบายสถานะ ณ วันที่ข้อมูลระบุ ไม่ใช่คำแนะนำการลงทุน':'All figures describe the state as of the data date — not investment advice',
 };
 
 // ป้ายที่มีตัวเลข/ชื่อแทรก — regex ต้องครอบทั้งข้อความ (^…$)
@@ -362,12 +379,24 @@ const RULES = [
   [new RegExp('^บอทคิดอะไรในรอบล่าสุด \\((.+)\\)$'), 'What the bot decided last run ($1)'],
   [new RegExp('^· กฎ (.+)$'), '· rules $1'],
   [new RegExp('^ยังไม่ถึง (.+)$'), 'Not yet $1'],
+  // v73
+  [new RegExp('^(⚠ )?ข้อมูล '+N+' วันก่อน ›$'), '$1Data $2 days old ›'],
+  [new RegExp('^⚠ ข้อมูล เมื่อวาน ›$'), '⚠ Data from yesterday ›'],
+  [new RegExp('^ข้อมูลตลาด '+N+' วันก่อน$'), 'Market data $1 days old'],
+  [new RegExp('^ข้อมูลตลาด เมื่อวาน$'), 'Market data from yesterday'],
+  [new RegExp('^ของช่วง (.+) → (.+)$'), 'of the $1 → $2 leg'],
+  [new RegExp('^หมวดที่ยังไม่ได้ใช้เดือนนี้ · '+N+' หมวด$'), 'Unused this month · $1 categories'],
+  [new RegExp('^รวมรูดบัตร (.+) · เกณฑ์เดียวกับหน้างบ$'), 'incl. card spending $1 · same rule as the Budget page'],
+  [new RegExp('^ไม่รวมค่างวด/จ่ายหนี้ที่ลงคอลัมน์บัญชีสินเชื่อ (.+) \\(ย้ายเงินระหว่างบัญชี ยอดสุทธิ 0\\)$'), 'Excludes $1 of installments posted to the loan column (a transfer between accounts, net 0)'],
+  [new RegExp('^① ใส่ดอกเบี้ยของ (.+) ก่อน$'), '① Enter the rate for $1 first'],
+  [new RegExp('^กรอกดอกเบี้ย (.+) ↓$'), 'Enter rate for $1 ↓'],
+  [new RegExp('^บทสรุปด้านล่างคิดจากหนี้ที่ใส่ดอกเบี้ยแล้ว (.+) \\('+N+' ของหนี้ทั้งหมด\\) เท่านั้น — ยังเชื่อไม่ได้$'), 'The verdict below only covers debt with a rate set, $1 ($2 of all debt) — not reliable yet'],
 ];
 
 let lang = 'th';
 try { lang = localStorage.getItem('finOS_lang') === 'en' ? 'en' : 'th'; } catch(e){}
 const TH = /[\u0E01-\u0E3A\u0E40-\u0E5B]/;   // อักษรไทย — ไม่รวม ฿ (U+0E3F) ไม่งั้น "Spent ฿5,500" ถูกมองว่ายังมีไทยค้าง
-const ATTRS = ['title','placeholder','aria-label'];
+const ATTRS = ['title','placeholder','aria-label','data-lbl'];   // v73 — data-lbl = ป้ายคอลัมน์บนการ์ดมือถือ (CSS attr())
 const origText = new WeakMap();   // text node → ข้อความไทยต้นฉบับ
 const origAttr = new WeakMap();   // element → {attr: ต้นฉบับ}
 
