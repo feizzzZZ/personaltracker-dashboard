@@ -7,7 +7,7 @@
    toLocaleString / toLocaleDateString call so nothing can drift again. */
 window.LOC = window.LOC || 'th-TH-u-ca-gregory';
 // ═══════════════════════════════════════════════════════════════════
-// Finance OS — shared.js : DATA LAYER กลางของทั้งสองหน้า
+// FinanceTracker — shared.js : DATA LAYER กลางของทั้งสองหน้า
 // ═══════════════════════════════════════════════════════════════════
 // single source of truth ของ:
 //   • APP_BUILD — bump ที่นี่ที่เดียว (คู่กับ CACHE_NAME ใน service-worker.js)
@@ -16,8 +16,8 @@ window.LOC = window.LOC || 'th-TH-u-ca-gregory';
 //   • XIRR engine
 // กติกา: ไฟล์นี้ห้ามแตะ DOM ของหน้าใดหน้าหนึ่ง — pure data layer เท่านั้น
 // ═══════════════════════════════════════════════════════════════════
-const APP_BUILD = 'v73';
-console.log('[Finance OS shared] build', APP_BUILD);
+const APP_BUILD = 'v74';
+console.log('[FinanceTracker shared] build', APP_BUILD);
 window.SHARED_BUILD = APP_BUILD;   // v45 — ให้ index.html ตรวจได้ว่าเวอร์ชันตรงกัน
  
 // ═══ LIVE_META — นิยามการ์ดข้อมูลตลาด ═══

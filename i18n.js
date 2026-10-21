@@ -263,6 +263,25 @@ const DICT = {
   'ⓘ อ่านเพิ่ม — ทำไมเลิกใช้คะแนนรวม · ข้อจำกัดที่ต้องรู้':'ⓘ Read more — why the combined score was retired · limitations',
   'ขนาดไม้พลิกประตูไม่ได้':'Sizing can never flip the gate',
   'ตัวเลขทั้งหมดอธิบายสถานะ ณ วันที่ข้อมูลระบุ ไม่ใช่คำแนะนำการลงทุน':'All figures describe the state as of the data date — not investment advice',
+
+  // ── v74 — หน้าเข้าสู่ระบบ · แถบบน · เมนูบัญชี · ค้นหา ⌘K ─────────────────────
+  'ยินดีต้อนรับสู่ FinanceTracker':'Welcome to FinanceTracker',
+  'เข้าใช้ครั้งแรกหรือกลับมาใหม่? เลือกวิธีที่ต้องการ':'New here or coming back? Choose how you want to continue',
+  'ชื่อผู้ใช้':'Username', 'รหัสผ่าน':'Password', 'ยืนยันรหัสผ่าน':'Confirm password',
+  '(อย่างน้อย 8 ตัวอักษร)':'(at least 8 characters)',
+  'แสดงรหัสผ่าน':'Show password', 'ปลดล็อก':'Unlock', 'หรือ':'Or',
+  'เข้าสู่ระบบด้วย Google':'Continue with Google', 'ตัวเลือกอื่น':'Other options',
+  'สร้างบัญชีในเครื่องนี้':'Create an account on this device', 'สร้างบัญชี':'Create account',
+  'รหัสผ่านใช้ล็อกแอปและเข้ารหัสข้อมูลที่เก็บไว้ในเครื่องนี้ (AES-256) — ไม่ถูกส่งไปที่ไหน · ลืมรหัสผ่าน = ล้างข้อมูลในเครื่องแล้วเข้าด้วย Google ใหม่ ข้อมูลจริงยังอยู่ใน Google Sheets':
+    'Your password locks the app and encrypts the data stored on this device (AES-256) — it is never sent anywhere · Forgot it = clear this device and sign in with Google again; your real data stays in Google Sheets',
+  'ตั้งค่า Google Sheets (Client ID / Spreadsheet ID)':'Google Sheets settings (Client ID / Spreadsheet ID)',
+  'ลืมรหัสผ่าน — ล้างบัญชีและข้อมูลในเครื่องนี้':'Forgot password — remove the account and data on this device',
+  'ข้อมูลของคุณอยู่ใน Google Sheets ของคุณเอง · ไม่มี server กลาง · token Google อยู่ในเครื่องนี้เท่านั้น':
+    'Your data lives in your own Google Sheets · no central server · the Google token stays on this device',
+  'ค้นหาหน้าและคำสั่ง…':'Find pages and actions…', 'ค้นหาหน้าและคำสั่ง':'Find pages and actions',
+  'พิมพ์ชื่อหน้า หรือคำสั่ง เช่น งบ, หนี้, sync':'Type a page or action, e.g. budget, debt, sync',
+  'บัญชีผู้ใช้':'Account', 'ล็อก':'Lock', 'ล็อกตอนนี้':'Lock now', 'บัญชีและความปลอดภัย':'Account & security',
+  'ตั้งค่า Google Sheets':'Google Sheets settings', 'ออกจากระบบ':'Sign out', 'ธีม':'Theme', 'ภาษา':'Language',
 };
 
 // ป้ายที่มีตัวเลข/ชื่อแทรก — regex ต้องครอบทั้งข้อความ (^…$)

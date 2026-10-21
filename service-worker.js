@@ -1,4 +1,4 @@
-// Finance OS — Service Worker v2
+// FinanceTracker — Service Worker v2
 // Cache strategy: Cache-first for shell, Network-first for CDN
 
 // ══════════════════════════════════════════════════════════════════════
@@ -22,7 +22,7 @@
 // หน้านั้นถูกยุบเข้า index.html และลบออกจาก repo แล้ว ถ้ายังอยู่ในลิสต์
 // ทุกครั้งที่ install จะ log "ข้ามไฟล์ที่หาไม่เจอ" ซึ่งเป็น noise ที่จะกลบ
 // warning จริงในอนาคต (กลไกข้ามไฟล์หายทำงานถูกแล้ว — แต่ต้องไม่มีของหายตั้งแต่แรก)
-const CACHE_NAME = 'finance-os-v73';  // bump version so old cache is cleared on deploy
+const CACHE_NAME = 'finance-os-v74';  // bump version so old cache is cleared on deploy
 const BASE = '/personaltracker-dashboard';
 
 // App shell — files to pre-cache on install
@@ -35,6 +35,7 @@ const SHELL_FILES = [
   BASE + '/index.html',
   BASE + '/i18n.js',                   // v65 — สลับภาษา TH/EN
   BASE + '/shared.js',                 // data layer กลาง — ต้อง precache ให้ offline ทำงาน
+  BASE + '/vault.js',                  // v74 — ล็อกด้วยรหัสผ่าน + เข้ารหัส cache (ไม่มีไฟล์นี้ = หน้าเข้าสู่ระบบใช้ไม่ได้ตอนออฟไลน์)
   BASE + '/manifest.json',
   BASE + '/icon/icon-192x192.png',
   BASE + '/icon/icon-512x512.png',
@@ -51,6 +52,8 @@ const CDN_ASSETS = [
   // Google-internal fonts that fonts.googleapis.com does not serve: the request
   // 400'd, so this was caching a failure and Thai text had no font offline.
   'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap',
+  // v74 — หัวเรื่อง serif + ชิป mono (ต้องตรงกับ <link> ตัวที่สองใน index.html)
+  'https://fonts.googleapis.com/css2?family=Hedvig+Letters+Serif:opsz@12..24&family=Geist+Mono:wght@400;500&display=swap',
 ];
 
 // ── Install: pre-cache app shell ──────────────────────────────────────
@@ -175,8 +178,8 @@ const PUSH_ICON = BASE + '/icon/icon-192x192.png';
 self.addEventListener('push', event => {
   let d = {};
   try { d = event.data ? event.data.json() : {}; }
-  catch (e) { d = { title: 'Finance OS', body: event.data ? event.data.text() : '' }; }
-  const title = d.title || 'Finance OS';
+  catch (e) { d = { title: 'FinanceTracker', body: event.data ? event.data.text() : '' }; }
+  const title = d.title || 'FinanceTracker';
   const opts = {
     body: d.body || '',
     icon: PUSH_ICON, badge: PUSH_ICON,
