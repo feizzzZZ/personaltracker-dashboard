@@ -16,7 +16,7 @@ window.LOC = window.LOC || 'th-TH-u-ca-gregory';
 //   • XIRR engine
 // กติกา: ไฟล์นี้ห้ามแตะ DOM ของหน้าใดหน้าหนึ่ง — pure data layer เท่านั้น
 // ═══════════════════════════════════════════════════════════════════
-const APP_BUILD = 'v71';
+const APP_BUILD = 'v73';
 console.log('[Finance OS shared] build', APP_BUILD);
 window.SHARED_BUILD = APP_BUILD;   // v45 — ให้ index.html ตรวจได้ว่าเวอร์ชันตรงกัน
  
@@ -1815,13 +1815,15 @@ function debtSplit(rows, bals){
 //   · เฉพาะ amount < 0 (เงินออก) — แถวจ่ายบัตร (−ธนาคาร +บัตร) รวมเป็น 0 · คืนเงิน/ยอดบวก ไม่นับ
 //   · แถว Debt ที่ไม่แตะบัตร (ค่างวด/ใช้หนี้) ไม่ใช่การใช้จ่ายตามหมวด → ไม่นับ
 // ไม่เปลี่ยนยอดบัตร/ยอดหนี้/saving rate — ใช้เฉพาะหน้างบและป้ายงบเกิน
-function budgetSpendMap(rows, bals){
+// v73 — keyFn (ไม่บังคับ): จัดกลุ่มด้วยอย่างอื่นแทนหมวด เช่น r=>r.dateStr สำหรับกราฟรายวัน
+//   โดนัท/กราฟรายวันหน้ารายเดือนใช้เกณฑ์นี้แล้ว (เดิมไม่นับรูดบัตร → ตัวเลขไม่ตรงกับหน้างบ)
+function budgetSpendMap(rows, bals, keyFn){
   const credit = new Set((bals || []).filter(isCreditAccount).map(b => b.name));
   const map = {}, card = {};
   let cardTotal = 0;
   (rows || []).forEach(r => {
     if(!r) return;
-    const cat = r.category || 'Other';
+    const cat = keyFn ? keyFn(r) : (r.category || 'Other');
     if(r.type === 'Expense' || r.type === 'Bills'){
       // v68 #7 — มีเครื่องหมาย: รายการบวก (เงินคืน/refund) หักออกจากหมวด · เดิม Math.abs นับเป็นรายจ่ายเพิ่ม
       map[cat] = (map[cat] || 0) - (Number(r.amount) || 0);
@@ -2876,4 +2878,28 @@ function docGuessFromFile(file, path, defaultCat){
 // Drive file id ที่มีในชีตแล้ว — ใช้ข้ามตอนนำเข้าซ้ำ
 function docDriveIds(docs){
   return new Set((docs || []).map(d => driveFileId(d.url || d.rawUrl)).filter(Boolean));
+}
+
+// ═══ v72 — ตรวจว่าแถวในชีตยังเป็นรายการเดิมก่อนแก้/ลบ ════════════════════
+// ฟอร์มแก้/ลบอ้างเลขแถวจากรอบ sync ล่าสุด (หรือจาก cache อายุถึง 24 ชม.)
+// ถ้าระหว่างนั้นมีการแทรก/ลบแถวในชีต (อีกเครื่อง · แก้ในชีตตรง ๆ) เลขแถวเดิมชี้ไปที่รายการอื่นแล้ว
+// → เดิมเขียนทับ/ลบรายการผิดตัวเงียบ ๆ · ตอนนี้อ่านแถวสดมาเทียบก่อนทุกครั้ง
+// spec: [{col, expect, kind:'date'|'text'|'upper', blank}] · blank = ค่าที่ parser ใช้แทนช่องว่าง
+function sheetRowMatches(row, spec){
+  const r = row || [];
+  const diff = [];
+  (spec || []).forEach(s => {
+    if(s == null || s.col == null || s.col < 0) return;
+    const raw = r[s.col];
+    let got, want = s.expect == null ? '' : String(s.expect);
+    if(s.kind === 'date') got = docDateIso(raw);
+    else {
+      got = String(raw == null ? '' : raw).trim();
+      if(!got && s.blank != null) got = String(s.blank);
+      if(s.kind === 'upper'){ got = got.toUpperCase(); want = want.toUpperCase(); }
+      want = want.trim();
+    }
+    if(got !== want) diff.push({col: s.col, want, got});
+  });
+  return { ok: diff.length === 0, diff };
 }

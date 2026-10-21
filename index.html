@@ -484,13 +484,11 @@ html[data-theme="light"] [style*="color: #a0c4ff"]{color:#1D4ED8!important}
   .sb-mini .theme-btn{padding:6px 0}
 }
 
-/* ══ v64 — รายการ "ต้องลงมือ" บนมือถือ: เห็น 2 เรื่องแรก ที่เหลือกดดู ══ */
-.act-toggle{display:none;margin-top:8px;width:100%;background:transparent;border:1px dashed var(--border2);
+/* ══ v64 — รายการ "ต้องลงมือ" บนมือถือ: เห็น 2 เรื่องแรก ที่เหลือกดดู ══
+   v73 — ย่อทุกขนาดจอ เห็น 3 เรื่องแรก: เดสก์ท็อปเดิมแสดงครบ 9–10 เรื่องยาวทั้งก้อน ดันตัวเลขอื่นตกจอ */
+.act-toggle{display:block;margin-top:8px;width:100%;background:transparent;border:1px dashed var(--border2);
   color:var(--muted2);border-radius:8px;padding:7px 0;font:inherit;font-size:11.5px;cursor:pointer}
-@media(max-width:768px){
-  .act-box:not(.expanded) .act-more{display:none!important}
-  .act-toggle{display:block}
-}
+.act-box:not(.expanded) .act-more{display:none!important}
 
 /* ══ v64 — มือถือ: เลื่อนลงซ่อนแถบเมนูล่าง เลื่อนขึ้นแสดงกลับ (ได้พื้นที่อ่านเพิ่ม) ══ */
 @media(max-width:768px){
@@ -935,6 +933,41 @@ select.month-display{text-align-last:center;outline:none}
 
 
 
+/* v73 — "ⓘ อ่านเพิ่ม": คำอธิบายแนวบันทึกการพัฒนา (ทำไมเปลี่ยนสูตร · เคยพังเพราะอะไร) พับไว้ ไม่ให้ดันเนื้อหาหลัก */
+.more-info{margin-top:10px}
+.more-info>summary{cursor:pointer;list-style:none;font-size:11.5px;color:var(--muted2);user-select:none;display:inline-block}
+.more-info>summary::-webkit-details-marker{display:none}
+.more-info>summary:hover{color:var(--text)}
+.more-info[open]>summary{margin-bottom:6px}
+/* v73 — ตารางดอกเบี้ยหนี้บนมือถือ = การ์ดต่อบัญชี: ช่องกรอก % ดอกเบี้ย (สิ่งที่ต้องทำ) เดิมหลุดขอบขวา ต้องเลื่อนตารางถึงเห็น */
+@media(max-width:768px){
+  .dbt-tw{overflow:visible;border:none}
+  .dbt-tbl thead{display:none}
+  .dbt-tbl,.dbt-tbl tbody{display:block}
+  .dbt-tbl tr{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;background:var(--bg2);border:1px solid var(--border);
+    border-radius:12px;padding:12px 14px;margin-bottom:10px}
+  .dbt-tbl tr.dbt-ask{border-color:rgba(255,149,0,.55)}
+  .dbt-tbl tr:hover td{background:transparent}
+  .dbt-tbl td{display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:0;border:none;white-space:normal;text-align:left!important}
+  .dbt-tbl td::before{content:attr(data-lbl);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+  .dbt-tbl td.dbt-name{grid-column:1/-1;font-size:13.5px;font-weight:600;color:var(--white)}
+  .dbt-tbl td.dbt-name::before{display:none}
+  .dbt-tbl td.dbt-apr-td{order:-1;grid-column:1/-1;flex-direction:row;align-items:center;justify-content:space-between;
+    background:var(--bg3);border-radius:8px;padding:8px 10px}
+  .dbt-tbl td.dbt-apr-td::before{font-size:11px;color:var(--debt);letter-spacing:0;text-transform:none}
+  .dbt-tbl td.dbt-name{order:-2}
+  .dbt-tbl td > span{justify-content:flex-start!important}
+}
+/* v73 — หมวดที่ยังไม่ได้ใช้เดือนนี้ พับไว้ท้ายคอลัมน์ · ปุ่มรองในแถวแก้งบ */
+.bgt-fold{margin-top:4px}
+.bgt-fold>summary{cursor:pointer;list-style:none;font-size:11.5px;color:var(--muted2);padding:8px 2px;user-select:none}
+.bgt-fold>summary::-webkit-details-marker{display:none}
+.bgt-fold>summary::before{content:'▸ ';display:inline-block;width:1.1em}
+.bgt-fold[open]>summary::before{content:'▾ '}
+.bgt-fold .bgt-card{opacity:.82}
+.bgt-alt-btn{background:transparent;border:1px solid var(--border2);color:var(--muted2);padding:5px 9px;
+  border-radius:7px;cursor:pointer;font-size:10.5px;white-space:nowrap;flex-shrink:0;font-family:inherit}
+.bgt-alt-btn:hover{color:var(--text);border-color:var(--muted)}
 /* Budget 2-column layout */
 .bgt-two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
 @media(max-width:768px){.bgt-two-col{grid-template-columns:1fr}}
@@ -1851,9 +1884,9 @@ body.sb-mini .docs-tabs{display:flex}
       <!-- v48 — เอาการ์ด "คุณ vs ตลาด" (benchmark S&P 500) ออกตามที่ผู้ใช้ขอ
            v64 — benchmarkXIRR()/priceAt() ใน shared.js ถูกลบแล้วเพราะไม่มีที่ไหนเรียก (ดู git history) -->
 
+      <!-- v73 — เดิมมีสองบล็อกซ้ำกัน: "Where are your assets" (การ์ดรายแพลตฟอร์ม) กับ "Asset investment location"
+           (กลุ่ม → แพลตฟอร์ม) ข้อมูลแพลตฟอร์มชุดเดียวกัน · เหลืออันที่ละเอียดกว่า (มี ticker + สัดส่วนในกลุ่ม) -->
       <div class="sl sl-mt">Where are your assets</div>
-      <div class="plat-grid" id="pf-plat-grid" style="margin-bottom:18px"></div>
-      <div class="sl sl-mt">Asset investment location</div>
       <div class="cc" style="margin-bottom:18px">
         <div class="ct">ลงทุนอยู่ที่ไหนบ้าง<span>แยกตาม exchange / broker / wallet</span></div>
         <div id="pf-location-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;margin-top:4px"></div>
@@ -1913,6 +1946,14 @@ body.sb-mini .docs-tabs{display:flex}
       <div class="pg-hdr">
         <div><div class="pg-title">Budget</div>
         <div class="pg-sub" id="bgt-month-label">ตั้ง budget รายเดือน · แจ้งเตือนเมื่อใกล้เกิน</div></div>
+        <!-- v73 — ตัวเลือกเดือนของหน้างบเอง (เดิมต้องย้อนไปเลือกที่หน้ารายเดือน) · ใช้เดือนร่วมกับหน้ารายเดือน -->
+        <div class="pg-controls">
+          <div class="month-nav">
+            <button class="month-btn" id="bgt-prev-month" aria-label="เดือนก่อน">‹</button>
+            <select id="bgt-month-select" class="month-display" style="cursor:pointer;padding-right:24px;appearance:auto" aria-label="เลือกเดือน"></select>
+            <button class="month-btn" id="bgt-next-month" aria-label="เดือนถัดไป">›</button>
+          </div>
+        </div>
       </div>
 
       <!-- Overview 2-panel -->
@@ -2110,9 +2151,9 @@ body.sb-mini .docs-tabs{display:flex}
 
         <!-- ตั้งค่าดอกเบี้ย -->
         <div class="sl orange" style="margin-bottom:10px">ดอกเบี้ยแต่ละใบ · ต้องกรอกเอง (ชีตไม่มีข้อมูลนี้) — แยกยอดผ่อน 0% ออกจากยอดที่คิดดอกได้</div>
-        <div class="tw" style="margin-bottom:18px"><table class="at"><thead><tr>
+        <div class="tw dbt-tw" style="margin-bottom:18px"><table class="at dbt-tbl"><thead><tr>
           <th>บัญชี</th><th class="r">ยอดค้าง</th><th class="r">ปลอดดอกเบี้ย</th><th class="r">คิดดอกจริง</th><th class="r">ดอกเบี้ย %/ปี</th>
-          <th class="r">ดอกเบี้ย/เดือน</th><th class="r">ขั้นต่ำ/เดือน</th>
+          <th class="r">ดอกเบี้ย/เดือน</th><th class="r">ขั้นต่ำ / ค่างวด</th>
         </tr></thead><tbody id="dbt-body"></tbody></table></div>
 
         <!-- v48 — หนี้ก้อนนี้ประกอบด้วยอะไร -->
@@ -2206,9 +2247,10 @@ body.sb-mini .docs-tabs{display:flex}
           <div class="sc-sub" id="dv-12m-s"></div>
         </div>
         <div class="sc">
-          <div class="sc-lbl">Yield on Portfolio</div>
+          <!-- v73 — มี Yield สองตัวในหน้าเดียว (คาดการณ์ด้านบน · ย้อนหลังตรงนี้) ป้ายเดิมใกล้กันจนอ่านว่าเป็นตัวเดียวกัน -->
+          <div class="sc-lbl">Yield ย้อนหลัง 12 เดือน</div>
           <div class="sc-val" id="dv-yield" style="font-size:22px;color:var(--savings)">—</div>
-          <div class="sc-sub">ปันผล 12 เดือน ÷ มูลค่าพอร์ตปัจจุบัน</div>
+          <div class="sc-sub">ปันผลที่ได้รับจริง 12 เดือน ÷ มูลค่าพอร์ตปัจจุบัน</div>
         </div>
       </div>
       <div class="sl sl-mt">ปันผลรายเดือน</div>
@@ -2247,6 +2289,8 @@ body.sb-mini .docs-tabs{display:flex}
           </div>
           <div style="text-align:right">
             <div style="font-family:var(--f-sans);font-size:22px;font-weight:700;color:var(--gain)" id="ov-3m-pct">0%</div>
+            <!-- v73 — บอกว่า % ใหญ่เทียบกับอะไร (เดิมหน้านี้ 13% แต่ Overview 37.6% อ่านแล้วงงว่าตัวไหนถูก) -->
+            <div style="font-size:10px;color:var(--muted2);margin-bottom:2px" id="ov-3m-pct-lbl"></div>
             <div style="font-size:10px;color:var(--muted2)" id="ov-3m-remain">เหลืออีก ฿3,000,000</div>
           </div>
         </div>
@@ -2620,6 +2664,16 @@ const clampPct=v=>{const n=+v;
   if(Number.isNaN(n)||v==null||v==='')return 0;   // unknown -> empty bar
   if(n===Infinity)return 100;                     // overflow -> full bar, not empty
   return Math.max(0,Math.min(100,n));};
+/* v72 — เดือนปฏิทินปัจจุบันยังไม่จบ (มักยังไม่ถึงวันเงินเดือนออก แต่ค่าเช่า/บิลตัดไปแล้ว)
+   ถ้านับเป็นเดือนเต็ม ค่าเฉลี่ยทุกตัวเพี้ยน: เป้า "ออม 30%" ได้ค่าเฉลี่ย −2% ทั้งที่ทำได้ 5/6 เดือน
+   · ETA ถึงเป้า · เงินสำรองฉุกเฉิน · FIRE · Analyst ใช้ค่าที่ติดลบหลอก
+   ค่าเฉลี่ย/แนวโน้มใช้เฉพาะเดือนที่จบแล้ว · หน้ารายเดือนยังแสดงเดือนนี้ตามปกติ (มีป้ายบอก) */
+const openMonthKey=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;};
+const isOpenMonth=mk=>mk===openMonthKey();
+function closedMonths(){
+  const ms=(availableMonths||[]).filter(mk=>mk<openMonthKey());
+  return ms.length?ms:(availableMonths||[]).slice();   // ผู้ใช้ใหม่ที่มีแค่เดือนนี้ — ใช้เท่าที่มี
+}
 const fmt=v=>{const n=nz(v);return (n<0?'−':'')+'฿'+Math.abs(n).toLocaleString(LOC,{maximumFractionDigits:0});};
 const fmtN=(v,d=2)=>nz(v).toLocaleString(LOC,{minimumFractionDigits:d,maximumFractionDigits:d});
 const fmtSign=v=>{const n=nz(v);return (n>=0?'+฿':'−฿')+Math.abs(n).toLocaleString(LOC,{maximumFractionDigits:0});};
@@ -2668,7 +2722,8 @@ const chartOpts = (unit='baht') => ({
       /* ข้อ 1 — ต้องผ่าน UNIT[unit] ไม่ใช่ fmt() ตรงๆ
          ไม่งั้นกราฟที่เป็น % จะได้ '฿' ติดมาด้วย (เดิม "Invest %: ฿47")
          แกน Y ใช้ UNIT อยู่แล้ว แต่ tooltip ตกหล่นไป — สองที่ต้องใช้หน่วยเดียวกัน */
-      callbacks:{label:c=>` ${escHtml(c.dataset.label)}: ${(UNIT[unit]||UNIT.baht).tip(c.raw)}`}}
+      // v72 — Chart.js วาดข้อความลง canvas ไม่ใช่ HTML · escHtml ทำให้ "Food & Drinks" ขึ้นเป็น "Food &amp; Drinks"
+      callbacks:{label:c=>` ${c.dataset.label}: ${(UNIT[unit]||UNIT.baht).tip(c.raw)}`}}
   },
   scales:{
     x:{grid:{color:CT.grid,lineWidth:.5},ticks:{color:CT.tick,font:{family:CHART_FONT,size:9}}},
@@ -2830,6 +2885,8 @@ function renderOverview(){
     `${_legPct.toFixed(1)}% ของช่วง ${fmtC(_prev)} → ${fmtC(_next)}  ·  `+
     `${pct.toFixed(1)}% ของเป้าปลายทาง ${fmtC(GOAL)}`;
   document.getElementById('ov-3m-bar').style.width=pct+'%';
+  { const _pl=document.getElementById('ov-3m-pct-lbl');
+    if(_pl) _pl.textContent=_reached?'':`ของช่วง ${fmtC(_prev)} → ${fmtC(_next)}`; }
 
   const _tEl=document.getElementById('ov-goal-title'), _sEl=document.getElementById('ov-goal-sub');
   // หัวข้อพูดถึงหมุดถัดไป เพราะนั่นคือสิ่งที่กำลังทำ
@@ -2847,9 +2904,9 @@ function renderOverview(){
       ? _L(`🎉 ถึงเป้าปลายทาง <strong>${fmtC(GOAL)}</strong> แล้ว · เกินมา ${fmt(netWorth-GOAL)}`,
            `🎉 Final goal <strong>${fmtC(GOAL)}</strong> reached · ${fmt(netWorth-GOAL)} over`)
       : _L(`🎯 ต่อไป <strong>${fmtC(_next)}</strong> · ขาดอีก ${fmt(Math.max(_next-netWorth,0))}`+
-           ` · ปลายทาง ${fmtC(GOAL)} <strong>${pct.toFixed(1)}%</strong>`,
+           ` · ถึงแล้ว <strong>${pct.toFixed(1)}%</strong> ของปลายทาง ${fmtC(GOAL)}`,   // v73 — บอกว่า % นี้เทียบกับเป้าไหน
            `🎯 Next <strong>${fmtC(_next)}</strong> · ${fmt(Math.max(_next-netWorth,0))} to go`+
-           ` · final ${fmtC(GOAL)} <strong>${pct.toFixed(1)}%</strong>`))+
+           ` · <strong>${pct.toFixed(1)}%</strong> of the final ${fmtC(GOAL)}`))+
     ` <span style="float:right">${_L('เป้าหมาย ›','Goals ›')}</span>`;
 
   // บรรทัดล่างพูดถึงเป้าปลายทางแยกกันคนละบรรทัด ไม่ปนกับหมุด
@@ -2876,7 +2933,7 @@ function renderOverview(){
 
   // v62 — monthlyWealthContrib() ตัวเดียวกับ FIRE Analyst (เฉลี่ย 12 เดือนล่าสุด เดือนติดลบหักจริง)
   // เดิมเฉลี่ยทุกเดือนตั้งแต่เริ่มบันทึก ขณะที่ Analyst ใช้อีกสูตร → เป้าเดียวกันได้ ETA ต่างกัน 3.5 ปี
-  const monthsData=availableMonths.map(mk=>computeSummary(txRows.filter(r=>r.month===mk)));
+  const monthsData=closedMonths().map(mk=>computeSummary(txRows.filter(r=>r.month===mk)));   // v72 — ไม่นับเดือนที่ยังไม่จบ
   const _wc = monthlyWealthContrib(monthsData);
   const monthlyContrib = Math.max(_wc.avg, 0);
   const contribMonths = _wc.n;
@@ -3213,7 +3270,7 @@ function monthlyNetSeries(nMonths){
 // มูลค่าเวนคืนประกัน เพราะสองอย่างนั้นแปลงเป็นเงินไม่ทันตอนฉุกเฉิน
 function computeEmergencyFund(nMonths){
   const N = nMonths || 6;
-  const months = (availableMonths||[]).slice().sort().slice(-N);
+  const months = closedMonths().slice().sort().slice(-N);   // v72 — เดือนที่ยังไม่จบมีรายจ่ายไม่ครบ
   if(!months.length) return null;
 
   // ค่าใช้จ่ายจำเป็นต่อเดือน = Expense + Bills + Debt (หนี้ต้องจ่ายต่อแม้ตกงาน)
@@ -3243,7 +3300,7 @@ function renderEmergencyFund(){
   const COLOR = { ok:'var(--gain)', warn:'var(--debt)', risk:'var(--loss)' };
   const LABEL = { ok:'ปลอดภัย', warn:'ยังไม่พอ', risk:'เสี่ยงสูง' };
   const c = COLOR[ef.level];
-  const pct6 = Math.min(100, ef.cash / ef.target6 * 100);
+  const pct6 = clampPct(ef.cash / ef.target6 * 100);   // v72 — เงินสดติดลบ = width ติดลบ (CSS ไม่ถูกต้อง → แถบเต็ม)
   const m3 = 50;   // 3 เดือน = ครึ่งทางของเป้า 6 เดือน
 
   el.style.borderColor = ef.level==='risk' ? 'rgba(255,69,58,.45)' : 'var(--cb)';
@@ -3291,16 +3348,22 @@ function renderOverviewTiles(s, mk, portVal){
             high:['เสี่ยงสูง','var(--loss)'],unknown:['ไม่มีข้อมูล','var(--muted2)']};
   const r=R?(RL[R.level]||[R.level,'var(--text)']):['ไม่มีข้อมูล','var(--muted2)'];
   const age=(typeof marketDataAge==='function')?marketDataAge():null;
-  const tile=(page,lbl,val,col,sub)=>`<button type="button" class="ov-tile" onclick="switchPage('${page}')">
+  // v73 — ข้อมูล pipeline เก่า: ไทล์ตลาดต้องเป็นสีเตือน ไม่ใช่ "ปกติ" สีเขียว
+  //   เดิมกล่อง "ต้องลงมือ" ด้านบนเตือนแดงว่าข้อมูลตลาดเก่า 3 วัน แต่ไทล์เดียวกันยังเขียวเหมือนสด
+  const stale = age && age.level!=='fresh' ? (age.level==='dead'?'var(--loss)':'var(--debt)') : '';
+  const tile=(page,lbl,val,col,sub,warn)=>`<button type="button" class="ov-tile"${warn?` style="border-color:${warn}"`:''} onclick="switchPage('${page}')">
       <span class="ov-tile-lbl">${lbl}</span>
       <span class="ov-tile-val" style="color:${col}">${val}</span>
-      <span class="ov-tile-sub">${sub} ›</span></button>`;
+      <span class="ov-tile-sub"${warn?` style="color:${warn}"`:''}>${sub} ›</span></button>`;
+  // marketDataAge().label บางกรณีขึ้นต้นด้วย "ข้อมูล" อยู่แล้ว → เคยขึ้น "ข้อมูล ข้อมูล 3 วันก่อน"
+  const ageTxt = age ? (/^ข้อมูล/.test(age.label) ? age.label : 'ข้อมูล '+age.label) : '';
   el.innerHTML=
     tile('cashflow',`เดือนนี้ · ${mk?monthLabel(mk):'—'}`, fmtSign(s.net), s.net>=0?'var(--gain)':'var(--loss)',
-         s.income>0?`Saving rate ${s.savRate}%`:'ยังไม่มีรายรับเดือนนี้')+
+         (isOpenMonth(mk)?_L('ยังไม่จบเดือน · ','month in progress · '):'')+(s.income>0?`Saving rate ${s.savRate}%`:'ยังไม่มีรายรับเดือนนี้'))+
     tile('portfolio','พอร์ตลงทุน', fmt(portVal), 'var(--white)',
          `Unrealized ${fmtSign(upnl)}${cost>0?` (${fmtPct(upnl/cost*100)})`:''}`)+
-    tile('market','ตลาด', r[0], r[1], age?`ข้อมูล ${age.label}`:'ยังไม่มีข้อมูล pipeline');
+    // สถานะตลาดจากข้อมูลเก่าเชื่อไม่ได้ → ตัวเลขเป็นสีจาง ขอบ/บรรทัดล่างเป็นสีเตือน (แดงที่ "ปกติ" จะอ่านเป็น "เสี่ยง")
+    tile('market','ตลาด', r[0], stale?'var(--muted2)':r[1], age?(stale?'⚠ ':'')+ageTxt:'ยังไม่มีข้อมูล pipeline', stale);
 }
 
 function renderActionNeeded(ef){
@@ -3369,7 +3432,7 @@ function renderActionNeeded(ef){
     const expMap = budgetSpendMap(txRows.filter(r=>r.month===mk), bankBals).map;   // v63 — รวมรูดบัตร
     const over = [];
     Object.keys(expMap).forEach(cat=>{
-      const lim = parseFloat(budgets['exp_'+cat]) || BGT_DEFAULTS[cat] || 0;
+      const lim = bgtExpLimit(budgets, cat);   // v73
       if(lim>0 && expMap[cat] > lim) over.push({cat, spent:expMap[cat], lim});
     });
     if(over.length){
@@ -3386,11 +3449,8 @@ function renderActionNeeded(ef){
   try{
     const now = new Date(); now.setHours(0,0,0,0);
     const soon = (insPolicies||[]).filter(insIsActive).map(pl=>{   // v68 #8 — กรมธรรม์ที่จบแล้วไม่ต้องจ่ายเบี้ย
-      const d = insDate(pl.renewal);   // กู้จาก cache = string → เดิมหลุดเงียบ
-      if(!d || isNaN(d)) return null;
-      // ใช้ปีปัจจุบันเป็นรอบต่ออายุถัดไป (กรมธรรม์ต่ออายุรายปี)
-      const nx = new Date(now.getFullYear(), d.getMonth(), d.getDate());
-      if(nx < now) nx.setFullYear(nx.getFullYear()+1);
+      const nx = insNextRenewal(pl);   // v72 — ตัวเดียวกับหน้าประกัน
+      if(!nx) return null;
       const days = Math.round((nx-now)/864e5);
       // v62 — กรมธรรม์ที่เบี้ย ฿0 (เช่น ประกันกลุ่มที่บริษัทจ่าย) ไม่มีอะไรต้องลงมือ
       // ข้อมูลจริง: ขึ้น "ต้องลงมือ · เบี้ยประกันครบกำหนด 1 ฉบับ · ฿0" เพราะ Group Insurance
@@ -3433,10 +3493,11 @@ function renderActionNeeded(ef){
       d:`สูงกว่า ${FEE_WARN_PCT}% — รวม ${fmt(fs.fees)}`, go:'cost'});
   }catch(e){}
   try{
-    const mk = availableMonths[curMonthIdx];
+    // v72 — เดือนล่าสุดที่จบแล้ว: เดือนนี้ก่อนเงินเดือนออก saving rate ติดลบหลอกทุกเดือน (เคยขึ้นแดง −245%)
+    const _cm = closedMonths(), mk = _cm[_cm.length-1];
     const sm = computeSummary(txRows.filter(r=>r.month===mk));
-    if(sm.income>0 && sm.savRate<10) items.push({lv: sm.savRate<0?'alert':'warn',
-      t:`Saving rate เดือนนี้ ${sm.savRate}%`,
+    if(mk && sm.income>0 && sm.savRate<10) items.push({lv: sm.savRate<0?'alert':'warn',
+      t:`Saving rate ${monthLabel(mk)} ${sm.savRate}%`,
       d: sm.savRate<0 ? 'ใช้จ่ายเกินรายได้ — กำลังกินเงินเก็บ' : 'ต่ำกว่า 10% ของรายได้',
       go:'cashflow'});
   }catch(e){}
@@ -3445,7 +3506,7 @@ function renderActionNeeded(ef){
   try{
     const a = marketDataAge();
     if(a && a.level!=='fresh') items.push({lv: a.level==='dead'?'alert':'warn',
-      t:`ข้อมูลตลาด ${a.label}`,
+      t:`ข้อมูลตลาด${/^ข้อมูล/.test(a.label)?a.label.replace(/^ข้อมูล/,''):' '+a.label}`,
       d:'pipeline ควรรัน 2 ครั้ง/วัน — ตรวจ GitHub Actions ว่า workflow ยังทำงานอยู่'});
   }catch(e){}
 
@@ -3456,9 +3517,11 @@ function renderActionNeeded(ef){
   const worst = items.some(i=>i.lv==='alert') ? 'alert' : 'warn';
   // v64 — มือถือ: เรื่องสีแดงขึ้นก่อน แล้วย่อให้เห็น 2 เรื่องแรก ที่เหลือกด "ดูอีก" (จอเล็กเดิมเต็มไปทั้งหน้าจอ)
   items.sort((a,b)=>(a.lv==='alert'?0:1)-(b.lv==='alert'?0:1));
-  const ACT_SHOW = 2, nMore = Math.max(0, items.length-ACT_SHOW);
+  const ACT_SHOW = 3, nMore = Math.max(0, items.length-ACT_SHOW);
   // v67 — เรื่องสีแดงเข้า inbox แจ้งเตือน (วันละครั้งต่อเรื่อง)
-  try{ items.filter(i=>i.lv==='alert').forEach(i=>notifyApp('act-'+String(i.t).replace(/[^A-Za-z0-9ก-๙]/g,'').slice(0,40), i.t, i.d||'', i.go||'overview')); }catch(e){}
+  /* v72 — key ต้องคงที่ต่อ "เรื่อง" ไม่ใช่ต่อข้อความ: เดิมใช้หัวข้อทั้งบรรทัด (มีตัวเลข) เป็น key
+     ยอดต่าง/จำนวนเดือน/จำนวนตัวขยับนิดเดียว = key ใหม่ = แจ้งเตือนซ้ำหลายครั้งต่อวัน · ตัดตัวเลขทิ้งก่อน */
+  try{ items.filter(i=>i.lv==='alert').forEach(i=>notifyApp('act-'+(i.go||'')+'-'+String(i.t).replace(/[^A-Za-zก-๏]/g,'').slice(0,32), i.t, i.d||'', i.go||'overview')); }catch(e){}
   el.style.display='block';
   el.innerHTML = `
     <div class="act-box" style="background:${C[worst].g};border:1px solid ${C[worst].b};border-radius:12px;padding:14px 16px">
@@ -3548,42 +3611,62 @@ function renderCashflow(){
   document.getElementById('cf-sav-s').textContent=`${s.savingsCount} transactions`;
   const netEl=document.getElementById('cf-net');netEl.textContent=fmtSign(s.net);netEl.className='sc-val '+(s.net>=0?'gain':'loss');
   document.getElementById('cf-net-s').textContent=s.net>=0?'surplus':'deficit';
-  document.getElementById('cf-debt').textContent=fmt(s.debt);document.getElementById('cf-debt-s').textContent=`${s.debtCount} transactions`;
+  document.getElementById('cf-debt').textContent=fmt(s.debt);
+  /* v73 — แยกยอด Debt เป็นรูดบัตร กับ ผ่อน/ใช้หนี้ (เกณฑ์ debtSplit เดียวกับหน้ารายปี)
+     เดิมขึ้นแค่ "N transactions" — ยอดรูดบัตรกับค่างวดสินเชื่อปนกันเป็นตัวเลขเดียว */
+  { const d=debtSplit(rows,bankBals);
+    document.getElementById('cf-debt-s').innerHTML=s.debtCount
+      ? `รูดบัตร <strong style="color:var(--text)">${fmt(Math.abs(d.card))}</strong><br>ผ่อน/ใช้หนี้ <strong style="color:var(--text)">${fmt(Math.abs(d.loan))}</strong>`
+      : '0 transactions';
+    // ค่างวดที่ลงคอลัมน์บัญชีสินเชื่อด้วย (−ธนาคาร +สินเชื่อ) ยอดสุทธิ 0 จึงไม่อยู่ในตัวเลขนี้ — บอกไว้ใน tooltip
+    const _cr=new Set((bankBals||[]).filter(isCreditAccount).map(b=>b.name));
+    const moved=rows.filter(r=>r.type==='Debt'&&Math.abs(r.amount)<0.005&&!Object.keys(r.acct||{}).some(k=>_cr.has(k)))
+      .reduce((t,r)=>t+Object.values(r.acct||{}).filter(v=>v>0).reduce((a,v)=>a+v,0),0);
+    document.getElementById('cf-debt-s').title = moved>0
+      ? `ไม่รวมค่างวด/จ่ายหนี้ที่ลงคอลัมน์บัญชีสินเชื่อ ${fmt(moved)} (ย้ายเงินระหว่างบัญชี ยอดสุทธิ 0)` : ''; }
   const srEl=document.getElementById('cf-savrate');srEl.textContent=_srTxt(s);
   srEl.style.color=_srCol(s); srEl.title=s.savRateUndef?_L('เดือนนี้ไม่มีรายรับ จึงคำนวณอัตราการออมไม่ได้','No income this month — saving rate is undefined'):'';
 
+  /* v73 — รายจ่ายในกราฟรายวัน/โดนัท/3 วันที่ใช้มากสุด นับรูดบัตรด้วย (แถว Debt ที่แตะบัตรเครดิต)
+     เกณฑ์ budgetSpendMap เดียวกับหน้างบ — เดิมนับแค่ Expense/Bills สองหน้าจึงได้ตัวเลขไม่ตรงกัน */
+  const spendDay=budgetSpendMap(rows,bankBals,r=>r.dateStr);
+  const spendCat=budgetSpendMap(rows,bankBals);
   // daily chart
   const byDay={};
   rows.forEach(r=>{
     if(!byDay[r.dateStr])byDay[r.dateStr]={inc:0,exp:0};
     if(r.type==='Income')byDay[r.dateStr].inc+=r.amount;
-    if(r.type==='Expense'||r.type==='Bills')byDay[r.dateStr].exp+=r.amount;
   });
-  const days=Object.keys(byDay).sort();
+  Object.entries(spendDay.map).forEach(([d,v])=>{ if(!byDay[d])byDay[d]={inc:0,exp:0}; byDay[d].exp=v; });
+  const days=Object.keys(byDay).filter(d=>byDay[d].inc||byDay[d].exp).sort();
   mkBarChart('cf-daily-chart',days.map(d=>d.slice(8)),[
     {label:'Income',data:days.map(d=>byDay[d].inc),backgroundColor:'rgba(0,212,160,.7)',borderRadius:3,borderSkipped:false},
-    {label:'Expense',data:days.map(d=>Math.max(0,-byDay[d].exp)),backgroundColor:'rgba(255,64,96,.7)',borderRadius:3,borderSkipped:false}
+    {label:'Expense',data:days.map(d=>byDay[d].exp),backgroundColor:'rgba(255,64,96,.7)',borderRadius:3,borderSkipped:false}
   ]);
   document.getElementById('cf-daily-range').textContent=`${days.length} days`;
 
   // donut
-  const catMap=expenseByKey(rows, r=>r.category||'Other');   // v68 #7
-  const cSorted=Object.entries(catMap).sort((a,b)=>b[1]-a[1]);
+  const cSorted=Object.entries(spendCat.map).filter(([,v])=>v>0.005).sort((a,b)=>b[1]-a[1]);   // v73 — รวมรูดบัตร
   const cTotal=cSorted.reduce((s,[,v])=>s+v,0);
   document.getElementById('cf-donut-val').textContent=fmt(cTotal);
+  if(!cSorted.length){   // v72 — เดือนที่ไม่มีรายจ่าย: เดิมโดนัท/คำอธิบายของเดือนก่อนค้างอยู่
+    if(charts['cf-donut-chart']){ charts['cf-donut-chart'].destroy(); delete charts['cf-donut-chart']; }
+    document.getElementById('cf-donut-legend').innerHTML=`<div style="font-size:12px;color:var(--muted2)">${_L('ไม่มีรายจ่ายเดือนนี้','No expenses this month')}</div>`;
+  }
   if(cSorted.length){
     const cl=cSorted.map(([k])=>k),cv=cSorted.map(([,v])=>v),cc=cl.map((_,i)=>EXP_COLORS[i%EXP_COLORS.length]);
     mkDonut('cf-donut-chart',cl,cv,cc);
     document.getElementById('cf-donut-legend').innerHTML=cSorted.slice(0,8).map(([cat,val],i)=>`
-      <div class="ar"><div class="al-left"><div class="al-dot" style="background:${cc[i]}"></div><span>${escHtml(cat)}</span></div>
-      <div class="al-pct" style="font-size:11px;color:var(--text)">${fmt(val)}</div></div>`).join('');
+      <div class="ar"><div class="al-left"><div class="al-dot" style="background:${cc[i]}"></div><span>${escHtml(cat)}${spendCat.card[cat]>0?` <span title="รวมรูดบัตร ${fmt(spendCat.card[cat])}">💳</span>`:''}</span></div>
+      <div class="al-pct" style="font-size:11px;color:var(--text)">${fmt(val)}</div></div>`).join('')
+      + (spendCat.cardTotal>0?`<div style="font-size:10.5px;color:var(--muted2);margin-top:6px">รวมรูดบัตร ${fmt(spendCat.cardTotal)} · เกณฑ์เดียวกับหน้างบ</div>`:'');
   }
 
   // top 3 spend days
   const MONTHS_SHORT=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const fmtTopDate=ds=>{const[,m,d]=ds.split('-');return MONTHS_SHORT[+m-1]+'-'+d;};
-  const dayExp=expenseByKey(rows, r=>r.dateStr);   // v68 #7
-  const top3=Object.entries(dayExp).sort((a,b)=>b[1]-a[1]).slice(0,3);
+  const dayExp=spendDay.map;   // v73 — รวมรูดบัตร (เดิม expenseByKey นับแค่ Expense/Bills)
+  const top3=Object.entries(dayExp).filter(([,v])=>v>0.005).sort((a,b)=>b[1]-a[1]).slice(0,3);
   const maxA=top3[0]?.[1]||1;
   document.getElementById('cf-top-days').innerHTML=top3.map(([date,amt],i)=>
     `<div style="display:flex;align-items:center;gap:10px;padding:9px 13px;background:var(--bg3);border-radius:9px;border:1px solid var(--border)">
@@ -3688,16 +3771,22 @@ function renderYearlySelected(yr){
   srEl.style.color=_srCol(s);   // v68 #12
 
   // Expense breakdown donut
-  const catMap=expenseByKey(rows, r=>r.category||'Other');   // v68 #7
-  const cSorted=Object.entries(catMap).sort((a,b)=>b[1]-a[1]);
+  // v73 — รวมรูดบัตร (budgetSpendMap) ให้ตรงกับหน้ารายเดือน/หน้างบ
+  const yrSpend=budgetSpendMap(rows,bankBals);
+  const cSorted=Object.entries(yrSpend.map).filter(([,v])=>v>0.005).sort((a,b)=>b[1]-a[1]);
   const cTotal=cSorted.reduce((s,[,v])=>s+v,0);
   document.getElementById('yrs-donut-val').textContent=fmt(cTotal);
+  if(!cSorted.length){   // v72
+    if(charts['yrs-donut']){ charts['yrs-donut'].destroy(); delete charts['yrs-donut']; }
+    document.getElementById('yrs-donut-legend').innerHTML='';
+  }
   if(cSorted.length){
     const cl=cSorted.map(([k])=>k),cv=cSorted.map(([,v])=>v),cc=cl.map((_,i)=>EXP_COLORS[i%EXP_COLORS.length]);
     mkDonut('yrs-donut',cl,cv,cc);
     document.getElementById('yrs-donut-legend').innerHTML=cSorted.slice(0,8).map(([cat,val],i)=>`
       <div class="ar"><div class="al-left"><div class="al-dot" style="background:${cc[i]}"></div><span>${escHtml(cat)}</span></div>
-      <div class="al-pct" style="font-size:11px;color:var(--text)">${fmt(val)}</div></div>`).join('');
+      <div class="al-pct" style="font-size:11px;color:var(--text)">${fmt(val)}</div></div>`).join('')
+      + (yrSpend.cardTotal>0?`<div style="font-size:10.5px;color:var(--muted2);margin-top:6px">รวมรูดบัตร ${fmt(yrSpend.cardTotal)}</div>`:'');
   }
 
   // Monthly cashflow chart for selected year
@@ -3780,7 +3869,7 @@ function renderReconciliation(){
           <div style="font-family:var(--f-sans);font-size:20px;font-weight:700;color:${C}">
             ${r.clean ? 'ตรงทุกบัญชี' : 'ต่าง '+fmt(r.totalDrift)}</div>
           <div style="font-size:11px;color:var(--muted2);margin-top:3px">
-            เช็คแล้ว ${r.checkedCount}/${r.totalCount} บัญชี · verify ล่าสุด ${ageTxt}</div>
+            เช็คแล้ว ${r.checkedCount}/${r.totalCount} บัญชี · ${_L('บัญชีที่เช็คนานสุด','oldest check')} ${ageTxt}</div>
         </div>
         ${r.stale?`<div style="margin-left:auto;font-size:11px;color:var(--debt);text-align:right">
           ⏰ ถึงเวลา reconcile รอบใหม่<br>
@@ -4264,7 +4353,7 @@ const VLOG_PURGED_KEY = 'finOS_valueLogPurged_v44';
 //   ฟังก์ชันหาย  → BLOCK  (แอปคำนวณผิดแน่นอน — นี่คือสิ่งที่ guard มีไว้จับ)
 //   เลขไม่ตรง    → WARN   (แค่ลืม bump — log ไว้ ไม่รบกวนผู้ใช้)
 // ฟังก์ชันที่ต้องมีคือสัญญาจริงระหว่างสองไฟล์ ส่วนสตริงเวอร์ชันเป็นแค่ป้าย
-const EXPECTED_SHARED_BUILD = 'v71';
+const EXPECTED_SHARED_BUILD = 'v73';
 const REQUIRED_SHARED_FNS = [
   'resolvePrices', 'pipelinePricesTHB', 'parseReconcileRows',
   'computeReconciliation', 'splitBalances', 'debtVsInvest', 'buildDebtPlan',
@@ -4285,6 +4374,7 @@ const REQUIRED_SHARED_FNS = [
   'loadBotPaper', 'fetchBotPaper', 'botStatus',   // v59 — หน้าบอทจำลอง
   'parseDocumentRows', 'docSearch', 'docCategoryList', 'docThumbUrl', 'docEmbedUrl', 'docSafeUrl', 'docRowValues',   // v71 — คลังเอกสาร
   'driveFolderId', 'docGuessFromFile', 'docDriveIds',   // v71 — นำเข้าจาก Drive
+  'sheetRowMatches',                                     // v72 — กันแก้/ลบผิดแถว
 ];
 function checkSharedVersion(){
   const missing = REQUIRED_SHARED_FNS.filter(f=>typeof window[f] !== 'function');
@@ -4509,7 +4599,8 @@ function renderPortfolio(){
   const pm={};assets.forEach(a=>{if(!pm[a.platform])pm[a.platform]={val:0,n:0};pm[a.platform].val+=a.val;pm[a.platform].n++;});
   const pSorted=Object.entries(pm).sort((a,b)=>b[1].val-a[1].val);
   const pTotal=pSorted.reduce((s,[,v])=>s+v.val,0);
-  document.getElementById('pf-plat-grid').innerHTML=pSorted.map(([p,v])=>{
+  const _pg=document.getElementById('pf-plat-grid');   // v73 — บล็อกนี้ถูกรวมเข้า location grid แล้ว (ถ้าไม่มี element ก็ข้าม)
+  if(_pg) _pg.innerHTML=pSorted.map(([p,v])=>{
     const pct=pTotal>0?(v.val/pTotal*100).toFixed(1):0;
     return `<div class="plat-card"><div class="bank-name">${escHtml(p)}</div>
       <div class="bank-val ${v.val>=0?'':''}" style="font-size:15px;color:var(--white)">${fmt(v.val)}</div>
@@ -4533,8 +4624,10 @@ function renderAssetTable(){
   document.getElementById('pf-body').innerHTML=sorted.map(a=>{
     const pc=a.pnl>0?'pp':a.pnl<0?'pn':'pz';
     const ptc=a.pnlPct>0?'pp':a.pnlPct<0?'pn':'pz';
-    const pt=a.pnl===0&&a.cost===0?'—':fmtSign(a.pnl);
-    const ptt=a.pnlPct===0&&a.cost===0?'—':fmtPct(a.pnlPct);
+    // v72 — ไม่มีราคา = ไม่รู้กำไร (เดิมขึ้น −100% ขาดทุนเต็มทุน ขัดกับการ์ด Unrealized ที่ไม่นับตัวนี้)
+    const _np=!(a.val>0);
+    const pt=_np||(a.pnl===0&&a.cost===0)?'—':fmtSign(a.pnl);
+    const ptt=_np||(a.pnlPct===0&&a.cost===0)?'—':fmtPct(a.pnlPct);
     const bs=[...(specials[a.ticker]||[])].map(t=>t==='div'?`<span class="tx-badge tx-div">DIV</span>`:t==='sell'?`<span class="tx-badge tx-sell">SELL</span>`:`<span class="tx-badge tx-xfer">XFER</span>`).join('');
     return `<tr>
       <td class="tk">${escHtml(a.ticker)}${bs}</td>
@@ -4664,7 +4757,8 @@ function buildEngineMonths(){
 }
 
 function renderEngine(){
-  const all=buildEngineMonths().filter(m=>m.inc>0);   // เดือนที่ยังไม่มีรายได้บันทึก = ข้าม
+  const _cs=new Set(closedMonths());   // v72 — สถิติ 12 เดือนไม่นับเดือนที่ยังไม่จบ
+  const all=buildEngineMonths().filter(m=>m.inc>0 && _cs.has(m.mk));   // เดือนที่ยังไม่มีรายได้บันทึก = ข้าม
   if(!all.length) return;
   const L12=all.slice(-12);
   const sum=(a,k)=>a.reduce((s,x)=>s+x[k],0);
@@ -4783,7 +4877,8 @@ function renderDividends(){
   setT('dv-yield', pv>0 ? (d12/pv*100).toFixed(2)+'%' : '—');
 
   // FIRE: ปันผลครอบคลุมรายจ่ายกี่ %
-  const em=buildEngineMonths().filter(m=>m.inc>0).slice(-12);
+  const _cs=new Set(closedMonths());
+  const em=buildEngineMonths().filter(m=>m.inc>0 && _cs.has(m.mk)).slice(-12);   // v72
   const avgExp=em.length?em.reduce((s,m)=>s+m.exp,0)/em.length:0;
   const cover=avgExp>0 ? (d12/12)/avgExp*100 : 0;
   setT('dv-fire', cover.toFixed(1)+'%');
@@ -4797,9 +4892,16 @@ function renderDividends(){
     const mk=`${r.date.getFullYear()}-${String(r.date.getMonth()+1).padStart(2,'0')}`;
     byM[mk]=(byM[mk]||0)+Math.abs(r.amtTHB);
   });
-  const keys=Object.keys(byM).sort().slice(-18);
+  /* v73 — เติมเดือนที่ไม่มีปันผลเป็น 0 (เดิมข้ามเดือนว่าง แท่งเรียงติดกันเหมือนได้ทุกเดือน)
+     ช่วง: 18 เดือนล่าสุดจนถึงเดือนนี้ หรือตั้งแต่เดือนแรกที่ได้ปันผลถ้าสั้นกว่า */
+  const _first=Object.keys(byM).sort()[0], _nowD=new Date(), keys=[];
+  for(let i=17;i>=0;i--){
+    const d=new Date(_nowD.getFullYear(), _nowD.getMonth()-i, 1);
+    const k=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    if(k>=_first) keys.push(k);
+  }
   mkBarChart('dv-chart', keys.map(monthLabel), [
-    {label:'ปันผล', data:keys.map(k=>Math.round(byM[k])), backgroundColor:'rgba(0,212,160,.8)', borderRadius:4}
+    {label:'ปันผล', data:keys.map(k=>Math.round(byM[k]||0)), backgroundColor:'rgba(0,212,160,.8)', borderRadius:4}
   ]);
 
   // per-ticker table
@@ -4886,7 +4988,7 @@ function renderDividendTracker(){
         <div class="dvt-box">
           ${stat('📊','รายเดือน','Monthly',fmt(C.monthly))}
           ${stat('📅','รายวัน','Daily',fmt(C.daily))}
-          ${stat('％','Yield','Yield',pv>0?(C.annual/pv*100).toFixed(2)+'%':'—',_L('รายได้ปันผลต่อปี ÷ มูลค่าพอร์ต','Annual income ÷ portfolio value'))}
+          ${stat('％','Yield คาดการณ์','Forward yield',pv>0?(C.annual/pv*100).toFixed(2)+'%':'—',_L('รายได้ปันผลคาดการณ์ 12 เดือนข้างหน้า ÷ มูลค่าพอร์ต (ต่างจาก Yield ย้อนหลังด้านล่างที่ใช้เงินที่ได้รับจริง)','Projected next-12-month income ÷ portfolio value (unlike the trailing yield below, which uses cash actually received)'))}
           ${stat('⏳','ยังไม่ได้รับ','Yet to receive',fmt(C.yetToReceive),_L('ขึ้น XD แล้วแต่ยังไม่เจอเงินเข้าในชีต','Went ex-dividend but no payout row in the sheet yet'))}
         </div>
         <div class="dvt-note">${_L('ก่อนหักภาษี ณ ที่จ่าย · ฉายจากรอบเดียวกันของปีก่อน × จำนวนหุ้นตอนนี้','Before withholding tax · projected from last year\'s payments × current shares')}${usd?` · USD/THB ${usd.toFixed(2)}`:''}${stale?` · <span style="color:var(--debt)">${_L(`ข้อมูล ${stale} ตัวเก่ากว่า ${FUND_MAX_DAYS} วัน`,`${stale} tickers older than ${FUND_MAX_DAYS} days`)}</span>`:''}</div>
@@ -5276,7 +5378,7 @@ function _rsDividends(tb, f, fq){
 }
 function _rsNews(tb, f){
   const n=f.news||[];
-  tb.innerHTML=n.length?`<div class="cc rs-news">${n.map(x=>`<a href="${escAttr(x.link)}" target="_blank" rel="noopener noreferrer">
+  tb.innerHTML=n.length?`<div class="cc rs-news">${n.filter(x=>docSafeUrl(x.link)).map(x=>`<a href="${escAttr(docSafeUrl(x.link))}" target="_blank" rel="noopener noreferrer">
       <div class="t">${escHtml(x.title)}</div><div class="s">${escHtml(x.publisher||'')}${x.time?' · '+escHtml(x.time):''} ↗</div></a>`).join('')}</div>`
     :`<div class="cc" style="color:var(--muted2);font-size:12px">${_L('ยังไม่มีข่าว','No news yet')}</div>`;
 }
@@ -6350,7 +6452,7 @@ function generateMonthlyPDF(){
   const budgetAlerts=[];
   Object.keys({...expMap,...BGT_DEFAULTS}).forEach(cat=>{
     const spent=expMap[cat]||0;
-    const bgt=parseFloat(budgets['exp_'+cat])||BGT_DEFAULTS[cat]||0;
+    const bgt=bgtExpLimit(budgets, cat);   // v73
     if(bgt<=0)return;
     const pct=bgt>0?Math.round(spent/bgt*100):0;   // #11 bgt=0 gave Infinity%
     if(pct>=80) budgetAlerts.push({cat,spent,bgt,pct});
@@ -6569,7 +6671,7 @@ function updateBudgetBadge(){
   const allExpCats=[...new Set([...Object.keys(expMap),...Object.keys(BGT_DEFAULTS)])];
   allExpCats.forEach(cat=>{
     const spent  = expMap[cat]||0;
-    const bgtAmt = parseFloat(budgets['exp_'+cat])||BGT_DEFAULTS[cat]||0;
+    const bgtAmt = bgtExpLimit(budgets, cat);   // v73
     if(bgtAmt<=0) return;
     const pct = spent/bgtAmt*100;
     if(pct>=100) overCount++;
@@ -6602,6 +6704,16 @@ const BGT_DEFAULTS={
 function bgtLoad(){
   try{return JSON.parse(localStorage.getItem(BGT_KEY)||'{}');}catch{return {};}
 }
+/* v73 — งบของหมวด: ค่าที่ผู้ใช้ตั้ง → ค่าตั้งต้น · บันทึกเป็น 0 = "ไม่ตั้งงบหมวดนี้" จริง ๆ
+   เดิม parseFloat(x)||ค่าตั้งต้น → ตั้ง 0 แล้วเด้งกลับไปใช้ค่าตั้งต้นเสมอ ปิดงบหมวดที่ไม่ได้ใช้ไม่ได้
+   (หมวดตั้งต้นอย่าง Motocycle / Dtac (Mom) ค้างอยู่ทั้งที่ไม่เคยใช้) · ทุกจุดที่อ่านงบต้องผ่านตัวนี้ */
+const bgtIsOff = (budgets, key) => !!budgets && (budgets[key]===0 || budgets[key]==='0');
+function bgtLimit(budgets, key, def){
+  const v = budgets ? budgets[key] : undefined;
+  if(bgtIsOff(budgets, key)) return 0;
+  return parseFloat(v) || def || 0;
+}
+const bgtExpLimit = (budgets, cat) => bgtLimit(budgets, 'exp_'+cat, BGT_DEFAULTS[cat]);
 function bgtSave(data){
   try{localStorage.setItem(BGT_KEY,JSON.stringify(data));}catch{}
 }
@@ -6626,9 +6738,29 @@ function bgtStatus(pct){
 // Savings excluded from budget tracking (fixed deductions)
 const SAV_EXCLUDE=new Set(['Social Security','Physical Welath','Physical Wealth']);
 
+/* v73 — ตัวเลือกเดือนของหน้างบ: ใช้ curMonthIdx ร่วมกับหน้ารายเดือน (เลือกที่ไหนก็ตรงกันทั้งสองหน้า) */
+function bgtMonthNav(){
+  const sel=document.getElementById('bgt-month-select'); if(!sel) return;
+  if(sel.options.length!==availableMonths.length)
+    sel.innerHTML=availableMonths.map(mk=>`<option value="${mk}">${monthLabel(mk)}</option>`).join('');
+  if(availableMonths.length) sel.value=availableMonths[curMonthIdx]||availableMonths[availableMonths.length-1];
+  const pv=document.getElementById('bgt-prev-month'), nx=document.getElementById('bgt-next-month');
+  if(pv) pv.disabled = curMonthIdx<=0;
+  if(nx) nx.disabled = curMonthIdx>=availableMonths.length-1;
+  if(sel.dataset.init) return;
+  sel.dataset.init='1';
+  const go=i=>{ if(i<0||i>=availableMonths.length) return; curMonthIdx=i;
+    const m=document.getElementById('month-select'); if(m) m.value=availableMonths[i];
+    renderBudget(); };
+  sel.addEventListener('change',()=>go(availableMonths.indexOf(sel.value)));
+  if(pv) pv.addEventListener('click',()=>go(curMonthIdx-1));
+  if(nx) nx.addEventListener('click',()=>go(curMonthIdx+1));
+}
+
 function renderBudget(){
   const mk      = availableMonths[curMonthIdx];
   const budgets = bgtLoad();
+  try{ bgtMonthNav(); }catch(e){}
 
   // ── Expense data ──
   // v63 — budgetSpendMap() รวมรายจ่ายที่รูดบัตร (แถว Debt ที่แตะบัตรเครดิต) เข้าหมวดด้วย
@@ -6650,8 +6782,12 @@ function renderBudget(){
   document.getElementById('bgt-month-label').textContent='Budget · '+monthLabel(mk);
 
   // Expense overview
-  const totalSpent  = Object.values(expMap).reduce((s,v)=>s+v,0);
-  const totalExpBgt = expCats.reduce((s,cat)=>s+(parseFloat(budgets['exp_'+cat])||BGT_DEFAULTS[cat]||0),0);
+  /* v72 — เทียบเฉพาะหมวดที่ตั้งงบ: เดิม "ใช้ไป" รวมหมวดที่ไม่มีงบ (ค่าเช่า ฿14,000) แต่ "งบ" ไม่รวม
+     → ใช้ไป 124% ทั้งที่หมวดที่ตั้งงบเกินจริงแค่บางหมวด · ส่วนนอกงบแสดงแยกให้เห็น */
+  const _lim=cat=>bgtExpLimit(budgets, cat);   // v73
+  const totalSpent  = expCats.filter(c=>_lim(c)>0).reduce((s,c)=>s+(expMap[c]||0),0);
+  const unbudgeted  = expCats.filter(c=>!(_lim(c)>0)).reduce((s,c)=>s+(expMap[c]||0),0);
+  const totalExpBgt = expCats.reduce((s,cat)=>s+_lim(cat),0);
   const expPct      = totalExpBgt>0?Math.min(Math.round(totalSpent/totalExpBgt*100),999):0;
   document.getElementById('bgt-exp-spent').textContent  = fmt(totalSpent);
   document.getElementById('bgt-exp-spent').style.color  = bgtColor(expPct);
@@ -6663,12 +6799,13 @@ function renderBudget(){
   const expRem = totalExpBgt - totalSpent;
   document.getElementById('bgt-exp-remain').textContent =
     (expRem>=0 ? 'เหลือ '+fmt(expRem) : 'เกิน '+fmt(Math.abs(expRem)))
-    + (spend.cardTotal>0 ? ' · รวมรูดบัตร '+fmt(spend.cardTotal) : '');
+    + (spend.cardTotal>0 ? ' · รวมรูดบัตร '+fmt(spend.cardTotal) : '')
+    + (unbudgeted>0 ? ' · นอกงบ (ยังไม่ตั้ง) '+fmt(unbudgeted) : '');
   document.getElementById('bgt-exp-remain').style.color = expRem>=0?'var(--muted2)':'var(--expense)';
 
   // Savings overview (ยิ่งมากยิ่งดี)
   const totalSaved  = Object.values(savMap).reduce((s,v)=>s+v,0);
-  const totalSavTgt = savCats.reduce((s,cat)=>s+(parseFloat(budgets['sav_'+cat])||SAV_DEFAULTS[cat]||0),0);
+  const totalSavTgt = savCats.reduce((s,cat)=>s+bgtLimit(budgets,'sav_'+cat,SAV_DEFAULTS[cat]),0);   // v73
   const savPct      = totalSavTgt>0?Math.min(Math.round(totalSaved/totalSavTgt*100),100):0;
   const savColor    = savPct>=100?'var(--income)':savPct>=50?'var(--debt)':'var(--expense)';
   document.getElementById('bgt-sav-saved').textContent  = fmt(totalSaved);
@@ -6683,36 +6820,47 @@ function renderBudget(){
   document.getElementById('bgt-sav-remain').style.color = savRem<=0?'var(--income)':'var(--muted2)';
 
   // ── Expense cards ──
-  document.getElementById('bgt-exp-grid').innerHTML = expCats.map(cat=>{
+  /* v73 — เรียง เกิน → ใกล้เกิน → ปกติ → ไม่ตั้งงบ (เดิมเรียงตามตัวอักษร 21 ใบ ต้องไล่หาว่าหมวดไหนเกิน)
+     หมวดที่เดือนนี้ใช้ ฿0 พับไว้ท้ายคอลัมน์ · ไม่ตั้งงบและไม่ได้ใช้ = ไม่ต้องแสดงเลย */
+  const RANK={over:0,warn:1,exact:1,ok:2,unset:3};
+  const expCards = expCats.map(cat=>{
     const spent  = expMap[cat]||0;
-    const bgtAmt = parseFloat(budgets['exp_'+cat])||BGT_DEFAULTS[cat]||0;
+    const bgtAmt = _lim(cat);
     const pct    = bgtAmt>0?Math.round(spent/bgtAmt*100):0;
-    const st     = bgtAmt>0?bgtStatus(pct):{label:'ยังไม่ตั้ง',cls:'unset'};
+    const st     = bgtAmt>0?bgtStatus(pct):{label:bgtIsOff(budgets,'exp_'+cat)?'ไม่ตั้งงบ':'ยังไม่ตั้ง',cls:'unset'};
     const barW   = bgtAmt>0?clampPct(pct):0;   // #11
     const key    = 'exp_'+cat;
     const fromCard = spend.card[cat]||0;   // v63 — บอกว่ายอดในหมวดมาจากบัตรเท่าไร
-    return bgtCardHTML(cat, spent, bgtAmt, pct, st, barW, key, 'ใช้ไป', '/ ', undefined,
-      fromCard>0 ? 'รวมรูดบัตร '+fmt(fromCard) : '');
-  }).join('');
+    return {cat, spent, bgtAmt, pct, st, html: bgtCardHTML(cat, spent, bgtAmt, pct, st, barW, key, 'ใช้ไป', '/ ', undefined,
+      fromCard>0 ? 'รวมรูดบัตร '+fmt(fromCard) : '', BGT_DEFAULTS[cat]>0, bgtIsOff(budgets,key))};
+  });
+  const used   = expCards.filter(c=>c.spent>0.005)
+    .sort((a,b)=>(RANK[a.st.cls]-RANK[b.st.cls]) || (b.pct-a.pct) || (b.spent-a.spent) || a.cat.localeCompare(b.cat));
+  const idle   = expCards.filter(c=>!(c.spent>0.005) && c.bgtAmt>0);
+  const offIdle= expCards.filter(c=>!(c.spent>0.005) && !(c.bgtAmt>0) && bgtIsOff(budgets,'exp_'+c.cat));
+  const fold   = [...idle, ...offIdle];
+  document.getElementById('bgt-exp-grid').innerHTML =
+    (used.length ? used.map(c=>c.html).join('') : `<div style="font-size:12px;color:var(--muted2);padding:10px 2px">ยังไม่มีรายจ่ายเดือนนี้</div>`)
+    + (fold.length ? `<details class="bgt-fold"><summary>หมวดที่ยังไม่ได้ใช้เดือนนี้ · ${fold.length} หมวด</summary>${fold.map(c=>c.html).join('')}</details>` : '');
 
   // ── Savings cards (ยิ่งมากยิ่งดี) ──
   document.getElementById('bgt-sav-grid').innerHTML = savCats.map(cat=>{
     const saved  = savMap[cat]||0;
-    const tgt    = parseFloat(budgets['sav_'+cat])||SAV_DEFAULTS[cat]||0;
+    const tgt    = bgtLimit(budgets,'sav_'+cat,SAV_DEFAULTS[cat]);   // v73
     const pct    = tgt>0?Math.round(saved/tgt*100):0;
     // Savings: green when >= 100%, orange 50-99%, red < 50%
     const savSt  = tgt>0
       ?(pct>=100?{label:'ถึง target!',cls:'ok'}:pct>=50?{label:'กำลังดี',cls:'warn'}:{label:'ต่ำกว่า target',cls:'over'})
-      :{label:'ยังไม่ตั้ง',cls:'unset'};
+      :{label:bgtIsOff(budgets,'sav_'+cat)?'ไม่ตั้ง target':'ยังไม่ตั้ง',cls:'unset'};
     const barCol = pct>=100?'var(--income)':pct>=50?'var(--debt)':'var(--expense)';
     const barW   = clampPct(pct);   // #11
     const key    = 'sav_'+cat;
-    return bgtCardHTML(cat, saved, tgt, pct, savSt, barW, key, 'ออม', 'target ', barCol);
+    return bgtCardHTML(cat, saved, tgt, pct, savSt, barW, key, 'ออม', 'target ', barCol, '', SAV_DEFAULTS[cat]>0, bgtIsOff(budgets,key));
   }).join('');
   updateBudgetBadge(); try{updateDebtBadge();}catch(e){}
 }
 
-function bgtCardHTML(cat, amount, limit, pct, st, barW, key, spentLabel, limitPrefix, barCol, note){
+function bgtCardHTML(cat, amount, limit, pct, st, barW, key, spentLabel, limitPrefix, barCol, note, hasDefault, isOff){
   const col = barCol||bgtColor(pct);
   // #12 — ชื่อหมวดมาจากชีต ควบคุมเนื้อหาไม่ได้ ต้อง escape ให้ครบทุกบริบทที่มันไปโผล่:
   //  1) id attribute — CSS.escape() ทำเพื่อ CSS selector เท่านั้น มันคืน \" (มี " ดิบอยู่)
@@ -6735,13 +6883,15 @@ function bgtCardHTML(cat, amount, limit, pct, st, barW, key, spentLabel, limitPr
     </div>
     <div class="bgt-amounts">
       <span class="bgt-spent"${note?` title="${escAttr(note)}"`:''}>${spentLabel} ${fmt(amount)}${note?' 💳':''}</span>
-      <span class="bgt-limit">${limit>0?limitPrefix+fmt(limit):'ยังไม่ตั้ง'}</span>
+      <span class="bgt-limit">${limit>0?limitPrefix+fmt(limit):(isOff?'ปิดงบหมวดนี้':'ยังไม่ตั้ง')}</span>
     </div>
     <div class="bgt-bar2"><div class="bgt-bar2-fill" style="width:${barW}%;background:${col}"></div></div>
     <div class="bgt-edit-row" id="bgt-edit-${escId}" style="display:none">
       <input class="bgt-input" type="number" placeholder="${escAttr(limitPrefix.trim())} (฿)"
         value="${limit||''}" id="bgt-inp-${escId}">
       <button class="bgt-save-btn" onclick="bgtSaveOne('${keyJs}','${catJs}')">บันทึก</button>
+      ${limit>0?`<button class="bgt-alt-btn" title="ไม่ติดตามหมวดนี้ (ไม่นับในงบรวม ไม่เตือน)" onclick="bgtSaveOne('${keyJs}','${catJs}','off')">ไม่ตั้งงบ</button>`:''}
+      ${hasDefault&&(isOff||limit>0)?`<button class="bgt-alt-btn" title="กลับไปใช้ค่าตั้งต้นของแอป" onclick="bgtSaveOne('${keyJs}','${catJs}','default')">ค่าตั้งต้น</button>`:''}
     </div>
   </div>`;
 }
@@ -6761,14 +6911,19 @@ function bgtToggleEdit(key,cat,currentVal){
   }
 }
 
-function bgtSaveOne(key,cat){
+/* v73 — mode: 'off' = ไม่ตั้งงบหมวดนี้ (เก็บเป็น 0) · 'default' = กลับไปใช้ค่าตั้งต้น
+   พิมพ์ 0 เอง = ไม่ตั้งงบ · ช่องว่าง = ค่าตั้งต้น (เดิมทั้งคู่ = ค่าตั้งต้น) */
+function bgtSaveOne(key,cat,mode){
   const escSel=CSS.escape(cat);   // #6 — was `esc`, see bgtToggleEdit
   const inp=document.getElementById('bgt-inp-'+escSel);
   if(!inp)return;
-  const val=parseFloat(inp.value)||0;
+  const raw=String(inp.value).trim();
+  const val=parseFloat(raw)||0;
   const data=bgtLoad();
-  if(val>0) data[key]=val;
-  else delete data[key];
+  if(mode==='off') data[key]=0;
+  else if(mode==='default' || raw==='') delete data[key];
+  else if(val>0) data[key]=val;
+  else data[key]=0;
   bgtSave(data);
   renderBudget();
 }
@@ -6926,9 +7081,14 @@ function savePortfolioToStorage(){
     localStorage.setItem('finOS_portfolio',JSON.stringify(summary));
     console.log('[FinOS] Portfolio saved to localStorage:',Object.keys(groupMap));
     saveDataCache();   // เก็บ state ไว้ให้กลับมาใช้ได้ทันทีโดยไม่ต้อง sync ใหม่
-    localStorage.setItem('finOS_lastSync', String(Date.now()));
-    try{ showStaleBanner(null); }catch(e){}   // sync สำเร็จ → ซ่อน toast
-    console.log('[GS] ✓ sync สำเร็จ — ข้อมูลสดแล้ว');
+    /* v72 — ตอนกู้จาก cache ฟังก์ชันนี้ถูกเรียกด้วย แต่ยังไม่ได้ sync จริง
+       เดิมประทับ finOS_lastSync = ตอนนี้ → visibilitychange ไม่ sync ให้อีก 15 นาที
+       (เคสจริง: ต่ออายุ token เงียบไม่สำเร็จตอนเปิดแอป สลับแอปไปกลับมาก็ยังไม่ลองใหม่) */
+    if(!_restoringFromCache){
+      localStorage.setItem('finOS_lastSync', String(Date.now()));
+      try{ showStaleBanner(null); }catch(e){}   // sync สำเร็จ → ซ่อน toast
+      console.log('[GS] ✓ sync สำเร็จ — ข้อมูลสดแล้ว');
+    }
   }catch(e){console.warn('[FinOS] savePortfolio error:',e);}
 }
 
@@ -7071,12 +7231,13 @@ function renderDebtComposition(liabAccounts){
       ${rows}
       <div style="margin-top:10px;padding-top:9px;border-top:1px solid var(--border);font-size:11px;color:var(--muted2);line-height:1.8">
         ${mTxt}
-        <br><span style="color:var(--muted)">แถบด้านบน = ยอดที่ <strong>ทำให้หนี้เพิ่ม</strong> แยกตามร้านค้า/บริการ —
-        ยอดชำระคืนไม่นับรวมในแถบ เพื่อให้เห็นว่าหนี้เกิดจากอะไรจริงๆ ไม่ใช่ยอดสุทธิที่หักกลบกันจนดูเล็กลง
-        · <strong>รูดสะสม ≠ ยอดค้าง</strong> — รูดสะสมคือทุกครั้งที่เคยรูดตั้งแต่วันแรก ส่วนยอดค้างคือรูดสะสม − ชำระคืนสะสม</span>
       </div>
     </div>`;
-  }).join('');
+  }).join('')
+  // v73 — คำอธิบายเดียวกันเคยซ้ำใต้ทุกบัญชี → แสดงครั้งเดียวท้ายบล็อก
+  + `<div style="font-size:11px;color:var(--muted);line-height:1.8;margin:-2px 2px 10px">แถบในแต่ละบัญชี = ยอดที่ <strong>ทำให้หนี้เพิ่ม</strong> แยกตามร้านค้า/บริการ —
+        ยอดชำระคืนไม่นับรวมในแถบ เพื่อให้เห็นว่าหนี้เกิดจากอะไรจริงๆ ไม่ใช่ยอดสุทธิที่หักกลบกันจนดูเล็กลง
+        · <strong>รูดสะสม ≠ ยอดค้าง</strong> — รูดสะสมคือทุกครั้งที่เคยรูดตั้งแต่วันแรก ส่วนยอดค้างคือรูดสะสม − ชำระคืนสะสม</div>`;
 }
 
 function renderDebt(){
@@ -7136,11 +7297,24 @@ function renderDebt(){
 
   // ── บทสรุปการตัดสินใจ ──
   const vEl=document.getElementById('dbt-verdict');
+  /* v73 — ขอดอกเบี้ยของหนี้ก้อนใหญ่ที่สุดที่ยังไม่ได้ใส่ก่อน
+     เดิมบทสรุปชูหนี้ ฿1,357 ที่ใส่ดอกเบี้ยแล้ว ขณะที่สินเชื่อ ฿207,000 ยังไม่มีดอกเบี้ย
+     = คำตอบ "จ่ายหนี้ vs ลงทุน" คิดจากหนี้ส่วนเล็กนิดเดียว · ก้อนที่ยังไม่รู้ใหญ่กว่าส่วนที่รู้ → ถามก่อน */
+  const unrated=di.rows.filter(r=>!(r.apr>0) && r.intBal>0.5).sort((a,b)=>b.bal-a.bal);
+  const ratedBal=di.rows.filter(r=>r.apr>0).reduce((t,r)=>t+r.bal,0);
+  const ask=unrated.length && (!anyApr || unrated[0].bal>ratedBal) ? unrated[0] : null;
+  const askHtml=ask?`<div style="background:rgba(255,149,0,.08);border:1px solid rgba(255,149,0,.45);border-radius:12px;padding:12px 16px;margin-bottom:10px;font-size:12px;line-height:1.85">
+      <strong style="color:var(--debt)">① ใส่ดอกเบี้ยของ ${escHtml(ask.name)} ก่อน</strong> — ก้อนใหญ่สุดที่ยังไม่มีดอกเบี้ย ยอด <strong style="color:var(--loss)">${fmt(ask.bal)}</strong>
+      ${anyApr?`<br><span style="color:var(--muted2)">บทสรุปด้านล่างคิดจากหนี้ที่ใส่ดอกเบี้ยแล้ว ${fmt(ratedBal)} (${(ratedBal/sb.liabilities*100).toFixed(0)}% ของหนี้ทั้งหมด) เท่านั้น — ยังเชื่อไม่ได้</span>`:''}
+      <button type="button" onclick="const i=document.querySelector('tr.dbt-ask .dbt-apr');if(i){i.scrollIntoView({block:'center',behavior:'smooth'});i.focus();}"
+        style="display:block;margin-top:8px;background:var(--debt);color:#1a1000;border:none;border-radius:7px;padding:6px 14px;font:inherit;font-size:12px;font-weight:700;cursor:pointer">กรอกดอกเบี้ย ${escHtml(ask.name)} ↓</button>
+    </div>`:'';
   if(!anyApr){
     vEl.innerHTML=`<div style="background:rgba(255,149,0,.07);border:1px solid rgba(255,149,0,.3);border-radius:12px;padding:14px 18px;font-size:12px;line-height:1.9">
       <strong style="color:var(--debt)">⚠️ ยังไม่ได้ใส่ดอกเบี้ย</strong> — กรอกช่อง "ดอกเบี้ย %/ปี" ในตารางด้านล่าง
       แล้วระบบจะคำนวณให้ว่าควรเอาเงินไปจ่ายหนี้หรือลงทุน<br>
       <span style="color:var(--muted2)">บัตรเครดิตไทยส่วนใหญ่อยู่ที่ 16% · สินเชื่อส่วนบุคคล 20–25% · ผ่อน 0% ใส่ 0</span></div>`;
+    if(askHtml) vEl.innerHTML=askHtml+vEl.innerHTML.replace('⚠️ ยังไม่ได้ใส่ดอกเบี้ย','⚠️ ยังไม่ได้ใส่ดอกเบี้ยเลย');
   }else{
     /* BUGFIX v48 #9 — บทสรุปใช้ apr ดิบ แต่ debtVsInvest() ตัดสินด้วย effApr
        (= apr × intBal ÷ bal คือดอกเบี้ยที่มีผลจริงกับทั้งใบ หลังหักยอดปลอดดอก)
@@ -7164,36 +7338,49 @@ function renderDebt(){
         :`ดอกเบี้ยที่มีผลจริงสูงสุดของคุณ ${topApr.toFixed(1)}% ต่ำกว่าผลตอบแทนคาดหวัง ${di.expectedReturn}% —
         ทางคณิตศาสตร์ควรจ่ายขั้นต่ำแล้วเอาเงินที่เหลือไปลงทุน (แต่ต้องมั่นใจว่าจ่ายตรงเวลาทุกงวด)`}
       </div></div>`;
+    if(askHtml) vEl.innerHTML=askHtml+vEl.innerHTML;
   }
 
   // ── ตารางดอกเบี้ย ──
+  // v73 — ก้อนที่ขอดอกเบี้ย (ask) ขึ้นแถวแรก ที่เหลือเรียงตามดอกเบี้ยเหมือนเดิม
   document.getElementById('dbt-body').innerHTML=di.rows
-    .sort((a,b)=>b.apr-a.apr||b.bal-a.bal).map(r=>{
+    .sort((a,b)=>(ask?(b.name===ask.name)-(a.name===ask.name):0)||b.apr-a.apr||b.bal-a.bal).map(r=>{
     /* ข้อ 3 — ดอกเบี้ยคิดจาก intBal (ยอดค้าง − ยอดปลอดดอก) ไม่ใช่ยอดค้างทั้งก้อน
        บัตรใบเดียวมักมียอดผ่อน 0% ปนกับยอด revolving ที่คิดดอก
        เดิมโมเดลมี APR เดียวต่อบัญชี -> ต้องเลือกระหว่างคิด 16% ทั้งก้อน
        (ดอกเกินจริง) หรือใส่ 0 (ดอกหายไปเลย) ผิดทั้งสองทาง */
     const monthlyInt=r.intBal*r.apr/100/12;
-    const minPay=Math.min(r.bal,Math.max(cfg.minFloor,r.bal*cfg.minPct/100));
-    return `<tr>
-      <td>${escHtml(r.name)}</td>
-      <td class="r" style="color:var(--loss)">${fmt(r.bal)}</td>
-      <td class="r"><span style="display:inline-flex;align-items:center;gap:4px;justify-content:flex-end">
+    /* v72 — สินเชื่อ (รถ/บ้าน/บุคคล) จ่ายค่างวดคงที่ ไม่ใช่ "ขั้นต่ำ % ของยอด" แบบบัตรเครดิต
+       เดิม Car Loan ยอด ฿186,500 ขึ้นขั้นต่ำ ฿18,650 ทั้งที่ค่างวดจริง ฿8,900
+       → ใช้ค่างวดที่จ่ายจริง (มัธยฐานยอดชำระเข้าบัญชีนี้ 6 เดือนล่าสุด) */
+    const _acc=(sb.liabAccounts||[]).find(b=>b.name===r.name)||{};
+    const _isLoan=!isCreditAccount(_acc) && /loan|สินเชื่อ|เงินกู้|ผ่อน/i.test((_acc.type||'')+' '+r.name);
+    let minPay=Math.min(r.bal,Math.max(cfg.minFloor,r.bal*cfg.minPct/100));
+    if(_isLoan){
+      const byM={}; (txRows||[]).forEach(t=>{ const v=t.acct&&t.acct[r.name]; if(v>0) byM[t.month]=(byM[t.month]||0)+v; });
+      const last=Object.keys(byM).sort().slice(-6).map(k=>byM[k]).sort((a,b)=>a-b);
+      minPay=last.length?last[Math.floor(last.length/2)]:null;
+    }
+    // v73 — data-lbl = หัวคอลัมน์ที่โชว์บนการ์ดมือถือ (CSS ::before)
+    return `<tr${ask&&r.name===ask.name?' class="dbt-ask"':''}>
+      <td class="dbt-name">${escHtml(r.name)}</td>
+      <td class="r" data-lbl="ยอดค้าง" style="color:var(--loss)">${fmt(r.bal)}</td>
+      <td class="r" data-lbl="ปลอดดอกเบี้ย"><span style="display:inline-flex;align-items:center;gap:4px;justify-content:flex-end">
         <span style="color:var(--muted2);font-size:11px">฿</span><input type="number" class="dbt-free" value="${r.free||''}"
         step="100" min="0" max="${Math.round(r.bal)}" placeholder="0"
         data-acct="${escAttr(r.name)}" inputmode="decimal"
         title="ยอดในใบนี้ที่ไม่คิดดอกเบี้ย เช่นยอดผ่อน 0% — ดอกเบี้ยจะคิดจากส่วนที่เหลือเท่านั้น"
         style="background:var(--bg4);color:${r.free>0?'var(--gain)':'var(--muted)'};border:1px solid ${r.free>0?'rgba(0,212,160,.45)':'var(--border2)'};
         border-radius:6px;padding:5px 8px;width:88px;text-align:right;font-family:inherit;font-size:12px"></span></td>
-      <td class="r" style="color:${r.intBal>0?'var(--debt)':'var(--muted)'}">${fmt(Math.round(r.intBal))}${r.free>0?`<div style="font-size:9px;color:var(--muted)">${(r.intBal/r.bal*100).toFixed(0)}% ของใบ</div>`:''}</td>
-      <td class="r"><span style="display:inline-flex;align-items:center;gap:4px;justify-content:flex-end">
+      <td class="r" data-lbl="คิดดอกจริง" style="color:${r.intBal>0?'var(--debt)':'var(--muted)'}">${fmt(Math.round(r.intBal))}${r.free>0?`<div style="font-size:9px;color:var(--muted)">${(r.intBal/r.bal*100).toFixed(0)}% ของใบ</div>`:''}</td>
+      <td class="r dbt-apr-td" data-lbl="ดอกเบี้ย %/ปี${r.apr>0?'':' — กรอกตรงนี้'}"><span style="display:inline-flex;align-items:center;gap:4px;justify-content:flex-end">
         <input type="number" class="dbt-apr" value="${r.apr||''}" step="0.5" min="0" max="99" placeholder="?"
         data-acct="${escAttr(r.name)}" inputmode="decimal" title="ใส่ดอกเบี้ยต่อปี เช่น 16"
         style="background:var(--bg4);color:${r.apr>0?'var(--debt)':'var(--muted)'};border:1px solid ${r.apr>0?'rgba(255,149,0,.45)':'var(--border2)'};
         border-radius:6px;padding:5px 8px;width:72px;text-align:right;font-family:inherit;font-size:12px"
         ><span style="color:var(--muted2);font-size:11px">%</span></span></td>
-      <td class="r" style="color:var(--debt)">${r.apr>0?fmt(Math.round(monthlyInt)):'—'}</td>
-      <td class="r" style="color:var(--muted2)">${fmt(Math.round(minPay))}</td>
+      <td class="r" data-lbl="ดอกเบี้ย/เดือน" style="color:var(--debt)">${r.apr>0?fmt(Math.round(monthlyInt)):'—'}</td>
+      <td class="r" data-lbl="${_isLoan?'ค่างวด':'ขั้นต่ำ'}" style="color:var(--muted2)">${minPay==null?'—':fmt(Math.round(minPay))}</td>
     </tr>`;
   }).join('');
 
@@ -7435,7 +7622,7 @@ function renderRebalance(){
       <div class="sc"><div class="sc-lbl">${_L('มูลค่าพอร์ตหลังปรับ','Portfolio after')}</div><div class="sc-val">${fmt(p.totalAfter)}</div><div class="sc-sub">${_L('ก่อน','before')} ${fmt(p.totalBefore)}${p.lockedVal>0?' · '+_L('รวม Provident Fund','incl. Provident Fund')+' '+fmt(p.lockedVal)+' 🔒':''}</div></div>
     </div>
     <div class="cc" style="padding:0"><div class="tw" style="border:none"><table class="rb-table">
-      <thead><tr><th>#</th><th>${_L('สินทรัพย์','Asset')}</th><th>${_L('ต้นทุน','Cost basis')}</th><th>${_L('มูลค่าปัจจุบัน','Current cost')}</th><th>${_L('กำไร','Gain')}</th>
+      <thead><tr><th>#</th><th>${_L('สินทรัพย์','Asset')}</th><th>${_L('ต้นทุน','Cost basis')}</th><th>${_L('มูลค่าปัจจุบัน','Current value')}</th><th>${_L('กำไร','Gain')}</th>
         <th>${_L('สัดส่วนในพอร์ต','Share in portfolio')}</th><th>${_L('หมวด','Categories')}</th><th>${_L('สัดส่วนในหมวด','Share in a category')}</th><th>${_L('ต้องซื้อ/ขาย','To buy / sell')}</th><th></th></tr></thead>
       <tbody>${rows}</tbody></table></div></div>
     <div class="rb-note">${_L(
@@ -7636,7 +7823,12 @@ function gateExplainer(){
     โมเมนตัมหารความผันผวนรายปี  เรียงด้วยโมเมนตัมดิบไม่ได้ ไม่งั้นของที่เหวี่ยงแรง
     จะอยู่หัวตารางตลอด เพราะมันชนะด้วยความเสี่ยง ไม่ใช่ด้วยคุณภาพ<br>
     <strong style="color:var(--text)">③ ขนาดไม้</strong> ตอบว่า “เท่าไหร่” —
-    จาก RSI · ระยะห่างจุดสูงสุด · ตำแหน่งในกรอบปี  บีบไว้ที่ ×0.5–1.5 เท่านั้น<br><br>
+    จาก RSI · ระยะห่างจุดสูงสุด · ตำแหน่งในกรอบปี  บีบไว้ที่ ×0.5–1.5 เท่านั้น
+    — <strong style="color:var(--text)">ขนาดไม้พลิกประตูไม่ได้</strong> ของที่ไม่ผ่านประตูไม่มีทางกลายเป็นซื้อได้
+    และบอทจำลองใช้กฎชุดเดียวกันนี้<br>
+    <span style="color:var(--muted)">ตัวเลขทั้งหมดอธิบายสถานะ ณ วันที่ข้อมูลระบุ ไม่ใช่คำแนะนำการลงทุน</span>
+    <!-- v73 — ประวัติการเปลี่ยนสูตร + ข้อจำกัด ย้ายเข้า "อ่านเพิ่ม" (เดิมยาว 5 ย่อหน้าเปิดค้างใต้ตาราง) -->
+    <details class="more-info"><summary>ⓘ อ่านเพิ่ม — ทำไมเลิกใช้คะแนนรวม · ข้อจำกัดที่ต้องรู้</summary>
     <strong style="color:var(--text)">ทำไมถึงเลิกใช้คะแนนรวม</strong>
     รุ่นก่อนใช้ <code>คะแนน = เทรนด์ + จังหวะ</code> ซึ่งเอาสองปรัชญาที่ตรงข้ามกัน
     มาบวกกัน — เทรนด์คือ “ของที่ขึ้นมักขึ้นต่อ” (ช่วง −2 ถึง +1)
@@ -7660,8 +7852,8 @@ function gateExplainer(){
     “ยังไม่รู้” ไม่ใช่ “ไม่ผ่าน” — ไม่รู้ ≠ แย่<br>
     งานวิจัยเรื่องโมเมนตัมเองก็มีข้อโต้แย้ง (ผลอ่อนลงมากถ้าไม่ปรับด้วยความผันผวน
     และเคยหายไปในช่วงปี 2009-2013) เกณฑ์นี้ถูกเลือกเพราะมัน
-    <strong style="color:var(--text)">สอดคล้องกันเอง</strong> ไม่ใช่เพราะรับประกันผลตอบแทน<br><br>
-    ตัวเลขทั้งหมดอธิบายสถานะ ณ วันที่ข้อมูลระบุ ไม่ใช่คำแนะนำการลงทุน
+    <strong style="color:var(--text)">สอดคล้องกันเอง</strong> ไม่ใช่เพราะรับประกันผลตอบแทน
+    </details>
   </div>`;
 }
 
@@ -8155,16 +8347,18 @@ function renderMarket(){
     ${sigRegimeBlock()}
     <div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;
                 padding:16px 18px;font-size:12px;color:var(--muted2);line-height:1.9">
-      <strong style="color:var(--text)">ทำไมถึงกลับมาให้คะแนนได้อีก</strong><br>
-      v44 ปิดการให้คะแนนไปเพราะ 9 ใน 14 สัญญาณมาจาก FRED ที่ดึงไม่ได้เลย
-      (สำเร็จ 0/14 · timeout 42 ครั้ง) แล้วกลไก merge carry ค่าเก่ามาเรื่อยๆ
-      หน้านี้จึงเคยแสดง "สถานการณ์ปัจจุบัน" จากข้อมูลอายุ 3 เดือน<br><br>
-      ตอนนี้สัญญาณเหล่านั้นมาจาก Yahoo (ผลตอบแทนพันธบัตร) กับ BLS (เงินเฟ้อ · ว่างงาน)
-      ซึ่งทดสอบแล้วว่าเข้าถึงได้จาก CI จริง และเพิ่ม<strong style="color:var(--text)">เพดานอายุรายสัญญาณ</strong> —
-      ตัวไหนเก่าเกินจะถูก<strong style="color:var(--text)">ตัดออกจากการให้คะแนน</strong>
-      ไม่ใช่แค่ทำเป็นสีจาง เพราะค่าเฉลี่ยที่มีตัวเก่าปนคือตัวเลขที่ผิดโดยไม่มีใครเห็น<br><br>
       สำหรับพอร์ตที่ DCA อัตโนมัติ การจับจังหวะตลาดมักลดผลตอบแทนมากกว่าเพิ่ม —
       ใช้หน้านี้ปรับ "น้ำหนัก" ไม่ใช่ปรับ "จะลงทุนต่อหรือไม่"
+      <!-- v73 — ประวัติการพัฒนาย้ายเข้า "อ่านเพิ่ม" (เดิมเป็นย่อหน้าแรกที่ผู้ใช้เห็น) -->
+      <details class="more-info"><summary>ⓘ อ่านเพิ่ม — สัญญาณมาจากไหน ตัดของเก่ายังไง</summary>
+      สัญญาณ macro มาจาก Yahoo (ผลตอบแทนพันธบัตร) กับ BLS (เงินเฟ้อ · ว่างงาน)
+      ซึ่งทดสอบแล้วว่าเข้าถึงได้จาก CI จริง และมี<strong style="color:var(--text)">เพดานอายุรายสัญญาณ</strong> —
+      ตัวไหนเก่าเกินจะถูก<strong style="color:var(--text)">ตัดออกจากการให้คะแนน</strong>
+      ไม่ใช่แค่ทำเป็นสีจาง เพราะค่าเฉลี่ยที่มีตัวเก่าปนคือตัวเลขที่ผิดโดยไม่มีใครเห็น<br><br>
+      ที่มา: v44 เคยปิดการให้คะแนนไปเพราะ 9 ใน 14 สัญญาณมาจาก FRED ที่ดึงไม่ได้เลย
+      (สำเร็จ 0/14 · timeout 42 ครั้ง) แล้วกลไก merge carry ค่าเก่ามาเรื่อยๆ
+      หน้านี้จึงเคยแสดง "สถานการณ์ปัจจุบัน" จากข้อมูลอายุ 3 เดือน
+      </details>
     </div>`;
 }
 
@@ -8202,14 +8396,14 @@ function renderDocsNav(){
     .concat(cats.map(c => ({id:c.id, icon:c.icon, label:_L(c.th, c.en), n:c.n})));
   const sub = document.getElementById('sb-docs-sub');
   if(sub) sub.innerHTML = items.map(c =>
-    `<button type="button" class="sb-subitem${c.id===docsCat?' active':''}" onclick="docsGo('${escHtml(c.id)}')"
+    `<button type="button" class="sb-subitem${c.id===docsCat?' active':''}" data-cat="${escAttr(c.id)}" onclick="docsGo(this.dataset.cat)"
        ${c.id===docsCat?'aria-current="page"':''}><span aria-hidden="true">${c.icon}</span><span>${escHtml(c.label)}</span>
        <span class="n">${c.n || ''}</span></button>`).join('');
   const tabs = document.getElementById('docs-tabs');
   if(tabs){
     tabs.innerHTML = items.filter(c => c.id === 'all' || c.n || c.id === docsCat).map(c =>
       `<button type="button" role="tab" class="grp-tab${c.id===docsCat?' active':''}" aria-selected="${c.id===docsCat}"
-         onclick="docsGo('${escHtml(c.id)}')">${escHtml(c.label)}</button>`).join('');
+         data-cat="${escAttr(c.id)}" onclick="docsGo(this.dataset.cat)">${escHtml(c.label)}</button>`).join('');
     const act = tabs.querySelector('.grp-tab.active');
     if(act) tabs.scrollLeft = Math.max(0, act.offsetLeft - (tabs.clientWidth - act.offsetWidth) / 2);
   }
@@ -8253,7 +8447,7 @@ function renderDocs(){
     const cats = docCategoryList(docsList);
     html += `<div class="docs-tiles">` + cats.map(c => {
       const latest = docsList.find(d => d.cat === c.id);
-      return `<button type="button" class="docs-tile${c.n?'':' empty'}" onclick="docsGo('${escHtml(c.id)}')">
+      return `<button type="button" class="docs-tile${c.n?'':' empty'}" data-cat="${escAttr(c.id)}" onclick="docsGo(this.dataset.cat)">
         <span class="docs-tile-ic" aria-hidden="true">${c.icon}</span>
         <span class="docs-tile-n">${c.n}</span>
         <span class="docs-tile-lbl">${escHtml(_L(c.th, c.en))}</span>
@@ -8377,7 +8571,7 @@ function docsOpenDetail(row){
       ${big ? `<img src="${escHtml(big)}" alt="${escHtml(_L('ตัวอย่างเอกสาร','Document preview'))}" referrerpolicy="no-referrer"
           onerror="this.parentNode.classList.remove('has-img');this.remove()">` : ''}
     </div>
-    ${embed ? `<button type="button" class="docs-ibtn" style="margin:-8px 0 18px" onclick="docsEmbed('${escHtml(embed)}')">👁 ${_L('แสดงไฟล์เต็มในหน้านี้','Show the full file here')}</button>` : ''}
+    ${embed ? `<button type="button" class="docs-ibtn" style="margin:-8px 0 18px" data-src="${escAttr(embed)}" onclick="docsEmbed(this.dataset.src)">👁 ${_L('แสดงไฟล์เต็มในหน้านี้','Show the full file here')}</button>` : ''}
     <dl class="doc-meta">${rows.map(([k, v, cls]) => `<dt>${escHtml(k)}</dt><dd${cls?` class="${cls}"`:''}>${escHtml(v)}</dd>`).join('')}</dl>
     ${!d.url && d.rawUrl ? `<div class="doc-note" style="color:var(--expense)">⚠ ${_L('ลิงก์ในชีตไม่ใช่ http(s) จึงไม่เปิดให้ — แก้ลิงก์ในแท็บ Documents','The link in the sheet is not http(s), so it is not opened — fix it in the Documents tab')}</div>` : ''}
     <div class="doc-note">${_L('ภาพตัวอย่างจาก Drive จะขึ้นเมื่อเบราว์เซอร์นี้ล็อกอินบัญชี Google ที่มีสิทธิ์ไฟล์ · ไฟล์ไม่ได้ถูกเก็บในแอป',
@@ -8775,7 +8969,7 @@ function buildAnalystCtx(){
   }catch(e){ console.warn('[analyst] perf:',e.message); }
 
   // ── กระแสเงินรายเดือน ──
-  const months=(availableMonths||[]).map(mk=>({mk, ...computeSummary(txRows.filter(r=>r.month===mk))}));
+  const months=closedMonths().map(mk=>({mk, ...computeSummary(txRows.filter(r=>r.month===mk))}));   // v72
 
   // ── งบที่เกินในเดือนที่กำลังดู ──
   const overBudget=[];
@@ -8783,7 +8977,7 @@ function buildAnalystCtx(){
     const mk=availableMonths[curMonthIdx], b=bgtLoad();
     const em=budgetSpendMap(txRows.filter(r=>r.month===mk),bankBals).map;   // v63 — รวมรูดบัตร
     Object.keys(em).forEach(cat=>{
-      const lim=parseFloat(b['exp_'+cat])||BGT_DEFAULTS[cat]||0;
+      const lim=bgtExpLimit(b, cat);   // v73
       if(lim>0&&em[cat]>lim) overBudget.push({cat,spent:em[cat],lim});
     });
     overBudget.sort((x,y)=>(y.spent-y.lim)-(x.spent-x.lim));
@@ -8899,7 +9093,11 @@ function capCols(n, minW, gap){
   minW = minW || 150;
   gap  = gap == null ? 12 : gap;                      // v62 — ช่องว่างระหว่างการ์ด (gap ของ grid)
   const pad  = window.innerWidth <= 768 ? 28 : 48;   // padding ซ้าย+ขวาของ .page
-  const avail = Math.min(window.innerWidth, 1200) - pad;
+  /* v72 — เดิมใช้ความกว้างหน้าต่างทั้งจอ ซึ่งรวมแถบเมนูข้าง (200px) → จอ 800–1200px
+     ได้คอลัมน์เกินจริง การ์ดแคบกว่าที่ตั้งใจ · ใช้ความกว้างของพื้นที่เนื้อหาจริงแทน */
+  const mc = document.querySelector('.main-content');
+  const wide = (mc && mc.clientWidth) || window.innerWidth;
+  const avail = Math.min(wide, 1200) - pad;
   /* v62 — เดิม floor(avail/minW) ไม่นับ gap: จอ 390px ได้ 3 คอลัมน์ × 120px แต่ gap 2×12px
      ทำให้เนื้อที่จริงเหลือ ~113px/การ์ด → การ์ดความคุ้มครอง 8 ประเภท (ข้อมูลจริง) ล้นขอบขวา ~15px */
   const fit   = Math.max(1, Math.floor((avail + gap) / (minW + gap)));
@@ -9172,7 +9370,8 @@ function saveGoal(){
   if(!name){alert('กรุณาใส่ชื่อ goal');return;}
   const icon=document.getElementById('gf-icon').value||'🎯';
   const id=document.getElementById('gf-id').value||genId();
-  let goal={id,name,icon,type:goalType,createdAt:new Date().toISOString()};
+  const _prev=goals.find(g=>g.id===id);   // v72 — แก้ไขแล้ว "สร้างเมื่อ" ต้องไม่เปลี่ยนเป็นวันนี้
+  let goal={id,name,icon,type:goalType,createdAt:(_prev&&_prev.createdAt)||new Date().toISOString()};
   if(goalType==='amount'){
     const target=parseFloat(document.getElementById('gf-target').value)||0;
     if(!target){alert('กรุณาใส่ Target amount');return;}
@@ -9219,7 +9418,8 @@ function computeGoalProgress(g){
     /* v68 #6 — นิยามเดียวกับ Overview/กระแสเงินสด/Engine: (รายได้ − รายจ่ายรวมหนี้) ÷ รายได้
        เดิมใช้ "ยอดโอนเข้า Savings ÷ รายได้" → เป้าเดียวกันได้ % คนละตัวกับหน้าอื่น
        เดือนที่ไม่มีรายรับ = คำนวณไม่ได้ ข้าม (เดิมนับเป็น 0% ดึงค่าเฉลี่ยลง) */
-    const months=[...new Set(txRows.filter(r=>r.month>=fromMk).map(r=>r.month))].sort()
+    const _closed=new Set(closedMonths());   // v72 — ไม่นับเดือนที่ยังไม่จบ
+    const months=[...new Set(txRows.filter(r=>r.month>=fromMk && _closed.has(r.month)).map(r=>r.month))].sort()
       .map(mk=>({mk, s:computeSummary(txRows.filter(r=>r.month===mk))}))
       .filter(x=>x.s.income>0).slice(-6);
     const rates=months.map(x=>Math.round(x.s.saved/x.s.income*100));
@@ -9467,11 +9667,20 @@ let insSelectedCov=null;
    เดิมความคุ้มครองรวมและ Cash Value ที่บวกเข้า Net Worth นับทุกกรมธรรม์ */
 const INS_ENDED_RE=/laps|terminat|surrender|cancel|matur|expir|claim(ed)? ?out|ขาดอายุ|ยกเลิก|เวนคืน|ครบ(กำหนด|สัญญา)|สิ้นสุด/i;
 function insIsActive(p){ return !!p && !INS_ENDED_RE.test(String(p.status||'')); }
+/* v72 — วันต่ออายุรอบถัดไป: ชีตมักเก็บวันครบรอบเดิม (ปีที่แล้ว) → เลื่อนทีละปีจนถึงวันนี้
+   เดิมหน้า Overview เลื่อนให้ แต่หน้าประกันไม่เลื่อน → "Next Renewal —" ขณะที่ Overview เตือนว่าใกล้ครบ */
+function insNextRenewal(p){
+  const d=insDate(p && p.renewal); if(!d) return null;
+  const now=new Date(); now.setHours(0,0,0,0);
+  const nx=new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  let guard=0; while(nx<now && guard++<200) nx.setFullYear(nx.getFullYear()+1);
+  return nx;
+}
 function insCashValue(){ return (insPolicies||[]).filter(insIsActive).reduce((s,p)=>s+(p.surrender||0),0); }
 function insStatusClass(status){
   const s=(status||'').toLowerCase();
   if(s.includes('in-force')||s.includes('inforce')||s==='active') return 'inforce';
-  if(s.includes('lapsed')) return 'lapsed';
+  if(s.includes('lapsed') || INS_ENDED_RE.test(s)) return 'lapsed';
   return 'other';
 }
 
@@ -9488,15 +9697,18 @@ function renderInsurance(){
   noData.style.display='none';
 
   // ── Overview cards ──
-  const activePolicies=insPolicies.filter(p=>insStatusClass(p.status)==='inforce');
+  // v72 — นิยามเดียวกับ Cash Value / ความคุ้มครอง / แจ้งเตือนเบี้ยบน Overview (insIsActive)
+  //        เดิมนับเฉพาะสถานะที่สะกดว่า In-force/Active → สถานะอื่นที่ยังมีผล (เช่น "Paid-up", ว่าง)
+  //        ถูกนับใน Cash Value แต่หายจากเบี้ยรวม/Next Renewal
+  const activePolicies=insPolicies.filter(insIsActive);
   const totalPremium=activePolicies.reduce((s,p)=>s+p.premium,0);
   const totalSurrender=insCashValue();   // v68 #8 — เฉพาะกรมธรรม์ที่ยังมีผล
   // Nearest renewal
   const now=new Date();
   // ใช้ insDate() ทุกจุด — เดิมเทียบ string กับ Date ตรงๆ ได้ false เสมอ
   // ทำให้ Next Renewal ขึ้น "—" ทั้งที่มีกรมธรรม์ที่ยังไม่ครบกำหนด
-  const upcoming=activePolicies.map(p=>({p,rd:insDate(p.renewal)}))
-    .filter(x=>x.rd&&x.rd>=now).sort((a,b)=>a.rd-b.rd);
+  const upcoming=activePolicies.filter(p=>(p.premium||0)>0).map(p=>({p,rd:insNextRenewal(p)}))
+    .filter(x=>x.rd).sort((a,b)=>a.rd-b.rd);
   const nearest=upcoming[0]?upcoming[0].p:null;
   const nearestRd=upcoming[0]?upcoming[0].rd:null;
   const daysToRenewal=nearestRd?Math.ceil((nearestRd-now)/86400000):null;
@@ -9521,7 +9733,7 @@ function renderInsurance(){
   document.getElementById('ins-mypolicy-grid').innerHTML=insPolicies.map(p=>{
     const stCls=insStatusClass(p.status);
     const stColor=stCls==='inforce'?'var(--income)':stCls==='lapsed'?'var(--expense)':'var(--muted2)';
-    const rd=insDate(p.renewal);
+    const rd=insIsActive(p)?insNextRenewal(p):insDate(p.renewal);   // v72 — รอบถัดไปจริง
     const renewalStr=rd?`${MONTH_ABBR[rd.getMonth()]} ${rd.getDate()}, ${rd.getFullYear()}`:'—';
     return `<div class="ins-mypolicy-card">
       <div class="ins-mypolicy-top">
@@ -9635,7 +9847,7 @@ function renderInsurance(){
         plugins:{legend:{position:'bottom',labels:{color:CT.body,font:{family:CHART_FONT,size:10},boxWidth:10,padding:10}},
           tooltip:{backgroundColor:CT.tipBg,borderColor:CT.tipBorder,borderWidth:1,
             titleColor:CT.title,bodyColor:CT.body,titleFont:{family:CHART_FONT},bodyFont:{family:CHART_FONT,size:11},
-            callbacks:{label:c=>` ${escHtml(c.label)}: ${fmt(c.raw)}`}}}}
+            callbacks:{label:c=>` ${c.label}: ${fmt(c.raw)}`}}}}
     });
   }
 
@@ -9674,7 +9886,7 @@ function renderInsurance(){
   });
   document.getElementById('ins-policy-body').innerHTML=sortedPolicies.map(p=>{
     const stCls=insStatusClass(p.status);
-    const rd=insDate(p.renewal);
+    const rd=insIsActive(p)?insNextRenewal(p):insDate(p.renewal);   // v72
     const renewalStr=rd?
       `${rd.getFullYear()}-${String(rd.getMonth()+1).padStart(2,'0')}-${String(rd.getDate()).padStart(2,'0')}`:'—';
     const daysLeft=rd?Math.ceil((rd-now)/86400000):null;
@@ -9816,9 +10028,39 @@ async function txAppendRow(fields){
   return {row: rowNum};
 }
 
-async function txEditRowWrite(rowNum, fields){
+// v72 — อ่านแถวสดจากชีตแล้วเทียบกับรายการที่ฟอร์มเปิดอยู่ ก่อนเขียนทับ/ลบ (ดู sheetRowMatches ใน shared.js)
+async function sheetRowGuard(tab, rowNum, spec, what){
+  const maxCol = Math.max.apply(null, spec.map(s => s.col).filter(c => c != null && c >= 0));
+  const rng = `${tab}!A${rowNum}:${txColLetter(maxCol)}${rowNum}`;
+  const res = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${GS_CONFIG.spreadsheetId}`
+    + `/values/${encodeURIComponent(rng)}?valueRenderOption=UNFORMATTED_VALUE&dateTimeRenderOption=SERIAL_NUMBER`,
+    {headers:{'Authorization':'Bearer '+gsAccessToken}});
+  if(!res.ok) throw new Error('อ่านแถว '+rowNum+' ไม่ได้ (HTTP '+res.status+') — กด Sync แล้วลองใหม่');
+  const row = ((await res.json()).values || [])[0] || [];
+  const m = sheetRowMatches(row, spec);
+  if(!m.ok){
+    console.warn('[guard]', tab, 'แถว', rowNum, 'ไม่ตรง', m.diff);
+    throw new Error(`แถว ${rowNum} ในชีต ${tab} ไม่ใช่ ${what} แล้ว (ชีตถูกแก้ระหว่างนั้น) — ยกเลิกเพื่อไม่ให้แก้หรือลบรายการอื่นโดยไม่ตั้งใจ · กด Sync แล้วลองใหม่`);
+  }
+}
+function txGuardSpec(rec){
+  const M = txSheetMeta;
+  return [{col:M.colDate, expect:rec.dateStr, kind:'date'},
+          {col:M.colTx,   expect:rec.type},
+          {col:M.colType, expect:rec.category, blank:'Other'}];
+}
+function atGuardSpec(rec){
+  const C = atSheetMeta.cols;
+  return [{col:C.date,   expect:isoLocal(rec.date), kind:'date'},
+          {col:C.txType, expect:rec.txType},
+          {col:C.ticker, expect:rec.ticker}];
+}
+
+async function txEditRowWrite(rowNum, fields, rec){
   if(!txSheetMeta)    throw new Error('ยังไม่รู้โครงสร้างชีต — กด Sync ก่อน 1 ครั้ง');
   if(!gsTokenValid()) throw new Error('Session หมดอายุ — กด Sync เพื่อเข้าสู่ระบบใหม่');
+  if(rec) await sheetRowGuard('Transaction', rowNum, txGuardSpec(rec), 'รายการที่เปิดแก้อยู่');   // v72
   await txWriteCells(rowNum, txCellPlan(fields, true));
   return {row: rowNum};
 }
@@ -9840,8 +10082,9 @@ async function txSheetGid(){
   return txSheetMeta.gid;
 }
 
-async function txDeleteRow(rowNum){
+async function txDeleteRow(rowNum, rec){
   if(!gsTokenValid()) throw new Error('Session หมดอายุ — กด Sync เพื่อเข้าสู่ระบบใหม่');
+  if(rec) await sheetRowGuard('Transaction', rowNum, txGuardSpec(rec), 'รายการที่จะลบ');   // v72
   const gid = await txSheetGid();
   const res = await fetch(
     `https://sheets.googleapis.com/v4/spreadsheets/${GS_CONFIG.spreadsheetId}:batchUpdate`, {
@@ -9902,7 +10145,7 @@ async function txFindEmptyRow(){
 // ── ฟอร์มเพิ่มรายการ ────────────────────────────────────────────────
 function txFillOptions(){
   const opts = (txSheetMeta && txSheetMeta.banks ? txSheetMeta.banks : [])
-    .map(b => `<option value="${b.col}">${b.name}</option>`).join('');
+    .map(b => `<option value="${b.col}">${escHtml(b.name)}</option>`).join('');   // v72 — ชื่อบัญชีมาจากชีต
   const a1 = document.getElementById('tx-f-acct');
   const a2 = document.getElementById('tx-f-acct2');
   if(a1) a1.innerHTML = opts;
@@ -9910,7 +10153,7 @@ function txFillOptions(){
   // หมวดที่เคยใช้จริง → autocomplete
   const cats = [...new Set(txRows.map(r => r.category).filter(Boolean))].sort();
   const dl = document.getElementById('tx-cat-list');
-  if(dl) dl.innerHTML = cats.map(c => `<option value="${c}">`).join('');
+  if(dl) dl.innerHTML = cats.map(c => `<option value="${escAttr(c)}">`).join('');
 }
 
 // txOpenForm()          → โหมดเพิ่มรายการใหม่
@@ -10011,7 +10254,7 @@ async function txSubmitForm(){
   try{
     const f = {date, txType, category, details, bankCol, amount, bankCol2};
     if(txEditRow){
-      await txEditRowWrite(txEditRow, f);
+      await txEditRowWrite(txEditRow, f, (txRows || []).find(r => r.sheetRow === txEditRow));
       say('แก้แถว ' + txEditRow + ' แล้ว — กำลังดึงข้อมูลใหม่', 'var(--income)');
     } else {
       const wrote = await txAppendRow(f);
@@ -10040,7 +10283,7 @@ async function txDeleteCurrent(){
   btn.disabled = true; del.disabled = true;
   say('กำลังลบ…');
   try{
-    await txDeleteRow(txEditRow);
+    await txDeleteRow(txEditRow, rec);
     say('ลบแล้ว — กำลังดึงข้อมูลใหม่', 'var(--income)');
     await gsSync();
     txCloseForm();
@@ -10172,9 +10415,10 @@ async function atAppendRow(f){
 }
 
 // เขียนทับแถวเดิม — คอลัมน์สูตรไม่ต้องแตะ (มันอยู่ของมันอยู่แล้ว)
-async function atEditRowWrite(rowNum, f){
+async function atEditRowWrite(rowNum, f, rec){
   if(!atSheetMeta)    throw new Error('ยังไม่รู้โครงสร้างชีต — กด Sync ก่อน 1 ครั้ง');
   if(!gsTokenValid()) throw new Error('Session หมดอายุ — กด Sync เพื่อเข้าสู่ระบบใหม่');
+  if(rec) await sheetRowGuard('Asset_Tracker', rowNum, atGuardSpec(rec), 'รายการที่เปิดแก้อยู่');   // v72
   const C = atSheetMeta.cols;
   const F = atSheetMeta.formulaCols || await atFormulaCols(atSheetMeta.lastRow);
   atSheetMeta.formulaCols = F;
@@ -10202,8 +10446,9 @@ async function atEditRowWrite(rowNum, f){
   return {row: rowNum};
 }
 
-async function atDeleteRowNum(rowNum){
+async function atDeleteRowNum(rowNum, rec){
   if(!gsTokenValid()) throw new Error('Session หมดอายุ — กด Sync เพื่อเข้าสู่ระบบใหม่');
+  if(rec) await sheetRowGuard('Asset_Tracker', rowNum, atGuardSpec(rec), 'รายการที่จะลบ');   // v72
   const gid = await atSheetGid();
   const res = await fetch(
     `https://sheets.googleapis.com/v4/spreadsheets/${GS_CONFIG.spreadsheetId}:batchUpdate`, {
@@ -10369,6 +10614,14 @@ function fabPick(kind){
   if(kind === 'at') atOpenForm(); else txOpenForm();
 }
 document.addEventListener('keydown', e => { if(e.key === 'Escape') fabClose(); });
+/* v73 — Esc ปิดฟอร์มเพิ่ม/แก้รายการ (ธุรกรรม · ลงทุน) เหมือนฟอร์มเอกสาร
+   ไม่ปิดระหว่างกำลังบันทึก (ปุ่มบันทึกถูก disable) — กันผู้ใช้เข้าใจว่ายกเลิกแล้วแต่ชีตยังถูกเขียน */
+document.addEventListener('keydown', e => {
+  if(e.key !== 'Escape') return;
+  const tm = document.getElementById('tx-modal'), am = document.getElementById('at-modal');
+  if(tm && tm.classList.contains('show') && !document.getElementById('tx-f-save')?.disabled){ txCloseForm(); return; }
+  if(am && am.classList.contains('show') && !document.getElementById('at-f-save')?.disabled){ atCloseForm(); }
+});
 
 async function atSubmitForm(){
   const $   = id => document.getElementById(id);
@@ -10401,7 +10654,7 @@ async function atSubmitForm(){
   say('กำลังบันทึก…');
   try{
     if(atEditRow){
-      await atEditRowWrite(atEditRow, f);
+      await atEditRowWrite(atEditRow, f, (tracker || []).find(r => r.sheetRow === atEditRow));
       say('แก้แถว ' + atEditRow + ' แล้ว — กำลังดึงข้อมูลใหม่', 'var(--income)');
     } else {
       const w = await atAppendRow(f);
@@ -10432,7 +10685,7 @@ async function atDeleteCurrent(){
   btn.disabled = true; del.disabled = true;
   say('กำลังลบ…');
   try{
-    await atDeleteRowNum(atEditRow);
+    await atDeleteRowNum(atEditRow, rec);
     say('ลบแล้ว — กำลังดึงข้อมูลใหม่', 'var(--income)');
     await gsSync();
     atCloseForm();
