@@ -282,6 +282,12 @@ const DICT = {
   'พิมพ์ชื่อหน้า หรือคำสั่ง เช่น งบ, หนี้, sync':'Type a page or action, e.g. budget, debt, sync',
   'บัญชีผู้ใช้':'Account', 'ล็อก':'Lock', 'ล็อกตอนนี้':'Lock now', 'บัญชีและความปลอดภัย':'Account & security',
   'ตั้งค่า Google Sheets':'Google Sheets settings', 'ออกจากระบบ':'Sign out', 'ธีม':'Theme', 'ภาษา':'Language',
+  'ตั้งค่า':'Settings', 'ตั้งค่าการแจ้งเตือน':'Notification settings', 'รหัสผ่านและล็อกอัตโนมัติ':'Password & auto-lock',
+  'คาดการณ์ 12 เดือนข้างหน้า':'Next 12 months (forecast)',
+  'True Performance — ลงทุนแล้วได้อะไรเพิ่ม':'True Performance — what investing actually earned you',
+  'ผลตอบแทนต่อปี (XIRR)':'Return per year (XIRR)', 'เงินเข้า → ออก + มูลค่า':'Money in → out + value',
+  'ผลของพอร์ตเอง (TWR)':'Holdings only (TWR)', '🚀 กำไรมาจากไหน (เรียงตามบาท)':'🚀 Where the gain came from (by baht)',
+  '⚓ ตัวที่แพ้ฝากธนาคาร':'⚓ Holdings that lost to a bank deposit',
 };
 
 // ป้ายที่มีตัวเลข/ชื่อแทรก — regex ต้องครอบทั้งข้อความ (^…$)

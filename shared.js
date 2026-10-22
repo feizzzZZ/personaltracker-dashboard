@@ -1867,6 +1867,45 @@ function xirrJS(cfs){
   for(let i=0;i<200;i++){ const mid=(lo+hi)/2; if(npv(lo)*npv(mid)<=0) hi=mid; else lo=mid; }
   return (lo+hi)/2;
 }
+
+// ═══ v74 — True Performance ที่ตอบคำถามว่า "ลงทุนแล้วได้อะไรเพิ่ม" ════════════
+// เดิมการ์ดโชว์ XIRR / TWR เป็น % ลอย ๆ ไม่มีอะไรให้เทียบ — อ่านแล้วไม่รู้ว่าดีหรือไม่ดี
+// ตอนนี้เทียบกับ "ถ้าเอาเงินก้อนเดียวกันไปฝากธนาคาร" และ "ถ้าแค่ตามทันเงินเฟ้อ" เป็นบาท
+
+// ฝากประจำ 12 เดือนของธนาคารไทยช่วงนี้ราว 1.25–1.6%/ปี — ไม่มีใน market data จึงเป็นค่าสมมติ (ผู้ใช้แก้ได้)
+const DEPOSIT_RATE_DEFAULT = 0.015;
+
+// เอา cashflow ชุดเดิม (เงินเข้า-ออกวันเดียวกัน จำนวนเท่ากัน) ไปไว้ที่ที่ให้ rate ต่อปีทบต้น → วันนี้จะมีเท่าไร
+// flows: [{t, v}] · v<0 = เงินที่ใส่เข้า · v>0 = เงินที่ได้คืน (ขาย/ปันผล) ซึ่งออกจาก "บัญชีสมมติ" ด้วย
+// ผลเทียบตรง ๆ กับมูลค่าพอร์ตวันนี้ได้ เพราะเงินที่ได้คืนถูกหักออกทั้งสองฝั่งแล้ว
+function flowsFutureValue(flows, nowT, rate){
+  const YR = 365 * 86400e3;
+  return (flows || []).reduce((s, f) => s + (-f.v) * Math.pow(1 + rate, Math.max(0, nowT - f.t) / YR), 0);
+}
+
+// ผลตอบแทนรายตัว — ถือไม่ถึง 1 ปี ห้ามแปลงเป็น %/ปี
+// (ซื้อ 3 เดือนขึ้น 12% → "+57%/ปี" ซึ่งไม่มีใครได้จริง แต่จะดันตัวนั้นขึ้นอันดับ 1 ของ "เครื่องยนต์")
+// คืน {ins, outs, gain, simple, annual|null, days, vsDeposit} · vsDeposit = บาทที่ได้มากกว่า(+)/น้อยกว่า(−)ฝากธนาคาร
+function holdingPerf(flows, val, nowT, depositRate){
+  const fl = flows || [];
+  const ins  = -fl.filter(f => f.v < 0).reduce((s, f) => s + f.v, 0);
+  const outs =  fl.filter(f => f.v > 0).reduce((s, f) => s + f.v, 0);
+  const gain = val + outs - ins;
+  const first = fl.length ? Math.min(...fl.map(f => f.t)) : nowT;
+  const days = Math.max(0, (nowT - first) / 86400e3);
+  const annual = days >= 365 ? xirrJS([...fl, {t: nowT, v: val}]) : null;
+  const rate = depositRate == null ? DEPOSIT_RATE_DEFAULT : depositRate;
+  return { ins, outs, gain, simple: ins > 0 ? gain / ins : null, annual, days: Math.round(days),
+           vsDeposit: val - flowsFutureValue(fl, nowT, rate) };
+}
+
+// TWR: ช่วงไม่ถึง 1 ปี แสดงผลสะสมตามจริง (มาตรฐาน GIPS ห้าม annualize ช่วงสั้นกว่า 1 ปี)
+// เดิมตัดที่ 30 วัน → snapshot 60 วันที่ขึ้น 23% ถูกโชว์เป็น "+248%/ปี"
+function twrView(twr){
+  if(!twr) return null;
+  return twr.days >= 365 ? {kind: 'annual', v: twr.annual, days: twr.days}
+                         : {kind: 'total',  v: twr.total,  days: twr.days};
+}
  
 // ═══════════════════════════════════════════════════════════════════
 // v40 — LIABILITY & DEBT ENGINE
@@ -2302,6 +2341,18 @@ function _mk(id, name, role, icon, findings, actions){
            counts: { r:nR, y:nY, g:f.length-nR-nY } };
 }
 const _pc = v => (v>=0?'+':'−') + Math.abs(v).toFixed(1) + '%';
+// v74 รอบ 2 — สองภาษาสำหรับข้อความ Analyst ใหม่ (shared.js ไม่มี _L ของ index.html)
+const _LA = (th, en) => (typeof window!=='undefined' && window.I18N && window.I18N.lang==='en') ? en : th;
+const _heldFor = d => d>=365 ? _LA(`${(d/365).toFixed(1)} ปี`, `${(d/365).toFixed(1)} yr`)
+                    : d>=60  ? _LA(`${Math.round(d/30.44)} เดือน`, `${Math.round(d/30.44)} mo`)
+                             : _LA(`${d} วัน`, `${d} days`);
+// ผลรายตัวจาก holdingPerf(): %/ปี เฉพาะถือ ≥ 1 ปี ไม่งั้นบอกผลสะสม + ถือมานานเท่าไหร่
+// เดิมใช้ XIRR ทุกตัว → ถือ 3 เดือนขึ้น 12% กลายเป็น "+57%/ปี"
+function perfQuote(p){
+  if(p.annual!=null) return _pc(p.annual*100) + _LA('/ปี','/yr');
+  if(p.simple!=null) return _pc(p.simple*100) + _LA(` ใน ${_heldFor(p.days)}`, ` over ${_heldFor(p.days)}`);
+  return '—';
+}
  
 // ── 1. Portfolio Analyst ─────────────────────────────────────────────
 function analystPortfolio(c){
@@ -2334,14 +2385,22 @@ function analystPortfolio(c){
         : `เหนือเป้า ${(x-hurdle).toFixed(1)}pp` });
   }
   // (3) ตัวถ่วงที่ "ใหญ่พอจะสำคัญ" — ขาดทุน 50% ใน ฿500 ไม่ใช่ปัญหา
-  const drag=(c.perAsset||[]).filter(a=>a.xirr!=null&&a.xirr<-0.10&&a.val>tot*0.03)
-    .sort((a,b)=>a.xirr-b.xirr);
+  // v74 รอบ 2 — ตัดสินเป็นบาทเทียบฝากธนาคาร (holdingPerf) แทน XIRR รายตัว
+  // ถือไม่ถึง 3 เดือนยังไม่ตัดสิน (เกณฑ์เดียวกับหน้าพอร์ต) · ต้องแพ้ฝาก ≥ 5% ของเงินที่ใส่
+  const drag=(c.perAsset||[]).filter(a=>a.days>=90 && a.val>tot*0.03 && a.vsDeposit < -0.05*a.ins)
+    .sort((a,b)=>a.vsDeposit-b.vsDeposit);
   if(drag.length){
-    const d0=drag[0];
-    F.push({ s:'y', t:`${drag.length} ตัวถ่วงที่ใหญ่พอจะสำคัญ · หนักสุด ${d0.tk} ${_pc(d0.xirr*100)}/ปี`,
-      d:`${drag.map(d=>d.tk).join(', ')} — รวม ${Math.round(drag.reduce((s,d)=>s+d.val,0)).toLocaleString(_AL)} บาท`
-        + ` (${(drag.reduce((s,d)=>s+d.val,0)/tot*100).toFixed(0)}% ของพอร์ต) ตัวที่ถือเพราะ "รอให้เท่าทุน" คือต้นทุนค่าเสียโอกาส` });
-    A.push(`ทบทวน ${d0.tk}: เหตุผลที่ซื้อตอนแรกยังจริงอยู่ไหม ถ้าไม่ ขาดทุนที่ผ่านมาไม่ใช่เหตุผลให้ถือต่อ`);
+    const d0=drag[0], dv=drag.reduce((s,d)=>s+d.val,0), dGap=drag.reduce((s,d)=>s-d.vsDeposit,0);
+    const g0=`${d0.gain>=0?'+':'−'}${_n(Math.abs(d0.gain))}`;
+    F.push({ s:'y',
+      t:_LA(`${drag.length} ตัวถ่วงที่ใหญ่พอจะสำคัญ · หนักสุด ${d0.tk} ${g0} บาท (${perfQuote(d0)})`,
+            `${drag.length} drag${drag.length>1?'s':''} big enough to matter · worst ${d0.tk} ${g0} THB (${perfQuote(d0)})`),
+      d:_LA(`${drag.map(d=>d.tk).join(', ')} — รวม ${_n(dv)} บาท (${(dv/tot*100).toFixed(0)}% ของพอร์ต)`
+              + ` ได้น้อยกว่าฝากธนาคารรวม ${_n(dGap)} บาท · ตัวที่ถือเพราะ "รอให้เท่าทุน" คือต้นทุนค่าเสียโอกาส`,
+            `${drag.map(d=>d.tk).join(', ')} — ${_n(dv)} THB (${(dv/tot*100).toFixed(0)}% of the portfolio)`
+              + ` earned ${_n(dGap)} THB less than a bank deposit · holding to "get back to even" has an opportunity cost`) });
+    A.push(_LA(`ทบทวน ${d0.tk}: เหตุผลที่ซื้อตอนแรกยังจริงอยู่ไหม ถ้าไม่ ขาดทุนที่ผ่านมาไม่ใช่เหตุผลให้ถือต่อ`,
+               `Review ${d0.tk}: is the original reason to buy still true? If not, past losses are no reason to keep holding`));
   }
   // (4) ต้นทุนที่จ่ายไปโดยไม่รู้ตัว — v55: ใช้ feeStats() ตัวเดียวกับทุกหน้า
   const _fs = c.fee || null;

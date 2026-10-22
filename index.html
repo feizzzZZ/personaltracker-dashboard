@@ -1542,20 +1542,15 @@ kbd{font-family:var(--f-chip);font-size:10.5px;color:var(--muted);border:1px sol
   .sb-bottom{display:none}                        /* ย้ายไปแถบบน + เมนูบัญชีแล้ว */
   body.sb-mini{--sidebar-w:70px}
   .sb-mini .sb-brand{padding:calc(14px + env(safe-area-inset-top,0px)) 0 14px;justify-content:center;min-height:70px}
-  .sb-mini .sb-collapse{display:none}
   .sb-mini .sb-nav{padding:12px 15px}
   .sb-mini .sb-item{height:40px;padding:0;justify-content:center}
   .sb-mini .sb-item .sb-icon.ic{width:19px;height:19px}
 }
-/* ชี้ค้างที่ rail → กางเป็น 220px ทับเนื้อหา (ไม่ดันหน้า) · เฉพาะอุปกรณ์ที่มีเมาส์ */
-@media(min-width:769px) and (hover:hover){
-  .sb-mini .sidebar:hover{width:220px;box-shadow:var(--pop-shadow);transition-delay:.12s}
-  .sb-mini .sidebar:hover .sb-brand{justify-content:flex-start;padding-left:25px;padding-right:18px}
-  .sb-mini .sidebar:hover .sb-logo{display:block}
-  .sb-mini .sidebar:hover .sb-collapse{display:flex;transform:rotate(180deg)}
-  .sb-mini .sidebar:hover .sb-section{display:block}
-  .sb-mini .sidebar:hover .sb-item{font-size:13px;justify-content:flex-start;padding:0 10px;gap:12px}
-  .sb-mini .sidebar:hover .sb-item .sb-badge,.sb-mini .sidebar:hover .sb-item .bgt-badge{position:static;margin-left:auto;font-size:9px!important;line-height:normal;padding:1px 6px}
+/* v74 — ขยายด้วยการกดปุ่มเท่านั้น (ผู้ใช้ขอ — เดิมชี้ค้างแล้วกางเอง ทำให้เมนูเด้งทับเนื้อหาตอนแค่เลื่อนเมาส์ผ่าน)
+   rail: ซ่อนโลโก้ แสดงปุ่ม » ตรงกลางแทน · กดแล้วเมนูกาง 220px ดันเนื้อหา (จำค่าไว้ในเครื่อง) */
+@media(min-width:769px){
+  .sb-mini .sb-mark{display:none}
+  .sb-mini .sb-collapse{display:flex;margin:0;transform:rotate(180deg)}
 }
 
 /* ── แถบบน (เดสก์ท็อป) ── */
@@ -1805,7 +1800,41 @@ html[data-theme="midnight"] .auth-mark{color:#FAFAFA}
 .lock-nudge button{flex:0 0 auto;height:32px;padding:0 12px;font:inherit;font-size:12px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted2)}
 .lock-nudge button.go{background:var(--fg);color:var(--on-fg);border-color:var(--fg)}
 @media(max-width:768px){.lock-nudge{bottom:calc(80px + env(safe-area-inset-bottom,0px));flex-wrap:wrap}}
-@media(prefers-reduced-motion:reduce){.sb-mini .sidebar:hover{transition-delay:0s}.auth-more .ic{transition:none}}
+@media(prefers-reduced-motion:reduce){.auth-more .ic{transition:none}}
+
+/* ══ v74 — True Performance: คำตอบเป็นบาท + แท่งเทียบ ══ */
+.perf-verdict{margin-bottom:12px}
+.pv-h{font-family:var(--f-serif);font-size:22px;font-weight:400;color:var(--fg);line-height:1.35}
+.pv-h b{font-weight:400}
+.pv-sub{font-size:13px;color:var(--muted2);margin-top:6px;line-height:1.6}
+.pv-bars{display:flex;flex-direction:column;gap:10px;margin:18px 0 6px}
+.pv-row{display:grid;grid-template-columns:minmax(150px,240px) 1fr auto;gap:14px;align-items:center;font-size:12.5px}
+.pv-l{color:var(--muted2)}
+.pv-row b{font-weight:500;color:var(--text);font-variant-numeric:tabular-nums;min-width:96px;text-align:right}
+.pv-bar{height:10px;background:var(--bg4);position:relative}
+.pv-bar i{position:absolute;left:0;top:0;bottom:0;background:var(--muted)}
+.pv-bar i.me{background:var(--fg)}
+.pv-bar i.cpi{background:var(--border2)}
+.pv-edit{background:none;border:none;color:var(--muted);font:inherit;font-size:11px;text-decoration:underline;cursor:pointer;padding:0 2px}
+.pv-edit:hover{color:var(--fg)}
+.pv-pts{margin:14px 0 0;padding-left:18px;font-size:12.5px;color:var(--text);line-height:1.8}
+.pv-pts b{font-weight:600}
+.pv-note{font-size:11px;color:var(--muted);margin-top:10px}
+.perf-list{font-size:12.5px;margin-top:8px}
+.pl-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:12px;align-items:baseline;padding:6px 0;border-bottom:1px solid var(--border)}
+.pl-row:last-of-type{border-bottom:none}
+.pl-tk{color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pl-tk small,.pl-row strong small{color:var(--muted);font-size:10.5px;font-weight:400;margin-left:4px}
+.pl-r{color:var(--muted2);font-size:11.5px;white-space:nowrap}
+.pl-row strong{font-weight:500;text-align:right;white-space:nowrap;min-width:84px}
+.pl-empty{color:var(--muted2);font-size:12px}
+.pl-note{font-size:10.5px;color:var(--muted);margin-top:8px;line-height:1.6}
+@media(max-width:640px){.pv-row{grid-template-columns:1fr auto}.pv-bar{grid-column:1/-1;order:3}.pv-h{font-size:19px}.pl-r{display:none}.pl-row{grid-template-columns:minmax(0,1fr) auto}}
+
+/* v74 — เมนูตั้งค่า (เฟือง) ใช้หน้าตาเดียวกับเมนูบัญชี */
+.am-sec.am-first{border-top:none}
+.nt-set-btn{display:inline-flex;align-items:center;gap:6px}
+.nt-set-btn .ic{width:15px;height:15px}
 </style>
 </head>
 <body>
@@ -1826,7 +1855,7 @@ html[data-theme="midnight"] .auth-mark{color:#FAFAFA}
     <symbol id="i-docs" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></symbol>
     <symbol id="i-notify" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
     <symbol id="i-sync" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M8 16H3v5"/></symbol>
-    <symbol id="i-settings" viewBox="0 0 24 24"><path d="M21 4h-7M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3M14 2v4M8 10v4M16 18v4"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></symbol>
     <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></symbol>
     <symbol id="i-moon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"/></symbol>
     <symbol id="i-auto" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14"/><path d="M8 21h8M12 17v4"/></symbol>
@@ -2055,8 +2084,11 @@ html[data-theme="midnight"] .auth-mark{color:#FAFAFA}
       <div class="tb-right">
         <button type="button" class="tb-chip" id="tb-sync" onclick="gsSyncOrConnect()" title="ดึงข้อมูลล่าสุดจาก Google Sheets">
           <span class="gs-dot" id="tb-sync-dot" style="background:var(--muted)"></span><span id="tb-sync-txt">Connect Sheets</span></button>
+        <!-- v74 — ปุ่มตั้งค่า (เฟือง) อยู่ข้างกระดิ่ง · ธีม/ภาษา/Sheets/สำรองข้อมูล รวมในเมนูนี้ (เดิมกระจายอยู่ในเมนูบัญชี + ปุ่มธีมแยก) -->
         <button type="button" class="tb-ic" onclick="cycleTheme()" title="สลับธีม" aria-label="สลับธีม">
           <svg class="ic" aria-hidden="true"><use class="theme-ic" href="#i-auto"/></svg></button>
+        <button type="button" class="tb-ic" id="tb-settings" onclick="setMenuToggle(event)" title="ตั้งค่า" aria-label="ตั้งค่า" aria-haspopup="menu" aria-expanded="false" aria-controls="set-menu">
+          <svg class="ic" aria-hidden="true"><use href="#i-settings"/></svg></button>
         <button type="button" class="tb-ic" onclick="switchPage('notify')" title="การแจ้งเตือน" aria-label="การแจ้งเตือน">
           <svg class="ic" aria-hidden="true"><use href="#i-notify"/></svg><span class="notif-dot" id="tb-notif-n" hidden>0</span></button>
         <button type="button" class="tb-avatar" id="tb-avatar" onclick="acctMenuToggle(event)" aria-haspopup="menu" aria-expanded="false" aria-controls="acct-menu" title="บัญชีผู้ใช้" aria-label="บัญชีผู้ใช้"></button>
@@ -2316,27 +2348,30 @@ html[data-theme="midnight"] .auth-mark{color:#FAFAFA}
 
       <div id="pf-type-warn" style="display:none"></div>
       <div id="pf-dq-warn" style="display:none"></div>
-      <div class="sl sl-mt">True Performance — ผลตอบแทนที่แท้จริง</div>
+      <!-- v74 — เดิมเป็น % ลอย ๆ 3 ตัว (XIRR · TWR · เงินเข้าออก) ไม่มีอะไรให้เทียบ อ่านแล้วไม่รู้ว่าดีหรือไม่
+           ตอนนี้ตอบเป็นบาท: ลงทุนแล้วได้มากกว่าเอาเงินก้อนเดียวกันไปฝากธนาคาร/แค่ตามเงินเฟ้อเท่าไร · กำไรมาจากตัวไหน · ตัวไหนแพ้ฝากธนาคาร -->
+      <div class="sl sl-mt">True Performance — ลงทุนแล้วได้อะไรเพิ่ม</div>
+      <div class="cc perf-verdict" id="perf-verdict"><div class="pv-h">—</div></div>
       <div class="sg sg-perf">
-        <div class="sc" style="--g:rgba(0,212,160,.12)">
-          <div class="sc-lbl">Portfolio XIRR (Money-Weighted)</div>
+        <div class="sc">
+          <div class="sc-lbl">ผลตอบแทนต่อปี (XIRR)</div>
           <div class="sc-val" id="perf-xirr" style="font-size:26px">—</div>
-          <div class="sc-sub" id="perf-xirr-sub">ผลตอบแทนต่อปี ถ่วงตามวันที่เงินเข้าจริง — เลขเดียวที่ตอบว่า "DCA ของฉันคุ้มไหม"</div>
+          <div class="sc-sub" id="perf-xirr-sub">เหมือน "ดอกเบี้ยทบต้น" ที่พอร์ตจ่ายให้เงินแต่ละก้อน นับตามวันที่เงินเข้าจริง</div>
         </div>
         <div class="sc">
-          <div class="sc-lbl">Money In → Out + Value</div>
+          <div class="sc-lbl">เงินเข้า → ออก + มูลค่า</div>
           <div class="sc-val" id="perf-money" style="font-size:14px;line-height:1.7">—</div>
           <div class="sc-sub" id="perf-period"></div>
         </div>
         <div class="sc">
-          <div class="sc-lbl">TWR (Time-Weighted)</div>
+          <div class="sc-lbl">ผลของพอร์ตเอง (TWR)</div>
           <div class="sc-val" id="perf-twr" style="font-size:20px">—</div>
           <div class="sc-sub" id="perf-twr-sub"></div>
         </div>
       </div>
       <div class="sg sg-2">
-        <div class="sc"><div class="sc-lbl">🚀 เครื่องยนต์ของพอร์ต (XIRR สูงสุด)</div><div id="perf-top" style="font-size:12px;line-height:2;margin-top:6px">—</div></div>
-        <div class="sc"><div class="sc-lbl">⚓ ตัวถ่วง (XIRR ต่ำสุด)</div><div id="perf-bottom" style="font-size:12px;line-height:2;margin-top:6px">—</div></div>
+        <div class="sc"><div class="sc-lbl">🚀 กำไรมาจากไหน (เรียงตามบาท)</div><div id="perf-top" class="perf-list">—</div></div>
+        <div class="sc"><div class="sc-lbl">⚓ ตัวที่แพ้ฝากธนาคาร</div><div id="perf-bottom" class="perf-list">—</div></div>
       </div>
       <!-- v48 — เอาการ์ด "คุณ vs ตลาด" (benchmark S&P 500) ออกตามที่ผู้ใช้ขอ
            v64 — benchmarkXIRR()/priceAt() ใน shared.js ถูกลบแล้วเพราะไม่มีที่ไหนเรียก (ดู git history) -->
@@ -2689,9 +2724,8 @@ html[data-theme="midnight"] .auth-mark{color:#FAFAFA}
         <div class="pg-title">Dividend Income</div>
         <div class="pg-sub">รายได้ที่ไม่ต้องทำงาน — เงินทำงานแทนคุณเดือนละเท่าไหร่แล้ว</div>
       </div></div>
-      <!-- v66 — Dividend tracker: คาดการณ์ 12 เดือนข้างหน้า + ปฏิทินรายเดือน -->
-      <div id="dv-tracker"></div>
-      <div class="sl sl-mt">ประวัติที่ได้รับจริง</div>
+      <!-- v74 — ผู้ใช้ขอให้ "ที่ได้รับจริง" (ประวัติ · รายเดือน · รายปี) ขึ้นก่อน ส่วนคาดการณ์ 12 เดือนข้างหน้าย้ายลงไปต่อท้าย -->
+      <div class="sl">ประวัติที่ได้รับจริง</div>
       <div class="sg">
         <div class="sc" style="--g:rgba(0,212,160,.1)">
           <div class="sc-lbl">ปันผลรวมทั้งหมด</div>
@@ -2715,6 +2749,9 @@ html[data-theme="midnight"] .auth-mark{color:#FAFAFA}
       <!-- v56 — ย้ายมาจาก Investment Flow -->
       <div class="sl sl-mt">ปันผลรายปี</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px" id="dv-year-grid"></div>
+      <!-- v66 — Dividend tracker: คาดการณ์ 12 เดือนข้างหน้า + ปฏิทินรายเดือน · v74 ย้ายมาอยู่หลังประวัติจริง -->
+      <div class="sl sl-mt">คาดการณ์ 12 เดือนข้างหน้า</div>
+      <div id="dv-tracker"></div>
       <div class="sl sl-mt">ผู้จ่ายปันผล — เรียงตามยอดรวม</div>
       <div class="tw"><table class="at"><thead><tr>
         <th>Ticker</th><th>ประเภท</th><th class="r">จำนวนครั้ง</th>
@@ -4930,11 +4967,33 @@ function computeTWR(log, flows){
   return { total: growth-1, annual: Math.pow(growth, 365/days)-1, days: Math.round(days) };
 }
 
+// v74 — อัตราฝากประจำที่ใช้เทียบ (เก็บเป็น % ในเครื่อง · ค่าเริ่มต้น DEPOSIT_RATE_DEFAULT ใน shared.js)
+function perfDepositRate(){
+  const v=parseFloat(localStorage.getItem('finOS_depositRate'));
+  return isFinite(v) && v>=0 && v<20 ? v/100 : DEPOSIT_RATE_DEFAULT;
+}
+function perfEditDeposit(){
+  const cur=(perfDepositRate()*100).toFixed(2).replace(/\.?0+$/,'');
+  const v=prompt(_L('อัตราดอกเบี้ยฝากประจำที่ใช้เทียบ (%/ปี)','Fixed-deposit rate to compare against (%/yr)'), cur);
+  if(v==null) return;
+  const n=parseFloat(String(v).replace(',','.'));
+  if(!isFinite(n) || n<0 || n>=20){ alert(_L('ใส่ตัวเลข 0–20','Enter a number from 0 to 20')); return; }
+  localStorage.setItem('finOS_depositRate', String(n));
+  renderPerformance(assets.reduce((s,a)=>s+a.val,0));
+}
+const _pct = (x,d=1) => (x>=0?'+':'−')+Math.abs(x*100).toFixed(d)+'%';
+function _holdLbl(h){
+  if(h.annual!=null) return _pct(h.annual)+_L('/ปี','/yr');
+  const m=Math.max(1,Math.round(h.days/30.4));
+  return (h.simple!=null?_pct(h.simple):'—')+' · '+(h.days<45?_L(`ถือ ${h.days} วัน`,`${h.days}d held`):_L(`ถือ ${m} เดือน`,`${m} mo held`));
+}
+
 function renderPerformance(totalVal){
   const {flows, byTk} = buildPerfFlows();
   /* BUGFIX v48 #16 — เดิม return เฉยๆ ทำให้ทุกช่องในการ์ด Performance
      ค้างค่าจากการ render ครั้งก่อน (หรือค้าง placeholder ของ HTML)
      ผู้ใช้ที่ sync ไฟล์ใหม่ที่ไม่มีธุรกรรมลงทุน จะเห็น XIRR ของไฟล์เก่า */
+  const vEl=document.getElementById('perf-verdict');
   if(!flows.length){
     [['perf-xirr','—'],['perf-twr','—']].forEach(([id,v])=>{
       const e=document.getElementById(id); if(e){ e.textContent=v; e.style.color='var(--muted2)'; }
@@ -4943,67 +5002,113 @@ function renderPerformance(totalVal){
      ['perf-period',''],['perf-top','—'],['perf-bottom','—'],
      ['perf-twr-sub','TWR ต้องมีธุรกรรมลงทุนอย่างน้อย 1 รายการ']
     ].forEach(([id,v])=>{ const e=document.getElementById(id); if(e){ e.textContent=v; e.style.color=''; } });
+    if(vEl) vEl.innerHTML=`<div class="pv-h">${_L('ยังไม่มีธุรกรรมซื้อ/ขายให้คำนวณ','No buy/sell transactions to measure yet')}</div>`;
     return;
   }
   const nowT = Date.now();
+  const dep  = perfDepositRate();
+  const cpiP = (typeof mdNum==='function') ? mdNum('TH_CPI') : null;
+  const cpi  = (cpiP!=null && isFinite(cpiP)) ? cpiP/100 : null;
   const r = xirrJS([...flows, {t:nowT, v:totalVal}]);
-  const xEl=document.getElementById('perf-xirr');
-  if(xEl){
-    xEl.textContent = r===null ? '—' : (r>=0?'+':'')+(r*100).toFixed(2)+'% /ปี';
-    xEl.style.color = r===null ? 'var(--muted2)' : r>=0 ? 'var(--gain)' : 'var(--loss)';
-  }
   const inSum = -flows.filter(f=>f.v<0).reduce((s,f)=>s+f.v,0);
   const outSum =  flows.filter(f=>f.v>0).reduce((s,f)=>s+f.v,0);
+  const netIn   = inSum - outSum;              // เงินที่ยังจมอยู่ในพอร์ต
+  const mktGain = totalVal + outSum - inSum;   // ส่วนที่ตลาดสร้างให้
+  const t0=new Date(Math.min(...flows.map(f=>f.t)));
+  const yrsN=(nowT-t0.getTime())/(365*86400e3);
+
+  // ── คำตอบหลัก: เทียบเงินก้อนเดียวกันที่ฝากธนาคาร / แค่ตามเงินเฟ้อ (เป็นบาท) ──
+  const fvDep = flowsFutureValue(flows, nowT, dep);
+  const fvCpi = cpi!=null ? flowsFutureValue(flows, nowT, cpi) : null;
+  const vsDep = totalVal - fvDep;
+
+  // รายตัว — ทุกตัวที่ยังถือและมี flow (ใช้คำนวณสัดส่วน) · แสดงเฉพาะ > ฿3,000
+  const per = assets.filter(a=>a.val>0 && byTk[a.ticker]).map(a=>({ticker:a.ticker, val:a.val, ...holdingPerf(byTk[a.ticker], a.val, nowT, dep)}));
+  const posGain = per.filter(x=>x.gain>0).reduce((s,x)=>s+x.gain,0);
+  const winners = per.filter(x=>x.gain>0 && x.val>3000).sort((a,b)=>b.gain-a.gain);
+  const judged  = per.filter(x=>x.days>=90);                 // ถือไม่ถึง 3 เดือน ยังไม่ตัดสิน
+  const losers  = judged.filter(x=>x.vsDeposit<0).sort((a,b)=>a.vsDeposit-b.vsDeposit);
+  const youngN  = per.length - judged.length;
+  const loserVal= losers.reduce((s,x)=>s+x.val,0);
+
+  if(vEl){
+    const good = vsDep >= 0;
+    const mx = Math.max(totalVal, fvDep, fvCpi||0, 1);
+    const bar = (lbl, v, cls, extra) => `<div class="pv-row"><span class="pv-l">${lbl}${extra||''}</span>
+      <span class="pv-bar"><i class="${cls}" style="width:${Math.max(1, v/mx*100).toFixed(1)}%"></i></span><b>${fmt(v)}</b></div>`;
+    const pts=[];
+    if(winners.length>=4 && posGain>0){
+      const top3=winners.slice(0,3), sh=top3.reduce((s,x)=>s+x.gain,0)/posGain;
+      pts.push(_L(`กำไร <b>${Math.round(sh*100)}%</b> มาจาก 3 ตัว: ${top3.map(x=>escHtml(x.ticker)).join(', ')}`+(sh>0.6?' — พอร์ตพึ่งไม่กี่ตัว ถ้าตัวใดตัวหนึ่งพลิก กำไรรวมหายตาม':''),
+                    `<b>${Math.round(sh*100)}%</b> of the gain comes from 3 holdings: ${top3.map(x=>escHtml(x.ticker)).join(', ')}`+(sh>0.6?' — the portfolio leans on a few names':'')));
+    }
+    if(losers.length){
+      pts.push(_L(`<b>${fmt(loserVal)}</b> (${Math.round(loserVal/Math.max(totalVal,1)*100)}% ของพอร์ต) อยู่ใน ${losers.length} ตัวที่ได้น้อยกว่าฝากธนาคาร — ทบทวนว่ายังมีเหตุผลถือไหม (รายชื่อด้านล่าง)`,
+                    `<b>${fmt(loserVal)}</b> (${Math.round(loserVal/Math.max(totalVal,1)*100)}% of the portfolio) sits in ${losers.length} holdings that earned less than a bank deposit — review why you still hold them (list below)`));
+    } else if(judged.length){
+      pts.push(_L('ทุกตัวที่ถือเกิน 3 เดือนให้ผลดีกว่าฝากธนาคาร ✓','Every holding older than 3 months beat a bank deposit ✓'));
+    }
+    if(r!==null && cpi!=null){
+      const real=(1+r)/(1+cpi)-1;
+      pts.push(_L(`หักเงินเฟ้อแล้วเงินคุณงอกจริง <b>${_pct(real,1)}/ปี</b> — นี่คือกำลังซื้อที่เพิ่มขึ้นจริง`,`After inflation your money really grows <b>${_pct(real,1)}/yr</b> — actual purchasing power gained`));
+    }
+    if(yrsN<1) pts.push(_L('ข้อมูลยังไม่ถึง 1 ปี — ตัวเลข %/ปี ยังแกว่งได้มาก ดูเป็นบาทจะแม่นกว่า','Less than a year of data — %/yr figures still swing a lot; the baht figures are more reliable'));
+    vEl.innerHTML = `
+      <div class="pv-h">${good
+        ? _L(`การลงทุนทำให้คุณมีเงิน<b class="gain">มากกว่าฝากธนาคาร ${fmtSign(vsDep)}</b>`,`Investing left you <b class="gain">${fmtSign(vsDep)} ahead of a bank deposit</b>`)
+        : _L(`ตอนนี้พอร์ต<b class="loss">ได้น้อยกว่าฝากธนาคาร ${fmt(Math.abs(vsDep))}</b>`,`Right now the portfolio is <b class="loss">${fmt(Math.abs(vsDep))} behind a bank deposit</b>`)}</div>
+      <div class="pv-sub">${_L(`ใส่เงินไป ${fmt(inSum)} (ได้คืนแล้ว ${fmt(outSum)}) ตอนนี้มีค่า ${fmt(totalVal)} · ตลาดสร้างกำไรให้ ${fmtSign(mktGain)} · ตั้งแต่ ${t0.toLocaleDateString(LOC,{month:'short',year:'numeric'})}`,
+          `You put in ${fmt(inSum)} (got ${fmt(outSum)} back) and it is now worth ${fmt(totalVal)} · the market added ${fmtSign(mktGain)} · since ${t0.toLocaleDateString(LOC,{month:'short',year:'numeric'})}`)}</div>
+      <div class="pv-bars">
+        ${bar(_L('พอร์ตของคุณวันนี้','Your portfolio today'), totalVal, 'me')}
+        ${bar(_L(`ถ้าฝากประจำ ${(dep*100).toFixed(2).replace(/\.?0+$/,'')}%/ปี`,`If in a ${(dep*100).toFixed(2).replace(/\.?0+$/,'')}% deposit`), fvDep, 'dep',
+              ` <button type="button" class="pv-edit" onclick="perfEditDeposit()" title="${_L('แก้อัตราดอกเบี้ย','Edit rate')}">${_L('แก้','edit')}</button>`)}
+        ${fvCpi!=null?bar(_L(`ถ้าแค่ตามเงินเฟ้อ ${(cpi*100).toFixed(1)}%/ปี`,`Just keeping up with ${(cpi*100).toFixed(1)}% inflation`), fvCpi, 'cpi'):''}
+      </div>
+      ${pts.length?`<ul class="pv-pts">${pts.map(p=>`<li>${p}</li>`).join('')}</ul>`:''}
+      <div class="pv-note">${_L('เทียบแบบ "เงินก้อนเดิม เข้า-ออกวันเดียวกัน" — ฝากธนาคารเป็นอัตราสมมติ กด "แก้" เพื่อใส่อัตราของคุณ','Same money, same dates — the deposit rate is an assumption; tap "edit" to use yours')}</div>`;
+  }
+
+  const xEl=document.getElementById('perf-xirr');
+  if(xEl){
+    xEl.textContent = r===null ? '—' : _pct(r,2)+_L(' /ปี',' /yr');
+    xEl.style.color = r===null ? 'var(--muted2)' : r>=0 ? 'var(--gain)' : 'var(--loss)';
+  }
+  const xsEl=document.getElementById('perf-xirr-sub');
+  if(xsEl) xsEl.innerHTML = _L(`เหมือน "ดอกเบี้ยทบต้น" ที่พอร์ตจ่ายให้เงินแต่ละก้อน · เทียบ: ฝากประจำ ${(dep*100).toFixed(2).replace(/\.?0+$/,'')}%`+(cpi!=null?` · เงินเฟ้อ ${(cpi*100).toFixed(1)}%`:''),
+    `Like the compound "interest" the portfolio paid on each deposit · compare: deposit ${(dep*100).toFixed(2).replace(/\.?0+$/,'')}%`+(cpi!=null?` · inflation ${(cpi*100).toFixed(1)}%`:''));
+
   const mEl=document.getElementById('perf-money');
   if(mEl){
-    /* ══ ขาดหาย v48 #C — สองตัวเลขที่นักลงทุนต้องรู้ แต่แดชบอร์ดไม่เคยบอก ══
-       1) พอร์ตโตเพราะ "เติมเงินเข้าไป" หรือเพราะ "ตลาดขึ้น"?
-          ตัวเลข ฿X ที่โตขึ้นปีนี้ ถ้ามาจากการเติมเงินล้วน = ผลตอบแทน 0
-          แต่หน้าจอเดิมโชว์แค่ยอดรวม ทำให้เข้าใจผิดว่าลงทุนได้ผลดี
-          กำไรจากตลาด = มูลค่าปัจจุบัน + เงินที่ได้คืน − เงินที่ใส่เข้าไป
-       2) ผลตอบแทนจริงหลังเงินเฟ้อ (real return)
-          XIRR ที่โชว์อยู่เป็น nominal ล้วน เงินเฟ้อไทยกินไปเท่าไรไม่มีใครบอก
-          TH_CPI อยู่ใน market data อยู่แล้ว — หักออกได้ตรงๆ */
-    const netIn   = inSum - outSum;              // เงินที่ยังจมอยู่ในพอร์ต
-    const mktGain = totalVal + outSum - inSum;   // ส่วนที่ตลาดสร้างให้
+    /* ══ ขาดหาย v48 #C — พอร์ตโตเพราะ "เติมเงินเข้าไป" หรือเพราะ "ตลาดขึ้น"?
+       กำไรจากตลาด = มูลค่าปัจจุบัน + เงินที่ได้คืน − เงินที่ใส่เข้าไป */
     const gainPct = inSum>0 ? mktGain/inSum*100 : null;
     const gc = mktGain>=0 ? 'var(--gain)' : 'var(--loss)';
-    let html = `ลงไป <strong>${fmt(inSum)}</strong><br>`
-             + `ได้คืน <strong style="color:var(--gain)">${fmt(outSum)}</strong> · เหลือ <strong>${fmt(totalVal)}</strong>`
-             + `<br><span style="color:var(--muted2)">เงินตัวเองสุทธิ ${fmt(netIn)} · `
-             + `ตลาดสร้างให้ <strong style="color:${gc}">${fmtSign(mktGain)}</strong>`
-             + (gainPct!=null?` (${gainPct>=0?'+':'−'}${Math.abs(gainPct).toFixed(1)}%)`:'')
-             + `</span>`;
-    const cpi = (typeof mdNum==='function') ? mdNum('TH_CPI') : null;
-    if(r!==null && cpi!=null && isFinite(cpi)){
-      const real = ((1+r)/(1+cpi/100) - 1) * 100;   // Fisher — ไม่ใช่แค่ลบกันตรงๆ
-      html += `<br><span style="color:var(--muted2)">หลังเงินเฟ้อไทย ${cpi.toFixed(1)}% → `
-            + `<strong style="color:${real>=0?'var(--gain)':'var(--loss)'}">${real>=0?'+':'−'}${Math.abs(real).toFixed(2)}%/ปี</strong> `
-            + `<span style="color:var(--muted)">(real return — กำลังซื้อที่เพิ่มขึ้นจริง)</span></span>`;
-    }
-    mEl.innerHTML = html;
+    mEl.innerHTML = _L('ลงไป','In')+` <strong>${fmt(inSum)}</strong><br>`
+      + _L('ได้คืน','Back')+` <strong style="color:var(--gain)">${fmt(outSum)}</strong> · `+_L('เหลือ','Now')+` <strong>${fmt(totalVal)}</strong>`
+      + `<br><span style="color:var(--muted2)">`+_L('เงินตัวเองสุทธิ','Net own money')+` ${fmt(netIn)} · `
+      + _L('ตลาดสร้างให้','Market added')+` <strong style="color:${gc}">${fmtSign(mktGain)}</strong>`
+      + (gainPct!=null?` (${gainPct>=0?'+':'−'}${Math.abs(gainPct).toFixed(1)}%)`:'') + `</span>`;
   }
-  const t0=new Date(Math.min(...flows.map(f=>f.t)));
-  const yrs=((nowT-t0.getTime())/(365*86400e3)).toFixed(1);
   const pEl=document.getElementById('perf-period');
-  if(pEl) pEl.textContent = `ตั้งแต่ ${t0.toLocaleDateString(LOC,{month:'short',year:'2-digit'})} · ${yrs} ปี · ${flows.length} cashflows`;
+  if(pEl) pEl.textContent = _L(`ตั้งแต่ ${t0.toLocaleDateString(LOC,{month:'short',year:'2-digit'})} · ${yrsN.toFixed(1)} ปี · ${flows.length} cashflows`,
+                               `Since ${t0.toLocaleDateString(LOC,{month:'short',year:'2-digit'})} · ${yrsN.toFixed(1)} yrs · ${flows.length} cashflows`);
 
-  // per-asset XIRR (เฉพาะที่ยังถือและมูลค่า > ฿3,000)
-  const perAsset = assets.filter(a=>a.val>3000 && byTk[a.ticker]).map(a=>{
-    return { ticker:a.ticker, val:a.val, r: xirrJS([...byTk[a.ticker], {t:nowT, v:a.val}]) };
-  }).filter(x=>x.r!==null).sort((a,b)=>b.r-a.r);
-  const row = x => `<div style="display:flex;justify-content:space-between"><span>${escHtml(x.ticker)} <span style="color:var(--muted2);font-size:10px">${fmt(x.val)}</span></span><strong style="color:${x.r>=0?'var(--gain)':'var(--loss)'}">${(x.r>=0?'+':'')+(x.r*100).toFixed(1)}%/ปี</strong></div>`;
+  // ── รายตัว: กำไรมาจากไหน (บาท) · ตัวที่แพ้ฝากธนาคาร ──
+  // v74 — เดิมเรียงตาม %/ปี → ตัวเล็กที่เพิ่งซื้อแล้วขึ้นไม่กี่ % ถูก annualize ขึ้นเป็นอันดับ 1 ทั้งที่กำไรเป็นบาทนิดเดียว
+  const row = (x, right) => `<div class="pl-row"><span class="pl-tk">${escHtml(x.ticker)} <small>${fmt(x.val)}</small></span>
+    <span class="pl-r">${_holdLbl(x)}</span>${right}</div>`;
   const topEl=document.getElementById('perf-top'), botEl=document.getElementById('perf-bottom');
-  /* BUGFIX v48 #12 — เดิม top = slice(0,5), bottom = slice(-3)
-     ถ้ามีสินทรัพย์ที่คำนวณ XIRR ได้ ≤ 5 ตัว สองกล่องจะโชว์ตัวเดียวกัน
-     ผู้ใช้เห็น "ตัวที่ดีที่สุด" กับ "ตัวที่แย่ที่สุด" เป็นรายการเดียวกัน */
-  const _nTop = Math.min(5, Math.max(1, Math.ceil(perAsset.length/2)));
-  const _top  = perAsset.slice(0, _nTop);
-  const _bot  = perAsset.slice(_nTop).slice(-3).reverse();
-  if(topEl) topEl.innerHTML = _top.map(row).join('') || '—';
-  if(botEl) botEl.innerHTML = _bot.length
-    ? _bot.map(row).join('')
-    : '<span style="color:var(--muted2);font-size:11px">ยังมีสินทรัพย์ไม่พอจะแยกกลุ่มบน/ล่าง</span>';
+  if(topEl) topEl.innerHTML = winners.slice(0,5).map(x=>row(x,
+      `<strong class="gain">${fmtSign(x.gain)}<small>${posGain>0?Math.round(x.gain/posGain*100)+'%':''}</small></strong>`)).join('')
+    || `<span class="pl-empty">${_L('ยังไม่มีตัวที่กำไร','No holding is in profit yet')}</span>`;
+  if(botEl){
+    const lv=losers.filter(x=>x.val>3000).slice(0,5);
+    botEl.innerHTML = (lv.length ? lv.map(x=>row(x, `<strong class="loss">${fmtSign(x.vsDeposit)}</strong>`)).join('')
+        : `<span class="pl-empty">${_L('ไม่มี — ทุกตัวที่ถือเกิน 3 เดือนได้มากกว่าฝากธนาคาร ✓','None — every holding older than 3 months beat a bank deposit ✓')}</span>`)
+      + `<div class="pl-note">${_L('ตัวเลขขวา = ได้น้อยกว่าเอาเงินก้อนเดียวกันไปฝากธนาคารกี่บาท','Right = how many baht less than the same money in a bank deposit')}`
+      + (youngN?_L(` · ${youngN} ตัวถือไม่ถึง 3 เดือน ยังไม่นับ`,` · ${youngN} holdings under 3 months not judged yet`):'')+`</div>`;
+  }
 
   // TWR — เริ่มเก็บประวัติมูลค่าวันนี้
   purgeCorruptValueLog();          // v44: ล้างประวัติเสียก่อน (ทำครั้งเดียว)
@@ -5013,23 +5118,25 @@ function renderPerformance(totalVal){
   const _vr = window._vlogSheetReject;
   const _vrNote = _vr ? ` · ⚠ Value_Log ในชีต ${_vr.rows} แถว (${_vr.first} → ${_vr.last}) ไม่ถูกนำมาใช้:`
     + ` มูลค่ากระโดดเกิน 8% ถึง ${_vr.jumps} ครั้ง (ราคาบางตัวหลุดเป็นช่วงๆ) — TWR ใช้เฉพาะ snapshot ที่แอปบันทึกเองตอนราคาครบ` : '';
-  const twr = computeTWR(log, flows);
+  const twr = twrView(computeTWR(log, flows));
   const tEl=document.getElementById('perf-twr'), tsEl=document.getElementById('perf-twr-sub');
   if(tEl && tsEl){
     if(twr){
-      if(twr.days < 30){
-        // ข้อมูลสั้นเกินกว่าจะ annualize อย่างมีความหมาย — noise จะถูกคูณหลายสิบเท่า
-        // แสดงผลตอบแทนสะสมตามจริงแทน กันอ่านผิดแล้วตัดสินใจพลาด
-        tEl.textContent=(twr.total>=0?'+':'')+(twr.total*100).toFixed(2)+'% สะสม';
-        tEl.style.color=twr.total>=0?'var(--gain)':'var(--loss)';
-        tsEl.textContent=`ช่วง ${twr.days} วัน (snapshot ${log.length} วัน) — สั้นเกินกว่าจะคิดเป็น %ต่อปี รอครบ 30 วันจึงแสดง annualized`+_vrNote;
+      tEl.style.color=twr.v>=0?'var(--gain)':'var(--loss)';
+      if(twr.kind==='total'){
+        // v74 — ไม่ถึง 1 ปี: ผลสะสมตามจริง (เดิม annualize ตั้งแต่ 30 วัน → 60 วัน +23% กลายเป็น "+248%/ปี")
+        tEl.textContent=_pct(twr.v,2)+_L(` ใน ${twr.days} วัน`,` in ${twr.days} days`);
+        tsEl.textContent=_L(`ผลของสินทรัพย์ที่ถืออยู่ ไม่นับผลจากจังหวะเติมเงิน · ยังไม่ถึง 1 ปีจึงไม่แปลงเป็น %/ปี (แปลงแล้วจะสูงเกินจริง) · snapshot ${log.length} วัน`,
+          `How the holdings themselves did, ignoring when you added money · under a year so not annualized (it would overstate) · ${log.length} snapshots`)+_vrNote;
       } else {
-        tEl.textContent=(twr.annual>=0?'+':'')+(twr.annual*100).toFixed(2)+'% /ปี';
-        tEl.style.color=twr.annual>=0?'var(--gain)':'var(--loss)';
-        tsEl.textContent=`จาก snapshot ${log.length} วัน (${twr.days} วันปฏิทิน) — ใช้เทียบ benchmark ได้`+_vrNote;
+        tEl.textContent=_pct(twr.v,2)+_L(' /ปี',' /yr');
+        const gap = r!=null ? r - twr.v : null;
+        tsEl.textContent=_L(`ผลของสินทรัพย์ที่ถืออยู่ ไม่นับจังหวะเติมเงิน · snapshot ${log.length} วัน`,`Holdings only, ignoring contribution timing · ${log.length} snapshots`)
+          + (gap!=null && Math.abs(gap)>0.02 ? (gap>0 ? _L(' · XIRR สูงกว่า = จังหวะเติมเงินของคุณช่วยได้',' · XIRR higher = your contribution timing helped')
+                                                       : _L(' · XIRR ต่ำกว่า = เติมเงินช่วงราคาสูงบ่อย',' · XIRR lower = you often added money near highs')) : '')+_vrNote;
       }
     } else {
-      tEl.textContent='⏳ สะสมข้อมูล';
+      tEl.textContent='⏳ '+_L('สะสมข้อมูล','Collecting data');
       tEl.style.color='var(--muted2)';
       tsEl.textContent=`TWR ต้องมีมูลค่าพอร์ตรายวันย้อนหลัง — เริ่มบันทึกแล้ววันนี้ (${log.length}/2 วันขั้นต่ำ) เปิดแอปวันหลังจะเริ่มคำนวณให้`+_vrNote;
     }
@@ -5552,7 +5659,7 @@ function renderNotify(){
       <div class="nt-acts">
         <button type="button" class="rb-btn" onclick="ntMarkAllRead()">✓ ${_L('อ่านทั้งหมด','Mark all read')}</button>
         <button type="button" class="rb-btn" onclick="fetchNotifications()" title="${_L('ดึงล่าสุด','Refresh')}">↻</button>
-        <button type="button" class="rb-btn" onclick="_nt.setup=!_nt.setup;renderNotify()">⚙ ${_L('ตั้งค่า','Settings')}</button>
+        <button type="button" class="rb-btn nt-set-btn" onclick="_nt.setup=!_nt.setup;renderNotify()"><svg class="ic" aria-hidden="true"><use href="#i-settings"/></svg>${_L('ตั้งค่า','Settings')}</button>
       </div></div>
     ${_nt.setup?'<div id="nt-setup"></div>':''}
     <div class="cc nt-list">${rows||`<div class="nt-empty">🔕 ${_L('ยังไม่มีการแจ้งเตือน','No notifications yet')}${_ntKey()?'':`<div class="s">${_L('เริ่มจาก ⚙ ตั้งค่า เพื่อเปิดแจ้งเตือนบนเครื่องนี้','Start with ⚙ Settings to turn on notifications on this device')}</div>`}</div>`}</div>`;
@@ -9478,10 +9585,11 @@ function buildAnalystCtx(){
       const r=xirrJS([...flows,{t:nowT,v:totalVal}]);
       if(r!==null&&isFinite(r)) xirrV=r;
       flows.forEach(f=>{ if(f.v<0) moneyIn+=-f.v; else moneyOut+=f.v; });
+      // v74 รอบ 2 — holdingPerf แทน XIRR รายตัว: ไม่ annualize ตัวที่ถือ < 1 ปี (annual=null)
+      const dep=perfDepositRate();
       held.forEach(a=>{
         if(!byTk[a.ticker]||a.val<=3000) return;
-        const rr=xirrJS([...byTk[a.ticker],{t:nowT,v:a.val}]);
-        if(rr!==null&&isFinite(rr)) perAsset.push({tk:a.ticker,val:a.val,xirr:rr});
+        perAsset.push({tk:a.ticker, val:a.val, ...holdingPerf(byTk[a.ticker], a.val, nowT, dep)});
       });
       // ไม่มี loadValueLog() ในแอป — อ่าน finOS_valueLog ตรงๆ เหมือน renderPerformance
       let vlog=[]; try{ vlog=JSON.parse(localStorage.getItem('finOS_valueLog')||'[]'); }catch(e){}
@@ -10092,14 +10200,31 @@ function acctMenuToggle(e){
   if(e) e.stopPropagation();
   const m=_$('acct-menu'), b=_$('tb-avatar'); if(!m) return;
   if(!m.hidden){ acctMenuClose(); return; }
-  acctPaintBadge(); _paintThemeBtn();
+  setMenuClose(); acctPaintBadge();
   m.hidden=false; if(b) b.setAttribute('aria-expanded','true');
   const f=m.querySelector('.am-it'); if(f) f.focus({preventScroll:true});
 }
 function acctMenuClose(){
   const m=_$('acct-menu'); if(m && !m.hidden){ m.hidden=true; const b=_$('tb-avatar'); if(b){ b.setAttribute('aria-expanded','false'); } }
 }
-document.addEventListener('click', e=>{ const m=_$('acct-menu'); if(m && !m.hidden && !m.contains(e.target)) acctMenuClose(); });
+// v74 — เมนูตั้งค่า (ปุ่มเฟืองข้างกระดิ่ง)
+function setMenuToggle(e){
+  if(e) e.stopPropagation();
+  const m=_$('set-menu'), b=_$('tb-settings'); if(!m) return;
+  if(!m.hidden){ setMenuClose(); return; }
+  acctMenuClose(); _paintThemeBtn();
+  m.hidden=false; if(b) b.setAttribute('aria-expanded','true');
+  const f=m.querySelector('.am-it'); if(f) f.focus({preventScroll:true});
+}
+function setMenuClose(){
+  const m=_$('set-menu'); if(m && !m.hidden){ m.hidden=true; _$('tb-settings')?.setAttribute('aria-expanded','false'); }
+}
+function menusClose(){ acctMenuClose(); setMenuClose(); }
+function ntOpenSetup(){ try{ _nt.setup=true; }catch(e){} switchPage('notify'); try{ renderNotify(); }catch(e){} }
+document.addEventListener('click', e=>{
+  const m=_$('acct-menu'); if(m && !m.hidden && !m.contains(e.target)) acctMenuClose();
+  const sm=_$('set-menu'); if(sm && !sm.hidden && !sm.contains(e.target)) setMenuClose();
+});
 
 // ── หน้าต่างบัญชีและความปลอดภัย ──
 function acctOpen(){ acctRender(); _$('acct-modal')?.classList.add('show'); }
@@ -10236,7 +10361,7 @@ function _cmdkItems(){
 function cmdkOpen(){
   const c=_$('cmdk'), i=_$('cmdk-in'); if(!c||!i) return;
   if(_$('app') && _$('app').style.display==='none') return;    // ยังไม่ได้เข้าแอป
-  acctMenuClose();
+  menusClose();
   c.hidden=false; i.value=''; _cmdkSel=0; cmdkFilter(); i.focus();
 }
 function cmdkClose(){ const c=_$('cmdk'); if(c) c.hidden=true; }
@@ -10261,7 +10386,7 @@ function cmdkRun(i){ const x=_cmdkView[i]; cmdkClose(); if(x) setTimeout(()=>x.r
 document.addEventListener('keydown', e=>{
   const c=_$('cmdk');
   if((e.metaKey||e.ctrlKey) && !e.altKey && (e.key==='k'||e.key==='K')){ e.preventDefault(); if(c && !c.hidden) cmdkClose(); else cmdkOpen(); return; }
-  if(e.key==='Escape'){ if(c && !c.hidden){ cmdkClose(); return; } acctMenuClose();
+  if(e.key==='Escape'){ if(c && !c.hidden){ cmdkClose(); return; } menusClose();
     const am=_$('acct-modal'); if(am && am.classList.contains('show')) acctClose(); return; }
   if(!c || c.hidden) return;
   if(e.key==='ArrowDown'||e.key==='ArrowUp'){
@@ -11834,13 +11959,9 @@ document.addEventListener('DOMContentLoaded', () => {
     </div>
   </div>
 </div>
-<!-- v74 — เมนูบัญชี (กดรูปโปรไฟล์มุมขวาบน) -->
-<div class="acct-menu" id="acct-menu" role="menu" hidden>
-  <div class="am-head">
-    <div class="tb-avatar am-av" id="am-av" aria-hidden="true">?</div>
-    <div class="am-who"><div class="am-name" id="am-name">—</div><div class="am-mail" id="am-mail"></div></div>
-  </div>
-  <div class="am-sec">
+<!-- v74 — เมนูตั้งค่า (ปุ่มเฟืองข้างกระดิ่ง) -->
+<div class="acct-menu set-menu" id="set-menu" role="menu" hidden>
+  <div class="am-sec am-first">
     <div class="am-row"><span>ธีม</span>
       <div class="seg am-theme" role="group" aria-label="สลับธีม">
         <button type="button" data-theme-btn="light" onclick="setThemePref('light')" title="Light"><svg class="ic" aria-hidden="true"><use href="#i-sun"/></svg></button>
@@ -11854,15 +11975,27 @@ document.addEventListener('DOMContentLoaded', () => {
       </div></div>
   </div>
   <div class="am-sec">
-    <button type="button" role="menuitem" class="am-it" onclick="acctMenuClose();acctOpen()"><svg class="ic" aria-hidden="true"><use href="#i-user"/></svg>บัญชีและความปลอดภัย</button>
-    <button type="button" role="menuitem" class="am-it" onclick="acctMenuClose();gsOpenModal()"><svg class="ic" aria-hidden="true"><use href="#i-settings"/></svg>ตั้งค่า Google Sheets</button>
-    <button type="button" role="menuitem" class="am-it" onclick="acctMenuClose();generateMonthlyPDF()"><svg class="ic" aria-hidden="true"><use href="#i-download"/></svg>Export PDF</button>
-    <button type="button" role="menuitem" class="am-it" onclick="acctMenuClose();exportSettings()"><svg class="ic" aria-hidden="true"><use href="#i-backup"/></svg>Backup</button>
-    <button type="button" role="menuitem" class="am-it" onclick="acctMenuClose();document.getElementById('settings-import').click()"><svg class="ic" aria-hidden="true"><use href="#i-upload"/></svg>Restore</button>
+    <button type="button" role="menuitem" class="am-it" onclick="menusClose();gsOpenModal()"><svg class="ic" aria-hidden="true"><use href="#i-sync"/></svg>ตั้งค่า Google Sheets</button>
+    <button type="button" role="menuitem" class="am-it" onclick="menusClose();ntOpenSetup()"><svg class="ic" aria-hidden="true"><use href="#i-notify"/></svg>ตั้งค่าการแจ้งเตือน</button>
+    <button type="button" role="menuitem" class="am-it" onclick="menusClose();acctOpen()"><svg class="ic" aria-hidden="true"><use href="#i-key"/></svg>รหัสผ่านและล็อกอัตโนมัติ</button>
   </div>
   <div class="am-sec">
+    <button type="button" role="menuitem" class="am-it" onclick="menusClose();generateMonthlyPDF()"><svg class="ic" aria-hidden="true"><use href="#i-download"/></svg>Export PDF</button>
+    <button type="button" role="menuitem" class="am-it" onclick="menusClose();exportSettings()"><svg class="ic" aria-hidden="true"><use href="#i-backup"/></svg>Backup</button>
+    <button type="button" role="menuitem" class="am-it" onclick="menusClose();document.getElementById('settings-import').click()"><svg class="ic" aria-hidden="true"><use href="#i-upload"/></svg>Restore</button>
+  </div>
+</div>
+
+<!-- v74 — เมนูบัญชี (กดรูปโปรไฟล์มุมขวาบน) — เหลือเรื่องบัญชี · ตั้งค่าอื่นย้ายไปปุ่มเฟือง -->
+<div class="acct-menu" id="acct-menu" role="menu" hidden>
+  <div class="am-head">
+    <div class="tb-avatar am-av" id="am-av" aria-hidden="true">?</div>
+    <div class="am-who"><div class="am-name" id="am-name">—</div><div class="am-mail" id="am-mail"></div></div>
+  </div>
+  <div class="am-sec">
+    <button type="button" role="menuitem" class="am-it" onclick="menusClose();acctOpen()"><svg class="ic" aria-hidden="true"><use href="#i-user"/></svg>บัญชีและความปลอดภัย</button>
     <button type="button" role="menuitem" class="am-it" id="am-lock" onclick="authLock()" hidden><svg class="ic" aria-hidden="true"><use href="#i-lock"/></svg>ล็อกตอนนี้</button>
-    <button type="button" role="menuitem" class="am-it" onclick="acctMenuClose();authSignOut()"><svg class="ic" aria-hidden="true"><use href="#i-logout"/></svg>ออกจากระบบ</button>
+    <button type="button" role="menuitem" class="am-it" onclick="menusClose();authSignOut()"><svg class="ic" aria-hidden="true"><use href="#i-logout"/></svg>ออกจากระบบ</button>
   </div>
 </div>
 
