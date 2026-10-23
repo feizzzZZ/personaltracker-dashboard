@@ -1839,8 +1839,10 @@ html[data-theme="midnight"] .auth-mark{color:#FAFAFA}
 
 /* v74 — เมนูตั้งค่า (เฟือง) ใช้หน้าตาเดียวกับเมนูบัญชี */
 .am-sec.am-first{border-top:none}
-.nt-set-btn{display:inline-flex;align-items:center;gap:6px}
-.nt-set-btn .ic{width:15px;height:15px}
+.nt-set-modal{max-width:760px}
+.nt-set-modal .nt-setup{background:none;border:0;padding:0;margin:0}
+/* v76 — ปุ่ม + (z-index 900) ลอยทับหน้าต่างตั้งค่า (z-index 200) → ซ่อนระหว่างเปิดหน้าต่าง */
+body:has(.gs-modal-overlay.show) .tx-fab{display:none!important}  /* JS ตั้ง style="display:block" ไว้ */
 
 /* ══ v74 — My Policy แบบรายการ ══ */
 .ins-pl{border:1px solid var(--border);background:var(--bg3);margin-bottom:20px}
@@ -2120,8 +2122,6 @@ html[data-theme="midnight"] .auth-mark{color:#FAFAFA}
           <span class="gs-dot" id="gs-dot" style="background:var(--muted)"></span>
           <span id="gs-btn-text" class="sb-lbl">Connect Sheets</span>
         </button>
-        <button class="sb-btn sb-btn-ic" onclick="gsOpenModal()" title="ตั้งค่า Client ID / Spreadsheet ID" aria-label="ตั้งค่า Client ID / Spreadsheet ID">
-          <svg class="ic" aria-hidden="true"><use href="#i-settings"/></svg></button>
       </div>
       <!-- v65 — สลับภาษา TH/EN + ธีม (จำค่าไว้ในเครื่อง) · v74 ธีมมี Light / Dark / Auto -->
       <div class="pref-row">
@@ -2135,6 +2135,8 @@ html[data-theme="midnight"] .auth-mark{color:#FAFAFA}
       <div class="sb-row">
         <button class="sb-btn" onclick="acctOpen()" title="บัญชีและความปลอดภัย">
           <svg class="ic" aria-hidden="true"><use href="#i-user"/></svg><span class="sb-lbl">บัญชีผู้ใช้</span></button>
+        <button class="sb-btn" onclick="ntOpenSetup()" title="ตั้งค่าการแจ้งเตือน">
+          <svg class="ic" aria-hidden="true"><use href="#i-notify"/></svg><span class="sb-lbl">แจ้งเตือน</span></button>
         <button class="sb-btn" id="sb-lock-btn" onclick="authLock()" title="ล็อกตอนนี้" hidden>
           <svg class="ic" aria-hidden="true"><use href="#i-lock"/></svg><span class="sb-lbl">ล็อก</span></button>
       </div>
@@ -4952,7 +4954,7 @@ const VLOG_PURGED_KEY = 'finOS_valueLogPurged_v44';
 //   ฟังก์ชันหาย  → BLOCK  (แอปคำนวณผิดแน่นอน — นี่คือสิ่งที่ guard มีไว้จับ)
 //   เลขไม่ตรง    → WARN   (แค่ลืม bump — log ไว้ ไม่รบกวนผู้ใช้)
 // ฟังก์ชันที่ต้องมีคือสัญญาจริงระหว่างสองไฟล์ ส่วนสตริงเวอร์ชันเป็นแค่ป้าย
-const EXPECTED_SHARED_BUILD = 'v75';
+const EXPECTED_SHARED_BUILD = 'v76';
 const REQUIRED_SHARED_FNS = [
   'resolvePrices', 'pipelinePricesTHB', 'parseReconcileRows',
   'computeReconciliation', 'splitBalances', 'debtVsInvest', 'buildDebtPlan',
@@ -5737,9 +5739,9 @@ function renderNotify(){
   const list=_nt.items.filter(n=>_nt.cat==='all'||n.cat===_nt.cat);
   const cnt=c=>_nt.items.filter(n=>(c==='all'||n.cat===c)&&!read.has(n.id)).length;
   const warn=_nt.remoteErr==='key'
-    ? `<div class="nt-warn">🔑 ${_L('ถอดรหัส history จาก Actions ไม่ได้ — กุญแจในเครื่องนี้ไม่ตรงกับ secret NOTIFY_KEY (เปิด ⚙ ตั้งค่า → ใส่กุญแจเดียวกัน)','Cannot decrypt the history from Actions — this device key does not match the NOTIFY_KEY secret (open ⚙ Settings and enter the same key)')}</div>`
+    ? `<div class="nt-warn">🔑 ${_L('ถอดรหัส history จาก Actions ไม่ได้ — กุญแจในเครื่องนี้ไม่ตรงกับ secret NOTIFY_KEY (เปิด ⚙ ตั้งค่า → ตั้งค่าการแจ้งเตือน → ใส่กุญแจเดียวกัน)','Cannot decrypt the history from Actions — this device key does not match the NOTIFY_KEY secret (open ⚙ Settings → Notification settings and enter the same key)')} <button type="button" class="nt-go" onclick="ntOpenSetup()">${_L('เปิดตั้งค่า','Open settings')} ›</button></div>`
     : _nt.remoteErr==='nokey'
-    ? `<div class="nt-warn">🔑 ${_L('มี history จาก Actions แต่เครื่องนี้ยังไม่มีกุญแจ — เปิด ⚙ ตั้งค่า แล้วใส่กุญแจ หรือเปิดลิงก์ตั้งค่าจากเครื่องที่ตั้งไว้แล้ว','There is history from Actions but this device has no key yet — open ⚙ Settings and enter it, or open the setup link from a configured device')}</div>` : '';
+    ? `<div class="nt-warn">🔑 ${_L('มี history จาก Actions แต่เครื่องนี้ยังไม่มีกุญแจ — เปิด ⚙ ตั้งค่า → ตั้งค่าการแจ้งเตือน แล้วใส่กุญแจ หรือเปิดลิงก์ตั้งค่าจากเครื่องที่ตั้งไว้แล้ว','There is history from Actions but this device has no key yet — open ⚙ Settings → Notification settings and enter it, or open the setup link from a configured device')} <button type="button" class="nt-go" onclick="ntOpenSetup()">${_L('เปิดตั้งค่า','Open settings')} ›</button></div>` : '';
   const rows=list.map(n=>{
     const un=!read.has(n.id), op=_nt.open.has(n.id);
     const body=String(n.body||'');
@@ -5747,7 +5749,8 @@ function renderNotify(){
       <div class="nt-ic" aria-hidden="true">${NT_ICON[n.kind]||'🔔'}</div>
       <div class="nt-main"><div class="nt-top"><span class="nt-tt">${escHtml(n.title||'')}</span><span class="nt-tm">${_ntAgo(n.ts)}</span></div>
         <div class="nt-bd">${escHtml(op?body:body.split('\n').map(x=>x.trim()).filter(x=>x && !/^[─━\-=·\s]+$/.test(x)).slice(0,2).join(' · '))}</div>
-        ${op&&n.page?`<button type="button" class="nt-go" onclick="event.stopPropagation();switchPage('${escAttr(n.page)}')">${_L('ไปที่หน้าที่เกี่ยวข้อง','Open related page')} ›</button>`:''}</div>
+        ${op&&n.page==='notify'?`<button type="button" class="nt-go" onclick="event.stopPropagation();ntOpenSetup()">⚙ ${_L('ตั้งค่าการแจ้งเตือน','Notification settings')} ›</button>`
+          :op&&n.page?`<button type="button" class="nt-go" onclick="event.stopPropagation();switchPage('${escAttr(n.page)}')">${_L('ไปที่หน้าที่เกี่ยวข้อง','Open related page')} ›</button>`:''}</div>
       ${un?'<span class="nt-dot" aria-label="unread"></span>':''}</div>`;}).join('');
   el.innerHTML=`${warn}
     <div class="nt-bar">
@@ -5755,10 +5758,8 @@ function renderNotify(){
       <div class="nt-acts">
         <button type="button" class="rb-btn" onclick="ntMarkAllRead()">✓ ${_L('อ่านทั้งหมด','Mark all read')}</button>
         <button type="button" class="rb-btn" onclick="fetchNotifications()" title="${_L('ดึงล่าสุด','Refresh')}">↻</button>
-        <button type="button" class="rb-btn nt-set-btn" onclick="_nt.setup=!_nt.setup;renderNotify()"><svg class="ic" aria-hidden="true"><use href="#i-settings"/></svg>${_L('ตั้งค่า','Settings')}</button>
       </div></div>
-    ${_nt.setup?'<div id="nt-setup"></div>':''}
-    <div class="cc nt-list">${rows||`<div class="nt-empty">🔕 ${_L('ยังไม่มีการแจ้งเตือน','No notifications yet')}${_ntKey()?'':`<div class="s">${_L('เริ่มจาก ⚙ ตั้งค่า เพื่อเปิดแจ้งเตือนบนเครื่องนี้','Start with ⚙ Settings to turn on notifications on this device')}</div>`}</div>`}</div>`;
+    <div class="cc nt-list">${rows||`<div class="nt-empty">🔕 ${_L('ยังไม่มีการแจ้งเตือน','No notifications yet')}${_ntKey()?'':`<div class="s">${_L('เปิดแจ้งเตือนบนเครื่องนี้ได้ที่','Turn on notifications for this device in')} <button type="button" class="nt-go" onclick="ntOpenSetup()">⚙ ${_L('ตั้งค่าการแจ้งเตือน','Notification settings')} ›</button></div>`}</div>`}</div>`;
   if(_nt.setup) _ntSetup(document.getElementById('nt-setup'));
 }
 // ── ตั้งค่า: กุญแจ · เปิด push บนเครื่องนี้ · ทดสอบ ───────────────────────
@@ -5830,8 +5831,8 @@ async function ntCheckPush(){
     if(cur && _ntSubPub(cur)===null && r.pub){ _ntRegSave(cur, r.pub); }  // SW ลงทะเบียนต่อให้ด้วยกุญแจเดิม
     notifyApp('push-changed-'+(cur?cur.endpoint.slice(-12):'none'),
       _L('การลงทะเบียนแจ้งเตือนของเครื่องนี้เปลี่ยน','This device\'s push registration changed'),
-      cur?_L('ระบบลงทะเบียนต่อให้แล้ว — เปิด ⚙ ขั้น 2 คัดลอกไปแทน secret PUSH_SUBSCRIPTIONS ครั้งเดียว','It was renewed automatically — open ⚙ step 2 and copy it into the PUSH_SUBSCRIPTIONS secret once')
-         :_L('เปิด ⚙ ขั้น 2 กด "เปิดการแจ้งเตือน" แล้วคัดลอกไปแทน secret PUSH_SUBSCRIPTIONS','Open ⚙ step 2, press "Turn on notifications" and copy it into the PUSH_SUBSCRIPTIONS secret'),
+      cur?_L('ระบบลงทะเบียนต่อให้แล้ว — เปิด ⚙ ตั้งค่า → ตั้งค่าการแจ้งเตือน ขั้น 2 คัดลอกไปแทน secret PUSH_SUBSCRIPTIONS ครั้งเดียว','It was renewed automatically — open ⚙ Settings → Notification settings, step 2, and copy it into the PUSH_SUBSCRIPTIONS secret once')
+         :_L('เปิด ⚙ ตั้งค่า → ตั้งค่าการแจ้งเตือน ขั้น 2 กด "เปิดการแจ้งเตือน" แล้วคัดลอกไปแทน secret PUSH_SUBSCRIPTIONS','Open ⚙ Settings → Notification settings, step 2, press "Turn on notifications" and copy it into the PUSH_SUBSCRIPTIONS secret'),
       'notify');
   }catch(e){ console.warn('[notif] ตรวจ push ไม่ได้:', e.message); }
 }
@@ -5860,7 +5861,7 @@ function ntSetupLink(btn){
   const m=location.hash.match(/nsetup=([A-Za-z0-9\-_]+)/); if(!m) return;
   try{ const o=JSON.parse(new TextDecoder().decode(b64ToBytes(m[1])));
        if(o.k && b64ToBytes(o.k).length===32){ localStorage.setItem(NOTIF_KEY_LS,o.k); if(o.p) localStorage.setItem(VAPID_PUB_LS,o.p);
-         setTimeout(()=>alert(_L('ตั้งค่าการแจ้งเตือนจากลิงก์แล้ว — เปิดเมนูการแจ้งเตือน → ⚙ ขั้นที่ 2 เพื่อเปิด push บนเครื่องนี้','Notification settings applied — open Notifications → ⚙ step 2 to enable push on this device')),400); } }
+         setTimeout(()=>alert(_L('ตั้งค่าการแจ้งเตือนจากลิงก์แล้ว — เปิด ⚙ ตั้งค่า → ตั้งค่าการแจ้งเตือน ขั้นที่ 2 เพื่อเปิด push บนเครื่องนี้','Notification settings applied — open ⚙ Settings → Notification settings, step 2, to enable push on this device')),400); } }
   catch(e){ console.warn('[notif] ลิงก์ตั้งค่าไม่ถูกต้อง'); }
   history.replaceState(null,'',location.pathname+'#notify');
 })();
@@ -10318,7 +10319,9 @@ function setMenuClose(){
   const m=_$('set-menu'); if(m && !m.hidden){ m.hidden=true; _$('tb-settings')?.setAttribute('aria-expanded','false'); }
 }
 function menusClose(){ acctMenuClose(); setMenuClose(); }
-function ntOpenSetup(){ try{ _nt.setup=true; }catch(e){} switchPage('notify'); try{ renderNotify(); }catch(e){} }
+// v76 — ตั้งค่าการแจ้งเตือนเป็นหน้าต่างของเมนูตั้งค่า · ntGenKeys/ntSubscribe/… เรียก renderNotify() ซึ่ง render หน้าต่างนี้ซ้ำเมื่อเปิดอยู่
+function ntOpenSetup(){ menusClose(); _nt.setup=true; _$('nt-set-modal')?.classList.add('show'); renderNotify(); }
+function ntCloseSetup(){ _nt.setup=false; _$('nt-set-modal')?.classList.remove('show'); }
 document.addEventListener('click', e=>{
   const m=_$('acct-menu'); if(m && !m.hidden && !m.contains(e.target)) acctMenuClose();
   const sm=_$('set-menu'); if(sm && !sm.hidden && !sm.contains(e.target)) setMenuClose();
@@ -10448,9 +10451,9 @@ function _cmdkItems(){
   A('สลับธีม (Light / Dark / Auto)','Switch theme (Light / Dark / Auto)','sun',cycleTheme,'theme dark light มืด สว่าง');
   A(I18N && I18N.lang==='en'?'เปลี่ยนเป็นภาษาไทย':'Switch to English', I18N && I18N.lang==='en'?'Switch to Thai':'Switch to English','lang',
     ()=>I18N.setLang(I18N.lang==='en'?'th':'en'),'language ภาษา thai english');
-  A('บัญชีและความปลอดภัย','Account & security','user',acctOpen,'password รหัสผ่าน lock ล็อก');
+  A('บัญชีและความปลอดภัย','Account & security','user',acctOpen,'password รหัสผ่าน lock ล็อก google sheets client id spreadsheet ชีต');
+  A('ตั้งค่าการแจ้งเตือน','Notification settings','notify',ntOpenSetup,'notification push แจ้งเตือน key กุญแจ');
   if(_hasVault()) A('ล็อกตอนนี้','Lock now','lock',authLock,'lock');
-  A('ตั้งค่า Google Sheets','Google Sheets settings','settings',gsOpenModal,'client id spreadsheet');
   A('Export PDF รายเดือน','Export monthly PDF','download',generateMonthlyPDF,'pdf report รายงาน');
   A('Backup การตั้งค่า','Back up settings','backup',exportSettings,'backup สำรอง');
   A('ออกจากระบบ','Sign out','logout',authSignOut,'logout sign out');
@@ -12369,15 +12372,11 @@ document.addEventListener('DOMContentLoaded', () => {
     </div>
   </div>
 </div>
-<!-- v74 — เมนูตั้งค่า (ปุ่มเฟืองข้างกระดิ่ง) -->
+<!-- v74 — เมนูตั้งค่า (ปุ่มเฟืองข้างกระดิ่ง)
+     v76 — ตัดของซ้ำ: ธีมใช้ปุ่มบนแถบบน · Google Sheets + รหัสผ่าน/ล็อก อยู่ใน "บัญชีและความปลอดภัย" (เมนูรูปโปรไฟล์) ที่เดียว
+           ตั้งค่าการแจ้งเตือนย้ายมาเป็นหน้าต่างของเมนูนี้ (หน้าการแจ้งเตือนเหลือแค่รายการแจ้งเตือน) -->
 <div class="acct-menu set-menu" id="set-menu" role="menu" hidden>
   <div class="am-sec am-first">
-    <div class="am-row"><span>ธีม</span>
-      <div class="seg am-theme" role="group" aria-label="สลับธีม">
-        <button type="button" data-theme-btn="light" onclick="setThemePref('light')" title="Light"><svg class="ic" aria-hidden="true"><use href="#i-sun"/></svg></button>
-        <button type="button" data-theme-btn="midnight" onclick="setThemePref('midnight')" title="Dark"><svg class="ic" aria-hidden="true"><use href="#i-moon"/></svg></button>
-        <button type="button" data-theme-btn="auto" onclick="setThemePref('auto')" title="Auto"><svg class="ic" aria-hidden="true"><use href="#i-auto"/></svg></button>
-      </div></div>
     <div class="am-row"><span>ภาษา</span>
       <div class="seg" role="group" aria-label="สลับภาษา">
         <button type="button" data-lang-btn="th" onclick="I18N.setLang('th')">TH</button>
@@ -12385,9 +12384,7 @@ document.addEventListener('DOMContentLoaded', () => {
       </div></div>
   </div>
   <div class="am-sec">
-    <button type="button" role="menuitem" class="am-it" onclick="menusClose();gsOpenModal()"><svg class="ic" aria-hidden="true"><use href="#i-sync"/></svg>ตั้งค่า Google Sheets</button>
     <button type="button" role="menuitem" class="am-it" onclick="menusClose();ntOpenSetup()"><svg class="ic" aria-hidden="true"><use href="#i-notify"/></svg>ตั้งค่าการแจ้งเตือน</button>
-    <button type="button" role="menuitem" class="am-it" onclick="menusClose();acctOpen()"><svg class="ic" aria-hidden="true"><use href="#i-key"/></svg>รหัสผ่านและล็อกอัตโนมัติ</button>
   </div>
   <div class="am-sec">
     <button type="button" role="menuitem" class="am-it" onclick="menusClose();generateMonthlyPDF()"><svg class="ic" aria-hidden="true"><use href="#i-download"/></svg>Export PDF</button>
@@ -12436,6 +12433,15 @@ document.addEventListener('DOMContentLoaded', () => {
       <button class="gs-save-btn" onclick="abSaveWorker(false)">บันทึก &amp; ทดสอบ</button>
       <button class="gs-cancel-btn" onclick="abSaveWorker(true)">เลิกเชื่อม</button>
     </div>
+  </div>
+</div>
+
+<!-- v76 — ตั้งค่าการแจ้งเตือน (ย้ายมาจากปุ่ม ⚙ ในหน้าการแจ้งเตือน) · เนื้อหา render โดย _ntSetup() -->
+<div id="nt-set-modal" class="gs-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="nt-set-title">
+  <div class="gs-modal acct-modal nt-set-modal">
+    <div class="gs-modal-close" onclick="ntCloseSetup()" role="button" aria-label="ปิด">✕</div>
+    <div class="gs-modal-title" id="nt-set-title">ตั้งค่าการแจ้งเตือน</div>
+    <div id="nt-setup"></div>
   </div>
 </div>
 
