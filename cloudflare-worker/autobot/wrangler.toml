@@ -1,0 +1,24 @@
+# FinanceTracker AutoBot — Cloudflare Worker (phase 1 = paper)
+# ดูขั้นตอนติดตั้งใน README.md ในโฟลเดอร์เดียวกัน
+name = "financetracker-autobot"
+main = "worker.js"
+compatibility_date = "2024-09-23"
+
+# ตรวจกฎทุก 15 นาที
+[triggers]
+crons = ["*/15 * * * *"]
+
+# KV เก็บกฎ + พอร์ตจำลอง — สร้างด้วย: npx wrangler kv namespace create BOT แล้วเอา id มาใส่
+[[kv_namespaces]]
+binding = "BOT"
+id = "REPLACE_WITH_KV_ID"
+
+[vars]
+# ที่อยู่ market-data.json ของแอปคุณบน GitHub Pages
+MARKET_URL = "https://REPLACE_WITH_GITHUB_USER.github.io/personaltracker-dashboard/market-data.json"
+# เว็บที่อนุญาตให้เรียก Worker (ต้นทางของแอป ไม่มี / ท้าย) — คั่นหลายค่าด้วย ,
+ALLOWED_ORIGIN = "https://REPLACE_WITH_GITHUB_USER.github.io"
+# เงินตั้งต้นของพอร์ตจำลอง (บาท)
+START_THB = "100000"
+
+# secret (ไม่อยู่ในไฟล์นี้): npx wrangler secret put BOT_TOKEN
