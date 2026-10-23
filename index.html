@@ -1504,7 +1504,13 @@ kbd{font-family:var(--f-chip);font-size:10.5px;color:var(--muted);border:1px sol
 
 /* ── แถบข้าง: rail ไอคอน 70px (ค่าเริ่มต้นบนเดสก์ท็อป) · ชี้ค้างแล้วกางทับเนื้อหา ── */
 .sidebar{background:var(--bg);border-right:1px solid var(--border);white-space:nowrap;overflow-x:hidden}
-.sb-brand{display:flex;align-items:center;gap:10px;min-height:70px;padding:calc(14px + env(safe-area-inset-top,0px)) 18px 14px 25px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+/* v74 — แถวเดียวเสมอ สูง 70px เท่าแถบบน (เส้นใต้ตรงกัน) · เดิม flex-wrap ทำให้ระหว่างกาง/ย่อ (ความกว้างกำลังเปลี่ยน)
+   ชื่อแอปตกลงบรรทัดสอง หัวเมนูสูงขึ้นแวบหนึ่งแล้วหดกลับ — ดูเหมือนบั๊ก */
+.sb-brand{display:flex;align-items:center;gap:10px;flex-wrap:nowrap;overflow:hidden;box-sizing:border-box;
+  height:calc(70px + env(safe-area-inset-top,0px));min-height:0;padding:env(safe-area-inset-top,0px) 18px 0 25px;border-bottom:1px solid var(--border)}
+.sb-brand>*{flex-shrink:0}
+.sb-logo{white-space:nowrap;overflow:hidden;flex-shrink:1;min-width:0}
+.sb-collapse:focus:not(:focus-visible){outline:none}
 .sb-mark{width:22px;height:22px;color:var(--fg);stroke-width:1.8}
 .sb-logo{color:var(--fg);font-size:14px;font-weight:600;letter-spacing:-.01em}
 .sb-sub,.sb-status{display:none}
@@ -1541,7 +1547,7 @@ kbd{font-family:var(--f-chip);font-size:10.5px;color:var(--muted);border:1px sol
 @media(min-width:769px){
   .sb-bottom{display:none}                        /* ย้ายไปแถบบน + เมนูบัญชีแล้ว */
   body.sb-mini{--sidebar-w:70px}
-  .sb-mini .sb-brand{padding:calc(14px + env(safe-area-inset-top,0px)) 0 14px;justify-content:center;min-height:70px}
+  .sb-mini .sb-brand{padding:env(safe-area-inset-top,0px) 0 0;justify-content:center}
   .sb-mini .sb-nav{padding:12px 15px}
   .sb-mini .sb-item{height:40px;padding:0;justify-content:center}
   .sb-mini .sb-item .sb-icon.ic{width:19px;height:19px}
@@ -1835,6 +1841,75 @@ html[data-theme="midnight"] .auth-mark{color:#FAFAFA}
 .am-sec.am-first{border-top:none}
 .nt-set-btn{display:inline-flex;align-items:center;gap:6px}
 .nt-set-btn .ic{width:15px;height:15px}
+
+/* ══ v74 — My Policy แบบรายการ ══ */
+.ins-pl{border:1px solid var(--border);background:var(--bg3);margin-bottom:20px}
+.ip-hd,.ip-row{display:grid;grid-template-columns:minmax(0,2.4fr) 110px 120px 170px 120px 22px;gap:14px;align-items:center;padding:12px 18px}
+.ip-hd{font-size:12px;color:var(--muted);border-bottom:1px solid var(--border)}
+.ip-hd .r,.ip-num{text-align:right}
+.ip-grp{display:flex;align-items:baseline;gap:10px;padding:16px 18px 6px;font-size:13px;font-weight:500;color:var(--fg);border-top:1px solid var(--border)}
+.ip-grp:first-of-type{border-top:none}
+.ip-grp small{font-size:11.5px;font-weight:400;color:var(--muted)}
+.ip-row{border-top:1px solid var(--border);cursor:pointer;font-size:13px}
+.ip-grp+.ip-row{border-top:none}
+.ip-row:hover{background:var(--hover)}
+.ip-row:focus-visible{outline:2px solid var(--fg);outline-offset:-2px}
+.ip-row.ended{opacity:.6}
+.ip-name{min-width:0}
+.ip-name b{display:block;font-weight:500;color:var(--fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ip-name small{display:block;font-size:11.5px;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ip-id{font-family:var(--f-chip)}
+.ip-num{font-variant-numeric:tabular-nums;color:var(--text);white-space:nowrap}
+.ip-num small{display:block;font-size:11px;color:var(--muted);margin-top:2px}
+.ip-num small.ip-soon{color:var(--debt);font-weight:500}
+.ip-mute{color:var(--muted)}
+.ip-chev{color:var(--muted);display:flex;justify-content:center;transition:transform .15s}
+.ip-chev .ic{width:15px;height:15px}
+.ip-row.open .ip-chev{transform:rotate(180deg)}
+.ip-cov{padding:4px 18px 14px 36px;background:var(--hover);display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:4px 24px}
+.ip-cov-it{display:flex;justify-content:space-between;gap:12px;font-size:12.5px;padding:6px 0;border-bottom:1px dashed var(--border)}
+.ip-cov-it small{color:var(--muted);font-size:11px}
+.ip-cov-it b{font-weight:500;white-space:nowrap}
+@media(max-width:900px){
+  .ip-hd{display:none}
+  .ip-row{grid-template-columns:1fr 1fr 1fr;gap:8px 12px;padding:14px 16px}
+  .ip-name{grid-column:1/3}.ip-st{grid-column:3;text-align:right}.ip-chev{display:none}
+  .ip-num{text-align:left}
+  .ip-num::before{content:attr(data-l);display:block;font-size:10.5px;color:var(--muted);margin-bottom:2px}
+  .ip-cov{padding:4px 16px 12px}
+}
+@media(prefers-reduced-motion:reduce){.ip-chev{transition:none}}
+
+/* ══ v75 — บอทเทรด ══ */
+.ab-banner{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--border);background:var(--bg4);padding:14px 16px;margin-bottom:16px;font-size:12.5px;line-height:1.6}
+.ab-banner .ic{margin-top:2px}
+.ab-banner b{display:block;color:var(--fg);font-weight:500}
+.ab-banner span{display:block;color:var(--muted2)}
+.ab-banner .ab-where{margin-top:4px;font-family:var(--f-chip);font-size:11px;color:var(--muted)}
+.ab-bar{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 18px}
+.ab-sp{flex:1}
+.ab-rules{padding:4px 18px}
+.ab-rule{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px;align-items:center;padding:14px 0;border-bottom:1px solid var(--border)}
+.ab-rule:last-child{border-bottom:none}
+.ab-rule.off .ab-r-main{opacity:.5}
+.ab-r-name{font-size:13.5px;color:var(--fg);font-weight:500;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.ab-r-desc{font-size:12.5px;color:var(--text);margin-top:3px}
+.ab-r-desc b{font-weight:600}
+.ab-r-st{font-size:11.5px;color:var(--muted);margin-top:3px}
+.ab-r-act{display:flex;gap:6px}
+.ab-chip{font-family:var(--f-chip);font-size:10.5px;font-weight:400;padding:1px 8px;border:1px solid var(--border);border-radius:999px;color:var(--muted2);white-space:nowrap}
+.ab-sw{position:relative;width:34px;height:20px;flex:0 0 auto;cursor:pointer}
+.ab-sw input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer}
+.ab-sw span{position:absolute;inset:0;border-radius:999px;background:var(--bg4);border:1px solid var(--border2);transition:background .15s}
+.ab-sw span::after{content:'';position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:var(--muted);transition:transform .15s,background .15s}
+.ab-sw input:checked+span{background:var(--fg);border-color:var(--fg)}
+.ab-sw input:checked+span::after{transform:translateX(14px);background:var(--on-fg)}
+.ab-sw input:focus-visible+span{outline:2px solid var(--fg);outline-offset:2px}
+.ab-empty{color:var(--muted2);font-size:12.5px;padding:18px 0;line-height:1.7}
+.ab-why{white-space:normal!important;color:var(--muted2);font-size:11.5px;max-width:280px}
+.ab-note{font-size:11px;color:var(--muted);line-height:1.7;margin-top:14px}
+.ab-modal{max-width:520px;max-height:calc(100vh - 32px);overflow-y:auto}
+@media(prefers-reduced-motion:reduce){.ab-sw span,.ab-sw span::after{transition:none}}
 </style>
 </head>
 <body>
@@ -2348,31 +2423,7 @@ html[data-theme="midnight"] .auth-mark{color:#FAFAFA}
 
       <div id="pf-type-warn" style="display:none"></div>
       <div id="pf-dq-warn" style="display:none"></div>
-      <!-- v74 — เดิมเป็น % ลอย ๆ 3 ตัว (XIRR · TWR · เงินเข้าออก) ไม่มีอะไรให้เทียบ อ่านแล้วไม่รู้ว่าดีหรือไม่
-           ตอนนี้ตอบเป็นบาท: ลงทุนแล้วได้มากกว่าเอาเงินก้อนเดียวกันไปฝากธนาคาร/แค่ตามเงินเฟ้อเท่าไร · กำไรมาจากตัวไหน · ตัวไหนแพ้ฝากธนาคาร -->
-      <div class="sl sl-mt">True Performance — ลงทุนแล้วได้อะไรเพิ่ม</div>
-      <div class="cc perf-verdict" id="perf-verdict"><div class="pv-h">—</div></div>
-      <div class="sg sg-perf">
-        <div class="sc">
-          <div class="sc-lbl">ผลตอบแทนต่อปี (XIRR)</div>
-          <div class="sc-val" id="perf-xirr" style="font-size:26px">—</div>
-          <div class="sc-sub" id="perf-xirr-sub">เหมือน "ดอกเบี้ยทบต้น" ที่พอร์ตจ่ายให้เงินแต่ละก้อน นับตามวันที่เงินเข้าจริง</div>
-        </div>
-        <div class="sc">
-          <div class="sc-lbl">เงินเข้า → ออก + มูลค่า</div>
-          <div class="sc-val" id="perf-money" style="font-size:14px;line-height:1.7">—</div>
-          <div class="sc-sub" id="perf-period"></div>
-        </div>
-        <div class="sc">
-          <div class="sc-lbl">ผลของพอร์ตเอง (TWR)</div>
-          <div class="sc-val" id="perf-twr" style="font-size:20px">—</div>
-          <div class="sc-sub" id="perf-twr-sub"></div>
-        </div>
-      </div>
-      <div class="sg sg-2">
-        <div class="sc"><div class="sc-lbl">🚀 กำไรมาจากไหน (เรียงตามบาท)</div><div id="perf-top" class="perf-list">—</div></div>
-        <div class="sc"><div class="sc-lbl">⚓ ตัวที่แพ้ฝากธนาคาร</div><div id="perf-bottom" class="perf-list">—</div></div>
-      </div>
+      <!-- v74 — True Performance ย้ายไปแท็บ "ผลตอบแทนจริง" (page-performance) ผู้ใช้ขอ: อยู่หน้านี้แล้วดันบล็อกที่ตั้งสินทรัพย์ลงไปจนดูยาก -->
       <!-- v48 — เอาการ์ด "คุณ vs ตลาด" (benchmark S&P 500) ออกตามที่ผู้ใช้ขอ
            v64 — benchmarkXIRR()/priceAt() ใน shared.js ถูกลบแล้วเพราะไม่มีที่ไหนเรียก (ดู git history) -->
 
@@ -2569,9 +2620,11 @@ html[data-theme="midnight"] .auth-mark{color:#FAFAFA}
         </div>
         </div>
 
-        <!-- My Policy score cards -->
+        <!-- v74 — My Policy: เดิมการ์ด 5 คอลัมน์ ชื่อยาวขึ้นหลายบรรทัด ต้องอ่านทีละใบ ไม่เห็นภาพรวม
+             ตอนนี้เป็นรายการแถวเดียวต่อกรมธรรม์ จัดกลุ่มตามประเภท · ยังมีผลขึ้นก่อน เรียงเบี้ยมาก→น้อย
+             · ต่ออายุใน 60 วันมีป้ายเตือน · กดแถวเพื่อดูความคุ้มครองของเล่มนั้น -->
         <div class="sl sl-mt">My Policy</div>
-        <div class="ins-mypolicy-grid" id="ins-mypolicy-grid"></div>
+        <div class="ins-pl" id="ins-mypolicy-grid"></div>
 
         <!-- Coverage score cards -->
         <div class="sl sl-mt">ความคุ้มครองตามประเภท
@@ -2757,6 +2810,48 @@ html[data-theme="midnight"] .auth-mark{color:#FAFAFA}
         <th>Ticker</th><th>ประเภท</th><th class="r">จำนวนครั้ง</th>
         <th>Platform</th><th class="r">ปันผลรวม</th><th class="r" title="ปันผล 12 เดือนล่าสุด ÷ ต้นทุนที่ถืออยู่ (ต่อปี) · ชี้ที่ตัวเลขเพื่อดูยอดสะสม">Yield on cost /ปี</th><th class="r">ล่าสุด</th><th class="r">% ของปันผลทั้งหมด</th>
       </tr></thead><tbody id="dv-body"></tbody></table></div>
+    </div>
+
+    <!-- ══ PERFORMANCE (v74 — แยกจากหน้าพอร์ต) ══ -->
+    <div class="page" id="page-performance">
+      <div class="pg-hdr"><div>
+        <div class="pg-title">True Performance</div>
+        <div class="pg-sub">ลงทุนแล้วได้อะไรเพิ่ม — เทียบกับเอาเงินก้อนเดียวกันไปฝากธนาคาร</div>
+      </div></div>
+      <!-- v74 — เดิมเป็น % ลอย ๆ 3 ตัว (XIRR · TWR · เงินเข้าออก) ไม่มีอะไรให้เทียบ อ่านแล้วไม่รู้ว่าดีหรือไม่
+           ตอนนี้ตอบเป็นบาท: ลงทุนแล้วได้มากกว่าเอาเงินก้อนเดียวกันไปฝากธนาคาร/แค่ตามเงินเฟ้อเท่าไร · กำไรมาจากตัวไหน · ตัวไหนแพ้ฝากธนาคาร -->
+      
+      <div class="cc perf-verdict" id="perf-verdict"><div class="pv-h">—</div></div>
+      <div class="sg sg-perf">
+        <div class="sc">
+          <div class="sc-lbl">ผลตอบแทนต่อปี (XIRR)</div>
+          <div class="sc-val" id="perf-xirr" style="font-size:26px">—</div>
+          <div class="sc-sub" id="perf-xirr-sub">เหมือน "ดอกเบี้ยทบต้น" ที่พอร์ตจ่ายให้เงินแต่ละก้อน นับตามวันที่เงินเข้าจริง</div>
+        </div>
+        <div class="sc">
+          <div class="sc-lbl">เงินเข้า → ออก + มูลค่า</div>
+          <div class="sc-val" id="perf-money" style="font-size:14px;line-height:1.7">—</div>
+          <div class="sc-sub" id="perf-period"></div>
+        </div>
+        <div class="sc">
+          <div class="sc-lbl">ผลของพอร์ตเอง (TWR)</div>
+          <div class="sc-val" id="perf-twr" style="font-size:20px">—</div>
+          <div class="sc-sub" id="perf-twr-sub"></div>
+        </div>
+      </div>
+      <div class="sg sg-2">
+        <div class="sc"><div class="sc-lbl">🚀 กำไรมาจากไหน (เรียงตามบาท)</div><div id="perf-top" class="perf-list">—</div></div>
+        <div class="sc"><div class="sc-lbl">⚓ ตัวที่แพ้ฝากธนาคาร</div><div id="perf-bottom" class="perf-list">—</div></div>
+      </div>
+    </div>
+
+    <!-- ══ AUTOBOT (v75 — บอทเทรดตามกฎ · phase 1 paper) ══ -->
+    <div class="page" id="page-autobot">
+      <div class="pg-hdr"><div>
+        <div class="pg-title">Trading Bot</div>
+        <div class="pg-sub">ตั้งกฎให้บอทซื้อขายแทน — ตอนนี้ทดลองด้วยพอร์ตจำลองก่อน ยังไม่ใช้เงินจริง</div>
+      </div></div>
+      <div id="ab-root"></div>
     </div>
 
     <!-- ══ GOALS ══ -->
@@ -2992,6 +3087,7 @@ html[data-theme="midnight"] .auth-mark{color:#FAFAFA}
 </div><!-- /app -->
 
 <script src="shared.js"></script>
+<script src="autobot.js"></script>
 <script>
 /* ── #1: single source of truth for the Chart.js font stack ──────────────
    Latin first, Thai second — matches --f-sans / --f-mono in CSS so canvas
@@ -4856,7 +4952,7 @@ const VLOG_PURGED_KEY = 'finOS_valueLogPurged_v44';
 //   ฟังก์ชันหาย  → BLOCK  (แอปคำนวณผิดแน่นอน — นี่คือสิ่งที่ guard มีไว้จับ)
 //   เลขไม่ตรง    → WARN   (แค่ลืม bump — log ไว้ ไม่รบกวนผู้ใช้)
 // ฟังก์ชันที่ต้องมีคือสัญญาจริงระหว่างสองไฟล์ ส่วนสตริงเวอร์ชันเป็นแค่ป้าย
-const EXPECTED_SHARED_BUILD = 'v74';
+const EXPECTED_SHARED_BUILD = 'v75';
 const REQUIRED_SHARED_FNS = [
   'resolvePrices', 'pipelinePricesTHB', 'parseReconcileRows',
   'computeReconciliation', 'splitBalances', 'debtVsInvest', 'buildDebtPlan',
@@ -9550,6 +9646,8 @@ async function docsImportCommit(){
 let pageRenderFns={
   overview:renderOverview,cashflow:renderCashflow,yearly:renderYearly,
   accounts:renderAccounts,portfolio:renderPortfolio,
+  autobot:renderAutoBot,   // v75 — บอทเทรด (paper)
+  performance:()=>renderPerformance(assets.reduce((s,a)=>s+a.val,0)),   // v74 — แท็บแยก (หน้าพอร์ตยังเรียกด้วยเพื่อบันทึก snapshot TWR)
   budget:renderBudget,
   insurance:renderInsurance,
   flow:renderFlow,realized:renderRealized,
@@ -9768,7 +9866,7 @@ const NAV_GROUPS = [
   {id:'money',     pages:[['cashflow','รายเดือน'],['yearly','รายปี'],['engine','ออม & ลงทุน'],['budget','งบประมาณ']]},
   {id:'accounts',  pages:[['accounts','บัญชี'],['debt','หนี้']]},
   {id:'insurance', pages:[['insurance','ประกัน']]},
-  {id:'invest',    pages:[['portfolio','ภาพรวมพอร์ต'],['flow','รายการซื้อขาย'],['realized','ขายแล้ว'],
+  {id:'invest',    pages:[['portfolio','ภาพรวมพอร์ต'],['performance','ผลตอบแทนจริง'],['autobot','บอทเทรด'],['flow','รายการซื้อขาย'],['realized','ขายแล้ว'],
                           ['dormant','ไม่มีใครดูแล'],['cost','ต้นทุน & ค่าเงิน'],['rebalance','ปรับสมดุล']]},
   {id:'dividends', pages:[['dividends','ปันผล']]},
   {id:'markets',   pages:[['signals','สัญญาณรายตัว'],['research','วิเคราะห์เจาะลึก'],['watch','ภาพรวมตลาด'],
@@ -10424,6 +10522,289 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   const w=Vault.waitMs(); if(w>0) _authWait(w);
 });
 
+/* ══ v75 — บอทเทรด (phase 1 = paper) ═══════════════════════════════════════════════
+   กฎ + พอร์ตจำลอง ประเมินด้วย autobot.js (ไฟล์เดียวกับใน Cloudflare Worker)
+   • ยังไม่เชื่อม Worker: เก็บในเครื่องนี้ (finOS_autobot) ตรวจเงื่อนไขเมื่อกดปุ่ม ด้วยราคาจาก market-data.json
+   • เชื่อม Worker แล้ว: กฎ/พอร์ตอยู่ที่ Worker (KV) ตรวจเองทุก 15 นาทีแม้ปิดแอป — แอปแค่ส่งกฎและอ่านผล
+   ไม่มีการส่งคำสั่งซื้อขายจริงในเฟสนี้ ทั้งในแอปและใน Worker */
+const AB_KEY='finOS_autobot', AB_CFG='finOS_botWorker', AB_TOKEN='botToken';
+const _ab={ remote:null, err:'', busy:false, editId:null };
+const AB_BROKER={ binance:['Binance','Binance'], settrade:['หุ้นไทย · Settrade','Thai stocks · Settrade'], manual:['Dime / Streaming (กดเอง)','Dime / Streaming (manual)'] };
+function _abLocal(){
+  try{ const v=JSON.parse(localStorage.getItem(AB_KEY)||'null'); if(v && v.state) return v; }catch(e){}
+  return { rules:[], state:AutoBot.newState(100000), lastRun:null };
+}
+function _abSaveLocal(v){ localStorage.setItem(AB_KEY, JSON.stringify(v)); }
+function _abCfg(){ try{ return JSON.parse(localStorage.getItem(AB_CFG)||'null')||{}; }catch(e){ return {}; } }
+// token ของ Worker: เข้ารหัสด้วย vault ถ้าตั้งรหัสผ่านไว้ · ไม่งั้นเก็บใน localStorage
+async function _abToken(){
+  if(window.Vault && Vault.exists()){ if(!Vault.isUnlocked()) return ''; try{ return (await Vault.getItem(AB_TOKEN))||''; }catch(e){ return ''; } }
+  return localStorage.getItem('finOS_'+AB_TOKEN)||'';
+}
+async function _abSetToken(t){
+  if(window.Vault && Vault.exists() && Vault.isUnlocked()){ await Vault.setItem(AB_TOKEN, t); localStorage.removeItem('finOS_'+AB_TOKEN); }
+  else localStorage.setItem('finOS_'+AB_TOKEN, t);
+}
+async function _abApi(method, path, body){
+  const c=_abCfg(), tok=await _abToken();
+  if(!c.url || !tok) throw new Error(_L('ยังไม่ได้ตั้งค่า Worker','Worker not configured'));
+  const r=await fetch(c.url.replace(/\/+$/,'')+path, { method, headers:{ authorization:'Bearer '+tok, 'content-type':'application/json' },
+    body: body?JSON.stringify(body):undefined });
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(j.error || ('HTTP '+r.status));
+  return j;
+}
+const _abConnected=()=>!!_abCfg().url;
+// ราคา/สัญญาณดิบจาก market-data.json อยู่ใน finOS_actions (loadActions) — loadMarketData() เก็บแค่ macro ที่ merge แล้ว
+// USD/THB ใช้ค่าที่ merge แล้ว (ชีตหรือ pipeline ตัวที่สดกว่า)
+function _abMarket(){
+  const m=AutoBot.marketFromData(loadActions()||{}, Date.now());
+  const usd=(typeof mdNum==='function') ? mdNum('USDTHB') : null;
+  if(usd>0) m.fx.USD=usd;
+  return m;
+}
+
+function _abTrigTxt(t){
+  const DOW=['','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์','อาทิตย์'], DOWE=['','Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  switch(t.kind){
+    case 'schedule': return t.every==='month' ? _L(`ทุกเดือน วันที่ ${t.day}`,`Monthly on day ${t.day}`) : _L(`ทุกสัปดาห์ วัน${DOW[t.day]}`,`Weekly on ${DOWE[t.day]}`);
+    case 'price_below': return _L(`ราคา ≤ ${t.value}`,`Price ≤ ${t.value}`);
+    case 'price_above': return _L(`ราคา ≥ ${t.value}`,`Price ≥ ${t.value}`);
+    case 'drop_from_high': return _L(`ต่ำกว่าจุดสูงสุด 52 สัปดาห์ ≥ ${t.pct}%`,`≥ ${t.pct}% below 52-week high`);
+    case 'rsi_below': return `RSI ≤ ${t.value}`;
+    case 'rsi_above': return `RSI ≥ ${t.value}`;
+  }
+  return '—';
+}
+
+async function renderAutoBot(){
+  const el=document.getElementById('ab-root'); if(!el) return;
+  if(!window.AutoBot){ el.innerHTML=`<div class="nd">autobot.js ${_L('ไม่ได้โหลด','failed to load')}</div>`; return; }
+  const conn=_abConnected();
+  let data;
+  if(conn){
+    if(!_ab.remote && !_ab.err){
+      el.innerHTML=`<div class="nd">${_L('กำลังโหลดจาก Worker…','Loading from the Worker…')}</div>`;
+      try{ _ab.remote=await _abApi('GET','/state'); }catch(e){ _ab.err=e.message; }
+    }
+    data=_ab.remote || { rules:_abLocal().rules, state:AutoBot.newState(0), lastRun:null };
+  } else data=_abLocal();
+  const market=_abMarket();
+  const val=conn && _ab.remote && _ab.remote.valuation ? _ab.remote.valuation : AutoBot.valuate(data.state, market);
+  const lr=data.lastRun, ago=lr?Math.round((Date.now()-lr.t)/60000):null;
+  const skipOf={}; (lr && lr.skipped || []).forEach(s=>{ skipOf[s.ruleId]=_L(s.why, s.whyEn||s.why); });
+  const lastOf={}; (data.state.ledger||[]).forEach(o=>{ lastOf[o.ruleId]=o.t; });
+  const agoTxt=t=>{ const m=Math.round((Date.now()-t)/60000); return m<60?_L(`${m} นาทีก่อน`,`${m} min ago`):m<1440?_L(`${Math.round(m/60)} ชม.ก่อน`,`${Math.round(m/60)} h ago`):new Date(t).toLocaleDateString(LOC,{day:'numeric',month:'short'}); };
+
+  const rulesHtml=data.rules.length ? data.rules.map(r=>`
+    <div class="ab-rule${r.enabled?'':' off'}">
+      <label class="ab-sw" title="${_L('เปิด/ปิดกฎ','Enable/disable')}"><input type="checkbox" ${r.enabled?'checked':''} onchange="abToggle('${escAttr(r.id)}',this.checked)"><span></span></label>
+      <div class="ab-r-main">
+        <div class="ab-r-name">${escHtml(r.name)} <span class="ab-chip">${escHtml(_L(...AB_BROKER[r.broker]))}</span></div>
+        <div class="ab-r-desc"><b class="${r.side==='buy'?'gain':'loss'}">${r.side==='buy'?_L('ซื้อ','Buy'):_L('ขาย','Sell')}</b> ${escHtml(r.symbol)} ${fmt(r.amountTHB)}
+          · ${escHtml(_abTrigTxt(r.trigger))}${r.cooldownDays>0?` · ${_L('พัก','cooldown')} ${r.cooldownDays} ${_L('วัน','d')}`:''}${r.maxTotalTHB>0?` · ${_L('วงเงินรวม','cap')} ${fmt(r.maxTotalTHB)}`:''}</div>
+        <div class="ab-r-st">${lastOf[r.id]?_L('ทำล่าสุด ','Last fired ')+agoTxt(lastOf[r.id]):_L('ยังไม่เคยทำงาน','Never fired')}${skipOf[r.id]&&r.enabled?` · ${_L('รอบล่าสุด: ','last check: ')}${escHtml(skipOf[r.id])}`:''}</div>
+      </div>
+      <div class="ab-r-act">
+        <button type="button" class="gc-btn" onclick="abEdit('${escAttr(r.id)}')" title="${_L('แก้ไข','Edit')}" aria-label="${_L('แก้ไข','Edit')}">✎</button>
+        <button type="button" class="gc-btn del" onclick="abDelete('${escAttr(r.id)}')" title="${_L('ลบ','Delete')}" aria-label="${_L('ลบ','Delete')}">✕</button>
+      </div>
+    </div>`).join('')
+    : `<div class="ab-empty">${_L('ยังไม่มีกฎ — เริ่มจาก "เพิ่มกฎ" เช่น DCA BTC ทุกวันจันทร์ ฿1,000 หรือ ซื้อ PTT เมื่อ RSI ≤ 30','No rules yet — start with "Add rule", e.g. DCA BTC every Monday ฿1,000, or buy PTT when RSI ≤ 30')}</div>`;
+
+  const pos=val.rows||[];
+  const led=(data.state.ledger||[]).slice(-30).reverse();
+  el.innerHTML=`
+    <div class="ab-banner"><svg class="ic" aria-hidden="true"><use href="#i-lock"/></svg><div>
+      <b>${_L('โหมดทดลอง (paper) — บอทยังไม่ส่งคำสั่งจริง','Paper mode — the bot does not place real orders')}</b>
+      <span>${_L('ทุกคำสั่งเป็นพอร์ตจำลองที่ราคาตลาดจริง ใช้ทดสอบกฎก่อนเปิดใช้เงินจริงในเฟสถัดไป · ไม่ใช่คำแนะนำการลงทุน',
+        'Every order fills a simulated portfolio at real market prices, to test rules before real money in a later phase · not investment advice')}</span>
+      <span class="ab-where">${conn
+        ? (_ab.err ? `<span class="loss">⚠ Worker: ${escHtml(_ab.err)}</span>`
+           : _L(`รันที่ Cloudflare Worker · ตรวจทุก 15 นาทีแม้ปิดแอป`,`Running on the Cloudflare Worker · checks every 15 min even with the app closed`)+(lr?` · ${_L('ล่าสุด','last')} ${ago} ${_L('นาทีก่อน','min ago')} (${lr.source})`:''))
+        : _L('รันในเครื่องนี้ · ตรวจเมื่อกด "ตรวจเงื่อนไขตอนนี้" — เชื่อม Worker เพื่อให้ตรวจเองทุก 15 นาที','Running on this device · checks when you press "Check now" — connect the Worker to check every 15 min')+(lr?` · ${_L('ล่าสุด','last')} ${agoTxt(lr.t)}`:'')}</span>
+    </div></div>
+    <div class="sg">
+      <div class="sc"><div class="sc-lbl">${_L('มูลค่าพอร์ตจำลอง','Paper portfolio value')}</div><div class="sc-val">${fmt(val.equity)}</div>
+        <div class="sc-sub">${_L('เริ่มต้น','Started with')} ${fmt(data.state.startTHB)}</div></div>
+      <div class="sc"><div class="sc-lbl">${_L('กำไร/ขาดทุน','Profit / loss')}</div><div class="sc-val ${val.pnlTHB>=0?'gain':'loss'}">${fmtSign(val.pnlTHB)}</div>
+        <div class="sc-sub">${val.pnlPct!=null?(val.pnlPct>=0?'+':'−')+Math.abs(val.pnlPct*100).toFixed(2)+'%':'—'} · ${_L('หักค่าธรรมเนียมโดยประมาณแล้ว','after estimated fees')}</div></div>
+      <div class="sc"><div class="sc-lbl">${_L('เงินสดจำลอง','Paper cash')}</div><div class="sc-val">${fmt(val.cash)}</div>
+        <div class="sc-sub">${_L('ในสินทรัพย์','In assets')} ${fmt(val.positionsTHB)}</div></div>
+      <div class="sc"><div class="sc-lbl">${_L('คำสั่งที่บอททำ','Orders placed (paper)')}</div><div class="sc-val">${(data.state.ledger||[]).length}</div>
+        <div class="sc-sub">${data.rules.filter(r=>r.enabled).length}/${data.rules.length} ${_L('กฎเปิดอยู่','rules on')}</div></div>
+    </div>
+    <div class="ab-bar">
+      <button type="button" class="rb-btn primary" onclick="abEdit(null)">+ ${_L('เพิ่มกฎ','Add rule')}</button>
+      <button type="button" class="rb-btn" onclick="abRunNow()" ${_ab.busy?'disabled':''}>${_ab.busy?_L('กำลังตรวจ…','Checking…'):_L('ตรวจเงื่อนไขตอนนี้','Check now')}</button>
+      <span class="ab-sp"></span>
+      <button type="button" class="rb-btn" onclick="abOpenWorker()">${conn?_L('ตั้งค่า Worker','Worker settings'):_L('เชื่อม Worker','Connect Worker')}</button>
+      <button type="button" class="rb-btn" onclick="abReset()">${_L('เริ่มพอร์ตจำลองใหม่','Reset paper portfolio')}</button>
+    </div>
+    <div class="sl">${_L('กฎของบอท','Bot rules')}</div>
+    <div class="cc ab-rules">${rulesHtml}</div>
+    ${pos.length?`<div class="sl sl-mt">${_L('สินทรัพย์ในพอร์ตจำลอง','Paper holdings')}</div>
+    <div class="tw"><table class="at"><thead><tr><th>${_L('สินทรัพย์','Asset')}</th><th class="r">${_L('จำนวน','Qty')}</th><th class="r">${_L('ต้นทุน','Cost')}</th><th class="r">${_L('มูลค่า','Value')}</th><th class="r">P/L</th></tr></thead><tbody>
+      ${pos.map(p=>`<tr><td class="tk">${escHtml(p.symbol)}</td><td class="r">${p.qty<1?p.qty.toFixed(6):p.qty.toLocaleString(LOC,{maximumFractionDigits:4})}</td>
+        <td class="r">${fmt(p.costTHB)}</td><td class="r">${p.valueTHB==null?'—':fmt(p.valueTHB)}</td>
+        <td class="${p.pnlTHB==null?'pz':p.pnlTHB>=0?'pp':'pn'}">${p.pnlTHB==null?'—':fmtSign(p.pnlTHB)}</td></tr>`).join('')}</tbody></table></div>`:''}
+    <div class="sl sl-mt">${_L('คำสั่งล่าสุด (จำลอง)','Recent orders (paper)')}</div>
+    ${led.length?`<div class="tw"><table class="at"><thead><tr><th>${_L('เวลา','Time')}</th><th>${_L('กฎ','Rule')}</th><th>${_L('คำสั่ง','Order')}</th>
+      <th class="r">${_L('ราคา','Price')}</th><th class="r">${_L('จำนวนเงิน','Amount')}</th><th>${_L('เหตุผล','Why')}</th></tr></thead><tbody>
+      ${led.map(o=>`<tr><td>${new Date(o.t).toLocaleString(LOC,{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</td><td>${escHtml(o.rule||'')}</td>
+        <td><b class="${o.side==='buy'?'gain':'loss'}">${o.side==='buy'?_L('ซื้อ','Buy'):_L('ขาย','Sell')}</b> ${escHtml(o.symbol)} <span class="ab-chip">${escHtml(_L(...(AB_BROKER[o.broker]||['—','—'])))}</span></td>
+        <td class="r">${Number(o.price).toLocaleString(LOC,{maximumFractionDigits:4})} ${escHtml(o.ccy)}</td><td class="r">${fmt(o.amountTHB)}</td>
+        <td class="ab-why">${escHtml(_L(o.why||'', o.whyEn||o.why||''))}</td></tr>`).join('')}</tbody></table></div>`
+      :`<div class="ab-empty">${_L('ยังไม่มีคำสั่ง','No orders yet')}</div>`}
+    <p class="ab-note">${_L(`ค่าธรรมเนียมที่ใช้คำนวณ (ประมาณ): Binance ${AutoBot.FEES.binance*100}% · หุ้นไทย ${AutoBot.FEES.settrade*100}% · Dime/Streaming ไม่คิด ·
+      ราคาหุ้น/RSI/จุดสูงสุดมาจาก market-data.json (อัปเดตวันละ 2 รอบ) · crypto บน Worker ใช้ราคาสดจาก Binance ·
+      Dime/Streaming ไม่มี API ส่งคำสั่ง — ในเฟสเงินจริงกฎของโบรกเกอร์นี้จะเป็น "แจ้งเตือนให้ไปกดเอง"`,
+      `Fees used (estimates): Binance ${AutoBot.FEES.binance*100}% · Thai stocks ${AutoBot.FEES.settrade*100}% · Dime/Streaming none ·
+      stock prices/RSI/52-week highs come from market-data.json (updated twice a day) · crypto on the Worker uses live Binance prices ·
+      Dime/Streaming have no order API — in the real-money phase their rules become "go place it yourself" alerts`)}</p>`;
+}
+
+// ── แก้ไขข้อมูล (ในเครื่อง หรือส่งไป Worker) ──
+async function _abSaveRules(rules){
+  const loc=_abLocal(); loc.rules=rules; _abSaveLocal(loc);       // เก็บสำเนาในเครื่องเสมอ (ใช้ต่อได้ถ้าเลิกใช้ Worker)
+  if(_abConnected()){ await _abApi('PUT','/rules',{rules}); _ab.remote=null; _ab.err=''; }
+}
+async function abToggle(id, on){
+  const rules=(_abConnected() && _ab.remote ? _ab.remote.rules : _abLocal().rules).map(r=>r.id===id?{...r, enabled:on}:r);
+  try{ await _abSaveRules(rules); }catch(e){ alert(e.message); }
+  renderAutoBot();
+}
+async function abDelete(id){
+  const src=_abConnected() && _ab.remote ? _ab.remote.rules : _abLocal().rules;
+  const r=src.find(x=>x.id===id); if(!r || !confirm(_L(`ลบกฎ "${r.name}"?`,`Delete rule "${r.name}"?`))) return;
+  try{ await _abSaveRules(src.filter(x=>x.id!==id)); }catch(e){ alert(e.message); }
+  renderAutoBot();
+}
+async function abRunNow(){
+  _ab.busy=true; renderAutoBot();
+  try{
+    if(_abConnected()){ const r=await _abApi('POST','/run'); _ab.remote=null; _ab.err='';
+      if(r && !r.mdOk) alert(_L('Worker อ่าน market-data.json ไม่ได้ — ตรวจ MARKET_URL ใน wrangler.toml','The Worker could not read market-data.json — check MARKET_URL in wrangler.toml')); }
+    else{
+      const loc=_abLocal(), res=AutoBot.runPaper(loc.rules, loc.state, _abMarket());
+      loc.state=res.state; loc.lastRun={t:Date.now(), source:'manual', orders:res.orders.length, skipped:res.skipped, mode:'paper'};
+      _abSaveLocal(loc);
+    }
+  }catch(e){ _ab.err=e.message; }
+  _ab.busy=false; renderAutoBot();
+}
+async function abReset(){
+  const v=prompt(_L('เริ่มพอร์ตจำลองใหม่ด้วยเงินกี่บาท? (ประวัติคำสั่งจำลองเดิมจะหาย กฎยังอยู่)','Restart the paper portfolio with how many baht? (paper order history is cleared, rules are kept)'), '100000');
+  if(v==null) return;
+  const n=Number(String(v).replace(/[,\s฿]/g,''));
+  if(!(n>0)){ alert(_L('ใส่จำนวนเงินมากกว่า 0','Enter an amount above 0')); return; }
+  try{
+    if(_abConnected()){ await _abApi('POST','/reset',{startTHB:n}); _ab.remote=null; }
+    else{ const loc=_abLocal(); loc.state=AutoBot.newState(n); loc.lastRun=null; _abSaveLocal(loc); }
+  }catch(e){ alert(e.message); }
+  renderAutoBot();
+}
+
+// ── ฟอร์มกฎ ──
+function abEdit(id){
+  const src=_abConnected() && _ab.remote ? _ab.remote.rules : _abLocal().rules;
+  const r=id?src.find(x=>x.id===id):{ name:'', enabled:true, broker:'binance', symbol:'BTC', side:'buy', trigger:{kind:'schedule', every:'week', day:1}, amountTHB:1000, cooldownDays:0, maxTotalTHB:'' };
+  if(!r) return;
+  _ab.editId=id;
+  const t=r.trigger||{};
+  const syms=Object.keys((loadActions()||{}).prices||{}).sort();
+  const opt=(v,l,cur)=>`<option value="${v}"${String(v)===String(cur)?' selected':''}>${l}</option>`;
+  document.getElementById('ab-form').innerHTML=`
+    <div class="gs-field"><div class="gs-label">${_L('ชื่อกฎ','Rule name')}</div><input id="abf-name" class="gs-input" value="${escAttr(r.name)}" placeholder="${_L('เช่น DCA BTC ทุกจันทร์','e.g. DCA BTC every Monday')}"></div>
+    <div class="tx-g2">
+      <div class="gs-field"><div class="gs-label">${_L('ส่งไปที่','Broker')}</div><select id="abf-broker" class="gs-input">
+        ${Object.entries(AB_BROKER).map(([k,v])=>opt(k,_L(...v),r.broker)).join('')}</select></div>
+      <div class="gs-field"><div class="gs-label">${_L('สินทรัพย์','Asset')}</div><input id="abf-sym" class="gs-input" list="abf-syms" value="${escAttr(r.symbol)}" autocapitalize="characters" spellcheck="false">
+        <datalist id="abf-syms">${syms.map(s=>`<option value="${escAttr(s)}">`).join('')}</datalist></div>
+    </div>
+    <div class="tx-g2">
+      <div class="gs-field"><div class="gs-label">${_L('คำสั่ง','Order')}</div><select id="abf-side" class="gs-input">${opt('buy',_L('ซื้อ','Buy'),r.side)}${opt('sell',_L('ขาย','Sell'),r.side)}</select></div>
+      <div class="gs-field"><div class="gs-label">${_L('จำนวนเงินต่อครั้ง (บาท)','Amount per order (THB)')}</div><input id="abf-amt" class="gs-input" type="number" min="1" step="any" value="${escAttr(r.amountTHB)}"></div>
+    </div>
+    <div class="gs-field"><div class="gs-label">${_L('ทำเมื่อ','When')}</div><select id="abf-kind" class="gs-input" onchange="abKindChanged()">
+      ${opt('schedule',_L('ตามรอบเวลา (DCA)','On a schedule (DCA)'),t.kind)}${opt('price_below',_L('ราคาต่ำกว่าหรือเท่ากับ','Price at or below'),t.kind)}
+      ${opt('price_above',_L('ราคาสูงกว่าหรือเท่ากับ','Price at or above'),t.kind)}${opt('drop_from_high',_L('ลดลงจากจุดสูงสุด 52 สัปดาห์','Drop from 52-week high'),t.kind)}
+      ${opt('rsi_below',_L('RSI ต่ำกว่าหรือเท่ากับ (ขายมากเกิน)','RSI at or below (oversold)'),t.kind)}${opt('rsi_above',_L('RSI สูงกว่าหรือเท่ากับ (ซื้อมากเกิน)','RSI at or above (overbought)'),t.kind)}</select></div>
+    <div id="abf-kind-f"></div>
+    <div class="tx-g2">
+      <div class="gs-field"><div class="gs-label">${_L('พักหลังทำแต่ละครั้ง (วัน)','Cooldown after each order (days)')}</div><input id="abf-cd" class="gs-input" type="number" min="0" step="1" value="${escAttr(r.cooldownDays||0)}"></div>
+      <div class="gs-field"><div class="gs-label">${_L('วงเงินรวมของกฎนี้ (บาท · เว้นว่าง = ไม่จำกัด)','Total cap for this rule (THB · blank = none)')}</div><input id="abf-cap" class="gs-input" type="number" min="0" step="any" value="${escAttr(r.maxTotalTHB||'')}"></div>
+    </div>
+    <div class="auth-msg" id="abf-msg" role="alert"></div>`;
+  document.getElementById('ab-modal-title').textContent=id?_L('แก้ไขกฎ','Edit rule'):_L('เพิ่มกฎ','Add rule');
+  abKindChanged(t);
+  document.getElementById('ab-modal').classList.add('show');
+  setTimeout(()=>document.getElementById('abf-name')?.focus(),30);
+}
+function abKindChanged(cur){
+  const k=document.getElementById('abf-kind').value, t=(cur && cur.kind===k)?cur:{};
+  const f=document.getElementById('abf-kind-f');
+  if(k==='schedule'){
+    const ev=t.every||'week', day=t.day||1;
+    f.innerHTML=`<div class="tx-g2"><div class="gs-field"><div class="gs-label">${_L('ทุก','Every')}</div><select id="abf-every" class="gs-input" onchange="abKindChanged({kind:'schedule',every:this.value,day:1})">
+      <option value="week"${ev==='week'?' selected':''}>${_L('สัปดาห์','week')}</option><option value="month"${ev==='month'?' selected':''}>${_L('เดือน','month')}</option></select></div>
+      <div class="gs-field"><div class="gs-label">${ev==='week'?_L('วัน','Day'):_L('วันที่ (1–28)','Day of month (1–28)')}</div>
+      ${ev==='week'?`<select id="abf-day" class="gs-input">${[[1,'จันทร์','Mon'],[2,'อังคาร','Tue'],[3,'พุธ','Wed'],[4,'พฤหัสบดี','Thu'],[5,'ศุกร์','Fri'],[6,'เสาร์','Sat'],[7,'อาทิตย์','Sun']].map(([v,a,b])=>`<option value="${v}"${v==day?' selected':''}>${_L(a,b)}</option>`).join('')}</select>`
+        :`<input id="abf-day" class="gs-input" type="number" min="1" max="28" step="1" value="${day}">`}</div></div>`;
+  } else {
+    const isPct=k==='drop_from_high', v=isPct?(t.pct||''):(t.value||'');
+    const lbl={price_below:_L('ราคา (สกุลเงินของสินทรัพย์ เช่น USD สำหรับ BTC)','Price (asset currency, e.g. USD for BTC)'),price_above:_L('ราคา (สกุลเงินของสินทรัพย์)','Price (asset currency)'),
+      drop_from_high:_L('ลดลงอย่างน้อย (%)','At least (%) below'),rsi_below:'RSI (0–100)',rsi_above:'RSI (0–100)'}[k];
+    f.innerHTML=`<div class="gs-field"><div class="gs-label">${lbl}</div><input id="abf-val" class="gs-input" type="number" min="0" step="any" value="${escAttr(v)}"></div>`;
+  }
+}
+async function abSaveForm(){
+  const g=id=>document.getElementById(id), msg=g('abf-msg');
+  const kind=g('abf-kind').value;
+  const trigger = kind==='schedule' ? {kind, every:g('abf-every').value, day:parseInt(g('abf-day').value,10)}
+    : kind==='drop_from_high' ? {kind, pct:Number(g('abf-val').value)} : {kind, value:Number(g('abf-val').value)};
+  const src=_abConnected() && _ab.remote ? _ab.remote.rules : _abLocal().rules;
+  const old=_ab.editId?src.find(x=>x.id===_ab.editId):null;
+  const rule={ id:_ab.editId || ('r'+Date.now().toString(36)+Math.random().toString(36).slice(2,6)), name:g('abf-name').value.trim(),
+    enabled:old?old.enabled:true, broker:g('abf-broker').value, symbol:g('abf-sym').value.trim().toUpperCase(), side:g('abf-side').value,
+    trigger, amountTHB:Number(g('abf-amt').value), cooldownDays:Number(g('abf-cd').value)||0, maxTotalTHB:g('abf-cap').value===''?'':Number(g('abf-cap').value) };
+  const err=AutoBot.validateRule(rule);
+  if(err){ msg.className='auth-msg'; msg.textContent=_L(err, AutoBot.ERR_EN[err]||err); return; }
+  if(!(loadActions()||{}).prices?.[rule.symbol])
+    msg.className='auth-msg ok', msg.textContent=_L(`⚠ ยังไม่มีราคา ${rule.symbol} ใน market-data — กฎจะรอจนมีราคา (เพิ่มใน Watchlist ของ pipeline)`,`⚠ No price for ${rule.symbol} in market-data yet — the rule waits until one exists`);
+  const rules=old?src.map(x=>x.id===old.id?rule:x):[...src, rule];
+  try{ await _abSaveRules(rules); }catch(e){ msg.className='auth-msg'; msg.textContent=e.message; return; }
+  abCloseForm(); renderAutoBot();
+}
+function abCloseForm(){ document.getElementById('ab-modal')?.classList.remove('show'); _ab.editId=null; }
+
+// ── ตั้งค่า Worker ──
+async function abOpenWorker(){
+  const c=_abCfg(), tok=await _abToken();
+  document.getElementById('abw-url').value=c.url||'';
+  document.getElementById('abw-token').value=tok?'••••••••':'';
+  document.getElementById('abw-msg').textContent='';
+  document.getElementById('abw-modal').classList.add('show');
+}
+async function abSaveWorker(disconnect){
+  const msg=document.getElementById('abw-msg');
+  if(disconnect){ localStorage.removeItem(AB_CFG); localStorage.removeItem('finOS_'+AB_TOKEN); try{ if(window.Vault && Vault.isUnlocked()) Vault.removeItem(AB_TOKEN); }catch(e){}
+    _ab.remote=null; _ab.err=''; document.getElementById('abw-modal').classList.remove('show'); renderAutoBot(); return; }
+  const url=document.getElementById('abw-url').value.trim(), tok=document.getElementById('abw-token').value.trim();
+  if(!/^https:\/\/[^\s/]+/.test(url)){ msg.className='auth-msg'; msg.textContent=_L('URL ต้องขึ้นต้นด้วย https://','URL must start with https://'); return; }
+  localStorage.setItem(AB_CFG, JSON.stringify({url}));
+  if(tok && tok!=='••••••••') await _abSetToken(tok);
+  msg.className='auth-msg ok'; msg.textContent=_L('กำลังทดสอบ…','Testing…');
+  try{
+    const st=await _abApi('GET','/state');
+    const local=_abLocal().rules;
+    if(!st.rules.length && local.length && confirm(_L(`Worker ยังไม่มีกฎ — ส่งกฎ ${local.length} ข้อจากเครื่องนี้ไปเลยไหม?`,`The Worker has no rules — send the ${local.length} rules from this device?`)))
+      await _abApi('PUT','/rules',{rules:local});
+    _ab.remote=null; _ab.err='';
+    document.getElementById('abw-modal').classList.remove('show'); renderAutoBot();
+  }catch(e){ msg.className='auth-msg'; msg.textContent=_L('เชื่อมไม่ได้: ','Could not connect: ')+e.message; }
+}
+
 // ── Events ────────────────────────────────────────────────────────────
 
 document.getElementById('prev-month').addEventListener('click',()=>{
@@ -10887,28 +11268,8 @@ function renderInsurance(){
       <div class="ins-ov-sub">${c.sub}</div>
     </div>`).join('');
 
-  // ── My Policy score cards ──
-  document.getElementById('ins-mypolicy-grid').innerHTML=insPolicies.map(p=>{
-    const stCls=insStatusClass(p.status);
-    const stColor=stCls==='inforce'?'var(--income)':stCls==='lapsed'?'var(--expense)':'var(--muted2)';
-    const rd=insIsActive(p)?insNextRenewal(p):insDate(p.renewal);   // v72 — รอบถัดไปจริง
-    const renewalStr=rd?`${MONTH_ABBR[rd.getMonth()]} ${rd.getDate()}, ${rd.getFullYear()}`:'—';
-    return `<div class="ins-mypolicy-card">
-      <div class="ins-mypolicy-top">
-        <div>
-          <div class="ins-mypolicy-name">${escHtml(p.planName)}</div>
-          <div class="ins-mypolicy-provider">${escHtml(p.provider)} · ${escHtml(p.category)}</div>
-        </div>
-        <span class="ins-status-pill ${stCls}">${escHtml(p.status||'—')}</span>
-      </div>
-      <div class="ins-mypolicy-rows">
-        <div class="ins-mypolicy-row"><span>Policy ID</span><span>${escHtml(p.policyId)}</span></div>
-        <div class="ins-mypolicy-row"><span>Premium/year</span><span>${p.premium>0?fmt(p.premium):'—'}</span></div>
-        <div class="ins-mypolicy-row"><span>Renewal</span><span>${renewalStr}</span></div>
-        <div class="ins-mypolicy-row"><span>Cash Value</span><span>${p.surrender>0?fmt(p.surrender):'—'}</span></div>
-      </div>
-    </div>`;
-  }).join('');
+  // ── My Policy — รายการจัดกลุ่มตามประเภท (v74) ──
+  renderInsPolicyList();
 
   // ── Coverage score cards — group by Coverage_Type ──
   const covByType={};
@@ -11062,6 +11423,55 @@ function renderInsurance(){
   }).join('');
 }
 
+/* ══ v74 — My Policy แบบรายการ ═══════════════════════════════════════════ */
+const _insOpen=new Set();
+function insTogglePolicyRow(id){ _insOpen.has(id)?_insOpen.delete(id):_insOpen.add(id); renderInsPolicyList(); }
+function renderInsPolicyList(){
+  const el=document.getElementById('ins-mypolicy-grid'); if(!el) return;
+  const now=new Date(); now.setHours(0,0,0,0);
+  const covOf={}; (insCoverage||[]).forEach(c=>{ (covOf[c.policyId]=covOf[c.policyId]||[]).push(c); });
+  const rows=insPolicies.map(p=>{
+    const active=insIsActive(p);
+    const rd=active?insNextRenewal(p):insDate(p.renewal);
+    const days=rd&&active?Math.ceil((rd-now)/864e5):null;
+    return {p, active, rd, days, cat:String(p.category||'').trim()||_L('อื่น ๆ','Other')};
+  });
+  // กลุ่ม: ประเภทของกรมธรรม์ที่ยังมีผล (เบี้ยรวมมากก่อน) · ขาดผลแล้วรวมไว้กลุ่มสุดท้าย
+  const groups={};
+  rows.forEach(r=>{ const k=r.active?r.cat:'__ended'; (groups[k]=groups[k]||[]).push(r); });
+  const prem=list=>list.reduce((s,r)=>s+(r.active?(r.p.premium||0):0),0);
+  const keys=Object.keys(groups).filter(k=>k!=='__ended').sort((a,b)=>prem(groups[b])-prem(groups[a]));
+  if(groups.__ended) keys.push('__ended');
+  const dLbl=r=>{
+    if(!r.rd) return '<span class="ip-mute">—</span>';
+    const d=`${MONTH_ABBR[r.rd.getMonth()]} ${r.rd.getDate()}, ${r.rd.getFullYear()}`;
+    if(r.days==null) return `<span class="ip-mute">${d}</span>`;
+    const soon=r.days<=60;
+    return `${d}<small class="${soon?'ip-soon':''}">${r.days===0?_L('วันนี้','today'):_L(`อีก ${r.days} วัน`,`in ${r.days} days`)}</small>`;
+  };
+  const row=r=>{
+    const p=r.p, id=String(p.policyId||''), open=_insOpen.has(id), cov=covOf[id]||[];
+    const st=insStatusClass(p.status);
+    return `<div class="ip-row${r.active?'':' ended'}${open?' open':''}" role="button" tabindex="0" aria-expanded="${open}"
+        onclick="insTogglePolicyRow('${escAttr(id)}')" onkeydown="if(event.key==='Enter')insTogglePolicyRow('${escAttr(id)}')">
+      <div class="ip-name"><b>${escHtml(p.planName||'—')}</b><small>${escHtml(p.provider||'')} · <span class="ip-id">${escHtml(id)}</span></small></div>
+      <div class="ip-st"><span class="ins-status-pill ${st}">${escHtml(p.status||'—')}</span></div>
+      <div class="ip-num" data-l="${_L('เบี้ย/ปี','Premium/yr')}">${p.premium>0?fmt(p.premium):'<span class="ip-mute">—</span>'}</div>
+      <div class="ip-num" data-l="${_L('ต่ออายุ','Renewal')}">${dLbl(r)}</div>
+      <div class="ip-num" data-l="${_L('มูลค่าเวนคืน','Cash value')}">${p.surrender>0?fmt(p.surrender):'<span class="ip-mute">—</span>'}</div>
+      <div class="ip-chev" aria-hidden="true">${cov.length?'<svg class="ic"><use href="#i-chev"/></svg>':''}</div>
+    </div>${open?`<div class="ip-cov">${cov.length?cov.map(c=>{ const m=insCovMeta(insCovKey(c.covType));
+        return `<div class="ip-cov-it"><span>${m.icon} ${escHtml(m.label)}${c.benefit?` <small>${escHtml(c.benefit)}</small>`:''}</span>
+          <b>${c.amount>0?fmt(c.amount)+' <small>'+escHtml(INS_UNIT_LABEL[c.unit]||c.unit||'')+'</small>':'—'}</b></div>`; }).join('')
+      :`<div class="ip-mute">${_L('ไม่มีรายการความคุ้มครองของกรมธรรม์นี้ในชีต Insurance_Coverage','No coverage rows for this policy in the Insurance_Coverage sheet')}</div>`}</div>`:''}`;
+  };
+  el.innerHTML=`<div class="ip-hd"><span>${_L('กรมธรรม์','Policy')}</span><span>${_L('สถานะ','Status')}</span><span class="r">${_L('เบี้ย/ปี','Premium/yr')}</span>
+      <span class="r">${_L('ต่ออายุครั้งถัดไป','Next renewal')}</span><span class="r">${_L('มูลค่าเวนคืน','Cash value')}</span><span></span></div>`
+    + keys.map(k=>{ const g=groups[k].sort((a,b)=>(b.p.premium||0)-(a.p.premium||0));
+      const name=k==='__ended'?_L('ขาดผล / สิ้นสุดแล้ว','Lapsed / ended'):escHtml(k);
+      const pr=prem(g);
+      return `<div class="ip-grp"><span>${name}</span><small>${g.length} ${_L('เล่ม','policies')}${pr>0?' · '+_L('เบี้ยรวม ','premium ')+fmt(pr)+_L('/ปี','/yr'):''}</small></div>`+g.map(row).join(''); }).join('');
+}
 function insTogglePolicyTable(){
   const sec=document.getElementById('ins-policy-table-section');
   if(!sec)return;
@@ -11996,6 +12406,36 @@ document.addEventListener('DOMContentLoaded', () => {
     <button type="button" role="menuitem" class="am-it" onclick="menusClose();acctOpen()"><svg class="ic" aria-hidden="true"><use href="#i-user"/></svg>บัญชีและความปลอดภัย</button>
     <button type="button" role="menuitem" class="am-it" id="am-lock" onclick="authLock()" hidden><svg class="ic" aria-hidden="true"><use href="#i-lock"/></svg>ล็อกตอนนี้</button>
     <button type="button" role="menuitem" class="am-it" onclick="menusClose();authSignOut()"><svg class="ic" aria-hidden="true"><use href="#i-logout"/></svg>ออกจากระบบ</button>
+  </div>
+</div>
+
+<!-- v75 — ฟอร์มกฎบอทเทรด -->
+<div id="ab-modal" class="gs-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="ab-modal-title">
+  <div class="gs-modal ab-modal">
+    <div class="gs-modal-close" onclick="abCloseForm()" role="button" aria-label="ปิด">✕</div>
+    <div class="gs-modal-title" id="ab-modal-title">เพิ่มกฎ</div>
+    <div id="ab-form"></div>
+    <div class="gs-modal-actions">
+      <button class="gs-save-btn" onclick="abSaveForm()">บันทึกกฎ</button>
+      <button class="gs-cancel-btn" onclick="abCloseForm()">ยกเลิก</button>
+    </div>
+  </div>
+</div>
+<!-- v75 — เชื่อม Cloudflare Worker ของบอท -->
+<div id="abw-modal" class="gs-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="abw-title">
+  <div class="gs-modal">
+    <div class="gs-modal-close" onclick="document.getElementById('abw-modal').classList.remove('show')" role="button" aria-label="ปิด">✕</div>
+    <div class="gs-modal-title" id="abw-title">เชื่อม Cloudflare Worker</div>
+    <p class="acct-p">ให้บอทตรวจกฎทุก 15 นาทีแม้ปิดแอป — ติดตั้งตามขั้นตอนใน cloudflare-worker/autobot/README.md แล้วใส่ URL กับ token ที่ตั้งไว้</p>
+    <div class="gs-field"><div class="gs-label">Worker URL</div>
+      <input id="abw-url" class="gs-input" type="url" placeholder="https://financetracker-autobot.xxx.workers.dev" autocomplete="off" spellcheck="false"></div>
+    <div class="gs-field"><div class="gs-label">BOT_TOKEN</div>
+      <input id="abw-token" class="gs-input" type="password" autocomplete="off" spellcheck="false"></div>
+    <div class="auth-msg" id="abw-msg" role="alert"></div>
+    <div class="gs-modal-actions">
+      <button class="gs-save-btn" onclick="abSaveWorker(false)">บันทึก &amp; ทดสอบ</button>
+      <button class="gs-cancel-btn" onclick="abSaveWorker(true)">เลิกเชื่อม</button>
+    </div>
   </div>
 </div>
 

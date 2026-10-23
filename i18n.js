@@ -284,6 +284,14 @@ const DICT = {
   'ตั้งค่า Google Sheets':'Google Sheets settings', 'ออกจากระบบ':'Sign out', 'ธีม':'Theme', 'ภาษา':'Language',
   'ตั้งค่า':'Settings', 'ตั้งค่าการแจ้งเตือน':'Notification settings', 'รหัสผ่านและล็อกอัตโนมัติ':'Password & auto-lock',
   'คาดการณ์ 12 เดือนข้างหน้า':'Next 12 months (forecast)',
+  'ผลตอบแทนจริง':'True performance',
+  // ── v75 — บอทเทรด ──
+  'บอทเทรด':'Trading bot', 'บันทึกกฎ':'Save rule', 'เพิ่มกฎ':'Add rule', 'เชื่อม Cloudflare Worker':'Connect Cloudflare Worker',
+  'ตั้งกฎให้บอทซื้อขายแทน — ตอนนี้ทดลองด้วยพอร์ตจำลองก่อน ยังไม่ใช้เงินจริง':'Set rules for the bot to trade for you — paper portfolio for now, no real money yet',
+  'ให้บอทตรวจกฎทุก 15 นาทีแม้ปิดแอป — ติดตั้งตามขั้นตอนใน cloudflare-worker/autobot/README.md แล้วใส่ URL กับ token ที่ตั้งไว้':
+    'Let the bot check rules every 15 minutes even with the app closed — install it using cloudflare-worker/autobot/README.md, then enter the URL and token you set',
+  'บันทึก & ทดสอบ':'Save & test', 'เลิกเชื่อม':'Disconnect',
+  'ลงทุนแล้วได้อะไรเพิ่ม — เทียบกับเอาเงินก้อนเดียวกันไปฝากธนาคาร':'What investing actually earned you — compared with the same money in a bank deposit',
   'True Performance — ลงทุนแล้วได้อะไรเพิ่ม':'True Performance — what investing actually earned you',
   'ผลตอบแทนต่อปี (XIRR)':'Return per year (XIRR)', 'เงินเข้า → ออก + มูลค่า':'Money in → out + value',
   'ผลของพอร์ตเอง (TWR)':'Holdings only (TWR)', '🚀 กำไรมาจากไหน (เรียงตามบาท)':'🚀 Where the gain came from (by baht)',

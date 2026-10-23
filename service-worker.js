@@ -22,7 +22,7 @@
 // หน้านั้นถูกยุบเข้า index.html และลบออกจาก repo แล้ว ถ้ายังอยู่ในลิสต์
 // ทุกครั้งที่ install จะ log "ข้ามไฟล์ที่หาไม่เจอ" ซึ่งเป็น noise ที่จะกลบ
 // warning จริงในอนาคต (กลไกข้ามไฟล์หายทำงานถูกแล้ว — แต่ต้องไม่มีของหายตั้งแต่แรก)
-const CACHE_NAME = 'finance-os-v74';  // bump version so old cache is cleared on deploy
+const CACHE_NAME = 'finance-os-v75';  // bump version so old cache is cleared on deploy
 const BASE = '/personaltracker-dashboard';
 
 // App shell — files to pre-cache on install
@@ -36,6 +36,7 @@ const SHELL_FILES = [
   BASE + '/i18n.js',                   // v65 — สลับภาษา TH/EN
   BASE + '/shared.js',                 // data layer กลาง — ต้อง precache ให้ offline ทำงาน
   BASE + '/vault.js',                  // v74 — ล็อกด้วยรหัสผ่าน + เข้ารหัส cache (ไม่มีไฟล์นี้ = หน้าเข้าสู่ระบบใช้ไม่ได้ตอนออฟไลน์)
+  BASE + '/autobot.js',                // v75 — ตัวประเมินกฎของบอทเทรด (ไฟล์เดียวกับใน Worker)
   BASE + '/manifest.json',
   BASE + '/icon/icon-192x192.png',
   BASE + '/icon/icon-512x512.png',
