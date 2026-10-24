@@ -228,6 +228,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--f-body);min-height
 /* ── Page header ── */
 /* v56 — แท็บในเมนู · ทางลัดบน Overview */
 .grp-tabs{display:flex;gap:2px;overflow-x:auto;margin:0 0 18px;border-bottom:1px solid var(--border);scrollbar-width:none}
+/* v76 — แถบสูงกว่ากล่อง 1px (margin-bottom:-1px ของแท็บ) + overflow-y:auto → iOS ให้แถบเด้งขึ้นลงตอนปัดแนวนอน
+   (มือถือแนวนอน: แท็บหลุดลงไปครึ่งตัวใต้เส้นขอบ) · ล็อกให้เลื่อนได้แนวนอนอย่างเดียว */
+.grp-tabs{overflow-y:hidden;overscroll-behavior-x:contain}
 .grp-tabs::-webkit-scrollbar{display:none}
 .grp-tab{background:none;border:none;border-bottom:2px solid transparent;color:var(--muted2);padding:9px 14px;font:inherit;font-size:12.5px;cursor:pointer;white-space:nowrap;margin-bottom:-1px}
 .grp-tab:hover{color:var(--text)}
@@ -1674,7 +1677,11 @@ kbd{font-family:var(--f-chip);font-size:10.5px;color:var(--muted);border:1px sol
 .menu-toggle .ic,.notif-bell .ic{width:18px;height:18px}
 @media(max-width:768px){
   .page{padding:16px;padding-top:calc(16px + env(safe-area-inset-top,0px));padding-bottom:calc(86px + env(safe-area-inset-bottom,0px))}
-  .grp-tabs{padding-left:14px;padding-right:60px}
+  /* v76 — กฎ .grp-tabs{padding:0 32px} ด้านบน (นอก media) ทับ padding-top แบบ safe-area ของ v66 → แถวแรกของชิปติดอยู่ใต้
+     แถบสถานะ iPhone (เวลา/แบต) มองไม่เห็น · ติดขอบที่ "ใต้แถบสถานะ" แทน (top: safe-area) + พื้นทึบรองแถบสถานะ (#app::before) */
+  .grp-tabs{padding:8px 60px 8px 14px;top:env(safe-area-inset-top,0px)}
+  #grp-tabs{margin-top:env(safe-area-inset-top,0px)}
+  #app::before{content:'';position:fixed;left:0;right:0;top:0;height:env(safe-area-inset-top,0px);background:var(--bg);z-index:95;pointer-events:none}
   .grp-tab{border-radius:999px;padding:6px 12px;margin:0;background:transparent;border-color:var(--border)}
   .grp-tab.active{border-color:var(--fg);color:var(--fg);background:var(--bg4)}
   .pg-title{font-size:22px}
