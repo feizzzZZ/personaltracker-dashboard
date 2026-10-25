@@ -16,7 +16,7 @@ window.LOC = window.LOC || 'th-TH-u-ca-gregory';
 //   • XIRR engine
 // กติกา: ไฟล์นี้ห้ามแตะ DOM ของหน้าใดหน้าหนึ่ง — pure data layer เท่านั้น
 // ═══════════════════════════════════════════════════════════════════
-const APP_BUILD = 'v76';
+const APP_BUILD = 'v78';
 console.log('[FinanceTracker shared] build', APP_BUILD);
 window.SHARED_BUILD = APP_BUILD;   // v45 — ให้ index.html ตรวจได้ว่าเวอร์ชันตรงกัน
  
@@ -2961,4 +2961,274 @@ function sheetRowMatches(row, spec){
     if(got !== want) diff.push({col: s.col, want, got});
   });
   return { ok: diff.length === 0, diff };
+}
+
+// ═══ v77 — หนี้สิน: แท็บ Debts (หนี้ 1 ก้อน = 1 แถว) ═══════════════════════════════
+// เดิมหน้า "หนี้" เห็นเฉพาะหนี้ที่มีคอลัมน์บัญชีของตัวเองในชีต Transaction (บัตรเครดิต)
+// ผ่อนมอเตอร์ไซต์/ช่วยแม่จ่ายหนี้เป็นแค่แถว Debt ที่จ่ายจากบัญชีธนาคาร → แอปไม่รู้ยอดรวม งวดที่เหลือ หรือวันจบ
+// แท็บ Debts เก็บ "ข้อตกลง" ของหนี้แต่ละก้อน (ค่างวด · จำนวนงวด · วันครบกำหนด · วงเงิน · ดอกเบี้ย)
+// การจ่ายจริงยังบันทึกในชีต Transaction เหมือนเดิม (ไม่ต้องลงซ้ำ) — จับคู่ด้วย Transactions = Debt + Type = Pay Category
+// หมวดเดียวกันอาจมีแถว Expense ปนอยู่ (เช่น Motocycle มีค่าเช็คระยะ) → นับเฉพาะแถว Debt เท่านั้น
+const DEBT_HEADER = ['Name','Type','Lender','Pay Category','Pay From','Card Account','First Payment','Installment',
+  'Term (months)','Paid Before','Principal','Down Payment','Rate %','Rate Type','Due Day','Credit Limit','Status','Note'];
+const DEBT_FIELDS = {
+  name:      ['name','ชื่อ','ชื่อหนี้'],
+  type:      ['type','ประเภท'],
+  lender:    ['lender','เจ้าหนี้','ผู้ให้กู้'],
+  payCat:    ['paycategory','category','หมวดที่จ่าย','หมวด'],
+  payFrom:   ['payfrom','จ่ายจาก','บัญชีที่จ่าย'],
+  card:      ['cardaccount','card','บัญชีบัตร','บัตร'],
+  first:     ['firstpayment','startdate','start','งวดแรก','วันเริ่ม'],
+  inst:      ['installment','ค่างวด'],
+  term:      ['term(months)','term','จำนวนงวด'],
+  paidBefore:['paidbefore','จ่ายก่อนหน้า','งวดที่จ่ายก่อนหน้า'],
+  principal: ['principal','ยอดจัด','เงินต้น'],
+  down:      ['downpayment','down','เงินดาวน์'],
+  rate:      ['rate%','rate','ดอกเบี้ย','ดอกเบี้ย%'],
+  rateType:  ['ratetype','ประเภทดอกเบี้ย'],
+  dueDay:    ['dueday','วันครบกำหนด','วันที่จ่าย'],
+  limit:     ['creditlimit','limit','วงเงิน'],
+  status:    ['status','สถานะ'],
+  note:      ['note','notes','หมายเหตุ'],
+};
+const DEBT_TYPES = [
+  {id:'Installment',      th:'ผ่อนสินค้า/รถ',  en:'Installment'},
+  {id:'Loan',             th:'สินเชื่อ',        en:'Loan'},
+  {id:'Credit Card',      th:'บัตรเครดิต',      en:'Credit card'},
+  {id:'Card Installment', th:'ผ่อนบนบัตร',      en:'Card installment'},
+  {id:'Family Support',   th:'ช่วยครอบครัว',    en:'Family support'},
+  {id:'Other',            th:'อื่น ๆ',          en:'Other'},
+];
+function debtTypeOf(raw){
+  const k = _docKey(raw);
+  if(!k) return 'Other';
+  const hit = DEBT_TYPES.find(t => _docKey(t.id) === k || _docKey(t.th) === k || _docKey(t.en) === k);
+  if(hit) return hit.id;
+  if(/บัตร|card/.test(k) && /ผ่อน|installment/.test(k)) return 'Card Installment';
+  if(/บัตร|card/.test(k)) return 'Credit Card';
+  if(/ครอบครัว|family|support|แม่|พ่อ/.test(k)) return 'Family Support';
+  if(/สินเชื่อ|loan|กู้/.test(k)) return 'Loan';
+  if(/ผ่อน|installment|เช่าซื้อ|hire/.test(k)) return 'Installment';
+  return 'Other';
+}
+
+function _debtHeaderMap(rows){
+  for(let r = 0; r < Math.min(5, (rows || []).length); r++){
+    const row = rows[r] || [], cols = {};
+    row.forEach((h, i) => {
+      const k = _docKey(h);
+      for(const [f, names] of Object.entries(DEBT_FIELDS))
+        if(cols[f] == null && names.some(n => _docKey(n) === k)) cols[f] = i;
+    });
+    if(cols.name != null && cols.type != null) return {headerRow:r, cols};
+  }
+  return null;
+}
+
+// ชีต Debts (array 2 มิติ) → {debts, meta} · meta.cols ใช้ตอนเขียนกลับ (คอลัมน์ที่ผู้ใช้เพิ่มเองไม่ถูกแตะ)
+function parseDebtRows(rows){
+  const hm = _debtHeaderMap(rows);
+  if(!hm) return {debts:[], meta:null};
+  const {headerRow, cols} = hm, at = (r, f) => (cols[f] == null ? '' : r[cols[f]]);
+  const txt = (r, f) => String(at(r, f) ?? '').trim();
+  const num = (r, f) => { const n = _docNum(at(r, f)); return n == null ? null : Math.abs(n); };
+  const debts = [];
+  let lastRow = headerRow + 1;
+  for(let i = headerRow + 1; i < rows.length; i++){
+    const r = rows[i] || [];
+    const name = txt(r, 'name');
+    if(!name) continue;
+    lastRow = i + 1;
+    const dd = num(r, 'dueDay');
+    const st = txt(r, 'status');
+    debts.push({
+      row: i + 1,                                  // แถวจริงในชีต (1-based)
+      name, type: debtTypeOf(at(r, 'type')), rawType: txt(r, 'type'),
+      lender: txt(r, 'lender'), payCat: txt(r, 'payCat'), payFrom: txt(r, 'payFrom'), card: txt(r, 'card'),
+      first: docDateIso(at(r, 'first')),
+      inst: num(r, 'inst'), term: num(r, 'term'), paidBefore: num(r, 'paidBefore') || 0,
+      principal: num(r, 'principal'), down: num(r, 'down'), rate: num(r, 'rate'),
+      rateType: txt(r, 'rateType'),
+      dueDay: dd && dd >= 1 && dd <= 31 ? Math.round(dd) : null,
+      limit: num(r, 'limit'),
+      status: /^(closed|ปิด|จบ|done|paid ?off)/i.test(st) ? 'Closed' : 'Active',
+      note: txt(r, 'note'),
+    });
+  }
+  return {debts, meta:{headerRow: headerRow + 1, cols, lastRow, width: Math.max(...Object.values(cols)) + 1}};
+}
+
+// ฟิลด์ฟอร์ม → แถวที่จะเขียนลงชีต · null = ไม่แตะช่องนั้น (คอลัมน์ที่ชีตไม่มี หรือช่องที่ฟอร์มซ่อนไว้สำหรับประเภทนี้)
+// แก้ไขแล้วเขียนแบบ PUT: null ถูกข้าม → ค่าที่ผู้ใช้พิมพ์ในชีตเองในช่องที่ฟอร์มไม่แสดงจะไม่ถูกล้าง
+function debtRowValues(meta, f){
+  const out = new Array(meta.width).fill(null);
+  const put = (k, v) => { if(meta.cols[k] != null) out[meta.cols[k]] = v === undefined ? null : v; };
+  ['name','type','lender','payCat','payFrom','card','first','inst','term','paidBefore','principal','down',
+   'rate','rateType','dueDay','limit','status','note'].forEach(k => put(k, f[k]));
+  return out;
+}
+
+const _ymAdd = (ym, n) => { const [y, m] = ym.split('-').map(Number); const t = y * 12 + (m - 1) + n;
+  return Math.floor(t / 12) + '-' + String(t % 12 + 1).padStart(2, '0'); };
+const _ymDiff = (a, b) => { const [ya, ma] = a.split('-').map(Number), [yb, mb] = b.split('-').map(Number); return (yb - ya) * 12 + (mb - ma); };
+// วันครบกำหนดในเดือน ym (วันที่ 31 ในเดือนที่มี 30 วัน → วันสุดท้ายของเดือน)
+function debtDueDate(ym, day){
+  const [y, m] = ym.split('-').map(Number);
+  const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  return ym + '-' + String(Math.min(day || last, last)).padStart(2, '0');
+}
+
+// เงินที่ออกจากบัญชีอื่น (ไม่ใช่ตัวบัตรเอง) ในแถวนั้น — แถว "Clear Debt บัตร" ยอดสุทธิเป็น 0 (ธนาคาร −x · บัตร +x)
+function _debtOutflow(t, card){
+  let s = 0;
+  for(const [k, v] of Object.entries(t.acct || {})) if(k !== card && v < 0) s -= v;
+  if(!s && !t.acct && t.amount < 0) s = -t.amount;
+  return Math.round(s * 100) / 100;
+}
+
+// ความคืบหน้าของหนี้ 1 ก้อน
+// opts: {today:'YYYY-MM-DD', balances:{ชื่อบัญชี: ยอด (ติดลบ = หนี้)}, cardFree:{บัตร: ยอดผ่อน 0%}, aprFallback:{บัตร: %}}
+function debtProgress(d, txRows, opts){
+  opts = opts || {};
+  const today = opts.today || new Date().toISOString().slice(0, 10);
+  const curYm = today.slice(0, 7), dayNow = +today.slice(8, 10);
+  const pays = !d.payCat ? [] : (txRows || [])
+    .filter(t => t.type === 'Debt' && _docKey(t.category) === _docKey(d.payCat)
+      && (!d.first || (t.dateStr || '') >= d.first)
+      // มีคอลัมน์บัญชีของหนี้ (บัตร/สินเชื่อที่มีคอลัมน์ของตัวเอง) → แถวต้องตัดยอดเข้าคอลัมน์นั้นจริง
+      // กันกรณีหลายบัตรใช้หมวดจ่ายเดียวกัน (เช่น "Credit card payment") แล้วนับยอดของอีกใบมาปน
+      && (!d.card || ((t.acct || {})[d.card] > 0))
+      && !/ดาวน์|down\s*payment/i.test(t.details || ''))
+    .map(t => ({date: t.dateStr, amt: _debtOutflow(t, d.card)}))
+    .filter(p => p.amt > 0.005)
+    .sort((a, b) => a.date.localeCompare(b.date));
+  const paidTotal = Math.round(pays.reduce((s, p) => s + p.amt, 0) * 100) / 100;
+  const paidThisMonth = Math.round(pays.filter(p => p.date.slice(0, 7) === curYm).reduce((s, p) => s + p.amt, 0) * 100) / 100;
+  const lastPay = pays.length ? pays[pays.length - 1] : null;
+  const base = {debt: d, name: d.name, type: d.type, payments: pays.length, paidTotal, paidThisMonth, lastPay,
+                dueDay: d.dueDay, own: d.type !== 'Family Support'};
+  // anyPay: บัตรเครดิตไม่รู้ยอดใบแจ้งหนี้ → จ่ายแล้วในเดือนนี้ = ถือว่าจ่ายงวดนี้แล้ว
+  const dueStatus = (need, paidAmt, anyPay) => {
+    if(!(need > 0)) return null;
+    const paid = anyPay ? paidAmt > 0 : paidAmt >= need * 0.95 - 0.5;
+    const dueDate = debtDueDate(curYm, d.dueDay);
+    return {ym: curYm, dueDate, amount: need, paidAmt, paid,
+            status: paid ? 'paid' : (d.dueDay && dayNow > d.dueDay ? 'late' : 'due')};
+  };
+
+  if(d.type === 'Credit Card'){
+    const raw = opts.balances ? opts.balances[d.card || d.name] : undefined;
+    const bal = raw == null ? null : Math.max(0, -Number(raw) || 0);
+    const rate = d.rate != null ? d.rate : (opts.aprFallback && opts.aprFallback[d.card || d.name] > 0 ? opts.aprFallback[d.card || d.name] : null);
+    const free = Math.min(bal || 0, Math.max(0, (opts.cardFree && opts.cardFree[d.card || d.name]) || 0));
+    const intBal = Math.max(0, (bal || 0) - free);
+    // ดอกเบี้ยที่ธนาคารเรียกเก็บจริง (แถวที่บัตรติดลบ + รายละเอียดมีคำว่าดอกเบี้ย) 6 เดือนล่าสุด
+    const since = _ymAdd(curYm, -5);
+    const interest = (txRows || []).filter(t => t.acct && t.acct[d.card || d.name] < 0 && /ดอกเบี้ย|interest/i.test(t.details || '')
+      && (t.dateStr || '').slice(0, 7) >= since).map(t => ({date: t.dateStr, amt: -t.acct[d.card || d.name]}));
+    // ยอดจ่ายบัตรต่อเดือน (มัธยฐาน 6 เดือนที่มีการจ่าย) = ภาระต่อเดือนโดยประมาณ
+    const byM = {};
+    pays.filter(p => p.date.slice(0, 7) >= since).forEach(p => { const k = p.date.slice(0, 7); byM[k] = (byM[k] || 0) + p.amt; });
+    const mv = Object.values(byM).sort((a, b) => a - b);
+    const typical = mv.length ? mv[Math.floor(mv.length / 2)] : null;
+    // ภาระต่อเดือนของบัตร = ขั้นต่ำ (ไม่ใช่ยอดที่จ่ายจริง ซึ่งส่วนใหญ่คือค่าใช้จ่ายประจำที่รูดแล้วจ่ายเต็ม — นับเป็นหนี้แล้ว DTI เพี้ยน)
+    const minPct = opts.minPct > 0 ? opts.minPct : 10, minFloor = opts.minFloor >= 0 ? opts.minFloor : 500;
+    const minPay = bal > 0.5 ? Math.min(bal, Math.max(minFloor, bal * minPct / 100)) : 0;
+    return {...base, kind: 'card', balance: bal, owed: bal || 0, limit: d.limit, util: bal != null && d.limit ? bal / d.limit : null,
+      rate, free, intBal, monthlyInterest: rate ? intBal * rate / 100 / 12 : null, interest,
+      interestSum: interest.reduce((s, x) => s + x.amt, 0), typical, minPay, monthly: minPay, remaining: bal || 0,
+      due: bal > 0.5 || paidThisMonth > 0 ? dueStatus(paidThisMonth || Math.min(bal || 0, typical || bal || 0), paidThisMonth, true) : null};
+  }
+
+  const inst = d.inst || 0, term = d.term || 0, pb = d.paidBefore || 0;
+  if(inst > 0 && term > 0){
+    // จ่ายไปกี่งวด: จากยอดจ่ายรวม ÷ ค่างวด (บางเดือนจ่ายไม่เต็ม/จ่ายสองงวด — นับตามเงินจริง ไม่ใช่นับแถว)
+    // แถวผ่อนบนบัตร/ไม่มีหมวดจับคู่ → ประมาณจากตารางเวลา (งวดที่ถึงกำหนดแล้ว)
+    let paidInst, estimated = false;
+    if(d.payCat){
+      paidInst = pb + Math.floor(paidTotal / inst + 0.02);
+    } else if(d.first){
+      estimated = true;
+      const firstYm = d.first.slice(0, 7);
+      paidInst = pb + Math.max(0, _ymDiff(firstYm, curYm) + (dayNow >= (d.dueDay || +d.first.slice(8, 10)) ? 1 : 0));
+    } else paidInst = pb;
+    paidInst = Math.max(0, Math.min(term, paidInst));
+    const left = term - paidInst;
+    const thisPaid = estimated ? dayNow >= (d.dueDay || 1) : paidThisMonth >= inst * 0.95 - 0.5;
+    const nextYm = left > 0 ? (thisPaid ? _ymAdd(curYm, 1) : curYm) : null;
+    const endYm = left > 0 ? _ymAdd(nextYm, left - 1) : (lastPay ? lastPay.date.slice(0, 7) : null);
+    const total = term * inst;
+    // สินเชื่อที่มีคอลัมน์บัญชีของตัวเอง: ยอดในคอลัมน์ = เงินต้นคงเหลือจริง (ตรงกับที่หน้าอื่นนับเป็นหนี้สิน)
+    // ส่วน "งวดที่เหลือ × ค่างวด" รวมดอกเบี้ยอนาคตด้วย → ยอดหนี้รวมใช้ยอดในคอลัมน์ถ้ามี
+    // ผ่อนบนบัตร: คอลัมน์บัตรคือยอดทั้งใบ ไม่ใช่เงินต้นของรายการผ่อนนี้ → ไม่ใช้
+    const rawAcct = d.card && d.type !== 'Card Installment' && opts.balances ? opts.balances[d.card] : undefined;
+    const acctBalance = rawAcct == null ? null : Math.max(0, -Number(rawAcct) || 0);
+    let totalInterest = null;
+    if(d.principal > 0) totalInterest = Math.max(0, total - d.principal);
+    else if(d.rate > 0 && /flat/i.test(d.rateType || '')) totalInterest = null;   // ต้องมียอดจัดถึงคิดได้
+    return {...base, kind: 'fixed', inst, term, paidInst, left, remaining: left * inst, acctBalance,
+      owed: d.type === 'Card Installment' ? 0 : (acctBalance != null ? acctBalance : left * inst), total,
+      pct: term ? paidInst / term : 0, nextYm, endYm, estimated, totalInterest, monthly: left > 0 ? inst : 0,
+      due: left > 0 || paidThisMonth > 0 ? dueStatus(inst, estimated ? (thisPaid ? inst : 0) : paidThisMonth) : null};
+  }
+  if(inst > 0){   // ภาระรายเดือนไม่มีกำหนดจบ (เช่น ช่วยครอบครัว)
+    const months = new Set(pays.map(p => p.date.slice(0, 7))).size;
+    return {...base, kind: 'ongoing', inst, monthly: inst, monthsPaid: months, since: pays.length ? pays[0].date : d.first,
+      remaining: 0, owed: 0, due: dueStatus(inst, paidThisMonth)};
+  }
+  if(d.principal > 0){   // ยอดก้อน ไม่มีค่างวดคงที่ — คงเหลือ = ยอดกู้ − จ่ายแล้ว
+    const remaining = Math.max(0, d.principal - paidTotal);
+    return {...base, kind: 'balance', principal: d.principal, remaining, owed: remaining, pct: d.principal ? Math.min(1, paidTotal / d.principal) : 0,
+      monthly: 0, due: null};
+  }
+  return {...base, kind: 'other', remaining: 0, owed: 0, monthly: 0, due: null};
+}
+
+// ภาพรวมหนี้ทั้งหมด (เฉพาะ Status = Active)
+function debtOverview(debts, txRows, opts){
+  opts = opts || {};
+  const today = opts.today || new Date().toISOString().slice(0, 10), curYm = today.slice(0, 7);
+  const active = (debts || []).filter(d => d.status !== 'Closed');
+  // ผ่อนบนบัตร: ยอดที่ยังไม่ถึงงวดเป็นส่วนหนึ่งของยอดบัตร (ไม่บวกซ้ำ) และเป็นยอดปลอดดอกของบัตรใบนั้น
+  const pre = active.filter(d => d.type === 'Card Installment').map(d => debtProgress(d, txRows, opts));
+  const cardFree = {...(opts.cardFree || {})};
+  pre.forEach(p => { const c = p.debt.card; if(c && p.kind === 'fixed') cardFree[c] = (cardFree[c] || 0) + p.remaining; });
+  const items = active.map(d => d.type === 'Card Installment' ? pre.find(p => p.debt === d) : debtProgress(d, txRows, {...opts, cardFree}));
+  const own = items.filter(i => i.own && i.type !== 'Card Installment');
+  const totalOwed = own.reduce((s, i) => s + (i.owed || 0), 0);
+  const monthlyOwn = own.reduce((s, i) => s + (i.monthly || 0), 0);
+  const monthlySupport = items.filter(i => !i.own).reduce((s, i) => s + (i.monthly || 0), 0);
+  // รายได้เฉลี่ย 3 เดือนเต็มล่าสุด (ไม่นับเดือนปัจจุบันที่ยังไม่จบ)
+  const inc = {};
+  (txRows || []).forEach(t => { if(t.type === 'Income' && t.amount > 0){ const k = (t.dateStr || '').slice(0, 7); if(k < curYm) inc[k] = (inc[k] || 0) + t.amount; } });
+  const last3 = [1, 2, 3].map(n => _ymAdd(curYm, -n)).filter(k => inc[k] > 0);
+  const income = last3.length ? last3.reduce((s, k) => s + inc[k], 0) / last3.length : null;
+  const fixedEnds = own.filter(i => i.kind === 'fixed' && i.left > 0).map(i => i.endYm).sort();
+  const cardsOpen = own.filter(i => i.kind === 'card' && i.remaining > 0.5).length;
+  // ผ่อนบนบัตรถูกจ่ายรวมไปกับยอดบัตรแล้ว — ไม่แยกเป็นรายการครบกำหนดซ้ำ
+  const due = items.filter(i => i.due && i.type !== 'Card Installment').map(i => ({name: i.name, type: i.type, row: i.debt.row, ...i.due}))
+    .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+  return {items, totalOwed, monthlyOwn, monthlySupport, monthly: monthlyOwn + monthlySupport, income,
+    dti: income ? (monthlyOwn + monthlySupport) / income : null,
+    debtFreeYm: fixedEnds.length ? fixedEnds[fixedEnds.length - 1] : null, cardsOpen, due,
+    interestMonthly: own.reduce((s, i) => s + (i.monthlyInterest || 0), 0)};
+}
+
+// ตารางภาระรายเดือนล่วงหน้า (ข้อเท็จจริงตามสัญญา ไม่ใช่การจำลองกลยุทธ์) · บัตรเครดิตไม่มีงวดตายตัว → ไม่อยู่ในตาราง
+function debtSchedule(items, fromYm, months){
+  months = months || 24;
+  const rows = [];
+  const fixed = (items || []).filter(i => (i.kind === 'fixed' && i.left > 0) || i.kind === 'ongoing');
+  for(let n = 0; n < months; n++){
+    const ym = _ymAdd(fromYm, n), parts = {};
+    fixed.forEach(i => {
+      if(i.kind === 'ongoing') parts[i.name] = i.inst;
+      else if(ym >= i.nextYm && ym <= i.endYm) parts[i.name] = i.inst;
+    });
+    rows.push({ym, parts, total: Object.values(parts).reduce((s, v) => s + v, 0)});
+  }
+  // เดือนที่ภาระลดลง (งวดสุดท้ายจบ → เดือนถัดไปมีเงินเหลือเพิ่ม)
+  const events = fixed.filter(i => i.kind === 'fixed').map(i => ({ym: _ymAdd(i.endYm, 1), lastYm: i.endYm, name: i.name, freed: i.inst}))
+    .sort((a, b) => a.ym.localeCompare(b.ym));
+  return {rows, events};
 }

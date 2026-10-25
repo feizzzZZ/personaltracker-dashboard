@@ -1848,6 +1848,60 @@ html[data-theme="midnight"] .auth-mark{color:#FAFAFA}
 .am-sec.am-first{border-top:none}
 .nt-set-modal{max-width:760px}
 .nt-set-modal .nt-setup{background:none;border:0;padding:0;margin:0}
+/* ══ v77 — หนี้สิน ══ */
+.dbs-hdr{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.dbs-empty{display:flex;flex-direction:column;gap:12px;align-items:flex-start;margin-bottom:16px}
+.dbs-empty-h{font-size:15px;font-weight:600;color:var(--fg)}
+.dbs-warn{background:rgba(255,149,0,.08);border:1px solid rgba(255,149,0,.4);border-radius:var(--r);padding:11px 15px;font-size:12px;line-height:1.8;margin-bottom:16px;color:var(--text)}
+.dbs-due{border:1px solid var(--border);border-radius:var(--r);background:var(--bg3);margin-bottom:20px}
+.dbs-due-row{display:flex;align-items:center;gap:12px;padding:12px 16px;border-top:1px solid var(--border);flex-wrap:wrap}
+.dbs-due-row:first-child{border-top:none}
+.dbs-due-d{width:34px;height:34px;border-radius:50%;border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;flex:0 0 auto;color:var(--fg)}
+.dbs-due-n{flex:1 1 140px;min-width:0;font-size:13px;color:var(--fg)}
+.dbs-due-n .s{font-size:11px;color:var(--muted);margin-top:2px}
+.dbs-due-a{font-variant-numeric:tabular-nums;font-size:13px;color:var(--fg)}
+.dbs-st{font-size:11px;padding:3px 9px;border-radius:999px;border:1px solid var(--border2);white-space:nowrap}
+.dbs-st.ok{color:var(--gain);border-color:rgba(0,212,160,.4)}
+.dbs-st.late{color:var(--loss);border-color:rgba(255,64,96,.45)}
+.dbs-st.due{color:var(--debt);border-color:rgba(255,149,0,.45)}
+.dbs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-bottom:20px}
+.dbc{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.dbc.sup{border-style:dashed}
+.dbc-h{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.dbc-n{font-size:14px;font-weight:600;color:var(--fg);overflow-wrap:anywhere}
+.dbc-t{font-size:11px;color:var(--muted);margin-top:2px}
+.dbc-edit{background:none;border:1px solid var(--border);border-radius:var(--r-sm);color:var(--muted2);cursor:pointer;width:30px;height:30px;flex:0 0 auto;font:inherit}
+.dbc-edit:hover{color:var(--fg);border-color:var(--border2)}
+.dbc-big{font-size:22px;font-weight:600;color:var(--fg);font-variant-numeric:tabular-nums}
+.dbc-big span{font-size:12px;font-weight:400;color:var(--muted)}
+.dbc-bar{height:6px;background:var(--border);border-radius:3px;overflow:hidden}
+.dbc-bar i{display:block;height:100%;background:var(--gain);border-radius:3px}
+.dbc-bar.mid i{background:var(--debt)}
+.dbc-bar.hi i{background:var(--loss)}
+.dbc-row{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted2);flex-wrap:wrap}
+.dbc-row b,.dbc-meta b{color:var(--fg);font-weight:600}
+.dbc-meta{font-size:11.5px;color:var(--muted2);line-height:1.8}
+.dbc-warn{color:var(--debt)}
+.dbc-note{font-size:11px;color:var(--muted);border-top:1px solid var(--border);padding-top:8px;line-height:1.6}
+.dbc-pay{align-self:flex-start;margin-top:auto}
+.dbs-hint{font-size:11px;color:var(--muted);line-height:1.8;margin-bottom:16px}
+.dbs-closed{margin-bottom:16px;font-size:12px;color:var(--muted2)}
+.dbs-closed summary{cursor:pointer;margin-bottom:8px}
+.dbs-closed-row{padding:4px 0}
+.dsc-evs{display:flex;flex-direction:column;gap:10px;margin-bottom:20px}
+.dsc-ev{display:flex;gap:14px;font-size:12.5px;line-height:1.7;color:var(--text)}
+.dsc-ev-m{flex:0 0 76px;font-weight:600;color:var(--fg)}
+.dsc-leg{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--muted2);margin-bottom:12px}
+.dsc-leg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.dsc-row{display:grid;grid-template-columns:76px 1fr 84px;gap:10px;align-items:center;padding:4px 0;font-size:12px;color:var(--muted2)}
+.dsc-bar{display:flex;height:14px;border-radius:3px;overflow:hidden;background:var(--bg4)}
+.dsc-bar i{display:block;height:100%}
+.dsc-tot{text-align:right;font-variant-numeric:tabular-nums;color:var(--fg)}
+.dbf-modal{max-width:560px}
+.dbf-help{font-size:10.5px;color:var(--muted);margin-top:4px;line-height:1.5}
+.dbf-g2{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+.dbf-g2[hidden],#dbf-body [data-f][hidden]{display:none}
+@media(max-width:520px){.dbf-g2{grid-template-columns:1fr}.dsc-row{grid-template-columns:62px 1fr 70px}.dsc-ev{flex-direction:column;gap:2px}}
 /* v76 — ปุ่ม + (z-index 900) ลอยทับหน้าต่างตั้งค่า (z-index 200) → ซ่อนระหว่างเปิดหน้าต่าง */
 body:has(.gs-modal-overlay.show) .tx-fab{display:none!important}  /* JS ตั้ง style="display:block" ไว้ */
 
@@ -1919,6 +1973,63 @@ body:has(.gs-modal-overlay.show) .tx-fab{display:none!important}  /* JS ตั�
 .ab-note{font-size:11px;color:var(--muted);line-height:1.7;margin-top:14px}
 .ab-modal{max-width:520px;max-height:calc(100vh - 32px);overflow-y:auto}
 @media(prefers-reduced-motion:reduce){.ab-sw span,.ab-sw span::after{transition:none}}
+/* ══ v78 — พอร์ตสด ══ */
+.lv-status{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-family:var(--f-chip);font-size:11.5px;color:var(--text);margin-bottom:14px}
+.lv-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:0 0 auto}
+.lv-dot.on{background:var(--gain);box-shadow:0 0 0 3px color-mix(in srgb,var(--gain) 25%,transparent);animation:lvPulse 2s ease-in-out infinite}
+.lv-dot.wait{background:var(--debt)}
+@keyframes lvPulse{50%{box-shadow:0 0 0 6px color-mix(in srgb,var(--gain) 0%,transparent)}}
+.lv-mute{color:var(--muted);font-size:11.5px;line-height:1.6}
+.lv-warn{color:var(--debt);font-weight:600}
+.lv-warns{border:1px solid var(--border);border-left:3px solid var(--debt);background:var(--warn-bg);padding:10px 14px;margin-bottom:16px;font-size:12px;line-height:1.7;color:var(--text);overflow-wrap:anywhere}
+.lv-movers{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px}
+.lv-movers .cc{padding:12px 16px}
+.lv-mv{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:12px;font-size:12.5px;padding:6px 0;border-top:1px solid var(--border);font-variant-numeric:tabular-nums}
+.lv-mv:first-of-type{border-top:none}
+.lv-mv span{text-align:right}
+.lv-tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.lv-tools .seg{flex:0 0 auto}
+.lv-tools .seg button{padding:5px 12px}
+.lv-sort{width:auto;min-width:150px;padding:6px 10px;font-size:12px;margin-left:auto}
+.lv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px}
+.lv-card{border:1px solid var(--border);background:var(--bg3);padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.lv-c-hd{display:flex;gap:10px;align-items:flex-start;min-width:0}
+.lv-ic{flex:0 0 34px;height:34px;border-radius:50%;background:var(--bg4);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-family:var(--f-chip);font-size:9.5px;color:var(--fg);letter-spacing:-.02em}
+.lv-c-nm{min-width:0}
+.lv-c-nm b{font-size:14.5px;color:var(--fg);font-weight:600}
+.lv-chips{display:flex;gap:4px;flex-wrap:wrap;margin-top:3px}
+.lv-c-mid{display:flex;justify-content:space-between;align-items:flex-end;gap:10px}
+.lv-big{font-size:24px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.1}
+.lv-lbl{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px}
+.lv-spark{width:120px;height:40px;flex:0 0 auto}
+.lv-spark polyline{fill:none;stroke-width:1.6;vector-effect:non-scaling-stroke}
+.lv-spark.up polyline{stroke:var(--gain)} .lv-spark.dn polyline{stroke:var(--loss)}
+.lv-spark.up polygon{fill:color-mix(in srgb,var(--gain) 12%,transparent)} .lv-spark.dn polygon{fill:color-mix(in srgb,var(--loss) 12%,transparent)}
+.lv-kv{display:grid;grid-template-columns:1fr 1fr;gap:10px;font-variant-numeric:tabular-nums}
+.lv-kv>div{display:flex;flex-direction:column}
+.lv-kv .r{text-align:right;align-items:flex-end}
+.lv-kv b{font-size:14px;font-weight:600;color:var(--fg)} .lv-kv b.gain{color:var(--gain)} .lv-kv b.loss{color:var(--loss)}
+.lv-kv small{font-size:11.5px;color:var(--muted2)}
+.lv-qty{font-size:11.5px;color:var(--muted2);font-variant-numeric:tabular-nums}
+.lv-qty b{color:var(--text);font-weight:500}
+.lv-cmp{display:grid;grid-template-columns:1fr 1fr;gap:10px;border-top:1px solid var(--border);padding-top:10px;font-size:12px;font-variant-numeric:tabular-nums;line-height:1.6}
+.lv-cmp>div+div{border-left:1px solid var(--border);padding-left:10px}
+.lv-wrow{border:1px solid var(--border);padding:10px;margin-bottom:8px}
+.lv-chains{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;font-size:12px;margin-top:8px}
+.lv-chains label{display:inline-flex;gap:5px;align-items:center;cursor:pointer}
+.lv-chains .gc-btn{margin-left:auto}
+.lv-trow{display:grid;grid-template-columns:110px minmax(0,1fr) 80px auto;gap:6px;margin-bottom:6px;align-items:center}
+@media(max-width:768px){
+  .lv-movers{grid-template-columns:1fr}
+  .lv-grid{grid-template-columns:1fr}
+  .lv-sort{margin-left:0;flex:1}
+  .lv-trow{grid-template-columns:minmax(0,1fr) 84px auto}
+  .lv-trow select{grid-column:1;grid-row:1} .lv-trow input[data-k="symbol"]{grid-column:2;grid-row:1} .lv-trow .gc-btn{grid-column:3;grid-row:1}
+  .lv-trow input[data-k="address"]{grid-column:1/-1;grid-row:2}
+  .lv-trow{padding-bottom:6px;border-bottom:1px solid var(--border)}
+  .lv-wrow .tx-g2{grid-template-columns:1fr}
+}
+@media(prefers-reduced-motion:reduce){.lv-dot.on{animation:none}}
 </style>
 </head>
 <body>
@@ -1931,6 +2042,7 @@ body:has(.gs-modal-overlay.show) .tx-fab{display:none!important}  /* JS ตั�
     <symbol id="i-analyst" viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 3v4M17 5h4"/></symbol>
     <symbol id="i-goals" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></symbol>
     <symbol id="i-money" viewBox="0 0 24 24"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></symbol>
+    <symbol id="i-debt" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><path d="M6 15h4"/></symbol>
     <symbol id="i-accounts" viewBox="0 0 24 24"><path d="M3 21h18"/><path d="M6 17v-6M10 17v-6M14 17v-6M18 17v-6"/><path d="M12 3 20 8H4z"/></symbol>
     <symbol id="i-insurance" viewBox="0 0 24 24"><path d="M12 21.5s8-3.8 8-9.8V5l-8-3-8 3v6.7c0 6 8 9.8 8 9.8z"/></symbol>
     <symbol id="i-invest" viewBox="0 0 24 24"><rect x="2.5" y="7" width="19" height="13.5"/><path d="M16 20.5V5a1.5 1.5 0 0 0-1.5-1.5h-5A1.5 1.5 0 0 0 8 5v15.5"/></symbol>
@@ -2091,7 +2203,11 @@ body:has(.gs-modal-overlay.show) .tx-fab{display:none!important}  /* JS ตั�
         <span class="sb-badge sb-badge-warn" id="sb-budget-badge" style="display:none">0</span>
       </div>
       <div class="sb-item" data-group="accounts" onclick="switchGroup('accounts')">
-        <svg class="sb-icon ic" aria-hidden="true"><use href="#i-accounts"/></svg>บัญชี &amp; หนี้
+        <svg class="sb-icon ic" aria-hidden="true"><use href="#i-accounts"/></svg>บัญชี
+      </div>
+      <!-- v77 — หนี้สิน: เมนูของตัวเอง (เดิมเป็นแท็บ "หนี้" ในบัญชี & หนี้ ซึ่งเห็นแค่บัตรเครดิต) -->
+      <div class="sb-item" data-group="debts" onclick="switchGroup('debts')">
+        <svg class="sb-icon ic" aria-hidden="true"><use href="#i-debt"/></svg>หนี้สิน
         <span class="bgt-badge" id="debt-badge" style="display:none;margin-left:auto"></span>
       </div>
       <div class="sb-item" data-group="insurance" onclick="switchGroup('insurance')">
@@ -2670,9 +2786,13 @@ body:has(.gs-modal-overlay.show) .tx-fab{display:none!important}  /* JS ตั�
     </div>
 
     <!-- ══ DEBT — v40 ══════════════════════════════════════════════ -->
+    <!-- ══ v77 — หนี้สิน: ภาพรวม / ตารางผ่อน (เนื้อหา render ด้วย renderDebts / renderDebtSched) ══ -->
+    <div class="page" id="page-debts"><div id="dbs-body"></div></div>
+    <div class="page" id="page-debtsched"><div id="dsc-body"></div></div>
+
     <div class="page" id="page-debt">
       <div class="pg-hdr"><div>
-        <div class="pg-title">Debt</div>
+        <div class="pg-title">Credit cards</div>
         <div class="pg-sub">หนี้ที่มีดอกเบี้ยเดิน — ผลตอบแทนรับประกันที่สูงที่สุดในพอร์ตคุณ</div>
       </div></div>
 
@@ -2861,6 +2981,15 @@ body:has(.gs-modal-overlay.show) .tx-fab{display:none!important}  /* JS ตั�
         <div class="pg-sub">ตั้งกฎให้บอทซื้อขายแทน — ตอนนี้ทดลองด้วยพอร์ตจำลองก่อน ยังไม่ใช้เงินจริง</div>
       </div></div>
       <div id="ab-root"></div>
+    </div>
+
+    <!-- ══ LIVE (v78 — พอร์ตสด: Binance + MetaMask · อ่านอย่างเดียว) ══ -->
+    <div class="page" id="page-live">
+      <div class="pg-hdr"><div>
+        <div class="pg-title">Live Portfolio</div>
+        <div class="pg-sub">ยอดจริงจาก Binance และ MetaMask · ราคาสด · เทียบกำไรขาดทุนจากต้นทุน 2 แหล่ง</div>
+      </div></div>
+      <div id="lv-root"></div>
     </div>
 
     <!-- ══ GOALS ══ -->
@@ -3097,6 +3226,7 @@ body:has(.gs-modal-overlay.show) .tx-fab{display:none!important}  /* JS ตั�
 
 <script src="shared.js"></script>
 <script src="autobot.js"></script>
+<script src="liveport.js"></script>
 <script>
 /* ── #1: single source of truth for the Chart.js font stack ──────────────
    Latin first, Thai second — matches --f-sans / --f-mono in CSS so canvas
@@ -3241,6 +3371,7 @@ function unrealizedOf(list){
 }
 let insPolicies=[],insCoverage=[];
 let docsList=[], docSheetMeta=null;   // v71 — แท็บ Documents (บัตรรายการเอกสาร · ไฟล์จริงอยู่ใน Drive)
+let debtList=[], debtSheetMeta=null;  // v77 — แท็บ Debts (ข้อตกลงหนี้แต่ละก้อน · การจ่ายจริงอยู่ใน Transaction)
 let totalFee=0,availableMonths=[],curMonthIdx=0,cfFilter='all',cfPage=0,pfFilter='all';
 let charts={},flowPeriod='monthly';
 const PAGE_SIZE=15;
@@ -4961,7 +5092,7 @@ const VLOG_PURGED_KEY = 'finOS_valueLogPurged_v44';
 //   ฟังก์ชันหาย  → BLOCK  (แอปคำนวณผิดแน่นอน — นี่คือสิ่งที่ guard มีไว้จับ)
 //   เลขไม่ตรง    → WARN   (แค่ลืม bump — log ไว้ ไม่รบกวนผู้ใช้)
 // ฟังก์ชันที่ต้องมีคือสัญญาจริงระหว่างสองไฟล์ ส่วนสตริงเวอร์ชันเป็นแค่ป้าย
-const EXPECTED_SHARED_BUILD = 'v76';
+const EXPECTED_SHARED_BUILD = 'v78';
 const REQUIRED_SHARED_FNS = [
   'resolvePrices', 'pipelinePricesTHB', 'parseReconcileRows',
   'computeReconciliation', 'splitBalances', 'debtVsInvest', 'buildDebtPlan',
@@ -4983,6 +5114,7 @@ const REQUIRED_SHARED_FNS = [
   'parseDocumentRows', 'docSearch', 'docCategoryList', 'docThumbUrl', 'docEmbedUrl', 'docSafeUrl', 'docRowValues',   // v71 — คลังเอกสาร
   'driveFolderId', 'docGuessFromFile', 'docDriveIds',   // v71 — นำเข้าจาก Drive
   'sheetRowMatches',                                     // v72 — กันแก้/ลบผิดแถว
+  'parseDebtRows', 'debtRowValues', 'debtProgress', 'debtOverview', 'debtSchedule',   // v77 — หนี้สิน
 ];
 function checkSharedVersion(){
   const missing = REQUIRED_SHARED_FNS.filter(f=>typeof window[f] !== 'function');
@@ -6540,7 +6672,7 @@ async function gsSync(){
     console.log('[GS] Required:', Object.keys(map));
 
     // Optional sheets (skip if missing)
-    const OPT = ['Insurance_Policies','Insurance_Coverage','Market_Data','Value_Log','Reconcile','Documents'];   // v71 + Documents
+    const OPT = ['Insurance_Policies','Insurance_Coverage','Market_Data','Value_Log','Reconcile','Documents','Debts'];   // v71 + Documents · v77 + Debts
     for(const s of OPT){
       try{
         // v62 — Reconcile โตครั้งละ 10 แถว (บัญชีละแถว) และ Value_Log วันละแถว
@@ -6711,6 +6843,7 @@ function gsProcessData(map){
 
     // ─ Documents (v71) ─ ไม่มีแท็บ = คลังว่าง (หน้าเอกสารแสดงวิธีตั้งค่า)
     { const p = parseDocumentRows(map['Documents']||[]); docsList = p.docs; docSheetMeta = p.meta; }
+    { const p = parseDebtRows(map['Debts']||[]); debtList = p.debts; debtSheetMeta = p.meta; }   // v77
 
     // Show dashboard
     console.log('[GS] txRows:', txRows.length, 'assets:', assets.length, 'months:', availableMonths);
@@ -7686,6 +7819,7 @@ function saveDataCache(){
                     reconMap, waccMap, fxMap, platMap,
                     insPolicies, insCoverage, totalFee,
                     docsList, docSheetMeta,   // v71
+                    debtList, debtSheetMeta,  // v77
                     // v49 — ต้อง cache ด้วย ไม่งั้นเปิดแอปครั้งถัดไปปุ่ม + จะกดไม่ได้
                     // จนกว่า sync จะเสร็จ (ออฟไลน์ = บันทึกอะไรไม่ได้เลย)
                     txSheetMeta, atSheetMeta };   // ★ ชื่อตัวแปรจริง (เดิมเขียนผิดเป็น insurance/coverage → ข้อมูลประกันหาย)
@@ -7741,6 +7875,7 @@ function restoreDataCache(p){
       renewal:_d(r.renewal), policyDate:_d(r.policyDate), maturity:_d(r.maturity)}));
     insCoverage = p.insCoverage||[];
     docsList = Array.isArray(p.docsList) ? p.docsList : []; docSheetMeta = p.docSheetMeta || null;   // v71
+    debtList = Array.isArray(p.debtList) ? p.debtList : []; debtSheetMeta = p.debtSheetMeta || null;   // v77
     if(typeof p.totalFee==='number') totalFee = p.totalFee;
     // v49 — กู้ layout ชีตกลับมาด้วย แล้วเปิดปุ่มเพิ่มรายการให้ใช้ได้ทันที
     if(p.txSheetMeta) txSheetMeta = p.txSheetMeta;
@@ -7882,6 +8017,18 @@ function dbtBindInputs(){
 }
 function updateDebtBadge(){
   const el=document.getElementById('debt-badge'); if(!el) return;
+  // v77 — มีแท็บ Debts → badge = งวดเดือนนี้ที่ยังไม่จ่าย (! = เลยกำหนดแล้ว)
+  if(debtList.length){
+    try{
+      const o=debtOverview(debtList, txRows, _debtOpts());
+      const open=o.due.filter(x=>x.status!=='paid'), late=open.filter(x=>x.status==='late').length;
+      if(!open.length){ el.style.display='none'; return; }
+      el.style.display='inline-block'; el.className='bgt-badge'+(late?' warn':'');
+      el.textContent=late?'!':String(open.length);
+      el.title=late?_L(`เลยกำหนด ${late} รายการ`,`${late} overdue`):_L(`ครบกำหนดเดือนนี้ ${open.length} รายการ`,`${open.length} due this month`);
+      return;
+    }catch(e){ console.warn('[v77] debt badge:', e.message); }
+  }
   const sb=effectiveSplit();   // v48 — badge ต้องตรงกับหน้า Debt
   if(sb.liabilities<=0){ el.style.display='none'; return; }
   const cfg=getDebtCfg();
@@ -8122,6 +8269,298 @@ function renderDebt(){
 
   dbtBindInputs();
   /* v58 — โน้ตแผน + กราฟไทม์ไลน์ถูกถอดออกพร้อมบล็อกแผนปลดหนี้ */
+}
+
+/* ══ v77 — หนี้สิน (แท็บ Debts) ═══════════════════════════════════════════
+   ข้อตกลงของหนี้แต่ละก้อนอยู่ในแท็บ Debts · การจ่ายจริงมาจากชีต Transaction (ไม่ต้องลงซ้ำ)
+   ตรรกะคำนวณทั้งหมดอยู่ใน shared.js (debtProgress / debtOverview / debtSchedule — ทดสอบใน test_debts.cjs)
+   ที่นี่มีแค่: รวบรวม opts จาก state ของแอป → เรียก shared → วาดผล · ฟอร์มเขียนแท็บ Debts */
+const _DB_TH_MON=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const _DB_EN_MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function dbYm(ym){ if(!ym) return '—'; const [y,m]=ym.split('-').map(Number); return (window.I18N&&I18N.lang==='en'?_DB_EN_MON:_DB_TH_MON)[m-1]+' '+y; }
+function dbDate(iso){ return iso ? (+iso.slice(8,10))+' '+dbYm(iso.slice(0,7)) : '—'; }
+const dbTypeLbl = id => { const t=DEBT_TYPES.find(x=>x.id===id); return t?_L(t.th,t.en):id; };
+
+// ยอดบัตร = ยอดหลัง reconcile (เกณฑ์เดียวกับหน้าบัตรเครดิต) · ดอกเบี้ย/ยอดผ่อน 0% ที่เคยกรอกในเครื่องใช้เป็นค่าสำรอง
+function _debtOpts(){
+  let bals=bankBals||[];
+  try{ bals=applyReconciliation(bankBals, reconMap, null, txRows).bals||bals; }catch(e){}
+  const balances={}; bals.forEach(b=>{ balances[b.name]=b.balance; });
+  const cfg=getDebtCfg();
+  // บัตรที่มีแถว "ผ่อนบนบัตร" ในชีตแล้ว → ใช้ยอดจากชีตแทนค่าที่กรอกในเครื่อง (กันนับซ้ำ)
+  const hasCI=new Set(debtList.filter(d=>d.type==='Card Installment'&&d.status!=='Closed').map(d=>d.card));
+  const cardFree={}; Object.entries(cfg.free||{}).forEach(([k,v])=>{ if(!hasCI.has(k)&&+v>0) cardFree[k]=+v; });
+  return {today:isoLocal(new Date()), balances, aprFallback:cfg.apr||{}, cardFree, minPct:cfg.minPct, minFloor:cfg.minFloor};
+}
+function _dbEmpty(){
+  return `<div class="cc dbs-empty">
+    <div class="dbs-empty-h">${_L('ยังไม่มีหนี้ในแท็บ Debts','No debts in the Debts tab yet')}</div>
+    <div class="dbs-hint">${_L('เพิ่มหนี้แต่ละก้อน (ผ่อนรถ · บัตรเครดิต · ช่วยครอบครัว) — แอปจะสร้างแท็บ Debts ในชีตให้เองตอนบันทึกครั้งแรก แล้วนับงวดที่จ่ายจากชีต Transaction ให้อัตโนมัติ',
+      'Add each debt (installments · credit cards · family support) — the app creates the Debts tab on the first save and counts payments from the Transaction sheet automatically')}</div>
+    <button type="button" class="rb-btn primary" onclick="dbfOpen()">+ ${_L('เพิ่มหนี้ก้อนแรก','Add your first debt')}</button></div>`;
+}
+
+function _dbCard(i){
+  const d=i.debt;
+  const head=`<div class="dbc-h"><div><div class="dbc-n">${escHtml(d.name)}</div>
+      <div class="dbc-t">${dbTypeLbl(d.type)}${d.lender?' · '+escHtml(d.lender):''}</div></div>
+    <button type="button" class="dbc-edit" onclick="dbfOpen(${d.row})" title="${_L('แก้ไข','Edit')}" aria-label="${_L('แก้ไข','Edit')} ${escAttr(d.name)}">✎</button></div>`;
+  const per=_L('เดือน','mo');
+  let body='';
+  if(i.kind==='fixed'){
+    const big=i.acctBalance!=null?i.acctBalance:i.remaining;
+    body=`<div class="dbc-big">${fmt(big)} <span>${i.acctBalance!=null?_L('เงินต้นคงเหลือ','principal left'):_L('คงเหลือ','left')}</span></div>
+      <div class="dbc-bar"><i style="width:${(i.pct*100).toFixed(1)}%"></i></div>
+      <div class="dbc-row"><span>${_L('จ่ายแล้ว','Paid')} <b>${i.paidInst}/${i.term}</b> ${_L('งวด','')}</span><span>${_L('เหลือ','Left')} <b>${i.left}</b> ${_L('งวด','')}</span></div>
+      <div class="dbc-meta">${_L('ค่างวด','Installment')} ${fmt(i.inst)}${d.dueDay?' · '+_L('ทุกวันที่ ','due day ')+d.dueDay:''}${d.payFrom?' · '+_L('จ่ายจาก ','from ')+escHtml(d.payFrom):''}<br>
+        ${i.left>0?_L('งวดสุดท้าย ','Last installment ')+'<b>'+dbYm(i.endYm)+'</b>':_L('ผ่อนครบแล้ว — แก้สถานะเป็น Closed ได้','Fully paid — set the status to Closed')}
+        ${i.totalInterest!=null?' · '+_L('ดอกเบี้ยรวมตามสัญญา ','Contract interest ')+fmt(i.totalInterest):''}
+        ${i.acctBalance!=null?'<br>'+_L('เงินต้นจากคอลัมน์ ','Principal from column ')+escHtml(d.card)+' · '+_L('ค่างวดที่เหลือรวม ','installments left total ')+fmt(i.remaining)+' ('+i.left+' × '+fmt(i.inst)+')':''}
+        ${!i.own?'<br>'+_L('ไม่นับเป็นหนี้ของคุณ (นับในภาระต่อเดือน)','Not counted as your debt (counted in monthly payments)'):''}
+        ${i.estimated?'<br><span class="dbc-warn">'+_L('ประมาณจากตารางเวลา — ไม่มีหมวดใน Transaction ให้จับคู่','Estimated from the schedule — no Transaction category to match')+'</span>':''}</div>`;
+  } else if(i.kind==='card'){
+    const u=i.util;
+    body=`<div class="dbc-big">${i.balance==null?'—':fmt(i.balance)} <span>${_L('ยอดค้าง','balance')}</span></div>
+      ${i.limit?`<div class="dbc-bar ${u>0.7?'hi':u>0.3?'mid':''}"><i style="width:${Math.min(100,(u||0)*100).toFixed(1)}%"></i></div>
+        <div class="dbc-row"><span>${_L('ใช้วงเงิน','Utilization')} <b>${((u||0)*100).toFixed(0)}%</b></span><span>${_L('วงเงิน','Limit')} ${fmt(i.limit)}</span></div>`
+        :`<div class="dbc-row"><span class="dbc-warn">${_L('ใส่วงเงินเพื่อดู % การใช้วงเงิน','Add the credit limit to see utilization')}</span></div>`}
+      <div class="dbc-meta">${i.rate?_L('ดอกเบี้ย ','Interest ')+i.rate+'%/'+_L('ปี','yr')+(i.monthlyInterest>0.5?' · ~'+fmt(i.monthlyInterest)+'/'+per+_L(' ถ้าจ่ายไม่เต็ม',' if not paid in full'):''):'<span class="dbc-warn">'+_L('ยังไม่ใส่ดอกเบี้ย %','Interest rate not set')+'</span>'}
+        ${i.free>0?' · '+_L('ยอดผ่อน 0% ','0% installments ')+fmt(i.free):''}
+        <br>${i.minPay>0?_L('ขั้นต่ำ ~','Minimum ~')+fmt(i.minPay)+' · ':''}${i.typical?_L('ปกติจ่ายเดือนละ ','usually pays ')+fmt(i.typical):_L('ยังไม่มียอดจ่ายใน 6 เดือน','no payments in 6 months')}${d.dueDay?' · '+_L('ครบกำหนดวันที่ ','due day ')+d.dueDay:''}
+        ${i.interestSum>0.5?`<br><span class="dbc-warn">⚠ ${_L('ถูกเก็บดอกเบี้ยจริง ','Interest charged: ')}${fmt(i.interestSum)} (${i.interest.length} ${_L('ครั้งใน 6 เดือน','times in 6 months')})</span>`:''}</div>`;
+  } else if(i.kind==='ongoing'){
+    body=`<div class="dbc-big">${fmt(i.inst)} <span>/${per}</span></div>
+      <div class="dbc-meta">${_L('จ่ายมาแล้ว ','Paid for ')}<b>${i.monthsPaid}</b> ${_L('เดือน','months')} · ${_L('รวม ','total ')}${fmt(i.paidTotal)}${i.since?' · '+_L('ตั้งแต่ ','since ')+dbYm(i.since.slice(0,7)):''}${d.dueDay?' · '+_L('ทุกวันที่ ','due day ')+d.dueDay:''}<br>
+        ${_L('ไม่มีกำหนดจบ — ใส่จำนวนงวดถ้ารู้','No end date — add a term if you know it')}${i.own?'':'<br>'+_L('ไม่นับเป็นหนี้ของคุณ (นับในภาระต่อเดือน)','Not counted as your debt (counted in monthly payments)')}</div>`;
+  } else if(i.kind==='balance'){
+    body=`<div class="dbc-big">${fmt(i.remaining)} <span>${_L('คงเหลือ','left')}</span></div>
+      <div class="dbc-bar"><i style="width:${(i.pct*100).toFixed(1)}%"></i></div>
+      <div class="dbc-row"><span>${_L('จ่ายแล้ว','Paid')} <b>${fmt(i.paidTotal)}</b></span><span>${_L('จาก','of')} ${fmt(i.principal)}</span></div>`;
+  } else {
+    body=`<div class="dbc-meta dbc-warn">${_L('ใส่ค่างวด + จำนวนงวด หรือยอดกู้ เพื่อให้ติดตามได้','Add an installment + term, or a principal, so it can be tracked')}</div>`;
+  }
+  const pay=d.payCat&&i.kind!=='other'?`<button type="button" class="rb-btn dbc-pay" onclick="dbPay(${d.row})">+ ${_L('บันทึกจ่าย','Record payment')}</button>`:'';
+  return `<div class="dbc${i.own?'':' sup'}">${head}${body}${d.note?`<div class="dbc-note">${escHtml(d.note)}</div>`:''}${pay}</div>`;
+}
+
+function renderDebts(){
+  const el=document.getElementById('dbs-body'); if(!el) return;
+  const hdr=`<div class="pg-hdr dbs-hdr"><div><div class="pg-title">Debts</div>
+      <div class="pg-sub">${_L('ผ่อนรถ · บัตรเครดิต · ภาระรายเดือน — ข้อตกลงอยู่ในแท็บ Debts · การจ่ายจริงนับจากชีต Transaction','Installments · credit cards · monthly commitments — terms live in the Debts tab, payments are counted from the Transaction sheet')}</div></div>
+    <button type="button" class="rb-btn primary" onclick="dbfOpen()">+ ${_L('เพิ่มหนี้','Add debt')}</button></div>`;
+  if(!debtList.length){ el.innerHTML=hdr+_dbEmpty(); return; }
+  const opts=_debtOpts(), o=debtOverview(debtList, txRows, opts), curYm=opts.today.slice(0,7);
+  const ownFixed=o.items.filter(i=>i.own&&i.kind!=='card').reduce((s,i)=>s+(i.owed||0),0);
+  const ownCard=o.items.filter(i=>i.kind==='card').reduce((s,i)=>s+(i.owed||0),0);
+  const dti=o.dti!=null?Math.round(o.dti*100):null;
+  const dtiCol=dti==null?'var(--muted)':dti<=30?'var(--gain)':dti<=40?'var(--debt)':'var(--loss)';
+  const mLeft=o.debtFreeYm?_ymDiff(curYm,o.debtFreeYm)+1:null;
+  const cards=`<div class="sg dbs-sg">
+    <div class="sc"><div class="sc-lbl">${_L('หนี้คงเหลือ','Debt outstanding')}</div><div class="sc-val" style="color:var(--loss)">${fmt(o.totalOwed)}</div>
+      <div class="sc-sub">${_L('ผ่อน ','Installments ')}${fmt(ownFixed)} · ${_L('บัตร ','Cards ')}${fmt(ownCard)}</div></div>
+    <div class="sc"><div class="sc-lbl">${_L('ภาระต่อเดือน','Monthly payments')}</div><div class="sc-val">${fmt(o.monthly)}</div>
+      <div class="sc-sub">${_L('ของตัวเอง ','Own ')}${fmt(o.monthlyOwn)}${o.monthlySupport?' · '+_L('ช่วยครอบครัว ','Family ')+fmt(o.monthlySupport):''}${o.cardsOpen?' · '+_L('บัตรคิดที่ขั้นต่ำ','cards at minimum'):''}</div></div>
+    <div class="sc"><div class="sc-lbl">${_L('ภาระต่อรายได้','Debt-to-income')}</div><div class="sc-val" style="color:${dtiCol}">${dti==null?'—':dti+'%'}</div>
+      <div class="sc-sub">${o.income?_L('รายได้เฉลี่ย 3 เดือน ','3-month avg income ')+fmt(o.income)+' · '+_L('ควรไม่เกิน 40%','keep under 40%'):_L('ยังไม่มีรายได้ใน 3 เดือนล่าสุด','No income in the last 3 months')}</div></div>
+    <div class="sc"><div class="sc-lbl">${_L('ผ่อนหมด','Installments end')}</div><div class="sc-val">${o.debtFreeYm?dbYm(o.debtFreeYm):'—'}</div>
+      <div class="sc-sub">${mLeft?_L('อีก ','In ')+mLeft+_L(' เดือน',' months'):_L('ไม่มีหนี้ผ่อน','No installment debt')}${o.cardsOpen?' · '+_L('บัตรยังมียอด ','cards with a balance: ')+o.cardsOpen+_L(' ใบ',''):''}</div></div>
+  </div>`;
+  // บัตรที่ถูกเก็บดอกเบี้ยจริง = กำลังจ่ายไม่เต็มยอด → เตือนก่อนอย่างอื่น
+  const hot=o.items.filter(i=>i.kind==='card'&&i.interestSum>0.5);
+  const warn=hot.length?`<div class="dbs-warn">⚠ ${hot.map(i=>`<b>${escHtml(i.name)}</b> ${_L('ถูกเก็บดอกเบี้ยจริง','was charged interest')} ${fmt(i.interestSum)} ${_L('ใน 6 เดือน','in 6 months')}`).join(' · ')}
+      — ${_L('แปลว่ามียอดที่ไม่ได้จ่ายเต็มและกำลังเสียดอกเบี้ย','meaning part of the balance is not paid in full and is accruing interest')}
+      <button type="button" class="nt-go" onclick="switchPage('debt')">${_L('ดูหน้าบัตรเครดิต','Open credit cards')} ›</button></div>`:'';
+  const dueRows=o.due.map(x=>{
+    const it=o.items.find(i=>i.debt.row===x.row)||{};
+    const st=x.status==='paid'?`<span class="dbs-st ok">✓ ${_L('จ่ายแล้ว','Paid')} ${fmt(x.paidAmt)}</span>`
+      :x.status==='late'?`<span class="dbs-st late">${_L('เลยกำหนด','Overdue')}</span>`
+      :`<span class="dbs-st due">${_L('ครบกำหนด','Due')} ${dbDate(x.dueDate)}</span>`;
+    return `<div class="dbs-due-row"><div class="dbs-due-d">${+x.dueDate.slice(8,10)}</div>
+      <div class="dbs-due-n">${escHtml(x.name)}<div class="s">${dbTypeLbl(x.type)}${it.kind==='card'&&x.status!=='paid'?' · '+_L('ยอดโดยประมาณ','approx.'):''}</div></div>
+      <div class="dbs-due-a">${fmt(x.amount)}</div>${st}
+      ${x.status!=='paid'&&it.debt&&it.debt.payCat?`<button type="button" class="rb-btn" onclick="dbPay(${x.row})">${_L('บันทึกจ่าย','Record')}</button>`:''}</div>`;
+  }).join('');
+  const act=o.items.filter(i=>i.type!=='Card Installment'), ci=o.items.filter(i=>i.type==='Card Installment');
+  const closed=debtList.filter(d=>d.status==='Closed');
+  el.innerHTML=hdr+cards+warn
+    +(dueRows?`<div class="sl">${_L('ครบกำหนดเดือนนี้','Due this month')} · ${dbYm(curYm)}</div><div class="dbs-due">${dueRows}</div>`:'')
+    +`<div class="sl">${_L('หนี้แต่ละก้อน','Each debt')}</div><div class="dbs-grid">${act.map(_dbCard).join('')}</div>`
+    +(ci.length?`<div class="sl">${_L('ผ่อนบนบัตร (รวมอยู่ในยอดบัตรแล้ว)','Card installments (already inside the card balance)')}</div><div class="dbs-grid">${ci.map(_dbCard).join('')}</div>`:'')
+    +(closed.length?`<details class="dbs-closed"><summary>${_L('ปิดแล้ว ','Closed: ')}${closed.length}${_L(' ก้อน','')}</summary>
+        ${closed.map(d=>`<div class="dbs-closed-row">${escHtml(d.name)} · ${dbTypeLbl(d.type)} <button type="button" class="nt-go" onclick="dbfOpen(${d.row})">${_L('แก้ไข','Edit')} ›</button></div>`).join('')}</details>`:'')
+    +`<div class="dbs-hint">${_L('วิธีนับ: แถวใน Transaction ที่ Transactions = Debt และ Type ตรงกับ "หมวดที่ใช้จ่าย" ของหนี้ก้อนนั้น · แถว Expense หมวดเดียวกัน (เช่นค่าเช็คระยะ) และเงินดาวน์ไม่นับเป็นงวด · ยอดบัตรมาจากคอลัมน์บัตรในชีต (ใช้ยอดจาก Reconcile ถ้ามี) · แก้ข้อมูลได้ทั้งในแอปและในแท็บ Debts ของชีต',
+      'How it counts: Transaction rows with Transactions = Debt whose Type matches the debt\'s pay category · Expense rows in the same category (e.g. servicing) and down payments are not counted · card balances come from the card column (Reconcile when available) · edit here or directly in the Debts tab')}</div>`;
+}
+
+function renderDebtSched(){
+  const el=document.getElementById('dsc-body'); if(!el) return;
+  const hdr=`<div class="pg-hdr"><div><div class="pg-title">Payment schedule</div>
+    <div class="pg-sub">${_L('ภาระผ่อนรายเดือนล่วงหน้าตามสัญญา — เดือนไหนผ่อนจบ และมีเงินเหลือเพิ่มเท่าไร','Upcoming installments by contract — when each one ends and how much cash frees up')}</div></div></div>`;
+  if(!debtList.length){ el.innerHTML=hdr+_dbEmpty(); return; }
+  const opts=_debtOpts(), o=debtOverview(debtList, txRows, opts), curYm=opts.today.slice(0,7);
+  const ends=o.items.filter(i=>i.kind==='fixed'&&i.left>0).map(i=>_ymDiff(curYm,i.endYm)+2);
+  const n=Math.max(6,Math.min(60,Math.max(0,...ends)));
+  const s=debtSchedule(o.items, curYm, n);
+  const names=[...new Set(s.rows.flatMap(r=>Object.keys(r.parts)))];
+  const PAL=['var(--debt)','var(--savings)','#4cc9f0','#f472b6','#a78bfa','var(--income)'];
+  const col=nm=>PAL[names.indexOf(nm)%PAL.length];
+  const max=Math.max(1,...s.rows.map(r=>r.total));
+  // ภาระเต็มเดือน (ทุกก้อนที่ยังผ่อนอยู่ + ภาระต่อเนื่อง) — ไม่ใช่ยอดที่เหลือจ่ายของเดือนนี้ ซึ่งหักงวดที่จ่ายไปแล้ว
+  let running=o.items.filter(i=>(i.kind==='fixed'&&i.left>0)||i.kind==='ongoing').reduce((t,i)=>t+i.inst,0);
+  const ev=s.events.length?s.events.map(e=>{ running-=e.freed;
+      return `<div class="dsc-ev"><div class="dsc-ev-m">${dbYm(e.ym)}</div><div>${escHtml(e.name)} ${_L('ผ่อนจบ (งวดสุดท้าย ','ends (last installment ')}${dbYm(e.lastYm)})
+        → <b style="color:var(--gain)">+${fmt(e.freed)}/${_L('เดือน','mo')}</b> · ${_L('ภาระผ่อนเหลือ ','installments left: ')}${fmt(Math.max(0,running))}/${_L('เดือน','mo')}</div></div>`; }).join('')
+    :`<div class="dbs-hint">${_L('ยังไม่มีหนี้ผ่อนที่มีจำนวนงวด — ใส่ "จำนวนงวด" ในหนี้แต่ละก้อนเพื่อดูว่าจะจบเมื่อไร','No installment debt with a term yet — add a term to see when each one ends')}</div>`;
+  const cardsMo=o.items.filter(i=>i.kind==='card').reduce((t,i)=>t+(i.typical||0),0);
+  el.innerHTML=hdr
+    +`<div class="sl">${_L('เดือนที่ภาระลดลง','When payments drop')}</div><div class="cc dsc-evs">${ev}</div>`
+    +`<div class="sl">${_L('ภาระรายเดือนล่วงหน้า','Monthly payments ahead')} · ${n} ${_L('เดือน','months')}</div>
+      <div class="cc"><div class="dsc-leg">${names.map(nm=>`<span><i style="background:${col(nm)}"></i>${escHtml(nm)}</span>`).join('')}</div>
+      ${s.rows.map(r=>`<div class="dsc-row"><div class="dsc-m">${dbYm(r.ym)}</div>
+        <div class="dsc-bar" title="${escAttr(Object.entries(r.parts).map(([k,v])=>k+' '+fmt(v)).join(' · '))}">${Object.entries(r.parts).map(([k,v])=>`<i style="width:${(v/max*100).toFixed(2)}%;background:${col(k)}"></i>`).join('')}</div>
+        <div class="dsc-tot">${r.total?fmt(r.total):'—'}</div></div>`).join('')}</div>`
+    +`<div class="dbs-hint">${_L('บัตรเครดิตไม่อยู่ในตาราง (ไม่มีงวดตายตัว)','Credit cards are not in the table (no fixed installments)')}${cardsMo?' — '+_L('ตอนนี้จ่ายบัตรรวมประมาณ ','currently paying cards about ')+fmt(cardsMo)+'/'+_L('เดือน','mo'):''}
+      · ${_L('ตารางนี้เป็นข้อเท็จจริงตามสัญญา ไม่ใช่การจำลองโปะหนี้','This is the contract schedule, not a payoff simulation')}</div>`;
+}
+
+// ── ฟอร์มเพิ่ม/แก้หนี้ → เขียนแท็บ Debts ─────────────────────────────────
+// ช่องที่แสดงตามประเภท: fx = ผ่อน/สินเชื่อ/อื่นๆ · cc = บัตรเครดิต · ci = ผ่อนบนบัตร · fs = ช่วยครอบครัว
+const DBF_SHOW={
+  fx:['lender','card','payCat','payFrom','first','inst','term','paidBefore','principal','down','rate','rateType','dueDay'],
+  cc:['lender','payCat','payFrom','card','rate','dueDay','limit'],
+  ci:['card','first','inst','term','rate','dueDay'],
+  fs:['lender','payCat','payFrom','first','inst','term','paidBefore','dueDay'],
+};
+const _dbfKey=t=>t==='Credit Card'?'cc':t==='Card Installment'?'ci':t==='Family Support'?'fs':'fx';
+let dbfRow=null;
+function dbfOpen(row){
+  dbfRow=row||null;
+  const d=row?debtList.find(x=>x.row===row):null;
+  if(row&&!d){ alert(_L('หาหนี้ก้อนนี้ไม่เจอ — กด Sync แล้วลองใหม่','Debt not found — press Sync and try again')); return; }
+  const v=d||{type:'Installment',status:'Active'};
+  const banks=((txSheetMeta&&txSheetMeta.banks)||bankBals||[]).map(b=>b.name).filter(Boolean);
+  const bankSel=(id,sel)=>`<select id="dbf-${id}" class="gs-input"><option value="">—</option>${banks.map(n=>`<option${n===sel?' selected':''}>${escHtml(n)}</option>`).join('')}${sel&&!banks.includes(sel)?`<option selected>${escHtml(sel)}</option>`:''}</select>`;
+  const cats=[...new Set((txRows||[]).filter(t=>t.type==='Debt').map(t=>t.category).filter(Boolean))].sort();
+  const inp=(id,val,type,ph,extra)=>`<input id="dbf-${id}" class="gs-input" type="${type||'text'}" value="${escAttr(val==null?'':val)}" placeholder="${escAttr(ph||'')}" autocomplete="off" ${extra||''}>`;
+  const f=(id,lbl,inner,help)=>`<div class="gs-field" data-f="${id}"><div class="gs-label">${lbl}</div>${inner}${help?`<div class="dbf-help">${help}</div>`:''}</div>`;
+  const num='inputmode="decimal" step="any" min="0"';
+  document.getElementById('dbf-title').textContent=d?_L('แก้ไขหนี้','Edit debt'):_L('เพิ่มหนี้','Add debt');
+  document.getElementById('dbf-save').textContent=_L('บันทึกลงชีต','Save to sheet');
+  document.getElementById('dbf-cancel').textContent=_L('ยกเลิก','Cancel');
+  document.getElementById('dbf-msg').textContent='';
+  document.getElementById('dbf-body').innerHTML=
+    f('name',_L('ชื่อหนี้','Name')+' *',inp('name',v.name,'text',_L('เช่น ผ่อนมอเตอร์ไซต์','e.g. Motorcycle loan')))
+    +`<div class="dbf-g2">${f('type',_L('ประเภท','Type'),`<select id="dbf-type" class="gs-input" onchange="dbfType()">${DEBT_TYPES.map(t=>`<option value="${t.id}"${t.id===v.type?' selected':''}>${_L(t.th,t.en)}</option>`).join('')}</select>`)}
+      ${f('lender',_L('เจ้าหนี้','Lender'),inp('lender',v.lender,'text',_L('เช่น ธนาคาร / ไฟแนนซ์','e.g. bank / finance co.')))}</div>`
+    +f('card',`<span data-lbl-cc>${_L('บัตร (คอลัมน์บัญชีในชีต)','Card (account column)')}</span><span data-lbl-fx>${_L('คอลัมน์บัญชีของหนี้ (ถ้ามี)','Debt account column (if any)')}</span>`,bankSel('card',v.card),
+      `<span data-lbl-cc>${_L('ยอดค้างของบัตรอ่านจากคอลัมน์นี้','The card balance is read from this column')}</span><span data-lbl-fx>${_L('สินเชื่อที่มีคอลัมน์ของตัวเองในชีต (เช่น Car Loan) — ยอดในคอลัมน์ใช้เป็นเงินต้นคงเหลือ','For a loan with its own column (e.g. Car Loan) — that balance is used as principal outstanding')}</span>`)
+    +`<div class="dbf-g2">${f('payCat',_L('หมวดที่ใช้จ่าย','Pay category'),inp('payCat',v.payCat,'text','Motocycle','list="dbf-cat-list"')+`<datalist id="dbf-cat-list">${cats.map(c=>`<option value="${escAttr(c)}">`).join('')}</datalist>`,
+        _L('ช่อง Type ในชีต Transaction ตอนบันทึกการจ่าย — นับเฉพาะแถว Debt','The Type used when you record a payment in Transaction — only Debt rows count'))}
+      ${f('payFrom',_L('จ่ายจากบัญชี','Paid from'),bankSel('payFrom',v.payFrom))}</div>`
+    +`<div class="dbf-g2">${f('first',_L('งวดแรก','First payment'),inp('first',v.first,'date'),_L('การจ่ายก่อนวันนี้ (เช่นเงินดาวน์) ไม่นับ','Payments before this date (e.g. down payment) are not counted'))}
+      ${f('dueDay',_L('ครบกำหนดทุกวันที่','Due day'),inp('dueDay',v.dueDay,'number','27',num+' max="31"'))}</div>`
+    +`<div class="dbf-g2">${f('inst',_L('ค่างวด (บาท)','Installment (฿)'),inp('inst',v.inst,'number','3472',num))}
+      ${f('term',_L('จำนวนงวดทั้งหมด','Total installments'),inp('term',v.term,'number','24',num))}</div>`
+    +`<div class="dbf-g2">${f('paidBefore',_L('จ่ายก่อนเริ่มบันทึก (งวด)','Paid before tracking'),inp('paidBefore',v.paidBefore||'','number','0',num),_L('งวดที่จ่ายไปแล้วแต่ไม่อยู่ในชีต','Installments paid that are not in the sheet'))}
+      ${f('limit',_L('วงเงินบัตร (บาท)','Credit limit (฿)'),inp('limit',v.limit,'number','',num))}</div>`
+    +`<div class="dbf-g2">${f('principal',_L('ยอดจัด / เงินต้น','Principal'),inp('principal',v.principal,'number','',num))}
+      ${f('down',_L('เงินดาวน์','Down payment'),inp('down',v.down,'number','',num))}</div>`
+    +`<div class="dbf-g2">${f('rate',_L('ดอกเบี้ย %/ปี','Interest %/yr'),inp('rate',v.rate,'number','',num))}
+      ${f('rateType',_L('แบบดอกเบี้ย','Rate type'),`<select id="dbf-rateType" class="gs-input"><option value="">—</option>${['Flat','Effective','0%'].map(x=>`<option${x===v.rateType?' selected':''}>${x}</option>`).join('')}</select>`)}</div>`
+    +`<div class="dbf-g2">${f('status',_L('สถานะ','Status'),`<select id="dbf-status" class="gs-input"><option value="Active"${v.status!=='Closed'?' selected':''}>${_L('กำลังผ่อน','Active')}</option><option value="Closed"${v.status==='Closed'?' selected':''}>${_L('ปิดแล้ว','Closed')}</option></select>`)}
+      ${f('note',_L('หมายเหตุ','Note'),inp('note',v.note,'text'))}</div>`;
+  dbfType();
+  document.getElementById('dbf-modal').classList.add('show');
+  setTimeout(()=>{ const n=document.getElementById('dbf-name'); if(n&&!d) n.focus(); },80);
+}
+function dbfType(){
+  const t=(document.getElementById('dbf-type')||{}).value, show=DBF_SHOW[_dbfKey(t)];
+  document.querySelectorAll('#dbf-body [data-f]').forEach(el=>{
+    const k=el.dataset.f; el.hidden=!(['name','type','status','note'].includes(k)||show.includes(k)); });
+  document.querySelectorAll('#dbf-body .dbf-g2').forEach(g=>{ g.hidden=![...g.children].some(c=>!c.hidden); });
+  const fx=_dbfKey(t)==='fx';
+  document.querySelectorAll('#dbf-body [data-lbl-cc]').forEach(e=>{ e.hidden=fx; });
+  document.querySelectorAll('#dbf-body [data-lbl-fx]').forEach(e=>{ e.hidden=!fx; });
+}
+function dbfClose(){ document.getElementById('dbf-modal').classList.remove('show'); dbfRow=null; }
+async function debtsReload(){
+  const j=await _docsApi('/values/'+encodeURIComponent('Debts!A1:Z')+'?valueRenderOption=UNFORMATTED_VALUE&dateTimeRenderOption=SERIAL_NUMBER');
+  const p=parseDebtRows(j.values||[]); debtList=p.debts; debtSheetMeta=p.meta;
+  try{   // อัปเดตเฉพาะส่วนหนี้ใน cache — ไม่แตะเวลา sync ของข้อมูลอื่น (cache แบบเข้ารหัสจะอัปเดตตอน sync ครั้งถัดไป)
+    const raw=localStorage.getItem(CACHE_KEY);
+    if(raw){ const c=JSON.parse(raw); c.debtList=debtList; c.debtSheetMeta=debtSheetMeta; localStorage.setItem(CACHE_KEY, JSON.stringify(c)); }
+  }catch(e){}
+}
+// ให้แน่ใจว่ามีแท็บ Debts พร้อมหัวตาราง ก่อนเขียนครั้งแรก (แบบเดียวกับ docsEnsureSheet)
+async function debtsEnsureSheet(){
+  if(debtSheetMeta) return debtSheetMeta;
+  const j=await _docsApi('?fields='+encodeURIComponent('sheets(properties(title))'));
+  const has=(j.sheets||[]).some(s=>s.properties&&s.properties.title==='Debts');
+  if(!has) await _docsApi(':batchUpdate',{method:'POST',body:JSON.stringify({requests:[{addSheet:{properties:{
+    title:'Debts', gridProperties:{frozenRowCount:1}}}}]})});
+  await debtsReload();
+  if(debtSheetMeta) return debtSheetMeta;
+  const r1=await _docsApi('/values/'+encodeURIComponent('Debts!A1:Z1'));
+  if((r1.values||[]).some(r=>r.some(c=>String(c).trim())))
+    throw new Error(_L('แท็บ Debts มีข้อมูลอยู่แล้วแต่หาหัวตารางไม่เจอ — ใส่หัว ','The Debts tab has data but no header row — add ')+DEBT_HEADER.join(' | '));
+  await _docsApi('/values/'+encodeURIComponent('Debts!A1')+'?valueInputOption=RAW',{method:'PUT',body:JSON.stringify({values:[DEBT_HEADER]})});
+  await debtsReload();
+  if(!debtSheetMeta) throw new Error(_L('สร้างหัวตาราง Debts ไม่สำเร็จ','Could not create the Debts header'));
+  return debtSheetMeta;
+}
+async function dbfSave(){
+  // ช่องที่ซ่อนสำหรับประเภทนี้ → undefined = ไม่แตะค่าเดิมในชีตตอนแก้ไข (เพิ่มใหม่ = ช่องว่าง)
+  const g=id=>{ const e=document.getElementById('dbf-'+id); return e&&!e.closest('[hidden]')?String(e.value).trim():undefined; };
+  const n=id=>{ const v=g(id); if(v===undefined) return undefined; const s=v.replace(/,/g,''); if(s==='') return ''; const x=parseFloat(s); return isFinite(x)&&x>=0?x:''; };
+  const msg=document.getElementById('dbf-msg'), btn=document.getElementById('dbf-save');
+  const say=(m,c)=>{ msg.textContent=m; msg.style.color=c||'var(--muted2)'; };
+  const type=document.getElementById('dbf-type').value;
+  const f={name:g('name'), type, lender:g('lender'), payCat:g('payCat'), payFrom:g('payFrom'), card:g('card'), first:g('first'),
+    inst:n('inst'), term:n('term'), paidBefore:n('paidBefore'), principal:n('principal'), down:n('down'), rate:n('rate'),
+    rateType:g('rateType'), dueDay:n('dueDay'), limit:n('limit'), status:g('status')||'Active', note:g('note')};
+  const k=_dbfKey(type);
+  const has=v=>v!==undefined&&v!=='';
+  if(!f.name) return say(_L('ใส่ชื่อหนี้ก่อน','Enter a name'),'var(--expense)');
+  if(debtList.some(d=>d.name===f.name&&d.row!==dbfRow)) return say(_L('มีหนี้ชื่อนี้แล้ว','A debt with this name already exists'),'var(--expense)');
+  if(has(f.dueDay)&&(f.dueDay<1||f.dueDay>31)) return say(_L('วันครบกำหนดต้องอยู่ระหว่าง 1–31','Due day must be 1–31'),'var(--expense)');
+  if((k==='cc'||k==='ci')&&!f.card) return say(_L('เลือกบัตรก่อน','Choose the card'),'var(--expense)');
+  if(k==='ci'&&!(f.inst>0&&f.term>0&&f.first)) return say(_L('ผ่อนบนบัตรต้องมีงวดแรก ค่างวด และจำนวนงวด','A card installment needs a first payment, installment and term'),'var(--expense)');
+  if(k==='fx'&&!(f.inst>0&&f.term>0)&&!(f.principal>0)) return say(_L('ใส่ค่างวด + จำนวนงวด หรือยอดจัด','Enter installment + term, or a principal'),'var(--expense)');
+  if(k==='fs'&&!(f.inst>0)) return say(_L('ใส่ยอดที่จ่ายต่อเดือน','Enter the monthly amount'),'var(--expense)');
+  if(has(f.dueDay)) f.dueDay=Math.round(f.dueDay);
+  if(!GS_CONFIG.spreadsheetId||!gsTokenValid()) return say('🔑 '+_L('Session หมดอายุ — กด Sync เพื่อเข้าสู่ระบบใหม่ แล้วลองอีกครั้ง','Session expired — press Sync to sign in, then try again'),'var(--expense)');
+  btn.disabled=true; say('⏳ '+_L('กำลังบันทึก...','Saving...'));
+  try{
+    const meta=await debtsEnsureSheet();
+    if(dbfRow){
+      const orig=debtList.find(x=>x.row===dbfRow);
+      if(!orig||meta.cols.name==null) throw new Error(_L('หาแถวเดิมไม่เจอ — กด Sync แล้วลองใหม่','Original row not found — press Sync and try again'));
+      await sheetRowGuard('Debts', dbfRow, [{col:meta.cols.name, expect:orig.name}], _L('หนี้ ','debt ')+orig.name);   // กันเขียนทับแถวอื่นถ้าชีตเลื่อน
+      await _docsApi('/values/'+encodeURIComponent(`Debts!A${dbfRow}:${txColLetter(meta.width-1)}${dbfRow}`)+'?valueInputOption=USER_ENTERED',
+        {method:'PUT', body:JSON.stringify({values:[debtRowValues(meta,f)]})});
+    } else {
+      await _docsApi('/values/'+encodeURIComponent('Debts!A'+meta.headerRow)+':append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS',
+        {method:'POST', body:JSON.stringify({values:[debtRowValues(meta,f).map(x=>x==null?'':x)]})});
+    }
+    await debtsReload();
+    dbfClose();
+    renderDebts(); renderDebtSched(); try{ updateDebtBadge(); }catch(e){}
+  }catch(e){ say(e.message,'var(--expense)'); }
+  btn.disabled=false;
+}
+// บันทึกจ่าย → เปิดฟอร์มรายการเดิม (เขียนชีต Transaction) โดยกรอกให้ตามแบบที่เคยลง
+function dbPay(row){
+  const d=debtList.find(x=>x.row===row); if(!d) return;
+  if(!txSheetMeta){ alert(_L('กด Sync ก่อน 1 ครั้ง เพื่อให้ระบบอ่านโครงสร้างชีต','Press Sync once so the app can read the sheet layout')); return; }
+  const banks=txSheetMeta.banks||[], col=nm=>{ const b=banks.find(x=>x.name===nm); return b?b.col:null; };
+  const last=[...(txRows||[])].reverse().find(t=>t.type==='Debt'&&_docKey(t.category)===_docKey(d.payCat));
+  const it=debtProgress(d, txRows, _debtOpts());
+  const isCard=d.type==='Credit Card';
+  // หนี้ที่มีคอลัมน์บัญชีของตัวเอง (บัตร / สินเชื่อเช่น Car Loan): ชีตลงเป็น ธนาคาร −x · คอลัมน์หนี้ +x ในแถวเดียว
+  const ownCol=d.type!=='Card Installment'?col(d.card||(isCard?d.name:'')):null;
+  txOpenPrefill({type:'Debt', cat:d.payCat, detail:last?last.details:(isCard?(d.card||d.name):d.name),
+    acctCol:col(d.payFrom), toCardCol:ownCol,
+    amt:isCard?(it.balance||''):(d.inst||'')});
 }
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -9655,6 +10094,7 @@ let pageRenderFns={
   overview:renderOverview,cashflow:renderCashflow,yearly:renderYearly,
   accounts:renderAccounts,portfolio:renderPortfolio,
   autobot:renderAutoBot,   // v75 — บอทเทรด (paper)
+  live:renderLive,         // v78 — พอร์ตสด (Binance + MetaMask)
   performance:()=>renderPerformance(assets.reduce((s,a)=>s+a.val,0)),   // v74 — แท็บแยก (หน้าพอร์ตยังเรียกด้วยเพื่อบันทึก snapshot TWR)
   budget:renderBudget,
   insurance:renderInsurance,
@@ -9663,6 +10103,7 @@ let pageRenderFns={
   engine:renderEngine,dividends:renderDividends,
   goals:renderGoals,
   debt:renderDebt,
+  debts:renderDebts, debtsched:renderDebtSched,   // v77 — หนี้สิน (แท็บ Debts)
   // v51 — ยุบมาจาก investment-analysis.html
   dormant:renderDormant, cost:renderCost, market:renderMarket, rebalance:renderRebalance,
   // v53
@@ -9872,9 +10313,11 @@ const NAV_GROUPS = [
   {id:'analyst',   pages:[['analyst','บทวิเคราะห์']]},
   {id:'goals',     pages:[['goals','เป้าหมาย']]},
   {id:'money',     pages:[['cashflow','รายเดือน'],['yearly','รายปี'],['engine','ออม & ลงทุน'],['budget','งบประมาณ']]},
-  {id:'accounts',  pages:[['accounts','บัญชี'],['debt','หนี้']]},
+  {id:'accounts',  pages:[['accounts','บัญชี']]},
+  // v77 — หนี้สิน: ภาพรวม (ทุกก้อนจากแท็บ Debts) · ตารางผ่อน · บัตรเครดิต (หน้า "หนี้" เดิม — id 'debt' คงไว้ให้ลิงก์เดิมใช้ได้)
+  {id:'debts',     pages:[['debts','ภาพรวมหนี้'],['debtsched','ตารางผ่อน'],['debt','บัตรเครดิต']]},
   {id:'insurance', pages:[['insurance','ประกัน']]},
-  {id:'invest',    pages:[['portfolio','ภาพรวมพอร์ต'],['performance','ผลตอบแทนจริง'],['autobot','บอทเทรด'],['flow','รายการซื้อขาย'],['realized','ขายแล้ว'],
+  {id:'invest',    pages:[['portfolio','ภาพรวมพอร์ต'],['live','พอร์ตสด'],['performance','ผลตอบแทนจริง'],['autobot','บอทเทรด'],['flow','รายการซื้อขาย'],['realized','ขายแล้ว'],
                           ['dormant','ไม่มีใครดูแล'],['cost','ต้นทุน & ค่าเงิน'],['rebalance','ปรับสมดุล']]},
   {id:'dividends', pages:[['dividends','ปันผล']]},
   {id:'markets',   pages:[['signals','สัญญาณรายตัว'],['research','วิเคราะห์เจาะลึก'],['watch','ภาพรวมตลาด'],
@@ -9919,6 +10362,7 @@ function switchPage(name){
   document.querySelectorAll('.bnav-item[data-group]').forEach(el=>{el.classList.toggle('active',el.dataset.group===_g.id);});
   renderGroupTabs(_g, name);
   document.querySelectorAll('.page').forEach(el=>{el.classList.toggle('active',el.id===`page-${name}`);});
+  if(typeof liveOnPage==='function') try{ liveOnPage(name==='live'); }catch(e){}   // v78 — เปิด/ปิด WebSocket ราคาสด
   (PAGE_DEPS[name]||[]).forEach(dep=>{
     if(renderedPages.has(dep) || !pageRenderFns[dep]) return;
     try{ pageRenderFns[dep](); renderedPages.add(dep); }
@@ -10438,7 +10882,7 @@ async function acctRemovePw(){
 }
 
 // ── ค้นหาหน้าและคำสั่ง ⌘K ──
-const CMDK_IC={home:'overview',analyst:'analyst',goals:'goals',money:'money',accounts:'accounts',insurance:'insurance',
+const CMDK_IC={home:'overview',analyst:'analyst',goals:'goals',money:'money',accounts:'accounts',debts:'debt',insurance:'insurance',
   invest:'invest',dividends:'dividends',markets:'markets',notify:'notify',docs:'docs'};
 let _cmdkSel=0, _cmdkView=[];
 const _tr = s => (window.I18N ? I18N.t(s) : s);
@@ -10813,6 +11257,353 @@ async function abSaveWorker(disconnect){
     _ab.remote=null; _ab.err='';
     document.getElementById('abw-modal').classList.remove('show'); renderAutoBot();
   }catch(e){ msg.className='auth-msg'; msg.textContent=_L('เชื่อมไม่ได้: ','Could not connect: ')+e.message; }
+}
+
+/* ══ v78 — พอร์ตสด (Binance + MetaMask · อ่านอย่างเดียว) ═══════════════════════════════════
+   ยอดคงเหลือ: Worker ตัวเดียวกับบอทเทรด (GET /live/holdings) — key Binance อยู่ใน Worker เท่านั้น ไม่ผ่านเบราว์เซอร์
+   ราคา: เบราว์เซอร์ต่อ WebSocket สาธารณะของ Binance ตรง (ไม่ใช้ key) → ตัวเลขขยับทุกวินาที
+   ต้นทุน 2 แบบคู่กัน: ชีต (waccMap · บาท) กับประวัติเทรด Binance (USD) — สูตรอยู่ใน liveport.js
+   ไม่มีปุ่ม/โค้ดส่งคำสั่งซื้อขายในหน้านี้ */
+const LV_PREF='finOS_livePref';
+const LV_DATA='https://data-api.binance.vision/api/v3', LV_WS='wss://data-stream.binance.vision/stream?streams=';
+const _lv={ on:false, hold:null, err:'', loading:false, px:{}, spark:{}, noPair:new Set(), pairs:null, ws:null, wsState:'off', wsTry:0,
+  wsTimer:null, poll:null, paintAt:0, paintQ:false, costBusy:false, costMsg:'', cfg:null };
+function _lvPref(){ try{ return Object.assign({basis:'sheet', src:'all', sort:'value'}, JSON.parse(localStorage.getItem(LV_PREF)||'{}')); }catch(e){ return {basis:'sheet', src:'all', sort:'value'}; } }
+function lvSetPref(k,v){ const p=_lvPref(); p[k]=v; try{ localStorage.setItem(LV_PREF, JSON.stringify(p)); }catch(e){} renderLive(); }
+const _lvUsd=v=>v==null?'—':(v<0?'−':'')+'$'+Math.abs(v).toLocaleString(LOC,{maximumFractionDigits:Math.abs(v)>=100?0:2});
+const _lvUsdS=v=>v==null?'—':(v>=0?'+':'−')+'$'+Math.abs(v).toLocaleString(LOC,{maximumFractionDigits:Math.abs(v)>=100?0:2});
+const _lvPx=v=>v==null?'—':'$'+Number(v).toLocaleString(LOC,{maximumFractionDigits:v>=1000?2:v>=1?4:8});
+const _lvPct=v=>v==null?'—':(v>=0?'+':'−')+Math.abs(v*100).toFixed(2)+'%';
+const _lvCls=v=>v==null?'':v>=0?'gain':'loss';
+const _lvQty=q=>q<1?q.toLocaleString(LOC,{maximumFractionDigits:8}):q.toLocaleString(LOC,{maximumFractionDigits:4});
+const _lvId=a=>'lv-'+String(a).replace(/[^A-Za-z0-9]/g,'_');
+const _lvWallet={ spot:'Spot', funding:'Funding', earn:'Earn', 'earn-locked':_L('Earn ล็อก','Earn locked') };
+
+// ── แปลงข้อมูลจาก Worker + ราคา → มุมมองต่อสินทรัพย์ ──
+function _lvViews(){
+  const H=_lv.hold; if(!H) return { views:[], tot:null };
+  const fx=(typeof mdNum==='function') ? mdNum('USDTHB') : null;
+  const sheetQty={}; (assets||[]).forEach(a=>{ sheetQty[String(a.ticker).toUpperCase()]=a.qty; });
+  const rows=[...(H.binance.rows||[]), ...(H.evm.rows||[])];
+  const views=LivePort.mergeHoldings(rows).map(h=>{
+    const px=_lv.px[h.asset]||{};
+    return LivePort.positionView(h, { priceUSD:px.p, open24USD:px.o, fx,
+      sheetWacc:(waccMap||{})[h.asset]||0, sheetQty:sheetQty[h.asset]!=null?sheetQty[h.asset]:(Object.keys(waccMap||{}).length?0:null),
+      bin:(H.cost&&H.cost.assets||{})[h.asset] });
+  });
+  return { views, tot:LivePort.totals(views, fx), fx };
+}
+
+function _lvSpark(a, chg){
+  const s=(_lv.spark[a]||[]).slice(); const p=_lv.px[a]; if(p&&p.p&&s.length) s[s.length-1]=p.p;
+  if(s.length<2) return `<div class="lv-spark lv-spark-none"></div>`;
+  const W=120, H=40, mn=Math.min(...s), mx=Math.max(...s), rg=mx-mn||1;
+  const pts=s.map((v,i)=>`${(i/(s.length-1)*W).toFixed(1)},${(H-2-(v-mn)/rg*(H-4)).toFixed(1)}`).join(' ');
+  return `<svg class="lv-spark ${chg!=null&&chg<0?'dn':'up'}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
+    <polygon points="0,${H} ${pts} ${W},${H}"/><polyline points="${pts}"/></svg>`;
+}
+
+function _lvSrcChips(v){
+  const seen=new Set();
+  return v.parts.map(p=>{
+    const t=p.src==='binance' ? 'Binance · '+(_lvWallet[p.wallet]||p.wallet) : 'MetaMask · '+(LivePort.CHAINS[p.chain]||{}).name;
+    if(seen.has(t)) return ''; seen.add(t);
+    return `<span class="ab-chip">${escHtml(t)}</span>`;
+  }).join('');
+}
+
+function _lvCard(v, basis){
+  const id=_lvId(v.asset);
+  const main = basis==='bin' ? (v.bin&&v.bin.pnlPct!=null ? v.bin.pnlPct : null) : (v.sheet&&v.sheet.pnlPct!=null ? v.sheet.pnlPct : null);
+  const sq=v.sheet&&v.sheet.sheetQty;
+  const qtyDiff = sq!=null && v.qty>0 && Math.abs(sq-v.qty)/v.qty>0.005;
+  const fee=v.bin&&v.bin.feeOther ? Object.entries(v.bin.feeOther).map(([a,q])=>`${_lvQty(q)} ${a}`).join(', ') : '';
+  return `<div class="lv-card" data-a="${escAttr(v.asset)}">
+    <div class="lv-c-hd"><span class="lv-ic" aria-hidden="true">${escHtml(v.asset.slice(0,4))}</span>
+      <div class="lv-c-nm"><b>${escHtml(v.asset)}</b><div class="lv-chips">${_lvSrcChips(v)}</div></div></div>
+    <div class="lv-c-mid">
+      <div><div class="lv-big ${_lvCls(main)}" id="${id}-main">${_lvPct(main)}</div>
+        <div class="lv-lbl">P&amp;L · ${basis==='bin'?_L('ต้นทุน Binance','Binance cost'):_L('ต้นทุนชีต','sheet cost')}</div></div>
+      ${_lvSpark(v.asset, v.chg24)}</div>
+    <div class="lv-kv">
+      <div><span class="lv-lbl">${_L('มูลค่า','Value')}</span><b id="${id}-val">${v.valueTHB!=null?fmt(v.valueTHB):'—'}</b><small id="${id}-valu">${_lvUsd(v.valueUSD)}</small></div>
+      <div class="r"><span class="lv-lbl">24 ${_L('ชม.','h')}</span><b id="${id}-chg" class="${_lvCls(v.chg24)}">${_lvPct(v.chg24)}</b><small id="${id}-px">${_lvPx(v.priceUSD)}</small></div>
+    </div>
+    <div class="lv-qty">${_L('จำนวน','Qty')} <b>${_lvQty(v.qty)}</b>${sq!=null?` · ${_L('ชีตบันทึก','sheet')} <span class="${qtyDiff?'lv-warn':''}">${_lvQty(sq)}</span>`:''}</div>
+    <div class="lv-cmp">
+      <div><div class="lv-lbl">${_L('ต้นทุนตามชีต','Sheet cost')}</div>
+        ${v.sheet&&v.sheet.costTHB!=null?`<div>${fmt(v.sheet.wacc)}/${_L('หน่วย','unit')}</div>
+          <div id="${id}-ps" class="${_lvCls(v.sheet.pnlTHB)}">${fmtSign(v.sheet.pnlTHB)} · ${_lvPct(v.sheet.pnlPct)}</div>`
+        :`<div class="lv-mute">${_L('ไม่มีใน Asset_Tracker','Not in Asset_Tracker')}</div>`}</div>
+      <div><div class="lv-lbl">${_L('ต้นทุนตาม Binance','Binance cost')}</div>
+        ${v.bin&&v.bin.pnlUSD!=null?`<div>${_lvPx(v.bin.wacc)}/${_L('หน่วย','unit')}</div>
+          <div id="${id}-pb" class="${_lvCls(v.bin.pnlUSD)}">${_lvUsdS(v.bin.pnlUSD)} · ${_lvPct(v.bin.pnlPct)}</div>
+          ${v.bin.coverage<0.995?`<div class="lv-mute">${_L('มีประวัติซื้อ','history covers')} ${(v.bin.coverage*100).toFixed(0)}%</div>`:''}`
+        :`<div class="lv-mute">${v.bin&&v.bin.n?_L('ที่ถืออยู่ไม่มีประวัติซื้อ','no buy history for current qty'):_L('ไม่มีประวัติเทรด','no trade history')}</div>`}
+        ${fee?`<div class="lv-mute" title="${escAttr(_L('ค่าธรรมเนียมที่จ่ายเป็นเหรียญอื่น ไม่ได้รวมในต้นทุน','Fees paid in another coin are not in the cost'))}">+ ${_L('ค่าธรรมเนียม','fees')} ${escHtml(fee)}</div>`:''}</div>
+    </div></div>`;
+}
+
+function renderLive(){
+  const el=document.getElementById('lv-root'); if(!el) return;
+  if(!window.LivePort){ el.innerHTML=`<div class="nd">liveport.js ${_L('ไม่ได้โหลด','failed to load')}</div>`; return; }
+  if(!_abConnected()){
+    el.innerHTML=`<div class="ab-banner"><svg class="ic" aria-hidden="true"><use href="#i-lock"/></svg><div>
+      <b>${_L('ต้องเชื่อม Cloudflare Worker ก่อน','Connect the Cloudflare Worker first')}</b>
+      <span>${_L('ยอดคงเหลือจาก Binance อ่านผ่าน Worker (key อยู่ใน Worker ไม่อยู่ในเครื่อง) — ใช้ Worker ตัวเดียวกับบอทเทรด ขั้นตอนอยู่ใน cloudflare-worker/autobot/README.md',
+        'Binance balances are read through the Worker (the key lives there, not on this device) — the same Worker as the trading bot; steps in cloudflare-worker/autobot/README.md')}</span>
+      <span style="margin-top:10px"><button type="button" class="rb-btn primary" onclick="abOpenWorker()">${_L('เชื่อม Worker','Connect Worker')}</button></span></div></div>`;
+    return;
+  }
+  const pref=_lvPref(), H=_lv.hold;
+  const {views, tot}=_lvViews();
+  const shown=views.filter(v=>pref.src==='all' || v.parts.some(p=>p.src===pref.src));
+  const key={ value:v=>-(v.valueUSD||0), pnl:v=>{ const x=pref.basis==='bin'?v.bin&&v.bin.pnlPct:v.sheet&&v.sheet.pnlPct; return x==null?Infinity:-x; },
+    chg:v=>v.chg24==null?Infinity:-v.chg24, name:v=>v.asset }[pref.sort] || (v=>-(v.valueUSD||0));
+  shown.sort((a,b)=>{ const x=key(a), y=key(b); return typeof x==='string'?x.localeCompare(y):x-y; });
+  const dot={ live:['lv-dot on',_L('ราคาสด','Live prices')], connecting:['lv-dot wait',_L('กำลังเชื่อมต่อ…','Connecting…')],
+    off:['lv-dot',_L('ราคาไม่สด','Prices offline')] }[_lv.wsState] || ['lv-dot',''];
+  const warns=[];
+  if(_lv.err) warns.push(_L('Worker: ','Worker: ')+_lv.err);
+  if(H){
+    if(!H.binance.configured) warns.push(_L('Worker ยังไม่มี BINANCE_KEY / BINANCE_SECRET — แสดงเฉพาะ MetaMask (ขั้นตอนใน README)','The Worker has no BINANCE_KEY / BINANCE_SECRET — showing MetaMask only (see README)'));
+    else if(H.binance.err) warns.push('Binance: '+H.binance.err);
+    (H.binance.warn||[]).forEach(w=>warns.push('Binance '+w));
+    (H.evm.errs||[]).forEach(w=>warns.push('MetaMask '+w));
+    if(!(H.evm.rows||[]).length && !(_lv.cfg&&_lv.cfg.wallets&&_lv.cfg.wallets.length)) warns.push(_L('ยังไม่ได้ใส่ที่อยู่กระเป๋า MetaMask — กด "กระเป๋า MetaMask"','No MetaMask address yet — press "MetaMask wallets"'));
+  }
+  const movers=views.filter(v=>v.chg24!=null && !LivePort.isStable(v.asset)).sort((a,b)=>b.chg24-a.chg24);
+  const mv=(list)=>list.length?list.map(v=>`<div class="lv-mv"><b>${escHtml(v.asset)}</b><span>${_lvPx(v.priceUSD)}</span><span class="${_lvCls(v.chg24)}">${_lvPct(v.chg24)}</span></div>`).join('')
+    :`<div class="lv-mute">—</div>`;
+  const ago=H?Math.max(0,Math.round((Date.now()-H.t)/1000)):null;
+  el.innerHTML=`
+    <div class="lv-status"><span class="${dot[0]}"></span>${dot[1]}
+      <span class="lv-mute">· ${H?_L(`ยอดคงเหลืออัปเดต ${ago<60?ago+' วิ':Math.round(ago/60)+' นาที'}ก่อน`,`balances ${ago<60?ago+'s':Math.round(ago/60)+' min'} ago`):_lv.loading?_L('กำลังโหลดยอดคงเหลือ…','Loading balances…'):''}</span>
+      <span class="lv-mute">· ${_L('อ่านอย่างเดียว ไม่มีการส่งคำสั่ง','read-only · no orders')}</span></div>
+    ${warns.length?`<div class="lv-warns">${warns.map(w=>`<div>⚠ ${escHtml(w)}</div>`).join('')}</div>`:''}
+    <div class="sg">
+      <div class="sc"><div class="sc-lbl">${_L('มูลค่ารวม','Total value')}</div><div class="sc-val" id="lv-t-val">${tot?fmt(tot.valueTHB):'—'}</div>
+        <div class="sc-sub" id="lv-t-valu">${tot?_lvUsd(tot.valueUSD):''}${tot&&tot.unpriced?` · ${tot.unpriced} ${_L('ตัวไม่มีราคา','unpriced')}`:''}</div></div>
+      <div class="sc"><div class="sc-lbl">24 ${_L('ชั่วโมง','hours')}</div><div class="sc-val ${_lvCls(tot&&tot.d24USD)}" id="lv-t-d24">${tot?_lvUsdS(tot.d24USD):'—'}</div>
+        <div class="sc-sub" id="lv-t-chg">${tot?_lvPct(tot.chg24):''}</div></div>
+      <div class="sc"><div class="sc-lbl">P&amp;L · ${_L('ต้นทุนชีต','sheet cost')}</div><div class="sc-val ${_lvCls(tot&&tot.sheet.n?tot.sheet.pnlTHB:null)}" id="lv-t-ps">${tot&&tot.sheet.n?fmtSign(tot.sheet.pnlTHB):'—'}</div>
+        <div class="sc-sub" id="lv-t-ps2">${tot&&tot.sheet.n?_lvPct(tot.sheet.pnlPct)+` · ${tot.sheet.n} ${_L('ตัว','assets')}`:_L('ไม่มีต้นทุนในชีต','no sheet cost')}</div></div>
+      <div class="sc"><div class="sc-lbl">P&amp;L · ${_L('ต้นทุน Binance','Binance cost')}</div><div class="sc-val ${_lvCls(tot&&tot.bin.n?tot.bin.pnlUSD:null)}" id="lv-t-pb">${tot&&tot.bin.n?_lvUsdS(tot.bin.pnlUSD):'—'}</div>
+        <div class="sc-sub" id="lv-t-pb2">${tot&&tot.bin.n?_lvPct(tot.bin.pnlPct)+` · ${_L('ครอบคลุม','covers')} ${(tot.bin.coverage*100).toFixed(0)}% ${_L('ของมูลค่าที่ไม่ใช่ stablecoin','of non-stablecoin value')}`:_L('กด "อัปเดตต้นทุนจาก Binance"','press "Update Binance cost"')}</div></div>
+    </div>
+    <div class="ab-bar">
+      <button type="button" class="rb-btn" onclick="lvRefresh()" ${_lv.loading?'disabled':''}>${_lv.loading?_L('กำลังโหลด…','Loading…'):_L('รีเฟรชยอดคงเหลือ','Refresh balances')}</button>
+      <button type="button" class="rb-btn" onclick="lvUpdateCost()" ${_lv.costBusy||!(H&&H.binance.ok)?'disabled':''}>${_lv.costBusy?_L('กำลังดึงประวัติ…','Fetching history…'):_L('อัปเดตต้นทุนจาก Binance','Update Binance cost')}</button>
+      <span class="ab-sp"></span>
+      <button type="button" class="rb-btn" onclick="lvOpenCfg()">${_L('กระเป๋า MetaMask','MetaMask wallets')}</button>
+      <button type="button" class="rb-btn" onclick="abOpenWorker()">${_L('ตั้งค่า Worker','Worker settings')}</button>
+    </div>
+    ${_lv.costMsg?`<div class="lv-mute" style="margin:-8px 0 14px">${escHtml(_lv.costMsg)}</div>`:''}
+    ${movers.length>1?`<div class="lv-movers">
+      <div class="cc"><div class="lv-lbl">${_L('ขึ้นมากสุด 24 ชม.','Top gainers 24h')}</div>${mv(movers.filter(v=>v.chg24>0).slice(0,3))}</div>
+      <div class="cc"><div class="lv-lbl">${_L('ลงมากสุด 24 ชม.','Top losers 24h')}</div>${mv(movers.filter(v=>v.chg24<0).reverse().slice(0,3))}</div></div>`:''}
+    <div class="lv-tools">
+      <div class="seg" role="group" aria-label="${_L('แหล่ง','Source')}">${[['all',_L('ทั้งหมด','All')],['binance','Binance'],['metamask','MetaMask']].map(([k,l])=>
+        `<button type="button" class="${pref.src===k?'active':''}" aria-pressed="${pref.src===k}" onclick="lvSetPref('src','${k}')">${l}</button>`).join('')}</div>
+      <div class="seg" role="group" aria-label="${_L('P&L ตามต้นทุนจาก','P&L by cost from')}">${[['sheet',_L('ต้นทุนชีต','Sheet cost')],['bin',_L('ต้นทุน Binance','Binance cost')]].map(([k,l])=>
+        `<button type="button" class="${pref.basis===k?'active':''}" aria-pressed="${pref.basis===k}" onclick="lvSetPref('basis','${k}')">${l}</button>`).join('')}</div>
+      <select class="gs-input lv-sort" aria-label="${_L('เรียงตาม','Sort by')}" onchange="lvSetPref('sort',this.value)">
+        ${[['value',_L('มูลค่า','Value')],['pnl','P&L %'],['chg',_L('24 ชม.','24h')],['name',_L('ชื่อ','Name')]].map(([k,l])=>`<option value="${k}"${pref.sort===k?' selected':''}>${_L('เรียง: ','Sort: ')}${l}</option>`).join('')}</select>
+    </div>
+    ${shown.length?`<div class="lv-grid">${shown.map(v=>_lvCard(v, pref.basis)).join('')}</div>`
+      :`<div class="ab-empty">${H?_L('ไม่มีสินทรัพย์ในแหล่งนี้','No assets from this source'):_lv.loading?_L('กำลังโหลด…','Loading…'):''}</div>`}
+    <p class="ab-note">${_L(`ต้นทุนชีต = WACC จาก Asset_Tracker (บาท · รวมทุกแพลตฟอร์ม) คูณจำนวนที่ถืออยู่จริงตอนนี้ ·
+      ต้นทุน Binance = WACC จากประวัติเทรดคู่ USDT/FDUSD/USDC (USD) นับเฉพาะส่วนที่มีประวัติซื้อ — ของที่ได้มาจาก Convert, Auto-Invest, ฝากจากที่อื่น หรือรางวัล Earn ไม่อยู่ในประวัตินี้ ·
+      ค่าธรรมเนียมที่จ่ายเป็น BNB ไม่รวมในต้นทุน (แสดงแยก) · stablecoin นับ 1 USD · ราคา: Binance WebSocket · เหรียญที่ไม่มีคู่ USDT บน Binance จะไม่มีราคา`,
+      `Sheet cost = Asset_Tracker WACC (THB · all platforms) × quantity held now ·
+      Binance cost = WACC from USDT/FDUSD/USDC trade history (USD), counting only the part with buy history — coins from Convert, Auto-Invest, deposits from elsewhere or Earn rewards are not in it ·
+      fees paid in BNB are not in the cost (shown separately) · stablecoins count as 1 USD · prices: Binance WebSocket · coins without a USDT pair on Binance have no price`)}</p>`;
+}
+
+// ราคาเปลี่ยนทุก tick → แก้แค่ตัวเลข (ไม่ render ทั้งหน้า) อย่างมากวินาทีละครั้ง
+function _lvPaint(){
+  if(_lv.paintQ) return; _lv.paintQ=true;
+  const wait=Math.max(0, 1000-(Date.now()-_lv.paintAt));
+  setTimeout(()=>requestAnimationFrame(()=>{
+    _lv.paintQ=false; _lv.paintAt=Date.now();
+    if(!_lv.on) return;
+    const {views, tot}=_lvViews(), basis=_lvPref().basis;
+    const set=(id,txt,cls)=>{ const e=document.getElementById(id); if(!e) return; e.textContent=txt; if(cls!==undefined){ e.classList.remove('gain','loss'); if(cls) e.classList.add(cls); } };
+    views.forEach(v=>{
+      const id=_lvId(v.asset), main=basis==='bin'?(v.bin&&v.bin.pnlPct):(v.sheet&&v.sheet.pnlPct);
+      set(id+'-main', _lvPct(main), _lvCls(main));
+      set(id+'-val', v.valueTHB!=null?fmt(v.valueTHB):'—'); set(id+'-valu', _lvUsd(v.valueUSD));
+      set(id+'-chg', _lvPct(v.chg24), _lvCls(v.chg24)); set(id+'-px', _lvPx(v.priceUSD));
+      if(v.sheet&&v.sheet.costTHB!=null) set(id+'-ps', `${fmtSign(v.sheet.pnlTHB)} · ${_lvPct(v.sheet.pnlPct)}`, _lvCls(v.sheet.pnlTHB));
+      if(v.bin&&v.bin.pnlUSD!=null) set(id+'-pb', `${_lvUsdS(v.bin.pnlUSD)} · ${_lvPct(v.bin.pnlPct)}`, _lvCls(v.bin.pnlUSD));
+    });
+    if(tot){
+      set('lv-t-val', fmt(tot.valueTHB)); set('lv-t-d24', _lvUsdS(tot.d24USD), _lvCls(tot.d24USD)); set('lv-t-chg', _lvPct(tot.chg24));
+      if(tot.sheet.n) set('lv-t-ps', fmtSign(tot.sheet.pnlTHB), _lvCls(tot.sheet.pnlTHB));
+      if(tot.bin.n) set('lv-t-pb', _lvUsdS(tot.bin.pnlUSD), _lvCls(tot.bin.pnlUSD));
+    }
+  }), wait);
+}
+
+// ── ราคา: REST ตอนเริ่ม (ราคา + กราฟ 24 ชม.) แล้ว WebSocket ต่อ ──
+function _lvSyms(){
+  if(!_lv.hold) return [];
+  return [...new Set([...(_lv.hold.binance.rows||[]), ...(_lv.hold.evm.rows||[])].map(r=>r.asset))]
+    .filter(a=>!LivePort.isStable(a) && !_lv.noPair.has(a));
+}
+async function _lvLoadPrices(){
+  // รายชื่อคู่ทั้งหมดครั้งเดียว — คำตอบ 400 (ไม่มีคู่) ของ Binance ไม่มี CORS header เบราว์เซอร์จึงแยกจากเน็ตล่มไม่ได้
+  if(!_lv.pairs){
+    try{ const all=await fetch(`${LV_DATA}/ticker/price`).then(r=>r.json()); if(Array.isArray(all)) _lv.pairs=new Set(all.map(x=>x.symbol)); }catch(e){}
+  }
+  if(_lv.pairs) _lvSyms().forEach(a=>{ if(!_lv.pairs.has(LivePort.pricePair(a))) _lv.noPair.add(a); });
+  const need=_lvSyms().filter(a=>!_lv.spark[a]);
+  await Promise.all(need.map(async a=>{
+    try{
+      const r=await fetch(`${LV_DATA}/klines?symbol=${LivePort.pricePair(a)}&interval=1h&limit=25`);
+      if(!r.ok) return;
+      const k=await r.json(); if(!Array.isArray(k)||!k.length) return;
+      _lv.spark[a]=k.map(x=>Number(x[4]));
+      if(!_lv.px[a]) _lv.px[a]={ p:Number(k[k.length-1][4]), o:Number(k[0][1]) };   // ระหว่างรอ WebSocket
+    }catch(e){}
+  }));
+}
+function _lvWsOpen(){
+  const syms=_lvSyms();
+  if(!_lv.on || document.hidden || !syms.length) return;
+  const want=syms.map(a=>LivePort.pricePair(a).toLowerCase()+'@miniTicker').sort().join('/');
+  if(_lv.ws && _lv.ws._want===want && _lv.ws.readyState<2) return;
+  _lvWsClose();
+  _lv.wsState='connecting';
+  let ws; try{ ws=new WebSocket(LV_WS+want); }catch(e){ _lv.wsState='off'; return; }
+  ws._want=want; _lv.ws=ws;
+  ws.onopen=()=>{ _lv.wsState='live'; _lv.wsTry=0; renderLive(); };
+  ws.onmessage=ev=>{
+    let m; try{ m=JSON.parse(ev.data); }catch(e){ return; }
+    const d=m&&m.data; if(!d||!d.s) return;
+    const a=String(d.s).replace(/USDT$/,'');
+    _lv.px[a]={ p:Number(d.c), o:Number(d.o) };
+    _lvPaint();
+  };
+  ws.onclose=()=>{
+    if(_lv.ws!==ws) return;
+    _lv.ws=null; _lv.wsState='off';
+    if(_lv.on && !document.hidden){
+      const t=Math.min(30000, 2000*Math.pow(2,_lv.wsTry++));        // ต่อใหม่: 2 → 4 → … → 30 วิ
+      clearTimeout(_lv.wsTimer); _lv.wsTimer=setTimeout(_lvWsOpen, t);
+      renderLive();
+    }
+  };
+}
+function _lvWsClose(){ clearTimeout(_lv.wsTimer); const w=_lv.ws; _lv.ws=null; if(w) try{ w.close(); }catch(e){} if(_lv.wsState!=='off'){ _lv.wsState='off'; } }
+
+async function lvRefresh(){
+  if(!_abConnected() || _lv.loading) return;
+  _lv.loading=true; if(_lv.on) renderLive();
+  try{
+    const [h, cfg]=await Promise.all([_abApi('GET','/live/holdings'), _lv.cfg?Promise.resolve(_lv.cfg):_abApi('GET','/live/config').catch(()=>null)]);
+    _lv.hold=h; _lv.cfg=cfg; _lv.err='';
+  }catch(e){ _lv.err=e.message; }
+  _lv.loading=false;
+  if(!_lv.on) return;
+  renderLive();
+  await _lvLoadPrices();
+  if(_lv.on){ renderLive(); _lvWsOpen(); }
+}
+// ประวัติเทรดดึงได้ไม่เกิน ~35 คำขอต่อครั้ง (ข้อจำกัด Worker ฟรี) → เรียกซ้ำจนครบ
+async function lvUpdateCost(){
+  if(_lv.costBusy) return;
+  _lv.costBusy=true; _lv.costMsg=''; renderLive();
+  const since=Date.now(); let n=0, got=0;
+  try{
+    for(;;){
+      const r=await _abApi('POST','/live/costs',{since}); n++; got+=r.fetched||0;
+      if(r.err){ _lv.costMsg='⚠ '+r.err; break; }
+      _lv.costMsg=_L(`ดึงประวัติแล้ว ${got.toLocaleString(LOC)} รายการ`,`Fetched ${got.toLocaleString(LOC)} trades`)+(r.done?'':_L(` · เหลือ ${r.pending} คู่…`,` · ${r.pending} pairs left…`));
+      renderLive();
+      if(r.done || n>=20) break;
+    }
+    _lv.hold=await _abApi('GET','/live/holdings');
+  }catch(e){ _lv.costMsg='⚠ '+e.message; }
+  _lv.costBusy=false; renderLive();
+}
+
+// เข้า/ออกหน้า — ปิด WebSocket และหยุดดึงยอดเมื่อไม่ได้ดูอยู่
+function liveOnPage(active){
+  if(active && !_lv.on){
+    _lv.on=true;
+    renderLive(); lvRefresh();
+    clearInterval(_lv.poll);
+    _lv.poll=setInterval(()=>{ if(!document.hidden) lvRefresh(); }, 60000);
+  } else if(!active && _lv.on){
+    _lv.on=false; clearInterval(_lv.poll); _lvWsClose();
+  }
+}
+document.addEventListener('visibilitychange',()=>{
+  if(!_lv.on) return;
+  if(document.hidden) _lvWsClose();
+  else{ _lv.wsTry=0; lvRefresh(); }
+});
+
+// ── ตั้งค่ากระเป๋า MetaMask (เก็บใน Worker KV) ──
+async function lvOpenCfg(){
+  const m=document.getElementById('lv-modal'); if(!m) return;
+  document.getElementById('lv-msg').textContent='';
+  try{ _lv.cfg=await _abApi('GET','/live/config'); }catch(e){ document.getElementById('lv-msg').className='auth-msg'; document.getElementById('lv-msg').textContent=e.message; }
+  const c=_lv.cfg||{wallets:[],tokens:[]};
+  _lvCfgDraft={ wallets:(c.wallets||[]).map(w=>({...w})), tokens:(c.tokens||[]).map(t=>({...t})) };
+  if(!_lvCfgDraft.wallets.length) _lvCfgDraft.wallets.push({address:'', label:'', chains:['eth','bsc','arb','base']});
+  _lvCfgPaint(); m.classList.add('show');
+}
+let _lvCfgDraft=null;
+function _lvCfgRead(){
+  const f=document.getElementById('lv-form'); if(!f||!_lvCfgDraft) return;
+  _lvCfgDraft.wallets.forEach((w,i)=>{
+    w.address=(f.querySelector(`[data-w="${i}"][data-k="address"]`)||{}).value?.trim()||'';
+    w.label=(f.querySelector(`[data-w="${i}"][data-k="label"]`)||{}).value?.trim()||'';
+    w.chains=[...f.querySelectorAll(`[data-w="${i}"][data-k="chain"]:checked`)].map(x=>x.value);
+  });
+  _lvCfgDraft.tokens.forEach((t,i)=>{
+    const ch=f.querySelector(`[data-t="${i}"][data-k="chain"]`), ad=f.querySelector(`[data-t="${i}"][data-k="address"]`), sy=f.querySelector(`[data-t="${i}"][data-k="symbol"]`);
+    if(ch && ch.value!==t.chain){ t.decimals=null; } if(ch) t.chain=ch.value;
+    if(ad){ const v=ad.value.trim(); if(v.toLowerCase()!==String(t.address||'').toLowerCase()){ t.decimals=null; t.symbol=''; } t.address=v; }
+    if(sy && sy.value.trim()) t.symbol=sy.value.trim().toUpperCase();
+  });
+}
+function _lvCfgPaint(){
+  const C=LivePort.CHAINS, d=_lvCfgDraft;
+  document.getElementById('lv-form').innerHTML=`
+    <div class="gs-label">${_L('กระเป๋า (ที่อยู่สาธารณะ 0x… — ไม่ต้องใช้ seed phrase หรือ private key)','Wallets (public 0x… address — never a seed phrase or private key)')}</div>
+    ${d.wallets.map((w,i)=>`<div class="lv-wrow">
+      <div class="tx-g2"><input class="gs-input" data-w="${i}" data-k="address" value="${escAttr(w.address)}" placeholder="0x…" spellcheck="false" autocomplete="off" aria-label="${_L('ที่อยู่กระเป๋า','Wallet address')}">
+        <input class="gs-input" data-w="${i}" data-k="label" value="${escAttr(w.label||'')}" placeholder="${_L('ชื่อเรียก (ไม่บังคับ)','Label (optional)')}" aria-label="${_L('ชื่อเรียก','Label')}"></div>
+      <div class="lv-chains">${Object.entries(C).map(([k,c])=>`<label><input type="checkbox" data-w="${i}" data-k="chain" value="${k}"${(w.chains||[]).includes(k)?' checked':''}> ${c.name}</label>`).join('')}
+        <button type="button" class="gc-btn del" onclick="lvCfgDel('w',${i})" aria-label="${_L('ลบกระเป๋า','Remove wallet')}">✕</button></div></div>`).join('')}
+    ${d.wallets.length<LivePort.MAX_WALLETS?`<button type="button" class="rb-btn" onclick="lvCfgAdd('w')">+ ${_L('เพิ่มกระเป๋า','Add wallet')}</button>`:''}
+    <div class="gs-label" style="margin-top:16px">${_L('เหรียญ ERC-20 / BEP-20 ที่จะอ่าน (เหรียญหลัก ETH/BNB/POL อ่านให้อัตโนมัติ)','ERC-20 / BEP-20 tokens to read (native ETH/BNB/POL are read automatically)')}</div>
+    ${d.tokens.map((t,i)=>`<div class="lv-trow">
+      <select class="gs-input" data-t="${i}" data-k="chain" aria-label="${_L('เครือข่าย','Network')}">${Object.entries(C).map(([k,c])=>`<option value="${k}"${t.chain===k?' selected':''}>${c.name}</option>`).join('')}</select>
+      <input class="gs-input" data-t="${i}" data-k="address" value="${escAttr(t.address||'')}" placeholder="${_L('ที่อยู่สัญญา 0x…','Contract 0x…')}" spellcheck="false" autocomplete="off" aria-label="${_L('ที่อยู่สัญญา','Contract address')}">
+      <input class="gs-input" data-t="${i}" data-k="symbol" value="${escAttr(t.symbol||'')}" placeholder="${_L('อ่านเอง','auto')}" aria-label="${_L('ชื่อเหรียญ','Symbol')}">
+      <button type="button" class="gc-btn del" onclick="lvCfgDel('t',${i})" aria-label="${_L('ลบเหรียญ','Remove token')}">✕</button></div>`).join('')}
+    ${d.tokens.length<LivePort.MAX_TOKENS?`<button type="button" class="rb-btn" onclick="lvCfgAdd('t')">+ ${_L('เพิ่มเหรียญ','Add token')}</button>`:''}
+    <p class="ab-note">${_L('ที่อยู่สัญญาคัดลอกจาก MetaMask (รายละเอียดเหรียญ) หรือ Etherscan/BscScan · ชื่อและทศนิยมอ่านจาก blockchain ให้เอง · ระวังเหรียญปลอมที่ส่งเข้ามาเอง — ใส่เฉพาะเหรียญที่ตั้งใจถือ',
+      'Copy the contract from MetaMask (token details) or Etherscan/BscScan · name and decimals are read from the chain · beware of spam tokens airdropped to you — add only tokens you meant to hold')}</p>`;
+}
+function lvCfgAdd(k){ _lvCfgRead(); if(k==='w') _lvCfgDraft.wallets.push({address:'',label:'',chains:['eth']}); else _lvCfgDraft.tokens.push({chain:'eth',address:'',symbol:'',decimals:null}); _lvCfgPaint(); }
+function lvCfgDel(k,i){ _lvCfgRead(); (k==='w'?_lvCfgDraft.wallets:_lvCfgDraft.tokens).splice(i,1); _lvCfgPaint(); }
+async function lvSaveCfg(){
+  _lvCfgRead();
+  const msg=document.getElementById('lv-msg');
+  const cfg={ wallets:_lvCfgDraft.wallets.filter(w=>w.address), tokens:_lvCfgDraft.tokens.filter(t=>t.address) };
+  const e=LivePort.validateConfig(cfg);
+  if(e){ msg.className='auth-msg'; msg.textContent=_L(e, LivePort.CFG_ERR_EN[e]||e); msg.scrollIntoView({block:'nearest'}); return; }
+  msg.className='auth-msg ok'; msg.textContent=_L('กำลังบันทึก…','Saving…');
+  try{
+    const r=await _abApi('PUT','/live/config', cfg);
+    _lv.cfg=r.cfg; document.getElementById('lv-modal').classList.remove('show');
+    lvRefresh();
+  }catch(err){ msg.className='auth-msg'; msg.textContent=err.message; msg.scrollIntoView({block:'nearest'}); }
 }
 
 // ── Events ────────────────────────────────────────────────────────────
@@ -11562,7 +12353,7 @@ const TX_SIGN = {Income:+1, Expense:-1, Bills:-1, Savings:-1, Debt:-1, Transfer:
 
 // สร้างรายการช่องที่จะเขียน — ใช้ร่วมกันทั้งตอนเพิ่มใหม่และตอนแก้
 // clearOthers: ตอนแก้ ถ้าเปลี่ยนบัญชี ต้องล้างยอดในคอลัมน์บัญชีเดิมด้วย
-function txCellPlan({date, txType, category, details, bankCol, amount, bankCol2}, clearOthers){
+function txCellPlan({date, txType, category, details, bankCol, amount, bankCol2, toCard}, clearOthers){
   const M   = txSheetMeta;
   const mag = Math.abs(Number(amount) || 0);
   const cells = [
@@ -11573,8 +12364,8 @@ function txCellPlan({date, txType, category, details, bankCol, amount, bankCol2}
     [bankCol,     mag * (TX_SIGN[txType] ?? -1)]
   ];
   const used = {}; used[bankCol] = 1;
-  // Transfer: ออกจากบัญชีหนึ่ง เข้าอีกบัญชี → ยอดรวมของแถวเป็น 0
-  if(txType === 'Transfer' && bankCol2 != null && !isNaN(bankCol2) && bankCol2 !== bankCol){
+  // Transfer: ออกจากบัญชีหนึ่ง เข้าอีกบัญชี → ยอดรวมของแถวเป็น 0 · v77 จ่ายบัตร (Debt + toCard) เหมือนกัน
+  if((txType === 'Transfer' || (txType === 'Debt' && toCard)) && bankCol2 != null && !isNaN(bankCol2) && bankCol2 !== bankCol){
     cells.push([bankCol2, mag]); used[bankCol2] = 1;
   }
   if(clearOthers) (M.banks || []).forEach(b => { if(!used[b.col]) cells.push([b.col, '']); });
@@ -11738,11 +12529,29 @@ function txFillOptions(){
 // txOpenForm()          → โหมดเพิ่มรายการใหม่
 // txOpenForm(sheetRow)  → โหมดแก้ไขรายการที่แถวนั้นในชีต
 let txEditRow = null;
+/* v77 — จ่ายบัตรเครดิต: ชีตลงเป็น Transactions = Debt · หมวด "Clear Debt <บัตร>" · ธนาคาร −x และบัตร +x ในแถวเดียว
+   เดิมฟอร์มเขียนบัญชีที่สองได้เฉพาะ Transfer → บันทึกแบบนี้ไม่ได้ และเปิดแก้แถวแบบนี้แล้วบันทึก = ช่องบัตรถูกล้าง */
+let txPayCard = false;
+// เปิดฟอร์มเพิ่มรายการพร้อมค่าตั้งต้น (ใช้จากหน้าหนี้สิน)
+function txOpenPrefill(p){
+  txOpenForm();
+  const $ = id => document.getElementById(id);
+  if(!$('tx-modal').classList.contains('show')) return;
+  $('tx-f-type').value = p.type || 'Debt';
+  $('tx-f-cat').value = p.cat || '';
+  $('tx-f-detail').value = p.detail || '';
+  if(p.acctCol != null) $('tx-f-acct').value = p.acctCol;
+  if(p.amt) $('tx-f-amt').value = Math.round(p.amt * 100) / 100;
+  txPayCard = p.toCardCol != null;
+  if(txPayCard) $('tx-f-acct2').value = p.toCardCol;
+  txOnTypeChange();
+}
 
 function txOpenForm(sheetRow){
   if(!txSheetMeta){ alert('กด Sync ก่อน 1 ครั้ง เพื่อให้ระบบอ่านโครงสร้างชีต'); return; }
   txFillOptions();
   txEditRow = sheetRow || null;
+  txPayCard = false;
   const rec = txEditRow ? (txRows || []).find(r => r.sheetRow === txEditRow) : null;
   if(txEditRow && !rec){ alert('หารายการนี้ไม่เจอ — กด Sync แล้วลองใหม่'); txEditRow = null; return; }
 
@@ -11759,8 +12568,10 @@ function txOpenForm(sheetRow){
     // หาว่ายอดอยู่คอลัมน์บัญชีไหน จาก movement รายบัญชีที่ parser เก็บไว้
     const byName = {}; (txSheetMeta.banks || []).forEach(b => byName[b.name] = b.col);
     const ent = Object.entries(rec.acct || {});
-    const src = (rec.type === 'Transfer' ? ent.find(([,v]) => v < 0) : ent[0]) || ent[0];
-    const dst = rec.type === 'Transfer' ? ent.find(([,v]) => v > 0) : null;
+    // v77 — แถว Debt ที่มีบัญชีบวก (จ่ายบัตร) ก็มีสองบัญชีเหมือน Transfer
+    const dst = rec.type === 'Transfer' || (rec.type === 'Debt' && ent.some(([,v]) => v < 0)) ? ent.find(([,v]) => v > 0) : null;
+    const src = (rec.type === 'Transfer' || dst ? ent.find(([,v]) => v < 0) : ent[0]) || ent[0];
+    txPayCard = rec.type === 'Debt' && !!dst;
     if(src && byName[src[0]] != null) $('tx-f-acct').value  = byName[src[0]];
     if(dst && byName[dst[0]] != null) $('tx-f-acct2').value = byName[dst[0]];
     $('tx-f-amt').value = src ? Math.abs(src[1]) : Math.abs(rec.amount);
@@ -11780,13 +12591,17 @@ function txOpenForm(sheetRow){
 
 function txCloseForm(){
   document.getElementById('tx-modal').classList.remove('show');
+  txPayCard = false;
   txEditRow = null;   // สำคัญ — ไม่งั้นกด + ครั้งต่อไปจะไปเขียนทับแถวที่เพิ่งแก้
 }
 
 function txOnTypeChange(){
   const t = document.getElementById('tx-f-type').value;
-  document.getElementById('tx-f-acct2-wrap').style.display = t === 'Transfer' ? 'block' : 'none';
-  document.getElementById('tx-f-acct-lbl').textContent   = t === 'Transfer' ? 'โอนออกจากบัญชี' : 'บัญชี';
+  const card = t === 'Debt' && txPayCard;
+  document.getElementById('tx-f-acct2-wrap').style.display = t === 'Transfer' || card ? 'block' : 'none';
+  document.getElementById('tx-f-acct-lbl').textContent   = t === 'Transfer' ? 'โอนออกจากบัญชี' : card ? _L('จ่ายจากบัญชี','Paid from') : 'บัญชี';
+  const l2 = document.getElementById('tx-f-acct2-lbl');
+  if(l2) l2.textContent = card ? _L('ตัดยอดบัญชีหนี้ (บัตร/สินเชื่อ — ช่องนี้เป็นบวก)','Debt account paid down (card/loan column +)') : 'โอนเข้าบัญชี';
   txUpdatePreview();
 }
 
@@ -11800,7 +12615,7 @@ function txUpdatePreview(){
   const money = v => v.toLocaleString('en-US',{minimumFractionDigits:2, maximumFractionDigits:2});
   const signed = mag * (TX_SIGN[t] ?? -1);
   let out = `${n1}  ${signed < 0 ? '−' : '+'}${money(mag)}`;
-  if(t === 'Transfer'){
+  if(t === 'Transfer' || (t === 'Debt' && txPayCard)){
     const a2 = document.getElementById('tx-f-acct2');
     out += `\n${(a2.options[a2.selectedIndex] || {}).text || '—'}  +${money(mag)}`;
   }
@@ -11825,13 +12640,14 @@ async function txSubmitForm(){
   if(!category)      return say('ใส่หมวดก่อน', 'var(--expense)');
   if(!(amount > 0))  return say('จำนวนเงินต้องมากกว่า 0', 'var(--expense)');
   if(isNaN(bankCol)) return say('เลือกบัญชีก่อน', 'var(--expense)');
-  if(txType === 'Transfer' && bankCol === bankCol2)
+  const toCard = txType === 'Debt' && txPayCard;   // v77
+  if((txType === 'Transfer' || toCard) && bankCol === bankCol2)
     return say('บัญชีต้นทางกับปลายทางต้องคนละบัญชี', 'var(--expense)');
 
   btn.disabled = true; del.disabled = true;
   say('กำลังบันทึก…');
   try{
-    const f = {date, txType, category, details, bankCol, amount, bankCol2};
+    const f = {date, txType, category, details, bankCol, amount, bankCol2, toCard};
     if(txEditRow){
       await txEditRowWrite(txEditRow, f, (txRows || []).find(r => r.sheetRow === txEditRow));
       say('แก้แถว ' + txEditRow + ' แล้ว — กำลังดึงข้อมูลใหม่', 'var(--income)');
@@ -12443,12 +13259,41 @@ document.addEventListener('DOMContentLoaded', () => {
   </div>
 </div>
 
+<!-- v78 — กระเป๋า MetaMask ของพอร์ตสด · เนื้อหา render โดย _lvCfgPaint() -->
+<div id="lv-modal" class="gs-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="lv-title">
+  <div class="gs-modal ab-modal">
+    <div class="gs-modal-close" onclick="document.getElementById('lv-modal').classList.remove('show')" role="button" aria-label="ปิด">✕</div>
+    <div class="gs-modal-title" id="lv-title">กระเป๋า MetaMask</div>
+    <p class="acct-p">อ่านยอดจาก blockchain ด้วยที่อยู่สาธารณะเท่านั้น — ไม่มีสิทธิ์โอนหรือเซ็นธุรกรรม ที่อยู่เก็บใน Worker ของคุณ</p>
+    <div id="lv-form"></div>
+    <div class="auth-msg" id="lv-msg" role="alert"></div>
+    <div class="gs-modal-actions">
+      <button class="gs-save-btn" onclick="lvSaveCfg()">บันทึก</button>
+      <button class="gs-cancel-btn" onclick="document.getElementById('lv-modal').classList.remove('show')">ยกเลิก</button>
+    </div>
+  </div>
+</div>
+
 <!-- v76 — ตั้งค่าการแจ้งเตือน (ย้ายมาจากปุ่ม ⚙ ในหน้าการแจ้งเตือน) · เนื้อหา render โดย _ntSetup() -->
 <div id="nt-set-modal" class="gs-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="nt-set-title">
   <div class="gs-modal acct-modal nt-set-modal">
     <div class="gs-modal-close" onclick="ntCloseSetup()" role="button" aria-label="ปิด">✕</div>
     <div class="gs-modal-title" id="nt-set-title">ตั้งค่าการแจ้งเตือน</div>
     <div id="nt-setup"></div>
+  </div>
+</div>
+
+<!-- v77 — ฟอร์มหนี้ (เขียนแท็บ Debts) · ช่องในฟอร์ม render โดย dbfOpen() -->
+<div id="dbf-modal" class="gs-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="dbf-title">
+  <div class="gs-modal acct-modal dbf-modal">
+    <div class="gs-modal-close" onclick="dbfClose()" role="button" aria-label="ปิด">✕</div>
+    <div class="gs-modal-title" id="dbf-title">เพิ่มหนี้</div>
+    <div id="dbf-body"></div>
+    <div class="auth-msg" id="dbf-msg" role="alert"></div>
+    <div class="gs-modal-actions">
+      <button class="gs-save-btn" id="dbf-save" onclick="dbfSave()">บันทึกลงชีต</button>
+      <button class="gs-cancel-btn" id="dbf-cancel" onclick="dbfClose()">ยกเลิก</button>
+    </div>
   </div>
 </div>
 
@@ -12630,7 +13475,7 @@ document.addEventListener('DOMContentLoaded', () => {
     </div>
 
     <div class="gs-field" id="tx-f-acct2-wrap" style="display:none">
-      <div class="gs-label">โอนเข้าบัญชี</div>
+      <div class="gs-label" id="tx-f-acct2-lbl">โอนเข้าบัญชี</div>
       <select id="tx-f-acct2" class="gs-input"></select>
     </div>
 

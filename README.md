@@ -17,6 +17,8 @@ Personal finance tracker and investment dashboard built with HTML/JS.
 - 🎯 Financial Goals Tracker
 - 📄 Monthly Report PDF Export
 - 🔔 Budget Notification
+- 🗂 **Documents (v71)** — คลังใบยื่นภาษี / สลิปเงินเดือน / บิลบัตรเครดิต / ใบยืนยันซื้อขายหุ้น
+  ไฟล์จริงอยู่ใน Google Drive · แท็บ `Documents` ในชีตเก็บรายละเอียด + ลิงก์ (ดู `claude/release-v71.md`)
 
 ---
 

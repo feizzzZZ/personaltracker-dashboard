@@ -20,7 +20,7 @@ const DICT = {
   'ลงทุน':'Invest', 'พอร์ตลงทุน':'Portfolio', 'ปันผล':'Dividends', 'ตลาด & จังหวะ':'Markets & Timing',
   'พอร์ต':'Portfolio', 'ตลาด':'Markets', 'อื่น ๆ':'More',
   'รายเดือน':'Monthly', 'รายปี':'Yearly', 'ออม & ลงทุน':'Save & Invest', 'งบประมาณ':'Budget',
-  'บัญชี':'Accounts', 'หนี้':'Debt', 'ภาพรวมพอร์ต':'Portfolio', 'รายการซื้อขาย':'Trades',
+  'บัญชี':'Accounts', 'หนี้':'Debt', 'หนี้สิน':'Debts', 'ภาพรวมหนี้':'Overview', 'ตารางผ่อน':'Schedule', 'บัตรเครดิต':'Credit cards', 'ภาพรวมพอร์ต':'Portfolio', 'รายการซื้อขาย':'Trades',
   'ขายแล้ว':'Realized', 'ไม่มีใครดูแล':'Dormant', 'ต้นทุน & ค่าเงิน':'Costs & FX',
   'สัญญาณรายตัว':'Signals', 'ภาพรวมตลาด':'Market overview', 'บอทจำลอง':'Paper bot', 'ตลาดวันนี้':'Market today',
   'เมนู':'Menu', 'เมนูหลัก':'Main menu', 'เมนูทั้งหมด':'All menus', 'ย่อเมนู':'Collapse menu', 'ขยายเมนู':'Expand menu',
@@ -286,6 +286,9 @@ const DICT = {
   'คาดการณ์ 12 เดือนข้างหน้า':'Next 12 months (forecast)',
   'ผลตอบแทนจริง':'True performance',
   // ── v75 — บอทเทรด ──
+  'พอร์ตสด':'Live portfolio', 'กระเป๋า MetaMask':'MetaMask wallets',
+  'ยอดจริงจาก Binance และ MetaMask · ราคาสด · เทียบกำไรขาดทุนจากต้นทุน 2 แหล่ง':'Real balances from Binance and MetaMask · live prices · P&L against two cost sources',
+  'อ่านยอดจาก blockchain ด้วยที่อยู่สาธารณะเท่านั้น — ไม่มีสิทธิ์โอนหรือเซ็นธุรกรรม ที่อยู่เก็บใน Worker ของคุณ':'Reads balances from the blockchain using public addresses only — it cannot transfer or sign anything. Addresses are stored in your Worker',
   'บอทเทรด':'Trading bot', 'บันทึกกฎ':'Save rule', 'เพิ่มกฎ':'Add rule', 'เชื่อม Cloudflare Worker':'Connect Cloudflare Worker',
   'ตั้งกฎให้บอทซื้อขายแทน — ตอนนี้ทดลองด้วยพอร์ตจำลองก่อน ยังไม่ใช้เงินจริง':'Set rules for the bot to trade for you — paper portfolio for now, no real money yet',
   'ให้บอทตรวจกฎทุก 15 นาทีแม้ปิดแอป — ติดตั้งตามขั้นตอนใน cloudflare-worker/autobot/README.md แล้วใส่ URL กับ token ที่ตั้งไว้':
