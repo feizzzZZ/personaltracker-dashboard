@@ -22,3 +22,4 @@ ALLOWED_ORIGIN = "https://REPLACE_WITH_GITHUB_USER.github.io"
 START_THB = "100000"
 
 # secret (ไม่อยู่ในไฟล์นี้): npx wrangler secret put BOT_TOKEN
+# v78 พอร์ตสด (ไม่บังคับ · key Binance แบบอ่านอย่างเดียวเท่านั้น): npx wrangler secret put BINANCE_KEY · BINANCE_SECRET
