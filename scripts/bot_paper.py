@@ -38,8 +38,8 @@ import os
 import sys
 from datetime import datetime, timezone
 
-MD = os.environ.get("MARKET_DATA_OUT", "market-data.json")
-OUT = os.environ.get("BOT_PAPER_OUT", "bot-paper.json")
+MD = os.environ.get("MARKET_DATA_OUT", "data/market-data.json")
+OUT = os.environ.get("BOT_PAPER_OUT", "data/bot-paper.json")
 
 NOW = datetime.now(timezone.utc)
 TODAY = NOW.strftime("%Y-%m-%d")

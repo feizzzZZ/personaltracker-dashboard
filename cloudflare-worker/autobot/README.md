@@ -21,7 +21,7 @@ npx wrangler deploy                           # ได้ URL เช่น https
 
 แล้วในแอป: พอร์ตลงทุน → บอทเทรด → "เชื่อม Worker" → ใส่ URL + token เดียวกัน → "ส่งกฎไป Worker"
 
-`wrangler deploy` จะรวม `../../autobot.js` เข้าไปให้เอง — แก้กฎการประเมินที่ไฟล์นั้นที่เดียว แล้ว deploy ใหม่
+`wrangler deploy` จะรวม `../../js/autobot.js` เข้าไปให้เอง — แก้กฎการประเมินที่ไฟล์นั้นที่เดียว แล้ว deploy ใหม่
 
 ## พอร์ตสด (v78) — Binance + MetaMask แบบอ่านอย่างเดียว
 
@@ -37,7 +37,7 @@ Binance → Account → **API Management** → Create API → *System generated*
 ```bash
 npx wrangler secret put BINANCE_KEY       # วาง API Key
 npx wrangler secret put BINANCE_SECRET    # วาง Secret Key (Binance แสดงครั้งเดียว)
-npx wrangler deploy                       # รวม ../../liveport.js เข้าไปให้เอง
+npx wrangler deploy                       # รวม ../../js/liveport.js เข้าไปให้เอง
 ```
 
 ### 2. MetaMask
@@ -62,7 +62,7 @@ Binance ปฏิเสธคำขอจากบางประเทศ — W
 - token เก็บในแอปเครื่องนี้ (เข้ารหัสถ้าตั้งรหัสผ่านไว้) — ถ้าหลุด: `npx wrangler secret put BOT_TOKEN` ใหม่
 - (v78) ถ้าใส่ BINANCE_KEY แล้ว **BOT_TOKEN ใช้เปิดดูยอดเงินจริงได้** (แต่โอน/เทรด/ถอนไม่ได้ เพราะ key อ่านอย่างเดียวและ Worker ไม่มี endpoint ส่งคำสั่ง)
   → ใช้ token ยาว (`openssl rand -hex 32`) และตั้งรหัสผ่านในแอปเพื่อให้ token ถูกเข้ารหัสในเครื่อง · สงสัยว่าหลุด: เปลี่ยน BOT_TOKEN และลบ/สร้าง API key ใหม่ที่ Binance
-- ไม่มีโค้ดส่งคำสั่งซื้อขายหรือถอนใน Worker (เทสต์ `scripts/test_autobot_worker.mjs` ตรวจข้อนี้)
+- ไม่มีโค้ดส่งคำสั่งซื้อขายหรือถอนใน Worker (เทสต์ `tests/test_autobot_worker.mjs` ตรวจข้อนี้)
 
 ## เฟส 2 (เงินจริง) — ยังไม่ได้ทำ
 

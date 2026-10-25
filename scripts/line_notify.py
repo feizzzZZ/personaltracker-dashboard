@@ -38,8 +38,8 @@ from datetime import datetime, timedelta, timezone
 
 TZ = timezone(timedelta(hours=7))                 # Asia/Bangkok
 NOW = datetime.now(TZ)
-MARKET = os.environ.get("MARKET_DATA_OUT", "market-data.json")
-STATE = os.environ.get("NOTIFY_STATE", "notify-state.json")
+MARKET = os.environ.get("MARKET_DATA_OUT", "data/market-data.json")
+STATE = os.environ.get("NOTIFY_STATE", "data/notify-state.json")
 
 TH_MON = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.",
           "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."]

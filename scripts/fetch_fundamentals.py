@@ -15,7 +15,7 @@ v66 — ข้อมูลพื้นฐานรายบริษัท ส�
   • รายชื่อสินทรัพย์มาจาก market-data.json (prices + watchlist) — ไม่ทำตารางซ้ำ
   • ดึงไม่ได้ → เก็บของรอบก่อนไว้ ("แก่ลง" ไม่ใช่ "หายไป") พร้อมวันที่เดิม
   • หน้าเว็บตรวจอายุเอง ไม่มีทางเข้าใจผิดว่าเป็นของสด
-  • ฟังก์ชัน parse_* เป็นฟังก์ชันบริสุทธิ์ ทดสอบได้โดยไม่ต่อเน็ต (scripts/test_fundamentals.py)
+  • ฟังก์ชัน parse_* เป็นฟังก์ชันบริสุทธิ์ ทดสอบได้โดยไม่ต่อเน็ต (tests/test_fundamentals.py)
 """
 from __future__ import annotations
 
@@ -30,8 +30,8 @@ import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 
-MD = os.environ.get("MARKET_DATA_OUT", "market-data.json")
-OUT = os.environ.get("FUNDAMENTALS_OUT", "fundamentals.json")
+MD = os.environ.get("MARKET_DATA_OUT", "data/market-data.json")
+OUT = os.environ.get("FUNDAMENTALS_OUT", "data/fundamentals.json")
 DEADLINE_SEC = int(os.environ.get("FUND_DEADLINE", "240"))
 REFRESH_DAYS = int(os.environ.get("FUND_REFRESH_DAYS", "7"))   # งบรายปีไม่เปลี่ยนรายวัน
 UA_BOT = "Mozilla/5.0 (compatible; FinanceOS-fundamentals/1)"
@@ -103,7 +103,7 @@ def _json(raw: bytes | None):
 
 
 # ══════════════════════════════════════════════════════════════════════
-# parse_* — ฟังก์ชันบริสุทธิ์ (ทดสอบใน scripts/test_fundamentals.py)
+# parse_* — ฟังก์ชันบริสุทธิ์ (ทดสอบใน tests/test_fundamentals.py)
 # ══════════════════════════════════════════════════════════════════════
 def parse_timeseries(doc) -> dict[str, list[tuple[str, float]]]:
     """{"timeseries":{"result":[{"meta":{"type":["annualTotalRevenue"]},"annualTotalRevenue":[{asOfDate, reportedValue:{raw}}]}]}}
