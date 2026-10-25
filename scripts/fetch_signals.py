@@ -33,8 +33,8 @@ import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
  
-MD = os.environ.get("MARKET_DATA_OUT", "market-data.json")
-HIST = os.environ.get("SIGNAL_HISTORY_OUT", "signal-history.json")
+MD = os.environ.get("MARKET_DATA_OUT", "data/market-data.json")
+HIST = os.environ.get("SIGNAL_HISTORY_OUT", "data/signal-history.json")
 HIST_MAX_DAYS = 500          # ~2 ปีทำการ พอสำหรับ backtest สัญญาณระยะกลาง
  
 # ต้องตรงกับ SIGNAL_MAX_DAYS ใน shared.js เป๊ะ ๆ

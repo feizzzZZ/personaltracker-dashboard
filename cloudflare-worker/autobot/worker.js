@@ -18,8 +18,8 @@
      GET  /live/config · PUT /live/config {wallets, tokens} → ที่อยู่กระเป๋า MetaMask + เหรียญที่จะอ่าน
    secret (ไม่บังคับ): BINANCE_KEY · BINANCE_SECRET — ต้องเป็น key ที่ "อ่านอย่างเดียว"
      Worker ตรวจสิทธิ์ของ key ทุกชั่วโมง (apiRestrictions) ถ้าเปิดเทรดหรือถอนได้ จะไม่ใช้ key นั้นเลย              */
-import '../../autobot.js';
-import '../../liveport.js';
+import '../../js/autobot.js';
+import '../../js/liveport.js';
 const AutoBot = globalThis.AutoBot;
 const LivePort = globalThis.LivePort;
 

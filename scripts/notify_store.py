@@ -13,7 +13,7 @@ ENV (ไม่มีตัวไหน = ข้ามช่องทางนั
   VAPID_PRIVATE_KEY   กุญแจลับ VAPID (base64url 32 ไบต์) — สร้างจากแอปเช่นกัน
   VAPID_SUBJECT       mailto:… หรือ https://… (ไม่บังคับ)
   PUSH_SUBSCRIPTIONS  JSON array ของ subscription ทุกเครื่อง (คัดลอกจากแอป)
-  NOTIFY_FILE         ที่อยู่ไฟล์ (ค่าเริ่มต้น notifications.enc.json)
+  NOTIFY_FILE         ที่อยู่ไฟล์ (ค่าเริ่มต้น data/notifications.enc.json)
 
 รูปแบบไฟล์ (ต้องตรงกับ notifyDecrypt() ใน shared.js):
   {"v":1, "updated":ISO, "n":จำนวน, "iv":base64(12 ไบต์), "ct":base64(ciphertext+tag)}
@@ -36,7 +36,7 @@ KINDS = {"daily", "alert", "weekly", "monthly", "system", "test"}
 
 
 def _file() -> str:
-    return os.environ.get("NOTIFY_FILE", "notifications.enc.json")
+    return os.environ.get("NOTIFY_FILE", "data/notifications.enc.json")
 
 
 def _b64d(s: str) -> bytes:

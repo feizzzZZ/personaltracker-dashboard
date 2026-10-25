@@ -52,7 +52,7 @@ import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone, timedelta
 
-OUT = os.environ.get("MARKET_DATA_OUT", "market-data.json")
+OUT = os.environ.get("MARKET_DATA_OUT", "data/market-data.json")
 # ══════════════════════════════════════════════════════════════════════
 # v43 — HEADERS ต้องแยกตาม host  (แก้ regression ที่ v42 ทำไว้)
 # ══════════════════════════════════════════════════════════════════════

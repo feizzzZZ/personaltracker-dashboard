@@ -13,7 +13,7 @@ on:
       # ใช้เมื่อเปลี่ยนเกณฑ์การตัดสินใจ แล้วไม่อยากให้ประวัติเก่าปนกับกฎใหม่
       # (รอบตามตารางเวลาไม่มี input นี้ → ค่าว่าง → ไม่ reset)
       reset_bot:
-        description: "ล้างพอร์ตจำลอง (bot-paper.json) แล้วเริ่มใหม่"
+        description: "ล้างพอร์ตจำลอง (data/bot-paper.json) แล้วเริ่มใหม่"
         type: boolean
         default: false
 
@@ -130,10 +130,10 @@ jobs:
         run: |
           python3 - <<'PY'
           import json, os
-          if not os.path.exists('market-data.json'):
-              print("::warning::ไม่มี market-data.json — fetch ตายก่อนเขียนไฟล์")
+          if not os.path.exists('data/market-data.json'):
+              print("::warning::ไม่มี data/market-data.json — fetch ตายก่อนเขียนไฟล์")
               raise SystemExit(0)
-          j = json.load(open('market-data.json'))
+          j = json.load(open('data/market-data.json'))
           s = j.get('stats', {})
           print(f"keys รอบนี้ : {s.get('keys_this_run')}")
           print(f"keys รวม    : {s.get('keys_total')}")
@@ -176,14 +176,14 @@ jobs:
               for w in m.get('warnings', []):
                   print(f"  ⚠️  {w}")
 
-          if os.path.exists('signal-history.json'):
-              h = json.load(open('signal-history.json'))
+          if os.path.exists('data/signal-history.json'):
+              h = json.load(open('data/signal-history.json'))
               days = sorted((h.get('days') or {}).keys())
-              size = os.path.getsize('signal-history.json') / 1024
+              size = os.path.getsize('data/signal-history.json') / 1024
               print(f"\nประวัติ     : {len(days)} วัน ({size:.0f} KB)"
                     + (f" · {days[0]} → {days[-1]}" if days else ""))
           else:
-              print("::warning::ไม่มี signal-history.json — backtest จะไม่มีข้อมูลย้อนหลัง")
+              print("::warning::ไม่มี data/signal-history.json — backtest จะไม่มีข้อมูลย้อนหลัง")
           PY
 
       # if: always() — จุดสำคัญที่สุดของไฟล์นี้
@@ -192,7 +192,7 @@ jobs:
       - name: Commit if changed
         if: always()
         run: |
-          if [ ! -f market-data.json ]; then
+          if [ ! -f data/market-data.json ]; then
             echo "::warning::ไม่มีไฟล์ให้ commit — ข้าม"
             exit 0
           fi
@@ -211,10 +211,10 @@ jobs:
           # ของ AND-list ให้ (ทดสอบแล้วว่าแบบ && ไม่ทำให้ step ตายตรงนี้)
           # แต่จะตายทันทีถ้าบรรทัดนั้นบังเอิญกลายเป็นบรรทัดสุดท้ายของสคริปต์
           # เพราะ exit status ของสคริปต์จะเป็น 1 — if...fi ไม่มีกับดักนี้
-          git add market-data.json
-          if [ -f signal-history.json ]; then git add signal-history.json; fi
-          if [ -f bot-paper.json ];      then git add bot-paper.json;      fi
-          if [ -f fundamentals.json ];   then git add fundamentals.json;   fi
+          git add data/market-data.json
+          if [ -f data/signal-history.json ]; then git add data/signal-history.json; fi
+          if [ -f data/bot-paper.json ];      then git add data/bot-paper.json;      fi
+          if [ -f data/fundamentals.json ];   then git add data/fundamentals.json;   fi
 
           # เทียบข้อมูลจริงโดยตัด timestamp ออกก่อน — timestamp เปลี่ยนทุกรัน
           # แม้ข้อมูลจริงจะเหมือนเดิม ทำให้ git diff --quiet ไม่เคยว่างเลย
@@ -223,8 +223,8 @@ jobs:
           # risk.computed_at   (ไม่ตัด signals เพราะราคาที่เปลี่ยน = ข้อมูลจริง)
           STRIP='del(.generated_at, .signals_meta.generated_at, .risk.computed_at)
                  | .data |= with_entries(.value |= del(.fetched_at))'
-          OLD_HASH=$(git show HEAD:market-data.json 2>/dev/null | jq -S "$STRIP" | sha256sum | cut -d' ' -f1 || true)
-          NEW_HASH=$(jq -S "$STRIP" market-data.json | sha256sum | cut -d' ' -f1)
+          OLD_HASH=$(git show HEAD:data/market-data.json 2>/dev/null | jq -S "$STRIP" | sha256sum | cut -d' ' -f1 || true)
+          NEW_HASH=$(jq -S "$STRIP" data/market-data.json | sha256sum | cut -d' ' -f1)
 
           # ประวัติเพิ่มวันใหม่ = ต้อง commit เสมอ แม้ราคาจะไม่ขยับเลย
           # (เช่นรอบเย็นของวันหยุดตลาด) ไม่งั้นวันนั้นจะหายจาก backtest ถาวร
@@ -238,24 +238,24 @@ jobs:
           # ส่วนที่เหลือ (NAV ที่ตีมูลค่าใหม่ · คำสั่งที่เพิ่ง execute) คือข้อมูลจริง
           # ที่ต้องถูกบันทึก — ประวัติพอร์ตจำลองซื้อคืนย้อนหลังไม่ได้เหมือนกัน
           BOT_CHANGED=0
-          if [ -f bot-paper.json ]; then
-            OLD_BOT=$(git show HEAD:bot-paper.json 2>/dev/null | jq -S 'del(.computed_at)' 2>/dev/null || echo 'none')
-            NEW_BOT=$(jq -S 'del(.computed_at)' bot-paper.json)
+          if [ -f data/bot-paper.json ]; then
+            OLD_BOT=$(git show HEAD:data/bot-paper.json 2>/dev/null | jq -S 'del(.computed_at)' 2>/dev/null || echo 'none')
+            NEW_BOT=$(jq -S 'del(.computed_at)' data/bot-paper.json)
             if [ "$OLD_BOT" != "$NEW_BOT" ]; then BOT_CHANGED=1; fi
           fi
 
           HIST_CHANGED=0
-          if [ -f signal-history.json ]; then
-            OLD_DAYS=$(git show HEAD:signal-history.json 2>/dev/null | jq -Sc '.days | keys' 2>/dev/null || echo 'none')
-            NEW_DAYS=$(jq -Sc '.days | keys' signal-history.json)
+          if [ -f data/signal-history.json ]; then
+            OLD_DAYS=$(git show HEAD:data/signal-history.json 2>/dev/null | jq -Sc '.days | keys' 2>/dev/null || echo 'none')
+            NEW_DAYS=$(jq -Sc '.days | keys' data/signal-history.json)
             if [ "$OLD_DAYS" != "$NEW_DAYS" ]; then HIST_CHANGED=1; fi
           fi
 
           # v66 — fundamentals.json: ตัด generated_at/meta ก่อนเทียบ (เปลี่ยนทุกรอบ)
           FUND_CHANGED=0
-          if [ -f fundamentals.json ]; then
-            OLD_FUND=$(git show HEAD:fundamentals.json 2>/dev/null | jq -S 'del(.generated_at, .meta)' 2>/dev/null | sha256sum | cut -d' ' -f1 || echo none)
-            NEW_FUND=$(jq -S 'del(.generated_at, .meta)' fundamentals.json | sha256sum | cut -d' ' -f1)
+          if [ -f data/fundamentals.json ]; then
+            OLD_FUND=$(git show HEAD:data/fundamentals.json 2>/dev/null | jq -S 'del(.generated_at, .meta)' 2>/dev/null | sha256sum | cut -d' ' -f1 || echo none)
+            NEW_FUND=$(jq -S 'del(.generated_at, .meta)' data/fundamentals.json | sha256sum | cut -d' ' -f1)
             if [ "$OLD_FUND" != "$NEW_FUND" ]; then FUND_CHANGED=1; fi
           fi
 
@@ -275,7 +275,7 @@ jobs:
               sleep 5
             done
             if [ "$PUSHED" != "1" ]; then
-              echo "::error::push market-data.json ไม่สำเร็จหลังลอง 3 รอบ"
+              echo "::error::push data/market-data.json ไม่สำเร็จหลังลอง 3 รอบ"
               exit 1
             fi
           fi
