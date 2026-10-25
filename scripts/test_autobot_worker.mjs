@@ -5,7 +5,8 @@ let FAIL = 0;
 const chk = (n, c, d = '') => { if (c) console.log('  ✓ ' + n); else { FAIL++; console.log('  ✗ ' + n + '  ' + d); } };
 
 new Function(fs.readFileSync('autobot.js', 'utf8'))();
-const src = fs.readFileSync('cloudflare-worker/autobot/worker.js', 'utf8').replace(/^import '\.\.\/\.\.\/autobot\.js';$/m, '');
+new Function(fs.readFileSync('liveport.js', 'utf8'))();
+const src = fs.readFileSync('cloudflare-worker/autobot/worker.js', 'utf8').replace(/^import '\.\.\/\.\.\/(autobot|liveport)\.js';$/mg, '');
 const tmp = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'abw-')), 'worker.mjs');
 fs.writeFileSync(tmp, src);
 const W = (await import(pathToFileURL(tmp).href)).default;
@@ -16,8 +17,10 @@ const env = { BOT_TOKEN: 'x'.repeat(32), ALLOWED_ORIGIN: 'https://me.github.io',
 const MD = { prices: { PTT: { price: 32, ccy: 'THB' }, BTC: { price: 60000, ccy: 'USD' } },
              signals: { PTT: { rsi: 25, drawdown: -10 }, BTC: { rsi: 50, drawdown: -5 } }, data: { USDTHB: { value: 34 } } };
 let binanceCalls = 0;
-globalThis.fetch = async (url) => {
+let liveFetch = null;                  // v78 — ตัวจำลอง api.binance.com / RPC (ตั้งในส่วนพอร์ตสด)
+globalThis.fetch = async (url, init) => {
   url = String(url);
+  if (liveFetch && (url.startsWith('https://api.binance.com') || url.includes('publicnode.com'))) return liveFetch(url, init);
   if (url.startsWith(env.MARKET_URL)) return new Response(JSON.stringify(MD));
   if (url.includes('data-api.binance.vision')) { binanceCalls++; return new Response(JSON.stringify([{ symbol: 'BTCUSDT', price: '58000' }])); }
   throw new Error('unexpected fetch ' + url);
@@ -62,6 +65,77 @@ const rs = await call('POST', '/reset', { startTHB: 20000 });
 chk('reset เริ่มใหม่ ฿20,000', rs.status === 200 && JSON.parse(kv.get('state')).cash === 20000 && JSON.parse(kv.get('state')).ledger.length === 0);
 chk('path ไม่รู้จัก → 404', (await call('GET', '/nope')).status === 404);
 chk('ในไฟล์ Worker ไม่มีการเรียก endpoint ส่งคำสั่ง', !/\/api\/v3\/order|placeOrder|settrade.*order/i.test(src));
+
+console.log('\n═══ v78 พอร์ตสด ═══');
+const A = '0x' + 'ab'.repeat(20), TOK = '0x' + 'cd'.repeat(20);
+const restr = { enableReading: true, enableWithdrawals: false, enableSpotAndMarginTrading: false };
+const calls = [];
+const TR = {   // myTrades จำลอง: BTCUSDT 2 หน้า (1000 + 1) · BTCFDUSD ไม่มีคู่ · อื่น ๆ ว่าง
+  BTCUSDT: Array.from({ length: 1001 }, (_, i) => ({ id: i, time: i, isBuyer: true, qty: '0.001', quoteQty: '50', commission: '0', commissionAsset: 'USDT' })) };
+liveFetch = async (url, init) => {
+  const u = new URL(url); calls.push(u.pathname);
+  if (u.hostname === 'api.binance.com') {
+    if (init.headers['X-MBX-APIKEY'] !== 'k'.repeat(64)) return new Response('{"code":-2015,"msg":"bad key"}', { status: 401 });
+    if (!/^[0-9a-f]{64}$/.test(u.searchParams.get('signature') || '')) return new Response('{"code":-1022}', { status: 400 });
+    switch (u.pathname) {
+      case '/sapi/v1/account/apiRestrictions': return new Response(JSON.stringify(restr));
+      case '/api/v3/account': return new Response(JSON.stringify({ balances: [{ asset: 'BTC', free: '1', locked: '0' }, { asset: 'USDT', free: '10', locked: '0' }] }));
+      case '/sapi/v1/asset/get-funding-asset': return new Response('{"code":-1002,"msg":"no"}', { status: 401 });
+      case '/sapi/v1/simple-earn/flexible/position': return new Response(JSON.stringify({ rows: [{ asset: 'BTC', totalAmount: '0.5' }] }));
+      case '/sapi/v1/simple-earn/locked/position': return new Response(JSON.stringify({ rows: [] }));
+      case '/api/v3/myTrades': {
+        const sym = u.searchParams.get('symbol'), from = Number(u.searchParams.get('fromId'));
+        if (sym === 'BTCFDUSD') return new Response('{"code":-1121,"msg":"Invalid symbol."}', { status: 400 });
+        return new Response(JSON.stringify((TR[sym] || []).filter(t => t.id >= from).slice(0, 1000)));
+      }
+    }
+    return new Response('{}', { status: 404 });
+  }
+  const body = JSON.parse(init.body);
+  return new Response(JSON.stringify(body.map(r => r.method === 'eth_getBalance' ? { id: r.id, result: '0xde0b6b3a7640000' }
+    : r.params[0].data === LivePort.SEL_DECIMALS ? { id: r.id, result: '0x6' }
+    : r.params[0].data === LivePort.SEL_SYMBOL ? { id: r.id, result: '0x' + '20'.padStart(64, '0') + '4'.padStart(64, '0') + Buffer.from('USDC').toString('hex').padEnd(64, '0') }
+    : { id: r.id, result: '0x' + (5000000n).toString(16) })));
+};
+const LivePort = globalThis.LivePort;
+let h0 = await (await call('GET', '/live/holdings')).json();
+chk('ไม่มี key Binance → configured=false ไม่เรียก Binance', h0.binance.configured === false && !calls.some(c => c.startsWith('/api') || c.startsWith('/sapi')));
+chk('/live ต้องมี token', (await call('GET', '/live/holdings', null, { authorization: '' })).status === 401);
+const envK = { ...env, BINANCE_KEY: 'k'.repeat(64), BINANCE_SECRET: 's'.repeat(64) };
+const callK = (method, p, body) => W.fetch(new Request('https://w' + p, { method,
+  headers: { authorization: 'Bearer ' + env.BOT_TOKEN, origin: 'https://me.github.io', 'content-type': 'application/json' },
+  body: body ? JSON.stringify(body) : undefined }), envK);
+const badCfg = await callK('PUT', '/live/config', { wallets: [{ address: '0x12', chains: ['eth'] }] });
+chk('config ผิด → 400 + ข้อความ 2 ภาษา', badCfg.status === 400 && (await badCfg.json()).errorEn);
+const okCfg = await (await callK('PUT', '/live/config', { wallets: [{ address: A, chains: ['eth'] }], tokens: [{ chain: 'eth', address: TOK }] })).json();
+chk('เติม symbol/decimals ของเหรียญจาก blockchain', okCfg.ok && okCfg.cfg.tokens[0].symbol === 'USDC' && okCfg.cfg.tokens[0].decimals === 6);
+let h1 = await (await callK('GET', '/live/holdings')).json();
+chk('Binance: spot + earn (funding ล้ม = คำเตือน ไม่ล้มทั้งหมด)', h1.binance.ok && h1.binance.rows.length === 3 && h1.binance.warn.length === 1, JSON.stringify(h1.binance));
+chk('MetaMask: ETH 1 + USDC 5', h1.evm.rows.find(r => r.asset === 'ETH').amount === 1 && h1.evm.rows.find(r => r.asset === 'USDC').amount === 5);
+chk('ตรวจสิทธิ์ key แล้ว cache (ไม่เรียกซ้ำทุกครั้ง)', calls.filter(c => c === '/sapi/v1/account/apiRestrictions').length === 1);
+const c1 = await (await callK('POST', '/live/costs', { since: Date.now() })).json();
+chk('ดึงประวัติ 2 หน้า (1001 รายการ) · คู่ที่ไม่มี → ข้าม', c1.done && c1.fetched === 1001 && c1.pending === 0, JSON.stringify(c1));
+const lt = JSON.parse(kv.get('liveTrades'));
+chk('จำคู่ที่ไม่มีบน Binance', lt.pairs.BTCFDUSD.none === true);
+h1 = await (await callK('GET', '/live/holdings')).json();
+chk('ต้นทุน BTC จากประวัติ = $50,000/หน่วย', Math.abs(h1.cost.assets.BTC.wacc - 50000) < 1e-6 && Math.abs(h1.cost.assets.BTC.qty - 1.001) < 1e-9);
+const before = calls.filter(c => c === '/api/v3/myTrades').length;
+await callK('POST', '/live/costs', { since: 1 });
+chk('เรียกซ้ำในรอบเดียวกัน → คู่ที่ตามทันแล้วไม่ดึงอีก', calls.filter(c => c === '/api/v3/myTrades').length === before);
+await callK('POST', '/live/costs', { since: Date.now() + 1 });
+chk('รอบใหม่: คู่ละ 1 คำขอ · BTC 2 คู่ (ข้าม FDUSD ที่ไม่มี) + ETH จาก MetaMask 3 คู่', calls.filter(c => c === '/api/v3/myTrades').length - before === 5);
+TR.BTCUSDT.push({ id: 1001, time: 1001, isBuyer: false, qty: '0.001', quoteQty: '60', commission: '0', commissionAsset: 'USDT' });
+await callK('POST', '/live/costs', { since: Date.now() + 1 });
+chk('เทรดใหม่เข้ามาต่อท้าย ไม่ซ้ำ', JSON.parse(kv.get('liveTrades')).pairs.BTCUSDT.rows.length === 1002);
+// key ที่เปิดเทรดได้ → ไม่ใช้
+restr.enableSpotAndMarginTrading = true; kv.delete('liveKeyCheck');
+const h2 = await (await callK('GET', '/live/holdings')).json();
+chk('key เปิดเทรดได้ → ไม่ใช้ ไม่ดึงยอด', h2.binance.unsafe && !h2.binance.ok && /อ่านอย่างเดียว/.test(h2.binance.err));
+const c2 = await (await callK('POST', '/live/costs', {})).json();
+chk('key เปิดเทรดได้ → ไม่ดึงประวัติ', !!c2.err && c2.fetched === 0);
+restr.enableSpotAndMarginTrading = false; restr.enableWithdrawals = true; kv.delete('liveKeyCheck');
+chk('key เปิดถอนได้ → ไม่ใช้', (await (await callK('GET', '/live/holdings')).json()).binance.unsafe === true);
+chk('ไม่มี endpoint ส่งคำสั่ง/ถอน ในไฟล์ Worker', !/\/order\b|\/withdraw|\/capital\/withdraw|placeOrder/i.test(src));
 
 console.log(FAIL ? `\n✗ ไม่ผ่าน ${FAIL} ข้อ` : '\n✓ ผ่านทั้งหมด');
 process.exit(FAIL ? 1 : 0);
