@@ -15,9 +15,9 @@ id = "b91251707c7943fc822f474939658f1f"
 
 [vars]
 # ที่อยู่ market-data.json ของแอปคุณบน GitHub Pages
-MARKET_URL = "https://REPLACE_WITH_GITHUB_USER.github.io/personaltracker-dashboard/data/market-data.json"
+MARKET_URL = "https://feizzzzz.github.io/personaltracker-dashboard/data/market-data.json"
 # เว็บที่อนุญาตให้เรียก Worker (ต้นทางของแอป ไม่มี / ท้าย) — คั่นหลายค่าด้วย ,
-ALLOWED_ORIGIN = "https://REPLACE_WITH_GITHUB_USER.github.io"
+ALLOWED_ORIGIN = "https://feizzzzz.github.io"
 # เงินตั้งต้นของพอร์ตจำลอง (บาท)
 START_THB = "100000"
 
