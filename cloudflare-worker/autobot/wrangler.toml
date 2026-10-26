@@ -8,9 +8,6 @@ preview_urls = false     # ไม่ใช้ URL ทดลองรายเว
 
 # ตรวจกฎทุก 15 นาที
 [triggers]
-
-# ตรวจกฎทุก 15 นาที
-[triggers]
 crons = ["*/15 * * * *"]
 
 # KV เก็บกฎ + พอร์ตจำลอง — สร้างด้วย: npx wrangler kv namespace create BOT แล้วเอา id มาใส่
