@@ -113,15 +113,29 @@ async function keyIsReadOnly(env){
   return out;
 }
 const liveCfg = async env => (await env.BOT.get('liveCfg', 'json')) || { wallets: [], tokens: [] };
-const rpc = (url, body) => fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
-  .then(r => { if(!r.ok) throw new Error('RPC HTTP ' + r.status); return r.json(); });
+// v79 รอบ 3 — ลองทีละ RPC ใน urls จนได้คำตอบ batch (array) · 429/5xx/ผิดรูปแบบ → ตัวถัดไป
+// ทั้งหมดล้ม → error เดียวที่บอกผลของทุกตัว (เช่น "RPC HTTP 429 · drpc.org HTTP 403 · …")
+async function rpc(urls, body){
+  const errs = [];
+  for(const url of [].concat(urls)){
+    const host = new URL(url).hostname.replace(/^(ethereum-rpc|bsc-rpc|arbitrum-one-rpc|base-rpc|optimism-rpc|polygon-bor-rpc|www)\./, '');
+    try{
+      const r = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', 'user-agent': UA }, body: JSON.stringify(body) });
+      if(!r.ok){ errs.push(host + ' HTTP ' + r.status); continue; }
+      const j = await r.json().catch(() => null);
+      if(Array.isArray(body) !== Array.isArray(j)){ errs.push(host + ' ตอบผิดรูปแบบ'); continue; }
+      return j;
+    }catch(e){ errs.push(host + ' ' + e.message); }
+  }
+  throw new Error('RPC ' + errs.join(' · '));
+}
 
 async function liveHoldings(env){
   const out = { t: Date.now(), binance: { configured: !!(env.BINANCE_KEY && env.BINANCE_SECRET), ok: false, err: '', warn: [], rows: [] },
     evm: { rows: [], errs: [] } };
   const cfg = await liveCfg(env);
   const evmJobs = Object.entries(LivePort.evmRequests(cfg)).map(async ([chain, req]) => {
-    try{ const p = LivePort.evmParse(chain, req, await rpc(req.rpc, req.body)); out.evm.rows.push(...p.rows); out.evm.errs.push(...p.errs); }
+    try{ const p = LivePort.evmParse(chain, req, await rpc(req.rpcs || req.rpc, req.body)); out.evm.rows.push(...p.rows); out.evm.errs.push(...p.errs); }
     catch(e){ out.evm.errs.push(LivePort.CHAINS[chain].name + ': ' + e.message); }
   });
   const binJob = (async () => {
@@ -194,7 +208,7 @@ async function resolveTokens(cfg){
     const body = list.flatMap((t, i) => [
       { jsonrpc: '2.0', id: i * 2 + 1, method: 'eth_call', params: [{ to: t.address, data: LivePort.SEL_DECIMALS }, 'latest'] },
       { jsonrpc: '2.0', id: i * 2 + 2, method: 'eth_call', params: [{ to: t.address, data: LivePort.SEL_SYMBOL }, 'latest'] }]);
-    const resp = await rpc(LivePort.CHAINS[chain].rpc, body);
+    const resp = await rpc(LivePort.CHAINS[chain].rpcs || LivePort.CHAINS[chain].rpc, body);
     const byId = {}; (Array.isArray(resp) ? resp : []).forEach(r => { byId[r.id] = r; });
     list.forEach((t, i) => {
       const d = byId[i * 2 + 1], s = byId[i * 2 + 2];

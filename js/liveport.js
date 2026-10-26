@@ -18,14 +18,22 @@ const STABLES = ['USDT', 'USDC', 'FDUSD', 'BUSD', 'DAI', 'TUSD'];
 // คู่ที่ไปดึงประวัติเทรดมาคิดต้นทุน — quote ต้องเป็น stablecoin ต้นทุนจึงเป็น USD ได้ตรง ๆ
 const QUOTES = ['USDT', 'FDUSD', 'USDC'];
 
-// เครือข่ายที่ MetaMask ใช้บ่อย · RPC สาธารณะของ publicnode (ไม่ต้องสมัคร · รับ JSON-RPC แบบ batch)
+// เครือข่ายที่ MetaMask ใช้บ่อย · RPC สาธารณะ (ไม่ต้องสมัคร · รับ JSON-RPC แบบ batch)
+// rpc = ตัวหลัก (publicnode) · rpcs = ลำดับที่ Worker ลองเมื่อตัวก่อนหน้าตอบ 429/5xx หรือผิดรูปแบบ
+// (v79 รอบ 3 — ฟรีของ publicnode ถูกแชร์กับ Worker อื่นบน IP ของ Cloudflare จึงโดน 429 บ่อย)
 const CHAINS = {
-  eth:     { name: 'Ethereum', native: 'ETH', rpc: 'https://ethereum-rpc.publicnode.com' },
-  bsc:     { name: 'BNB Chain', native: 'BNB', rpc: 'https://bsc-rpc.publicnode.com' },
-  arb:     { name: 'Arbitrum', native: 'ETH', rpc: 'https://arbitrum-one-rpc.publicnode.com' },
-  base:    { name: 'Base', native: 'ETH', rpc: 'https://base-rpc.publicnode.com' },
-  op:      { name: 'Optimism', native: 'ETH', rpc: 'https://optimism-rpc.publicnode.com' },
-  polygon: { name: 'Polygon', native: 'POL', rpc: 'https://polygon-bor-rpc.publicnode.com' },
+  eth:     { name: 'Ethereum', native: 'ETH', rpc: 'https://ethereum-rpc.publicnode.com',
+             rpcs: ['https://ethereum-rpc.publicnode.com', 'https://eth.drpc.org', 'https://1rpc.io/eth', 'https://eth.llamarpc.com'] },
+  bsc:     { name: 'BNB Chain', native: 'BNB', rpc: 'https://bsc-rpc.publicnode.com',
+             rpcs: ['https://bsc-rpc.publicnode.com', 'https://bsc-dataseed.bnbchain.org', 'https://bsc.drpc.org', 'https://1rpc.io/bnb'] },
+  arb:     { name: 'Arbitrum', native: 'ETH', rpc: 'https://arbitrum-one-rpc.publicnode.com',
+             rpcs: ['https://arbitrum-one-rpc.publicnode.com', 'https://arb1.arbitrum.io/rpc', 'https://arbitrum.drpc.org'] },
+  base:    { name: 'Base', native: 'ETH', rpc: 'https://base-rpc.publicnode.com',
+             rpcs: ['https://base-rpc.publicnode.com', 'https://mainnet.base.org', 'https://base.drpc.org'] },
+  op:      { name: 'Optimism', native: 'ETH', rpc: 'https://optimism-rpc.publicnode.com',
+             rpcs: ['https://optimism-rpc.publicnode.com', 'https://mainnet.optimism.io', 'https://optimism.drpc.org'] },
+  polygon: { name: 'Polygon', native: 'POL', rpc: 'https://polygon-bor-rpc.publicnode.com',
+             rpcs: ['https://polygon-bor-rpc.publicnode.com', 'https://polygon.drpc.org', 'https://1rpc.io/matic'] },
 };
 const MAX_WALLETS = 5, MAX_TOKENS = 30;
 
@@ -94,12 +102,12 @@ const balanceOfData = addr => '0x70a08231' + '0'.repeat(24) + addr.slice(2).toLo
 const SEL_DECIMALS = '0x313ce567', SEL_SYMBOL = '0x95d89b41';
 
 // คำขอแบบ batch ต่อเครือข่าย: ยอดเหรียญหลักของทุกกระเป๋า + balanceOf ของทุกเหรียญที่ตั้งไว้
-// คืน {chainId: {rpc, body:[…], meta:[{asset, address, decimals, token}]}}
+// คืน {chainId: {rpc, rpcs, body:[…], meta:[{asset, address, decimals, token}]}}
 function evmRequests(cfg){
   const out = {};
   (cfg.wallets || []).forEach(w => (w.chains || []).forEach(c => {
     const ch = CHAINS[c]; if(!ch) return;
-    const o = out[c] || (out[c] = { rpc: ch.rpc, body: [], meta: [] });
+    const o = out[c] || (out[c] = { rpc: ch.rpc, rpcs: ch.rpcs, body: [], meta: [] });
     o.body.push({ jsonrpc: '2.0', id: o.body.length + 1, method: 'eth_getBalance', params: [w.address, 'latest'] });
     o.meta.push({ asset: ch.native, address: w.address, label: w.label || '', decimals: 18, token: null });
     (cfg.tokens || []).filter(t => t.chain === c && t.decimals != null && t.symbol).forEach(t => {

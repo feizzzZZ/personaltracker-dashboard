@@ -56,3 +56,17 @@ root เหลือ `index.html` · `manifest.json` · `service-worker.js` (ต
 - เทสต์ `tests/test_autobot_worker.mjs` +3 ข้อ (ส่ง User-Agent · 403 HTML จาก CloudFront จำลอง · error ที่มี code ยังแปลเหมือนเดิม) — 2 ข้อแรกตกกับโค้ดเดิม
 - ยังไม่รู้สาเหตุจริงจนกว่าจะ deploy ตัวนี้แล้วดูข้อความใหม่ — ถ้ายัง 403: ข้อความจะบอกว่าด่านไหน (CloudFront ตามประเทศ / WAF) แล้วค่อยเลือกทางแก้ (เช่น endpoint สำรอง `api1`–`api4`/`api-gcp.binance.com`)
 - ไม่แตะแอป (`index.html` / `js/*`) → ไม่ bump `APP_BUILD`
+
+## รอบ 3 (2026-10-26) — MetaMask: RPC HTTP 429
+
+ใส่ที่อยู่กระเป๋าแล้วหน้าพอร์ตสดขึ้น **"MetaMask Ethereum: RPC HTTP 429"** — RPC ฟรีของ publicnode ถูกแชร์กับ Worker อื่นบน IP ของ Cloudflare จึงโดนจำกัดความถี่
+(และรอบนั้น Binance ยังขึ้น "HTTP 403" แบบเดิม เพราะรอบ 2 ยังไม่ได้ merge/deploy)
+
+- `js/liveport.js` `CHAINS[*].rpcs`: ทุกเครือข่ายมี RPC สาธารณะ 3–4 ตัว (publicnode ก่อน · ตามด้วย RPC ทางการของเครือข่าย / drpc.org / 1rpc.io / llamarpc) · `evmRequests` ส่ง `rpcs` ต่อ
+- `worker.js` `rpc(urls, body)`: ลองทีละตัว — HTTP ไม่ ok / ตอบไม่ใช่ array (batch) / เน็ตล้ม → ตัวถัดไป · ล้มทุกตัว → error เดียวบอกผลของทุกตัว · ใช้ทั้งตอนดึงยอดและตอนอ่านชื่อ/ทศนิยมของเหรียญที่เพิ่ม · ส่ง User-Agent เดียวกับ Binance
+- subrequest แย่สุด 6 เครือข่าย × 4 = 24 + Binance ~5 — ยังต่ำกว่า 50 ของ Worker ฟรี
+- เทสต์: `test_autobot_worker.mjs` +2 (publicnode 429 → ใช้ drpc · ล้มทุกตัว → ข้อความรวม) · `test_liveport.cjs` +2 — ตกกับโค้ดเดิม
+- **RPC สำรองยังไม่ได้ทดสอบกับของจริง** (session นี้ต่อออกไปหา RPC ไม่ได้) — ตัวที่ใช้ไม่ได้จะถูกข้ามไปเองและขึ้นชื่อในข้อความ error
+- `liveport.js` เปลี่ยนแค่ข้อมูลที่ Worker ใช้ (แอปอ่านแค่ `CHAINS[*].name`) → ไม่ bump `APP_BUILD`
+
+ยังค้าง: ผู้ใช้มีเหรียญ **BBTC** ใน MetaMask — ต้องเพิ่มด้วยที่อยู่สัญญา และ Binance ไม่มีคู่ `BBTCUSDT` → ยังไม่มีราคา (รอผู้ใช้บอกเครือข่าย/ที่อยู่สัญญา และตัดสินใจว่าจะให้คิดราคาตาม BTC หรือไม่)
