@@ -98,5 +98,12 @@ const Ts = L.totals([vS], 35);
 chk('มีแต่ stablecoin → ฐาน Binance ว่าง (ไม่โชว์ +$0)', Ts.bin.n === 0 && Ts.bin.coverage === null && Ts.bin.pnlPct === null);
 chk('24 ชม. รวม', near(T.chg24, 20000 / (123100 - 20000)));
 
+// v79 รอบ 3 — RPC สำรอง: ทุกเครือข่ายมีหลายตัว · ตัวแรก = rpc เดิม · https ทั้งหมด · ส่งต่อไปใน evmRequests
+const C = L.CHAINS;
+chk('ทุกเครือข่ายมี RPC ≥ 3 ตัว (หลัก + สำรอง) · ตัวแรก = rpc หลัก · https ไม่ซ้ำ', Object.values(C).every(c =>
+  Array.isArray(c.rpcs) && c.rpcs.length >= 3 && c.rpcs[0] === c.rpc && c.rpcs.every(u => /^https:\/\/[^\s]+$/.test(u)) && new Set(c.rpcs).size === c.rpcs.length));
+const ER = L.evmRequests({ wallets: [{ address: '0x' + 'ab'.repeat(20), chains: ['eth', 'base'] }], tokens: [] });
+chk('evmRequests ส่ง rpcs ของเครือข่ายไปด้วย', ER.eth.rpcs === C.eth.rpcs && ER.base.rpcs === C.base.rpcs && ER.eth.rpc === C.eth.rpc);
+
 console.log(FAIL ? `\n✗ ${FAIL} ข้อไม่ผ่าน` : '\n✓ ผ่านทั้งหมด');
 process.exit(FAIL ? 1 : 0);

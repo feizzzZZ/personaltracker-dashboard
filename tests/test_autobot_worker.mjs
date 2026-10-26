@@ -17,10 +17,11 @@ const env = { BOT_TOKEN: 'x'.repeat(32), ALLOWED_ORIGIN: 'https://me.github.io',
 const MD = { prices: { PTT: { price: 32, ccy: 'THB' }, BTC: { price: 60000, ccy: 'USD' } },
              signals: { PTT: { rsi: 25, drawdown: -10 }, BTC: { rsi: 50, drawdown: -5 } }, data: { USDTHB: { value: 34 } } };
 let binanceCalls = 0;
-let liveFetch = null;                  // v78 — ตัวจำลอง api.binance.com / RPC (ตั้งในส่วนพอร์ตสด)
+let liveFetch = null;
+const RPC_ALT = /drpc\.org|1rpc\.io|llamarpc\.com|bnbchain\.org|arbitrum\.io|base\.org|optimism\.io/;   // v79 รอบ 3 — RPC สำรอง                  // v78 — ตัวจำลอง api.binance.com / RPC (ตั้งในส่วนพอร์ตสด)
 globalThis.fetch = async (url, init) => {
   url = String(url);
-  if (liveFetch && (url.startsWith('https://api.binance.com') || url.includes('publicnode.com'))) return liveFetch(url, init);
+  if (liveFetch && (url.startsWith('https://api.binance.com') || url.includes('publicnode.com') || RPC_ALT.test(url))) return liveFetch(url, init);
   if (url.startsWith(env.MARKET_URL)) return new Response(JSON.stringify(MD));
   if (url.includes('data-api.binance.vision')) { binanceCalls++; return new Response(JSON.stringify([{ symbol: 'BTCUSDT', price: '58000' }])); }
   throw new Error('unexpected fetch ' + url);
@@ -70,11 +71,16 @@ console.log('\n═══ v78 พอร์ตสด ═══');
 const A = '0x' + 'ab'.repeat(20), TOK = '0x' + 'cd'.repeat(20);
 const restr = { enableReading: true, enableWithdrawals: false, enableSpotAndMarginTrading: false };
 const calls = [];
+const uaSeen = []; let bnBlocked = false;
+let rpcDown = []; const rpcHits = [];   // v79 รอบ 3 — host ของ RPC ที่ให้ตอบ 429 · host ที่ถูกเรียก   // v79 รอบ 2 — User-Agent ที่ส่งไป Binance · จำลองด่าน CloudFront ตอบ 403
 const TR = {   // myTrades จำลอง: BTCUSDT 2 หน้า (1000 + 1) · BTCFDUSD ไม่มีคู่ · อื่น ๆ ว่าง
   BTCUSDT: Array.from({ length: 1001 }, (_, i) => ({ id: i, time: i, isBuyer: true, qty: '0.001', quoteQty: '50', commission: '0', commissionAsset: 'USDT' })) };
 liveFetch = async (url, init) => {
   const u = new URL(url); calls.push(u.pathname);
   if (u.hostname === 'api.binance.com') {
+    uaSeen.push(init.headers['user-agent']);
+    if (bnBlocked) return new Response('<HTML><HEAD><TITLE>ERROR: The request could not be satisfied</TITLE></HEAD><BODY><H1>403 ERROR</H1>Request blocked.</BODY></HTML>',
+      { status: 403, headers: { server: 'CloudFront', 'x-cache': 'Error from cloudfront' } });
     if (init.headers['X-MBX-APIKEY'] !== 'k'.repeat(64)) return new Response('{"code":-2015,"msg":"bad key"}', { status: 401 });
     if (!/^[0-9a-f]{64}$/.test(u.searchParams.get('signature') || '')) return new Response('{"code":-1022}', { status: 400 });
     switch (u.pathname) {
@@ -91,6 +97,8 @@ liveFetch = async (url, init) => {
     }
     return new Response('{}', { status: 404 });
   }
+  rpcHits.push(u.hostname);
+  if (rpcDown.some(h => u.hostname.includes(h))) return new Response('rate limited', { status: 429 });
   const body = JSON.parse(init.body);
   return new Response(JSON.stringify(body.map(r => r.method === 'eth_getBalance' ? { id: r.id, result: '0xde0b6b3a7640000' }
     : r.params[0].data === LivePort.SEL_DECIMALS ? { id: r.id, result: '0x6' }
@@ -135,6 +143,23 @@ const c2 = await (await callK('POST', '/live/costs', {})).json();
 chk('key เปิดเทรดได้ → ไม่ดึงประวัติ', !!c2.err && c2.fetched === 0);
 restr.enableSpotAndMarginTrading = false; restr.enableWithdrawals = true; kv.delete('liveKeyCheck');
 chk('key เปิดถอนได้ → ไม่ใช้', (await (await callK('GET', '/live/holdings')).json()).binance.unsafe === true);
+chk('ส่ง User-Agent ทุกคำขอที่ไป api.binance.com', uaSeen.length > 0 && uaSeen.every(u => typeof u === 'string' && u.length > 0));
+restr.enableWithdrawals = false; kv.delete('liveKeyCheck'); bnBlocked = true;
+const h3 = await (await callK('GET', '/live/holdings')).json();
+chk('403 จากด่านหน้า (ไม่มี code) → บอกว่าไม่ใช่ปัญหา key + server + ข้อความ', !h3.binance.ok
+  && /HTTP 403/.test(h3.binance.err) && /ไม่ใช่ปัญหา key/.test(h3.binance.err) && /CloudFront/.test(h3.binance.err) && /Request blocked/.test(h3.binance.err) && !/</.test(h3.binance.err), h3.binance.err);
+bnBlocked = false; kv.delete('liveKeyCheck');
+const h4 = await (await callK('GET', '/live/holdings')).json();
+chk('ด่านหน้าเลิกบล็อก → กลับมาดึงยอดได้ · error ที่มี code ยังแปลเหมือนเดิม', h4.binance.ok && /^Funding: Binance HTTP 401 -1002 no$/.test(h4.binance.warn[0]), JSON.stringify(h4.binance.warn));
+rpcDown = ['publicnode.com']; rpcHits.length = 0;
+const h5 = await (await callK('GET', '/live/holdings')).json();
+chk('RPC ตัวหลักตอบ 429 → ใช้ตัวสำรอง ยอด MetaMask ยังมา', h5.evm.errs.length === 0 && h5.evm.rows.find(r => r.asset === 'ETH').amount === 1
+  && rpcHits[0] === 'ethereum-rpc.publicnode.com' && rpcHits[1] === 'eth.drpc.org', JSON.stringify({ errs: h5.evm.errs, rpcHits }));
+rpcDown = ['publicnode.com', 'drpc.org', '1rpc.io', 'llamarpc.com'];
+const h6 = await (await callK('GET', '/live/holdings')).json();
+chk('RPC ล้มทุกตัว → error เดียวบอกผลทุกตัว · ไม่ล้มทั้งหน้า', h6.evm.rows.length === 0 && h6.evm.errs.length === 1
+  && /publicnode\.com HTTP 429/.test(h6.evm.errs[0]) && /eth\.drpc\.org HTTP 429/.test(h6.evm.errs[0]) && /eth\.llamarpc\.com HTTP 429/.test(h6.evm.errs[0]), h6.evm.errs[0]);
+rpcDown = [];
 chk('ไม่มี endpoint ส่งคำสั่ง/ถอน ในไฟล์ Worker', !/\/order\b|\/withdraw|\/capital\/withdraw|placeOrder/i.test(src));
 
 console.log(FAIL ? `\n✗ ไม่ผ่าน ${FAIL} ข้อ` : '\n✓ ผ่านทั้งหมด');

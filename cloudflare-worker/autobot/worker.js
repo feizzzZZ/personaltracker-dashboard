@@ -71,22 +71,33 @@ const BINANCE = 'https://api.binance.com';
 const TRADE_BUDGET = 35;              // คำขอ myTrades ต่อรอบ — Worker ฟรีจำกัด 50 subrequest ต่อคำขอ
 const hex = buf => [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
 
-function binErr(status, j){
+function binErr(status, j, raw = '', h = null){
   const code = j && j.code, msg = (j && j.msg) || '';
   if(status === 451) return 'Binance ปฏิเสธคำขอจากตำแหน่งของเซิร์ฟเวอร์ (HTTP 451)';
   if(code === -2015 || code === -2014) return 'API key ไม่ถูกต้อง หรือ key ถูกจำกัด IP ไว้ (' + code + ')';
   if(code === -1021) return 'เวลาไม่ตรงกับ Binance (-1021) — ลองใหม่';
   if(status === 429 || status === 418) return 'เรียก Binance ถี่เกินไป (HTTP ' + status + ') — รอสักครู่';
-  return 'Binance HTTP ' + status + (code ? ' ' + code : '') + (msg ? ' ' + msg : '');
+  // v79 รอบ 2 — ไม่มี code = ไม่ใช่คำตอบของระบบ API (ไม่ได้ตรวจ key เลย) แต่เป็นด่านหน้า (CloudFront/WAF) ที่ตัดก่อน
+  // เดิมทิ้งเนื้อหาไป เหลือแค่ "HTTP 403" ซึ่งบอกไม่ได้ว่าโดนบล็อกเพราะอะไร → เก็บ server/x-cache + ข้อความสั้น ๆ ไว้ด้วย
+  if(code === undefined || code === null){
+    const via = [h && h.get('server'), h && h.get('x-cache')].filter(Boolean).join(' · ');
+    const txt = String(raw).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 160);
+    return 'Binance HTTP ' + status + ' — ถูกด่านหน้าของ Binance บล็อกก่อนถึงระบบ API (ไม่ใช่ปัญหา key)'
+      + (via ? ' [' + via + ']' : '') + (txt ? ': ' + txt : '');
+  }
+  return 'Binance HTTP ' + status + ' ' + code + (msg ? ' ' + msg : '');
 }
+// fetch ใน Worker ไม่ใส่ User-Agent ให้เอง — ด่าน WAF หลายแห่งตอบ 403 กับคำขอที่ไม่มี User-Agent
+const UA = 'FinanceTracker-Worker/1.0 (read-only)';
 async function bnb(env, path, params = {}, method = 'GET'){
   const qs = new URLSearchParams({ ...params, recvWindow: '10000', timestamp: String(Date.now()) }).toString();
   const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(env.BINANCE_SECRET),
     { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
   const sig = hex(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(qs)));
-  const r = await fetch(`${BINANCE}${path}?${qs}&signature=${sig}`, { method, headers: { 'X-MBX-APIKEY': env.BINANCE_KEY } });
-  const j = await r.json().catch(() => null);
-  if(!r.ok){ const e = new Error(binErr(r.status, j)); e.code = j && j.code; throw e; }
+  const r = await fetch(`${BINANCE}${path}?${qs}&signature=${sig}`, { method, headers: { 'X-MBX-APIKEY': env.BINANCE_KEY, 'user-agent': UA } });
+  const raw = await r.text();
+  let j = null; try{ j = JSON.parse(raw); }catch(e){}
+  if(!r.ok){ const e = new Error(binErr(r.status, j, raw, r.headers)); e.code = j && j.code; throw e; }
   return j;
 }
 // key ต้องอ่านได้อย่างเดียว — เปิดเทรด/ถอน/margin/futures/โอนภายใน อย่างใดอย่างหนึ่ง = ไม่ใช้
@@ -102,15 +113,29 @@ async function keyIsReadOnly(env){
   return out;
 }
 const liveCfg = async env => (await env.BOT.get('liveCfg', 'json')) || { wallets: [], tokens: [] };
-const rpc = (url, body) => fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
-  .then(r => { if(!r.ok) throw new Error('RPC HTTP ' + r.status); return r.json(); });
+// v79 รอบ 3 — ลองทีละ RPC ใน urls จนได้คำตอบ batch (array) · 429/5xx/ผิดรูปแบบ → ตัวถัดไป
+// ทั้งหมดล้ม → error เดียวที่บอกผลของทุกตัว (เช่น "RPC HTTP 429 · drpc.org HTTP 403 · …")
+async function rpc(urls, body){
+  const errs = [];
+  for(const url of [].concat(urls)){
+    const host = new URL(url).hostname.replace(/^(ethereum-rpc|bsc-rpc|arbitrum-one-rpc|base-rpc|optimism-rpc|polygon-bor-rpc|www)\./, '');
+    try{
+      const r = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', 'user-agent': UA }, body: JSON.stringify(body) });
+      if(!r.ok){ errs.push(host + ' HTTP ' + r.status); continue; }
+      const j = await r.json().catch(() => null);
+      if(Array.isArray(body) !== Array.isArray(j)){ errs.push(host + ' ตอบผิดรูปแบบ'); continue; }
+      return j;
+    }catch(e){ errs.push(host + ' ' + e.message); }
+  }
+  throw new Error('RPC ' + errs.join(' · '));
+}
 
 async function liveHoldings(env){
   const out = { t: Date.now(), binance: { configured: !!(env.BINANCE_KEY && env.BINANCE_SECRET), ok: false, err: '', warn: [], rows: [] },
     evm: { rows: [], errs: [] } };
   const cfg = await liveCfg(env);
   const evmJobs = Object.entries(LivePort.evmRequests(cfg)).map(async ([chain, req]) => {
-    try{ const p = LivePort.evmParse(chain, req, await rpc(req.rpc, req.body)); out.evm.rows.push(...p.rows); out.evm.errs.push(...p.errs); }
+    try{ const p = LivePort.evmParse(chain, req, await rpc(req.rpcs || req.rpc, req.body)); out.evm.rows.push(...p.rows); out.evm.errs.push(...p.errs); }
     catch(e){ out.evm.errs.push(LivePort.CHAINS[chain].name + ': ' + e.message); }
   });
   const binJob = (async () => {
@@ -183,7 +208,7 @@ async function resolveTokens(cfg){
     const body = list.flatMap((t, i) => [
       { jsonrpc: '2.0', id: i * 2 + 1, method: 'eth_call', params: [{ to: t.address, data: LivePort.SEL_DECIMALS }, 'latest'] },
       { jsonrpc: '2.0', id: i * 2 + 2, method: 'eth_call', params: [{ to: t.address, data: LivePort.SEL_SYMBOL }, 'latest'] }]);
-    const resp = await rpc(LivePort.CHAINS[chain].rpc, body);
+    const resp = await rpc(LivePort.CHAINS[chain].rpcs || LivePort.CHAINS[chain].rpc, body);
     const byId = {}; (Array.isArray(resp) ? resp : []).forEach(r => { byId[r.id] = r; });
     list.forEach((t, i) => {
       const d = byId[i * 2 + 1], s = byId[i * 2 + 2];
