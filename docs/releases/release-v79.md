@@ -70,3 +70,16 @@ root เหลือ `index.html` · `manifest.json` · `service-worker.js` (ต
 - `liveport.js` เปลี่ยนแค่ข้อมูลที่ Worker ใช้ (แอปอ่านแค่ `CHAINS[*].name`) → ไม่ bump `APP_BUILD`
 
 ยังค้าง: ผู้ใช้มีเหรียญ **BBTC** ใน MetaMask — ต้องเพิ่มด้วยที่อยู่สัญญา และ Binance ไม่มีคู่ `BBTCUSDT` → ยังไม่มีราคา (รอผู้ใช้บอกเครือข่าย/ที่อยู่สัญญา และตัดสินใจว่าจะให้คิดราคาตาม BTC หรือไม่)
+
+## รอบ 4 (2026-10-26) — Binance บล็อก IP ของ Cloudflare Worker → ลองโดเมนอื่นของ Binance
+
+หลัง deploy รอบ 2–3 ข้อความใหม่บอกสาเหตุ: `Binance HTTP 403 — … [cloudflare · Error from cloudfront]: ERROR: The request could not be satisfied … Request blocked.`
+= CloudFront หน้า `api.binance.com` บล็อกตาม IP ต้นทาง (เครือข่ายของ Cloudflare) · User-Agent ไม่ช่วย · ไม่เกี่ยวกับ key
+
+- `worker.js` `binHost()`: ลอง `/api/v3/ping` ทีละโดเมน `api.binance.com` → `api-gcp.binance.com` (Google Cloud ไม่ผ่าน CloudFront) → `api1`–`api4` ·
+  ตัวแรกที่ตอบ JSON → จำใน KV `liveBinHost` 6 ชม. (+ ในหน่วยความจำของ isolate) · ทุกคำขอ Binance ใช้โดเมนนั้น
+- โดเมนที่จำไว้ตอบ 403/451 แบบไม่มี code → ลืม รอบหน้าลองใหม่ · บล็อกทุกโดเมน → "Binance บล็อกคำขอจาก Cloudflare Worker ทุกโดเมน (ไม่ใช่ปัญหา key) — api.binance.com 403 · …"
+- `liveHoldings` หาโดเมนก่อนยิง 4 คำขอพร้อมกัน (ไม่ให้แต่ละตัวลองซ้ำ) · แอปได้ `binance.host` ไปด้วย · `liveCosts` หาโดเมนก่อน — บล็อกทุกโดเมนก็หยุดพร้อมเหตุผล
+- subrequest: `/live/costs` 35 + ลองโดเมน ≤ 6 + ตรวจ key 1 = 42 (< 50)
+- เทสต์ `test_autobot_worker.mjs` +7 (เหลือ api-gcp · จำแล้วไม่ ping ซ้ำ · ประวัติเทรดใช้โดเมนเดียวกัน · บล็อกทุกโดเมน · costs หยุด · กลับมาใช้ตัวหลัก) — 6 ข้อตกกับโค้ดเดิม
+- **ยังไม่รู้ว่าโดเมนอื่นผ่านจาก Cloudflare หรือไม่** (ทดสอบจาก session นี้ไม่ได้) — ถ้าบล็อกทุกโดเมน ต้องเปลี่ยนวิธี (ตัวกลางที่ไม่ใช่ Cloudflare) · ต้องให้ผู้ใช้ตัดสินใจ
