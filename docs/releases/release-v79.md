@@ -40,3 +40,19 @@ root เหลือ `index.html` · `manifest.json` · `service-worker.js` (ต
 - PWA ที่ติดตั้งไว้: ปิด-เปิดแอปหนึ่งครั้งให้ service worker v79 ติดตั้ง (index.html เป็น network-first จึงโหลด `js/` ใหม่ได้ทันทีอยู่แล้ว)
 - Worker (ถ้า deploy แล้ว): แก้ `MARKET_URL` ให้ลงท้าย `/data/market-data.json` แล้ว `npx wrangler deploy` ใหม่
 - เครื่อง local (`~/Desktop/personaltracker-dashboard`): ใช้ `git clone` ของ repo แทนโฟลเดอร์คัดลอก จะได้ไม่ต้องอัปโหลดไฟล์เองอีก
+
+---
+
+## รอบ 2 (2026-10-26) — Worker ขึ้น Cloudflare จริง · Binance ตอบ 403
+
+ผู้ใช้ deploy Worker แล้ว (`workers.dev` · ใส่ `workers_dev = true` / `preview_urls = false` ใน `wrangler.toml` เอง) · แอปเชื่อม Worker ได้ ·
+ตั้ง `BINANCE_KEY`/`BINANCE_SECRET` แล้วหน้าพอร์ตสดขึ้น **"Binance: Binance HTTP 403"**
+
+- 403 ที่ไม่มี `code` ไม่ใช่คำตอบของระบบ API Binance (key ผิด/ถูกจำกัด IP จะได้ JSON `-2015` ซึ่งแปลเป็นข้อความอยู่แล้ว) แต่เป็นด่านหน้า (CloudFront/WAF) ที่ตัดก่อน —
+  `bnb()` เดิมทิ้งเนื้อหาคำตอบ จึงบอกไม่ได้ว่าโดนบล็อกเพราะอะไร
+- แก้ใน `cloudflare-worker/autobot/worker.js`:
+  - ส่ง `user-agent: FinanceTracker-Worker/1.0 (read-only)` ทุกคำขอที่ไป `api.binance.com` — `fetch` ใน Worker ไม่ใส่ให้เอง และกฎ WAF ทั่วไปบล็อกคำขอที่ไม่มี User-Agent ด้วย 403
+  - คำตอบที่ไม่มี `code` → ข้อความ "ถูกด่านหน้าของ Binance บล็อกก่อนถึงระบบ API (ไม่ใช่ปัญหา key)" + header `server`/`x-cache` + ข้อความในหน้า (ตัด HTML · ≤ 160 ตัว)
+- เทสต์ `tests/test_autobot_worker.mjs` +3 ข้อ (ส่ง User-Agent · 403 HTML จาก CloudFront จำลอง · error ที่มี code ยังแปลเหมือนเดิม) — 2 ข้อแรกตกกับโค้ดเดิม
+- ยังไม่รู้สาเหตุจริงจนกว่าจะ deploy ตัวนี้แล้วดูข้อความใหม่ — ถ้ายัง 403: ข้อความจะบอกว่าด่านไหน (CloudFront ตามประเทศ / WAF) แล้วค่อยเลือกทางแก้ (เช่น endpoint สำรอง `api1`–`api4`/`api-gcp.binance.com`)
+- ไม่แตะแอป (`index.html` / `js/*`) → ไม่ bump `APP_BUILD`

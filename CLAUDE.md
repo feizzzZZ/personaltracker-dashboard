@@ -75,7 +75,7 @@ Three workflows in `.github/workflows/`, each with extensive inline comments exp
 - AI API keys and Google `clientId`/`spreadsheetId`: localStorage only, entered once via the settings modal, never committed.
 - `data/notify-state.json` / `data/notifications.enc.json`: encrypted at rest with secret `NOTIFY_KEY` (plaintext portfolio values were previously committed in the clear — fixed in v72).
 - If ever hosted publicly (not single-user), the README calls out `cloudflare-worker/` as the proxy to switch to instead of calling AI APIs directly from the browser.
-- Cloudflare Worker (`cloudflare-worker/autobot/`, not deployed yet as of v78): every endpoint needs `Authorization: Bearer <BOT_TOKEN>` (constant-time compare, CORS limited to `ALLOWED_ORIGIN`). Once `BINANCE_KEY` is set, `BOT_TOKEN` grants **read access to real balances** — the app stores it vault-encrypted when a password is set. MetaMask uses public addresses only; never ask for or store a seed phrase/private key.
+- Cloudflare Worker (`cloudflare-worker/autobot/`, deployed by the user on 2026-10-26 to `workers.dev`; redeploy with `npx wrangler deploy` from that folder after pulling — GitHub edits don't reach Cloudflare by themselves): every endpoint needs `Authorization: Bearer <BOT_TOKEN>` (constant-time compare, CORS limited to `ALLOWED_ORIGIN`). Once `BINANCE_KEY` is set, `BOT_TOKEN` grants **read access to real balances** — the app stores it vault-encrypted when a password is set. MetaMask uses public addresses only; never ask for or store a seed phrase/private key.
 
 ## Running tests
 
