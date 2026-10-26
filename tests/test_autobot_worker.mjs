@@ -13,15 +13,16 @@ const W = (await import(pathToFileURL(tmp).href)).default;
 
 const kv = new Map();
 const env = { BOT_TOKEN: 'x'.repeat(32), ALLOWED_ORIGIN: 'https://me.github.io', MARKET_URL: 'https://md/market-data.json', START_THB: '50000',
-  BOT: { get: async (k, t) => kv.has(k) ? (t === 'json' ? JSON.parse(kv.get(k)) : kv.get(k)) : null, put: async (k, v) => { kv.set(k, v); } } };
+  BOT: { get: async (k, t) => kv.has(k) ? (t === 'json' ? JSON.parse(kv.get(k)) : kv.get(k)) : null, put: async (k, v) => { kv.set(k, v); }, delete: async k => { kv.delete(k); } } };
 const MD = { prices: { PTT: { price: 32, ccy: 'THB' }, BTC: { price: 60000, ccy: 'USD' } },
              signals: { PTT: { rsi: 25, drawdown: -10 }, BTC: { rsi: 50, drawdown: -5 } }, data: { USDTHB: { value: 34 } } };
 let binanceCalls = 0;
 let liveFetch = null;
+const BN_HOST = /^https:\/\/api(-gcp|\d)?\.binance\.com\//;   // v79 รอบ 4 — ทุกโดเมนของ Binance API
 const RPC_ALT = /drpc\.org|1rpc\.io|llamarpc\.com|bnbchain\.org|arbitrum\.io|base\.org|optimism\.io/;   // v79 รอบ 3 — RPC สำรอง                  // v78 — ตัวจำลอง api.binance.com / RPC (ตั้งในส่วนพอร์ตสด)
 globalThis.fetch = async (url, init) => {
   url = String(url);
-  if (liveFetch && (url.startsWith('https://api.binance.com') || url.includes('publicnode.com') || RPC_ALT.test(url))) return liveFetch(url, init);
+  if (liveFetch && (BN_HOST.test(url) || url.includes('publicnode.com') || RPC_ALT.test(url))) return liveFetch(url, init);
   if (url.startsWith(env.MARKET_URL)) return new Response(JSON.stringify(MD));
   if (url.includes('data-api.binance.vision')) { binanceCalls++; return new Response(JSON.stringify([{ symbol: 'BTCUSDT', price: '58000' }])); }
   throw new Error('unexpected fetch ' + url);
@@ -72,15 +73,17 @@ const A = '0x' + 'ab'.repeat(20), TOK = '0x' + 'cd'.repeat(20);
 const restr = { enableReading: true, enableWithdrawals: false, enableSpotAndMarginTrading: false };
 const calls = [];
 const uaSeen = []; let bnBlocked = false;
+let bnBlockHosts = []; const bnHits = [];   // v79 รอบ 4 — โดเมนที่ให้ CloudFront บล็อก · host+path ที่ถูกเรียก
 let rpcDown = []; const rpcHits = [];   // v79 รอบ 3 — host ของ RPC ที่ให้ตอบ 429 · host ที่ถูกเรียก   // v79 รอบ 2 — User-Agent ที่ส่งไป Binance · จำลองด่าน CloudFront ตอบ 403
 const TR = {   // myTrades จำลอง: BTCUSDT 2 หน้า (1000 + 1) · BTCFDUSD ไม่มีคู่ · อื่น ๆ ว่าง
   BTCUSDT: Array.from({ length: 1001 }, (_, i) => ({ id: i, time: i, isBuyer: true, qty: '0.001', quoteQty: '50', commission: '0', commissionAsset: 'USDT' })) };
 liveFetch = async (url, init) => {
   const u = new URL(url); calls.push(u.pathname);
-  if (u.hostname === 'api.binance.com') {
-    uaSeen.push(init.headers['user-agent']);
-    if (bnBlocked) return new Response('<HTML><HEAD><TITLE>ERROR: The request could not be satisfied</TITLE></HEAD><BODY><H1>403 ERROR</H1>Request blocked.</BODY></HTML>',
+  if (/^api(-gcp|\d)?\.binance\.com$/.test(u.hostname)) {
+    uaSeen.push(init.headers['user-agent']); bnHits.push(u.hostname + u.pathname);
+    if (bnBlocked || bnBlockHosts.includes(u.hostname)) return new Response('<HTML><HEAD><TITLE>ERROR: The request could not be satisfied</TITLE></HEAD><BODY><H1>403 ERROR</H1>Request blocked.</BODY></HTML>',
       { status: 403, headers: { server: 'CloudFront', 'x-cache': 'Error from cloudfront' } });
+    if (u.pathname === '/api/v3/ping') return new Response('{}');
     if (init.headers['X-MBX-APIKEY'] !== 'k'.repeat(64)) return new Response('{"code":-2015,"msg":"bad key"}', { status: 401 });
     if (!/^[0-9a-f]{64}$/.test(u.searchParams.get('signature') || '')) return new Response('{"code":-1022}', { status: 400 });
     switch (u.pathname) {
@@ -151,6 +154,30 @@ chk('403 จากด่านหน้า (ไม่มี code) → บอก�
 bnBlocked = false; kv.delete('liveKeyCheck');
 const h4 = await (await callK('GET', '/live/holdings')).json();
 chk('ด่านหน้าเลิกบล็อก → กลับมาดึงยอดได้ · error ที่มี code ยังแปลเหมือนเดิม', h4.binance.ok && /^Funding: Binance HTTP 401 -1002 no$/.test(h4.binance.warn[0]), JSON.stringify(h4.binance.warn));
+// v79 รอบ 4 — api.binance.com โดน CloudFront บล็อก (IP ของ Worker) → ลองโดเมนอื่นแล้วจำไว้
+bnBlockHosts = ['api.binance.com'];
+const h7 = await (await callK('GET', '/live/holdings')).json();
+chk('โดเมนที่จำไว้เพิ่งโดนบล็อก → รอบนี้ error · ลืมโดเมนนั้น', !h7.binance.ok && /HTTP 403/.test(h7.binance.err) && !kv.has('liveBinHost'), h7.binance.err);
+const h8 = await (await callK('GET', '/live/holdings')).json();
+chk('รอบถัดไปลอง ping ทีละโดเมน → ใช้ api-gcp ได้ยอดครบ · จำไว้ใน KV', h8.binance.ok && h8.binance.host === 'api-gcp.binance.com' && h8.binance.rows.length === 3
+  && JSON.parse(kv.get('liveBinHost')).host === 'https://api-gcp.binance.com' && bnHits.includes('api-gcp.binance.com/api/v3/account'), JSON.stringify(h8.binance));
+let pings = bnHits.filter(h => h.endsWith('/api/v3/ping')).length;
+await callK('GET', '/live/holdings');
+chk('โดเมนที่จำไว้ยังใช้ได้ → ไม่ ping ซ้ำทุกครั้ง', bnHits.filter(h => h.endsWith('/api/v3/ping')).length === pings);
+const c3 = await (await callK('POST', '/live/costs', { since: Date.now() + 5 })).json();
+chk('ประวัติเทรดก็ใช้โดเมนเดียวกัน', !c3.err && bnHits.includes('api-gcp.binance.com/api/v3/myTrades'), JSON.stringify(c3));
+bnBlocked = true;
+await callK('GET', '/live/holdings');                               // api-gcp ที่จำไว้โดนบล็อก → ลืม
+const h9 = await (await callK('GET', '/live/holdings')).json();     // ลองครบ 6 โดเมน
+chk('บล็อกทุกโดเมน → บอกว่าไม่ใช่ปัญหา key + ผลของทุกโดเมน', !h9.binance.ok && /ทุกโดเมน/.test(h9.binance.err) && /ไม่ใช่ปัญหา key/.test(h9.binance.err)
+  && /api\.binance\.com 403/.test(h9.binance.err) && /api-gcp\.binance\.com 403/.test(h9.binance.err) && /api4\.binance\.com 403/.test(h9.binance.err), h9.binance.err);
+const before9 = bnHits.length;
+const c4 = await (await callK('POST', '/live/costs', { since: Date.now() + 9 })).json();
+chk('บล็อกทุกโดเมน → /live/costs หยุดพร้อมเหตุผล ไม่ยิงประวัติเทรด', /ทุกโดเมน/.test(c4.err) && c4.fetched === 0
+  && bnHits.slice(before9).every(h => h.endsWith('/api/v3/ping')), JSON.stringify(c4));
+bnBlocked = false; bnBlockHosts = [];
+const h10 = await (await callK('GET', '/live/holdings')).json();
+chk('เลิกบล็อก → กลับมาใช้ api.binance.com', h10.binance.ok && h10.binance.host === 'api.binance.com', JSON.stringify(h10.binance));
 rpcDown = ['publicnode.com']; rpcHits.length = 0;
 const h5 = await (await callK('GET', '/live/holdings')).json();
 chk('RPC ตัวหลักตอบ 429 → ใช้ตัวสำรอง ยอด MetaMask ยังมา', h5.evm.errs.length === 0 && h5.evm.rows.find(r => r.asset === 'ETH').amount === 1

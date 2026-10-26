@@ -67,8 +67,13 @@ async function runOnce(env, source){
 /* ══ v78 — พอร์ตสด ══════════════════════════════════════════════════════════════════
    เรียกเฉพาะตอนแอปขอ (fetch) ไม่เรียกใน cron: Binance ปฏิเสธคำขอจากบางประเทศ (HTTP 451) และ cron ของ
    Cloudflare รันที่ศูนย์ข้อมูลไหนก็ได้ ส่วนคำขอจากแอปรันที่ศูนย์ใกล้ผู้ใช้ (ไทย)                          */
-const BINANCE = 'https://api.binance.com';
-const TRADE_BUDGET = 35;              // คำขอ myTrades ต่อรอบ — Worker ฟรีจำกัด 50 subrequest ต่อคำขอ
+// v79 รอบ 4 — api.binance.com อยู่หลัง CloudFront ซึ่งตอบ 403 "Request blocked" กับคำขอจาก IP ของ Cloudflare Worker
+// (เจอจริง 2026-10-26) · Binance มีโดเมนอื่นของ API ชุดเดียวกัน: api-gcp (Google Cloud ไม่ผ่าน CloudFront) · api1–4
+// ลองทีละโดเมนด้วย /api/v3/ping แล้วจำตัวที่ผ่านไว้ 6 ชม. (KV liveBinHost) · ตัวที่จำไว้โดนบล็อกภายหลัง → ลืมแล้วลองใหม่รอบหน้า
+const BINANCE_HOSTS = ['https://api.binance.com', 'https://api-gcp.binance.com', 'https://api1.binance.com',
+  'https://api2.binance.com', 'https://api3.binance.com', 'https://api4.binance.com'];
+const HOST_TTL = 6 * 3600e3;
+const TRADE_BUDGET = 35;              // คำขอ myTrades ต่อรอบ — Worker ฟรีจำกัด 50 subrequest ต่อคำขอ (35 + ลองโดเมน ≤ 6 + ตรวจ key 1 = 42)
 const hex = buf => [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
 
 function binErr(status, j, raw = '', h = null){
@@ -89,15 +94,43 @@ function binErr(status, j, raw = '', h = null){
 }
 // fetch ใน Worker ไม่ใส่ User-Agent ให้เอง — ด่าน WAF หลายแห่งตอบ 403 กับคำขอที่ไม่มี User-Agent
 const UA = 'FinanceTracker-Worker/1.0 (read-only)';
+let _bh = null;   // {host, t} ใน isolate — คำขอที่ตามมาไม่ต้องอ่าน KV ซ้ำ
+async function binHost(env){
+  if(_bh && Date.now() - _bh.t < HOST_TTL) return _bh.host;
+  const c = await env.BOT.get('liveBinHost', 'json');
+  if(c && BINANCE_HOSTS.includes(c.host) && Date.now() - c.t < HOST_TTL){ _bh = c; return c.host; }
+  const tried = [];
+  for(const host of BINANCE_HOSTS){
+    try{
+      const r = await fetch(host + '/api/v3/ping', { headers: { 'user-agent': UA } });
+      const raw = await r.text();
+      if(r.ok && /^\s*\{/.test(raw)){
+        _bh = { host, t: Date.now() };
+        await env.BOT.put('liveBinHost', JSON.stringify(_bh));
+        return host;
+      }
+      tried.push(host.slice(8) + ' ' + r.status);
+    }catch(e){ tried.push(host.slice(8) + ' ' + e.message); }
+  }
+  const all451 = tried.every(t => / 451$/.test(t));
+  throw new Error(all451 ? 'Binance ปฏิเสธคำขอจากตำแหน่งของเซิร์ฟเวอร์ (HTTP 451) ทุกโดเมน'
+    : 'Binance บล็อกคำขอจาก Cloudflare Worker ทุกโดเมน (ไม่ใช่ปัญหา key) — ' + tried.join(' · '));
+}
+async function forgetHost(env){ _bh = null; await env.BOT.delete('liveBinHost'); }
 async function bnb(env, path, params = {}, method = 'GET'){
+  const host = await binHost(env);
   const qs = new URLSearchParams({ ...params, recvWindow: '10000', timestamp: String(Date.now()) }).toString();
   const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(env.BINANCE_SECRET),
     { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
   const sig = hex(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(qs)));
-  const r = await fetch(`${BINANCE}${path}?${qs}&signature=${sig}`, { method, headers: { 'X-MBX-APIKEY': env.BINANCE_KEY, 'user-agent': UA } });
+  const r = await fetch(`${host}${path}?${qs}&signature=${sig}`, { method, headers: { 'X-MBX-APIKEY': env.BINANCE_KEY, 'user-agent': UA } });
   const raw = await r.text();
   let j = null; try{ j = JSON.parse(raw); }catch(e){}
-  if(!r.ok){ const e = new Error(binErr(r.status, j, raw, r.headers)); e.code = j && j.code; throw e; }
+  if(!r.ok){
+    if(!(j && j.code != null) && (r.status === 403 || r.status === 451)) await forgetHost(env);   // โดเมนที่จำไว้เพิ่งโดนบล็อก → รอบหน้าลองใหม่
+    const e = new Error(binErr(r.status, j, raw, r.headers) + (host === BINANCE_HOSTS[0] ? '' : ' (' + host.slice(8) + ')'));
+    e.code = j && j.code; throw e;
+  }
   return j;
 }
 // key ต้องอ่านได้อย่างเดียว — เปิดเทรด/ถอน/margin/futures/โอนภายใน อย่างใดอย่างหนึ่ง = ไม่ใช้
@@ -141,6 +174,7 @@ async function liveHoldings(env){
   const binJob = (async () => {
     if(!out.binance.configured) return;
     try{
+      out.binance.host = (await binHost(env)).slice(8);   // ก่อนเรียกพร้อมกัน 4 ตัว — ไม่ให้แต่ละตัวลองโดเมนซ้ำ
       const chk = await keyIsReadOnly(env);
       if(!chk.ok){ out.binance.err = 'key นี้มีสิทธิ์เกินอ่าน (' + chk.bad.join(', ') + ') — Worker จะไม่ใช้ ให้สร้าง key ใหม่แบบอ่านอย่างเดียว'; out.binance.unsafe = true; return; }
       const [spot, funding, flex, locked] = await Promise.allSettled([
@@ -167,6 +201,7 @@ async function liveHoldings(env){
 
 async function liveCosts(env, since){
   if(!(env.BINANCE_KEY && env.BINANCE_SECRET)) return { done: true, pending: 0, fetched: 0, err: 'ยังไม่ได้ตั้ง BINANCE_KEY / BINANCE_SECRET' };
+  try{ await binHost(env); }catch(e){ return { done: true, pending: 0, fetched: 0, err: e.message }; }
   const chk = await keyIsReadOnly(env);
   if(!chk.ok) return { done: true, pending: 0, fetched: 0, err: 'key นี้มีสิทธิ์เกินอ่าน — Worker ไม่ใช้' };
   const assets = (await env.BOT.get('liveAssets', 'json')) || [];
