@@ -38,8 +38,13 @@ const CHAINS = {
 const MAX_WALLETS = 5, MAX_TOKENS = 30;
 
 const isStable = a => STABLES.includes(String(a || '').toUpperCase());
+// v80 — เหรียญที่ Binance ไม่มีคู่ USDT แต่หนุนด้วยสินทรัพย์อื่นแบบ 1:1 → ใช้ราคาของสินทรัพย์นั้น
+// ผู้ใช้เลือก (2026-10-29): BBTC (Binance Wrapped BTC บน Ethereum) คิดตามราคา BTC · เพิ่มตัวอื่นเมื่อผู้ใช้ขอเท่านั้น
+// (ไม่จับคู่จากชื่อเหรียญอัตโนมัติ — เหรียญปลอมชื่อเหมือนถูกส่งเข้ากระเป๋าบ่อย)
+const PRICE_AS = { BBTC: 'BTC' };
+const priceAsset = a => { const u = String(a || '').toUpperCase(); return PRICE_AS[u] || u; };
 // คู่ราคาบน Binance ของสินทรัพย์ (stablecoin ไม่ต้องใช้)
-const pricePair = a => isStable(a) ? null : String(a).toUpperCase() + 'USDT';
+const pricePair = a => isStable(a) ? null : priceAsset(a) + 'USDT';
 const isAddr = s => /^0x[0-9a-fA-F]{40}$/.test(String(s || ''));
 const num = v => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 
@@ -253,6 +258,6 @@ function totals(views, fx){
 }
 
 root.LivePort = { STABLES, QUOTES, CHAINS, MAX_WALLETS, MAX_TOKENS, CFG_ERR_EN,
-  isStable, pricePair, isAddr, validateConfig, hexToAmount, decodeAbiString, balanceOfData, SEL_DECIMALS, SEL_SYMBOL,
+  isStable, PRICE_AS, priceAsset, pricePair, isAddr, validateConfig, hexToAmount, decodeAbiString, balanceOfData, SEL_DECIMALS, SEL_SYMBOL,
   evmRequests, evmParse, binanceRows, tradePairsFor, compactTrade, costFromTrades, mergeHoldings, positionView, totals };
 })(typeof window !== 'undefined' ? window : globalThis);

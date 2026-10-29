@@ -105,5 +105,14 @@ chk('ทุกเครือข่ายมี RPC ≥ 3 ตัว (หลั�
 const ER = L.evmRequests({ wallets: [{ address: '0x' + 'ab'.repeat(20), chains: ['eth', 'base'] }], tokens: [] });
 chk('evmRequests ส่ง rpcs ของเครือข่ายไปด้วย', ER.eth.rpcs === C.eth.rpcs && ER.base.rpcs === C.base.rpcs && ER.eth.rpc === C.eth.rpc);
 
+// v80 — BBTC ใช้ราคา BTC (ผู้ใช้เลือก) · ตัวอื่นไม่เปลี่ยน · ไม่เดาจากชื่อ
+chk('BBTC → ราคา BTC (ตัวพิมพ์ไหนก็ได้)', L.priceAsset('BBTC') === 'BTC' && L.priceAsset('bbtc') === 'BTC' && L.pricePair('BBTC') === 'BTCUSDT');
+chk('เหรียญอื่นใช้ราคาตัวเอง', L.priceAsset('BTC') === 'BTC' && L.pricePair('ETH') === 'ETHUSDT' && L.pricePair('wbtc') === 'WBTCUSDT' && L.pricePair('BTCB') === 'BTCBUSDT');
+chk('stablecoin ยังไม่มีคู่ราคา', L.pricePair('USDT') === null && L.pricePair('usdc') === null);
+chk('มีแค่ BBTC ในตาราง (เพิ่มเมื่อผู้ใช้ขอเท่านั้น)', JSON.stringify(L.PRICE_AS) === '{"BBTC":"BTC"}');
+const vB = L.positionView({ asset: 'BBTC', qty: 0.0103, parts: [] }, { priceUSD: 80000, open24USD: 80400, fx: 33 });
+chk('BBTC 0.0103 × ราคา BTC $80,000 = $824 · ฿27,192', near(vB.valueUSD, 824) && near(vB.valueTHB, 27192) && near(vB.chg24, 80000 / 80400 - 1));
+chk('BBTC ไม่มีประวัติเทรดบน Binance → ไม่เดาต้นทุน', vB.bin === null && vB.sheet === null);
+
 console.log(FAIL ? `\n✗ ${FAIL} ข้อไม่ผ่าน` : '\n✓ ผ่านทั้งหมด');
 process.exit(FAIL ? 1 : 0);
