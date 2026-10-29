@@ -16,7 +16,7 @@ window.LOC = window.LOC || 'th-TH-u-ca-gregory';
 //   • XIRR engine
 // กติกา: ไฟล์นี้ห้ามแตะ DOM ของหน้าใดหน้าหนึ่ง — pure data layer เท่านั้น
 // ═══════════════════════════════════════════════════════════════════
-const APP_BUILD = 'v80';
+const APP_BUILD = 'v81';
 console.log('[FinanceTracker shared] build', APP_BUILD);
 window.SHARED_BUILD = APP_BUILD;   // v45 — ให้ index.html ตรวจได้ว่าเวอร์ชันตรงกัน
  
@@ -1701,6 +1701,24 @@ function savingFromSummary(s){
 // เป็นวิธีเดียวกับที่โบรกและกองทุนวัด transaction cost (% ของ turnover)
 // เดิมนับค่าธรรมเนียมเฉพาะฝั่งซื้อ — ค่าธรรมเนียมตอนขายหายไปทั้งหมด
 const FEE_WARN_PCT = 0.5;      // เกิน 0.5% ของมูลค่าซื้อขาย = แพงเกินควร
+// v81 — หน้า Transactions: ประเภทที่มีจริงในชีต (มาก → น้อย) + กรอง/ค้นหา
+function investTxTypes(rows){
+  const n = {};
+  (rows || []).forEach(r => { const t = String(r && r.txType || '').trim(); if(t) n[t] = (n[t] || 0) + 1; });
+  return Object.entries(n).map(([type, c]) => ({ type, n: c })).sort((a, b) => b.n - a.n || a.type.localeCompare(b.type));
+}
+// ทุกคำในช่องค้นหาต้องเจอ (AND) ในช่องใดช่องหนึ่ง: ticker · ประเภท · แพลตฟอร์ม · กลุ่ม · Asset_Type · วันที่ YYYY-MM-DD
+function filterInvestTx(rows, q, type){
+  const terms = String(q || '').toLowerCase().split(/\s+/).filter(Boolean);
+  return (rows || []).filter(r => {
+    if(type && String(r.txType || '').trim() !== type) return false;
+    if(!terms.length) return true;
+    const hay = [r.ticker, r.txType, r.platform, r.group, r.assetTypeRaw, r.date ? isoLocal(r.date) : '']
+      .map(x => String(x || '').toLowerCase());
+    return terms.every(t => hay.some(h => h.includes(t)));
+  });
+}
+
 function feeStats(trackerRows){
   let fees = 0, traded = 0, buyFees = 0, sellFees = 0;
   (trackerRows || []).forEach(r => {
@@ -1897,6 +1915,19 @@ function holdingPerf(flows, val, nowT, depositRate){
   const rate = depositRate == null ? DEPOSIT_RATE_DEFAULT : depositRate;
   return { ins, outs, gain, simple: ins > 0 ? gain / ins : null, annual, days: Math.round(days),
            vsDeposit: val - flowsFutureValue(fl, nowT, rate) };
+}
+
+// v81 — การ์ด IRR หน้า Holdings (แทน True cost) · byTk = {ticker: [{t, v}]} จาก buildPerfFlows (ซื้อ −trueCost · ขาย +สุทธิ · ปันผล +)
+// all = ทุก flow (รวมตัวที่ขายหมดแล้ว) เทียบมูลค่าพอร์ตวันนี้ · cur = เฉพาะตัวที่ยังถือ (มีมูลค่า) เทียบมูลค่าของตัวเหล่านั้น
+// ใช้ holdingPerf ตัวเดียวกับ Analyst → ≥ 1 ปี: annual (XIRR) · < 1 ปี: simple (ผลสะสม) ไม่ annualize
+function irrSummary(byTk, holdings, nowT){
+  const map = byTk || {}, hs = (holdings || []).filter(h => h && h.val > 0);
+  const all = Object.values(map).flat();
+  const held = hs.filter(h => map[h.ticker] && map[h.ticker].length);
+  const cur = held.flatMap(h => map[h.ticker]);
+  const sum = list => list.reduce((s, h) => s + h.val, 0);
+  return { all: all.length ? holdingPerf(all, sum(hs), nowT) : null,
+           cur: cur.length ? holdingPerf(cur, sum(held), nowT) : null };
 }
 
 // TWR: ช่วงไม่ถึง 1 ปี แสดงผลสะสมตามจริง (มาตรฐาน GIPS ห้าม annualize ช่วงสั้นกว่า 1 ปี)
