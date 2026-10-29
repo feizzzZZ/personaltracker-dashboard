@@ -27,13 +27,19 @@ When adding a file, put it in the matching folder — don't add new files at the
 
 ### Frontend: one big HTML file + small shared JS modules
 - `index.html` (~13.6k lines) — entire UI: markup, CSS, and all page-render functions (`renderOverview`, `renderBudget`, `renderDebt`, etc.), inlined and loaded as plain `<script>` tags (no modules/bundler).
-- `js/shared.js` — the **data layer**, loaded before `index.html`'s inline scripts. Pure-ish functions for: loading/merging market data, classifying holdings (cost basis, P/L), rebalancing, dividends, debt, goals, notifications encoding, regime/signal computation. `window.SHARED_BUILD` exposes `APP_BUILD` (bumped per release, currently `v80`) so `index.html` can assert the two files are in sync.
+- `js/shared.js` — the **data layer**, loaded before `index.html`'s inline scripts. Pure-ish functions for: loading/merging market data, classifying holdings (cost basis, P/L), rebalancing, dividends, debt, goals, notifications encoding, regime/signal computation. `window.SHARED_BUILD` exposes `APP_BUILD` (bumped per release, currently `v81`) so `index.html` can assert the two files are in sync.
 - `js/vault.js` (v74) — local username/password lock: PBKDF2-SHA256 (600k) → AES-GCM key; encrypts the data cache + Google token in localStorage (`finOS_enc:*`). No server — the "account" is per-device. Login/lock UI + auto-lock + ⌘K palette live in the `v74 — เข้าสู่ระบบ` block of `index.html`.
 - `js/autobot.js` (v75) — rule-based trading bot engine (pure: evaluate rules → paper fills), shared by the app's "บอทเทรด" tab and the Cloudflare Worker in `cloudflare-worker/autobot/` (cron every 15 min, KV state, Bearer token). Phase 1 is paper only — see `docs/releases/release-v75.md`.
 - `js/liveport.js` (v78) — live portfolio math (pure): merge Binance/MetaMask balances, running WACC from Binance `myTrades`, the two-cost-basis view (sheet `waccMap` THB vs Binance trade history USD), EVM JSON-RPC encode/decode. Shared by the app's "พอร์ตสด" page (`renderLive`) and the same Cloudflare Worker (`/live/*` endpoints). Read-only by design: the Worker refuses a Binance key that has trade/withdraw permission (`apiRestrictions`), and there is no order endpoint. Live prices come from Binance's public WebSocket in the browser, not the Worker. See `docs/releases/release-v78.md`.
 - `js/i18n.js` — Thai→English `translate()` dictionary; most UI strings go through a `_L(thai, english)` helper inline in `index.html` rather than a key-based i18n system.
 - Routing is a flat registry, not a router: `pageRenderFns` in `index.html` maps page ids (`overview`, `cashflow`, `budget`, `debt`, `signals`, `watch`, `bot`, `autobot`, `live`, `docs`, ...) to render functions; sidebar groups/tabs come from `NAV_GROUPS`. `switchPage()` renders a page only the **first** time it's shown (`renderedPages`), so a page that holds live resources (WebSocket, timers) needs its own enter/leave hook called from `switchPage` — see `liveOnPage(active)`.
 - `service-worker.js` — PWA offline/caching logic. `CACHE_NAME` (`finance-os-vNN`) must be bumped together with `APP_BUILD`, or installed PWAs keep serving the old `shared.js`.
+
+### Portfolio menu (v81 — user decisions 2026-10-29)
+- Invest tabs: ภาพรวมพอร์ต · พอร์ตสด · บอทเทรด · รายการซื้อขาย (Transactions) · ปันผล · ต้นทุน & ค่าเงิน · ปรับสมดุล. Dividends is a tab here (page id `dividends` unchanged), not its own sidebar group.
+- The user removed the pages ผลตอบแทนจริง (`performance`), ขายแล้ว (`realized`) and ไม่มีใครดูแล (`dormant`) — don't add them back without asking. Their data stays: `finOS_valueLog` is still written by `logValueSnapshot` from `renderPortfolio` (Analyst TWR, net-worth history), `realized` feeds the Holdings Realized P&L card, `CLS` (iaRefresh) still feeds the Costs & FX page (`renderCost`).
+- Holdings: the top "True cost" card became IRR (`irrSummary` + `perfQuote`: whole portfolio incl. sold + dividends, sub-line = current holdings; < 1 year shows the cumulative return, not annualized). The table's True cost column was kept on purpose.
+- Transactions (`renderAtTxTable`): dates `YYYY-MM-DD`, type dropdown built from the sheet's actual `Transaction_Type` values (`investTxTypes`), search (`filterInvestTx`), Fee column = `commTHB`.
 
 ### Debt menu (v77)
 - Sidebar group `debts`: pages `debts` (overview), `debtsched` (contract schedule), `debt` (the older credit-card/interest page — id kept for existing links). "บัญชี & หนี้" is now just "บัญชี".
@@ -100,6 +106,7 @@ node tests/test_perf.cjs js/shared.js
 node tests/test_autobot.cjs js/autobot.js
 node tests/test_autobot_worker.mjs     # Worker handler with fake KV/fetch (incl. v78 /live/* with fake Binance + RPC)
 node tests/test_liveport.cjs js/liveport.js   # v78 — live portfolio: balances merge, trade-history WACC, two cost bases, EVM decode
+node tests/test_invest_tx.cjs js/shared.js   # v81 — Transactions types/search + Holdings IRR card
 node tests/test_notify.cjs js/shared.js   # optionally [enc-file] [NOTIFY_KEY] to cross-check Python↔WebCrypto decryption
 ```
 

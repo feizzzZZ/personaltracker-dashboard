@@ -20,7 +20,7 @@ const DICT = {
   'ลงทุน':'Invest', 'พอร์ตลงทุน':'Portfolio', 'ปันผล':'Dividends', 'ตลาด & จังหวะ':'Markets & Timing',
   'พอร์ต':'Portfolio', 'ตลาด':'Markets', 'อื่น ๆ':'More',
   'รายเดือน':'Monthly', 'รายปี':'Yearly', 'ออม & ลงทุน':'Save & Invest', 'งบประมาณ':'Budget',
-  'บัญชี':'Accounts', 'หนี้':'Debt', 'หนี้สิน':'Debts', 'ภาพรวมหนี้':'Overview', 'ตารางผ่อน':'Schedule', 'บัตรเครดิต':'Credit cards', 'ภาพรวมพอร์ต':'Portfolio', 'รายการซื้อขาย':'Trades',
+  'บัญชี':'Accounts', 'หนี้':'Debt', 'หนี้สิน':'Debts', 'ภาพรวมหนี้':'Overview', 'ตารางผ่อน':'Schedule', 'บัตรเครดิต':'Credit cards', 'ภาพรวมพอร์ต':'Portfolio', 'รายการซื้อขาย':'Transactions',
   'ขายแล้ว':'Realized', 'ไม่มีใครดูแล':'Dormant', 'ต้นทุน & ค่าเงิน':'Costs & FX',
   'สัญญาณรายตัว':'Signals', 'ภาพรวมตลาด':'Market overview', 'บอทจำลอง':'Paper bot', 'ตลาดวันนี้':'Market today',
   'เมนู':'Menu', 'เมนูหลัก':'Main menu', 'เมนูทั้งหมด':'All menus', 'ย่อเมนู':'Collapse menu', 'ขยายเมนู':'Expand menu',
