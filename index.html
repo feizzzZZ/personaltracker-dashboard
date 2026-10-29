@@ -5092,7 +5092,7 @@ const VLOG_PURGED_KEY = 'finOS_valueLogPurged_v44';
 //   ฟังก์ชันหาย  → BLOCK  (แอปคำนวณผิดแน่นอน — นี่คือสิ่งที่ guard มีไว้จับ)
 //   เลขไม่ตรง    → WARN   (แค่ลืม bump — log ไว้ ไม่รบกวนผู้ใช้)
 // ฟังก์ชันที่ต้องมีคือสัญญาจริงระหว่างสองไฟล์ ส่วนสตริงเวอร์ชันเป็นแค่ป้าย
-const EXPECTED_SHARED_BUILD = 'v79';
+const EXPECTED_SHARED_BUILD = 'v80';
 const REQUIRED_SHARED_FNS = [
   'resolvePrices', 'pipelinePricesTHB', 'parseReconcileRows',
   'computeReconciliation', 'splitBalances', 'debtVsInvest', 'buildDebtPlan',
@@ -11286,7 +11286,7 @@ function _lvViews(){
   const sheetQty={}; (assets||[]).forEach(a=>{ sheetQty[String(a.ticker).toUpperCase()]=a.qty; });
   const rows=[...(H.binance.rows||[]), ...(H.evm.rows||[])];
   const views=LivePort.mergeHoldings(rows).map(h=>{
-    const px=_lv.px[h.asset]||{};
+    const px=_lv.px[LivePort.priceAsset(h.asset)]||{};   // v80 — BBTC ใช้ราคา BTC (PRICE_AS ใน liveport.js)
     return LivePort.positionView(h, { priceUSD:px.p, open24USD:px.o, fx,
       sheetWacc:(waccMap||{})[h.asset]||0, sheetQty:sheetQty[h.asset]!=null?sheetQty[h.asset]:(Object.keys(waccMap||{}).length?0:null),
       bin:(H.cost&&H.cost.assets||{})[h.asset] });
@@ -11295,6 +11295,7 @@ function _lvViews(){
 }
 
 function _lvSpark(a, chg){
+  a=LivePort.priceAsset(a);
   const s=(_lv.spark[a]||[]).slice(); const p=_lv.px[a]; if(p&&p.p&&s.length) s[s.length-1]=p.p;
   if(s.length<2) return `<div class="lv-spark lv-spark-none"></div>`;
   const W=120, H=40, mn=Math.min(...s), mx=Math.max(...s), rg=mx-mn||1;
@@ -11320,7 +11321,7 @@ function _lvCard(v, basis){
   const fee=v.bin&&v.bin.feeOther ? Object.entries(v.bin.feeOther).map(([a,q])=>`${_lvQty(q)} ${a}`).join(', ') : '';
   return `<div class="lv-card" data-a="${escAttr(v.asset)}">
     <div class="lv-c-hd"><span class="lv-ic" aria-hidden="true">${escHtml(v.asset.slice(0,4))}</span>
-      <div class="lv-c-nm"><b>${escHtml(v.asset)}</b><div class="lv-chips">${_lvSrcChips(v)}</div></div></div>
+      <div class="lv-c-nm"><b>${escHtml(v.asset)}</b>${LivePort.priceAsset(v.asset)!==v.asset?` <span class="lv-mute" title="${escAttr(_L('Binance ไม่มีคู่ของเหรียญนี้ — ใช้ราคาของสินทรัพย์ที่หนุนแบบ 1:1','Binance has no pair for this coin — priced as the asset backing it 1:1'))}">${_L('ราคาตาม','priced as')} ${escHtml(LivePort.priceAsset(v.asset))}</span>`:''}<div class="lv-chips">${_lvSrcChips(v)}</div></div></div>
     <div class="lv-c-mid">
       <div><div class="lv-big ${_lvCls(main)}" id="${id}-main">${_lvPct(main)}</div>
         <div class="lv-lbl">P&amp;L · ${basis==='bin'?_L('ต้นทุน Binance','Binance cost'):_L('ต้นทุนชีต','sheet cost')}</div></div>
@@ -11414,10 +11415,10 @@ function renderLive(){
       :`<div class="ab-empty">${H?_L('ไม่มีสินทรัพย์ในแหล่งนี้','No assets from this source'):_lv.loading?_L('กำลังโหลด…','Loading…'):''}</div>`}
     <p class="ab-note">${_L(`ต้นทุนชีต = WACC จาก Asset_Tracker (บาท · รวมทุกแพลตฟอร์ม) คูณจำนวนที่ถืออยู่จริงตอนนี้ ·
       ต้นทุน Binance = WACC จากประวัติเทรดคู่ USDT/FDUSD/USDC (USD) นับเฉพาะส่วนที่มีประวัติซื้อ — ของที่ได้มาจาก Convert, Auto-Invest, ฝากจากที่อื่น หรือรางวัล Earn ไม่อยู่ในประวัตินี้ ·
-      ค่าธรรมเนียมที่จ่ายเป็น BNB ไม่รวมในต้นทุน (แสดงแยก) · stablecoin นับ 1 USD · ราคา: Binance WebSocket · เหรียญที่ไม่มีคู่ USDT บน Binance จะไม่มีราคา`,
+      ค่าธรรมเนียมที่จ่ายเป็น BNB ไม่รวมในต้นทุน (แสดงแยก) · stablecoin นับ 1 USD · ราคา: Binance WebSocket · เหรียญที่ไม่มีคู่ USDT บน Binance จะไม่มีราคา (ยกเว้น BBTC ใช้ราคา BTC)`,
       `Sheet cost = Asset_Tracker WACC (THB · all platforms) × quantity held now ·
       Binance cost = WACC from USDT/FDUSD/USDC trade history (USD), counting only the part with buy history — coins from Convert, Auto-Invest, deposits from elsewhere or Earn rewards are not in it ·
-      fees paid in BNB are not in the cost (shown separately) · stablecoins count as 1 USD · prices: Binance WebSocket · coins without a USDT pair on Binance have no price`)}</p>`;
+      fees paid in BNB are not in the cost (shown separately) · stablecoins count as 1 USD · prices: Binance WebSocket · coins without a USDT pair on Binance have no price (except BBTC, priced as BTC)`)}</p>`;
 }
 
 // ราคาเปลี่ยนทุก tick → แก้แค่ตัวเลข (ไม่ render ทั้งหน้า) อย่างมากวินาทีละครั้ง
@@ -11457,7 +11458,7 @@ async function _lvLoadPrices(){
     try{ const all=await fetch(`${LV_DATA}/ticker/price`).then(r=>r.json()); if(Array.isArray(all)) _lv.pairs=new Set(all.map(x=>x.symbol)); }catch(e){}
   }
   if(_lv.pairs) _lvSyms().forEach(a=>{ if(!_lv.pairs.has(LivePort.pricePair(a))) _lv.noPair.add(a); });
-  const need=_lvSyms().filter(a=>!_lv.spark[a]);
+  const need=[...new Set(_lvSyms().map(LivePort.priceAsset))].filter(a=>!_lv.spark[a]);   // ราคา/กราฟเก็บตามสินทรัพย์ที่ใช้ราคา (BBTC → BTC)
   await Promise.all(need.map(async a=>{
     try{
       const r=await fetch(`${LV_DATA}/klines?symbol=${LivePort.pricePair(a)}&interval=1h&limit=25`);
@@ -11471,7 +11472,7 @@ async function _lvLoadPrices(){
 function _lvWsOpen(){
   const syms=_lvSyms();
   if(!_lv.on || document.hidden || !syms.length) return;
-  const want=syms.map(a=>LivePort.pricePair(a).toLowerCase()+'@miniTicker').sort().join('/');
+  const want=[...new Set(syms.map(a=>LivePort.pricePair(a).toLowerCase()+'@miniTicker'))].sort().join('/');
   if(_lv.ws && _lv.ws._want===want && _lv.ws.readyState<2) return;
   _lvWsClose();
   _lv.wsState='connecting';
