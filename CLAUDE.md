@@ -27,7 +27,7 @@ When adding a file, put it in the matching folder — don't add new files at the
 
 ### Frontend: one big HTML file + small shared JS modules
 - `index.html` (~13.6k lines) — entire UI: markup, CSS, and all page-render functions (`renderOverview`, `renderBudget`, `renderDebt`, etc.), inlined and loaded as plain `<script>` tags (no modules/bundler).
-- `js/shared.js` — the **data layer**, loaded before `index.html`'s inline scripts. Pure-ish functions for: loading/merging market data, classifying holdings (cost basis, P/L), rebalancing, dividends, debt, goals, notifications encoding, regime/signal computation. `window.SHARED_BUILD` exposes `APP_BUILD` (bumped per release, currently `v82`) so `index.html` can assert the two files are in sync.
+- `js/shared.js` — the **data layer**, loaded before `index.html`'s inline scripts. Pure-ish functions for: loading/merging market data, classifying holdings (cost basis, P/L), rebalancing, dividends, debt, goals, notifications encoding, regime/signal computation. `window.SHARED_BUILD` exposes `APP_BUILD` (bumped per release, currently `v83`) so `index.html` can assert the two files are in sync.
 - `js/vault.js` (v74) — local username/password lock: PBKDF2-SHA256 (600k) → AES-GCM key; encrypts the data cache + Google token in localStorage (`finOS_enc:*`). No server — the "account" is per-device. Login/lock UI + auto-lock + ⌘K palette live in the `v74 — เข้าสู่ระบบ` block of `index.html`.
 - `js/autobot.js` (v75) — rule-based trading bot engine (pure: evaluate rules → paper fills), shared by the app's "บอทเทรด" tab and the Cloudflare Worker in `cloudflare-worker/autobot/` (cron every 15 min, KV state, Bearer token). Phase 1 is paper only — see `docs/releases/release-v75.md`.
 - `js/liveport.js` (v78) — live portfolio math (pure): merge Binance/MetaMask balances, running WACC from Binance `myTrades`, the two-cost-basis view (sheet `waccMap` THB vs Binance trade history USD), EVM JSON-RPC encode/decode. Shared by the app's "พอร์ตสด" page (`renderLive`) and the same Cloudflare Worker (`/live/*` endpoints). Read-only by design: the Worker refuses a Binance key that has trade/withdraw permission (`apiRestrictions`), and there is no order endpoint. Live prices come from Binance's public WebSocket in the browser, not the Worker. See `docs/releases/release-v78.md`.
@@ -47,6 +47,7 @@ When adding a file, put it in the matching folder — don't add new files at the
 - Annual payout per holding = `dividendCalendar().byTicker` forecast, else dividends received in the last 12 months. Yield = ÷ today's value, Yield on cost = ÷ cost; Categories/Sectors divide by the whole group incl. non-payers. Sectors = Asset_Tracker `Industry` (fundamentals.json has no sector).
 - Average annual growth = DPS CAGR via `divGrowthRate` (complete years only, ≤ 5 years). It includes special dividends (COKE/KBANK look extreme) — user decision 2026-10-31: leave it, don't filter specials.
 - Dividends received defaults to the latest year with data (the current year, like Snowball), else the trailing 12 months; a saved choice wins. Calculators live in shared.js and are tested in `test_dividends.cjs`.
+- Sectors notes say which Asset_Tracker column the industry came from (`window._atIndustryInfo`, set in `gsParseAssetTracker`) and warn when the values equal the Name column — the user once saw company names because the "Industry"-titled column held names at sync time. Headers are matched loosely (case/space/underscore); a holding's industry comes from its newest row.
 - Render functions run inside try/catch that only `console.warn('[div] …')` — browser checks must watch console warnings, not just page errors (a v82 bug hid there).
 
 ### Debt menu (v77)
@@ -80,6 +81,8 @@ When adding a file, put it in the matching folder — don't add new files at the
 There is no backend database. The user's spreadsheet (via `spreadsheetId`) is the source of truth for transactions, holdings, budgets, etc. The browser authenticates directly with Google OAuth (`google.accounts.oauth2`; the access token is persisted to localStorage — encrypted via `vault.js` when the user has set a password, plaintext otherwise) using a `clientId` the user enters once in the settings modal (`GS_CONFIG`, stored in `localStorage` on-device). All spreadsheet reads/writes go through the Sheets REST API called directly from the browser — see `GS_CONFIG` / `_docsApi` style helpers in `index.html`.
 
 Key tabs: `Transaction` (wide format: header row ~25, one column per bank/card account — a row's `acct` map holds per-column movements; card payoffs are `Debt` rows with bank −x and card +x), `Reconcile` (actual balances), `Asset_Tracker`, and app-created optional tabs `Documents` (v71) and `Debts` (v77: one row per debt — installment/term/due day/limit; progress is computed from `Transaction` rows where Transactions=`Debt` and Type=`Pay Category`, never stored). Optional tabs are header-matched (`parseDocumentRows` / `parseDebtRows`), created on first save (`docsEnsureSheet` / `debtsEnsureSheet`), and edits go through `sheetRowGuard` before overwriting a row.
+
+The user's `Asset_Tracker` has columns filled by a single **ARRAYFORMULA** in row 2 (e.g. E Name, F Industry = `ARRAYFORMULA(XLOOKUP(C2:C, Asset_Live_Price_Feed!…))`). Writing any value into such a column breaks the whole column (#REF!). The add/edit investment form classifies columns with `atFormulaKinds(row2, refRow)` (shared.js, tested in `test_at_formula.cjs`): per-row formulas are copied down, spilling formulas are never written or copied, and their form fields are disabled (v83).
 
 ### Data pipeline: GitHub Actions + stdlib-only Python
 Three workflows in `.github/workflows/`, each with extensive inline comments explaining hard-won lessons (timeouts, rebase-before-push races, FRED IP-blocking on GH Actions, etc.) — **read the comments before changing these**, they encode prior incident fixes:
@@ -115,6 +118,7 @@ node tests/test_autobot.cjs js/autobot.js
 node tests/test_autobot_worker.mjs     # Worker handler with fake KV/fetch (incl. v78 /live/* with fake Binance + RPC)
 node tests/test_liveport.cjs js/liveport.js   # v78 — live portfolio: balances merge, trade-history WACC, two cost bases, EVM decode
 node tests/test_invest_tx.cjs js/shared.js   # v81 — Transactions types/search + Holdings IRR card
+node tests/test_at_formula.cjs js/shared.js   # v83 — Asset_Tracker per-row vs ARRAYFORMULA columns (form must not overwrite)
 node tests/test_notify.cjs js/shared.js   # optionally [enc-file] [NOTIFY_KEY] to cross-check Python↔WebCrypto decryption
 ```
 

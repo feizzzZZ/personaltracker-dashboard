@@ -752,7 +752,8 @@ select.month-display{text-align-last:center;outline:none}
 .dv-sel{appearance:none;-webkit-appearance:none;background:transparent;border:none;border-radius:0;color:var(--text);font:inherit;font-size:13px;padding:6px 22px 6px 8px;cursor:pointer;max-width:100%}
 .dv-sel{field-sizing:content}   /* กว้างเท่าข้อความที่เลือก (เบราว์เซอร์ที่รองรับ) — ไม่งั้นกว้างเท่าตัวเลือกที่ยาวที่สุด */
 .dv-sel:hover{color:var(--fg)}
-.dv-sel:focus-visible{outline:1px solid var(--fg);outline-offset:1px}
+.dv-sel:focus,.dv-sel:focus-visible{outline:none}
+.dv-sel:focus-visible{background:var(--bg4)}   /* v83 — ไม่มีกรอบหลังคลิก (ผู้ใช้ขอแบบไม่มีกรอบ) · คีย์บอร์ดยังเห็นพื้นหลังจาง */
 .dv-sel option{background:var(--bg3);color:var(--text)}
 .dv-yp-sum{display:flex;flex-wrap:wrap;gap:6px 28px;margin:2px 0 12px}
 .dv-yp-sum>div{display:flex;align-items:baseline;gap:8px}
@@ -760,6 +761,7 @@ select.month-display{text-align-last:center;outline:none}
 .dv-yp-sum b{font-size:18px;font-weight:500;color:var(--fg);font-variant-numeric:tabular-nums}
 .dv-yp-sum small{font-size:11px;color:var(--muted2)}
 .dv-yp-note{font-size:11px;color:var(--muted);line-height:1.6;margin-top:8px}
+.gs-input.at-f-formula{opacity:.55;cursor:not-allowed}   /* v83 — ช่องที่ชีตคำนวณเอง */
 .dv-card{margin:14px 0 4px}   /* v82 รอบ 2 */
 .dv-2col{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:14px}
 .dv-2col>.dv-card{margin:0}
@@ -5059,7 +5061,7 @@ const VLOG_PURGED_KEY = 'finOS_valueLogPurged_v44';
 //   ฟังก์ชันหาย  → BLOCK  (แอปคำนวณผิดแน่นอน — นี่คือสิ่งที่ guard มีไว้จับ)
 //   เลขไม่ตรง    → WARN   (แค่ลืม bump — log ไว้ ไม่รบกวนผู้ใช้)
 // ฟังก์ชันที่ต้องมีคือสัญญาจริงระหว่างสองไฟล์ ส่วนสตริงเวอร์ชันเป็นแค่ป้าย
-const EXPECTED_SHARED_BUILD = 'v82';
+const EXPECTED_SHARED_BUILD = 'v83';
 const REQUIRED_SHARED_FNS = [
   'resolvePrices', 'pipelinePricesTHB', 'parseReconcileRows',
   'computeReconciliation', 'splitBalances', 'debtVsInvest', 'buildDebtPlan',
@@ -5583,6 +5585,21 @@ function _dvEmpty(wrapId, chartId, noteId, msg){
   const n=document.getElementById(noteId); if(n) n.textContent=msg;
 }
 const _dvPc=x=>x==null?'—':(x*100).toFixed(2)+'%';
+// v83 — บอกว่าอุตสาหกรรมมาจากคอลัมน์ไหน + เตือนถ้าค่าเป็นชื่อบริษัท (ซ้ำกับคอลัมน์ Name)
+function _dvSectorSrc(){
+  const i=window._atIndustryInfo;
+  if(!i) return _L(' · อุตสาหกรรมจากคอลัมน์ Industry ใน Asset_Tracker',' · industry from the Industry column in Asset_Tracker');
+  if(!i.col) return _L(' · ⚠ ไม่พบคอลัมน์ Industry ใน Asset_Tracker',' · ⚠ no Industry column found in Asset_Tracker');
+  return _L(` · อุตสาหกรรมจากคอลัมน์ ${i.col} ("${i.header}") ใน Asset_Tracker`,` · industry from column ${i.col} ("${i.header}") in Asset_Tracker`)
+    +(i.sameAsName>0 && i.sameAsName>=i.filled*0.5
+      ? _L(` · ⚠ ค่า ${i.sameAsName} แถวตรงกับคอลัมน์ ${i.nameCol} (Name) — ตรวจหัวคอลัมน์ในชีตแล้วกด Sync`,` · ⚠ ${i.sameAsName} rows equal column ${i.nameCol} (Name) — check the sheet headers and Sync`) : '');
+}
+// ป้ายแกน X ยาว (ชื่ออุตสาหกรรมภาษาไทย) → ตัดเหลือ n ตัวอักษร · tooltip ยังเห็นเต็ม
+function _dvTicks(opts, labels, n){
+  opts.scales.x.ticks.callback=(v,i)=>{ const t=String(labels[i]==null?'':labels[i]); return t.length>n?t.slice(0,n-1)+'…':t; };
+  opts.scales.x.ticks.maxRotation=50;
+  return opts;
+}
 const _dvMon=k=>new Date(+k.slice(0,4), +k.slice(5,7)-1, 1).toLocaleDateString(LOC,{month:'short'});
 
 function renderDvYield(D){
@@ -5627,12 +5644,13 @@ function renderDvYield(D){
     {type:'bar', label:_L('ปันผลต่อปี','Annual payout'), data:rows.map(r=>Math.round(r.payout)), backgroundColor:'rgba(0,212,160,.8)', borderRadius:4}
   ];
   if(charts['dv-yp-chart']) charts['dv-yp-chart'].destroy();
+  _dvTicks(opts, rows.map(label), 18);
   charts['dv-yp-chart']=new Chart(ctx,{type:'bar', data:{labels:rows.map(label), datasets:_trDs(ds)}, options:opts});
   note.textContent=_L(
     `ปันผลต่อปี = คาดการณ์ 12 เดือนข้างหน้าจากประวัติจ่าย (ก่อนหักภาษี)`+(T.fromReceived?` · ${T.fromReceived} ตัวไม่มีข้อมูลคาดการณ์ ใช้ยอดที่ได้รับจริง 12 เดือนล่าสุด`:'')
-      +` · Yield = ÷ มูลค่าวันนี้ · Yield on cost (ขีด) = ÷ ต้นทุน`+(by==='holdings'?'':' · กลุ่มหารด้วยมูลค่าทั้งกลุ่ม รวมตัวที่ไม่จ่ายปันผล')+(by==='sectors'?' · อุตสาหกรรมมาจากช่อง Industry ใน Asset_Tracker':''),
+      +` · Yield = ÷ มูลค่าวันนี้ · Yield on cost (ขีด) = ÷ ต้นทุน`+(by==='holdings'?'':' · กลุ่มหารด้วยมูลค่าทั้งกลุ่ม รวมตัวที่ไม่จ่ายปันผล'),
     `Annual payout = 12-month forecast from payment history (before withholding tax)`+(T.fromReceived?` · ${T.fromReceived} holding(s) without a forecast use what was received in the last 12 months`:'')
-      +` · Yield = ÷ today's value · Yield on cost (tick) = ÷ cost`+(by==='holdings'?'':' · groups divide by the whole group\'s value, non-payers included')+(by==='sectors'?' · industry comes from the Industry column in Asset_Tracker':''));
+      +` · Yield = ÷ today's value · Yield on cost (tick) = ÷ cost`+(by==='holdings'?'':' · groups divide by the whole group\'s value, non-payers included'))+(by==='sectors'?_dvSectorSrc():'');
 }
 
 // Passive income diversification — สัดส่วนของปันผลต่อปี (ชุดเดียวกับ Yield/Payout)
@@ -5657,7 +5675,7 @@ function renderDvDiv(D){
       <div class="dv-div-bar"><i style="width:${Math.max(.5,pct).toFixed(2)}%;background:${colors[i]}"></i></div></div>`;}).join('');
   document.getElementById('dv-div-note').textContent=_L(
     `สัดส่วนของปันผลต่อปี ${fmt(tot)} (คาดการณ์ 12 เดือนข้างหน้า · ตัวที่ไม่มีคาดการณ์ใช้ยอดได้รับจริง 12 เดือน)`,
-    `Share of the ${fmt(tot)} annual payout (12-month forecast · holdings without one use what was received in the last 12 months)`);
+    `Share of the ${fmt(tot)} annual payout (12-month forecast · holdings without one use what was received in the last 12 months)`)+(by==='sectors'?_dvSectorSrc():'');
 }
 // Average annual growth — ปันผลต่อหุ้นโตเฉลี่ยต่อปี (CAGR · ปีที่จ่ายครบ ย้อนสูงสุด 5 ปี)
 function renderDvGrowth(D){
@@ -5673,11 +5691,12 @@ function renderDvGrowth(D){
     afterBody:items=>{ const r=rows[items[0].dataIndex];
       return by==='holdings' ? [`${_L('ปันผลต่อหุ้น','Dividend/share')} ${r.from}: ${(+r.dpsFrom).toLocaleString(LOC,{maximumFractionDigits:4})} → ${r.to}: ${(+r.dpsTo).toLocaleString(LOC,{maximumFractionDigits:4})}`]
         : [`${r.n} ${_L('ตัว','holdings')}: ${r.tickers.slice(0,8).join(', ')}${r.tickers.length>8?' …':''}`, _L('เฉลี่ยถ่วงด้วยปันผลต่อปี','weighted by annual payout')]; } };
+  _dvTicks(opts, rows.map(r=>_dvLbl(r.key)), 16);
   _dvChart('dv-gr-chart',{type:'bar', data:{labels:rows.map(r=>_dvLbl(r.key)), datasets:[
     {label:_L('โตเฉลี่ยต่อปี','Avg annual growth'), data:rows.map(r=>+(r.rate*100).toFixed(2)), backgroundColor:'rgba(124,111,236,.85)', borderRadius:4}]}, options:opts});
   document.getElementById('dv-gr-note').textContent=_L(
     `อัตราเติบโตเฉลี่ยต่อปี (CAGR) ของปันผลต่อหุ้น จากประวัติจ่าย — เฉพาะปีที่จ่ายครบ ย้อนสูงสุด 5 ปี`+(by==='holdings'?'':' · กลุ่มเฉลี่ยถ่วงด้วยปันผลต่อปี')+(V.missing?` · ${V.missing} ตัวที่มีปันผลแต่ประวัติยังไม่พอ ไม่แสดง`:''),
-    `Average yearly growth (CAGR) of dividends per share from payment history — full years only, up to 5 years back`+(by==='holdings'?'':' · groups weighted by annual payout')+(V.missing?` · ${V.missing} payer(s) without enough history not shown`:''));
+    `Average yearly growth (CAGR) of dividends per share from payment history — full years only, up to 5 years back`+(by==='holdings'?'':' · groups weighted by annual payout')+(V.missing?` · ${V.missing} payer(s) without enough history not shown`:''))+(by==='sectors'?_dvSectorSrc():'');
 }
 // Future payments — 12 เดือนข้างหน้าจาก dividendCalendar (เดิมอยู่ในตัวติดตามปันผล)
 function renderDvFuture(D){
@@ -5719,7 +5738,9 @@ function renderDvRcv(D){
   sum.innerHTML=`<div><span>${_L('รวม','Total')}</span><b class="gain">${fmt(S.total)}</b></div>`
     +(gran==='monthly'&&S.keys.length?`<div><span>${_L('เฉลี่ย/เดือน','Avg / month')}</span><b>${fmt(S.total/S.keys.length)}</b></div>`:'');
   const opts=chartOpts('baht'); opts.plugins.legend.display=false;
-  _dvChart('dv-rcv-chart',{type:'bar', data:{labels:gran==='annual'?S.keys:S.keys.map(monthLabel), datasets:_trDs([
+  // v83 — เดือนตามภาษาแอป (ม.ค. 26 / Jan 26) ให้ตรงกับ Future payments / Dividend growth · เดิม monthLabel เป็นอังกฤษเสมอ
+  const _mLbl=k=>new Date(+k.slice(0,4), +k.slice(5,7)-1, 1).toLocaleDateString(LOC,{month:'short',year:'2-digit'});
+  _dvChart('dv-rcv-chart',{type:'bar', data:{labels:gran==='annual'?S.keys:S.keys.map(_mLbl), datasets:_trDs([
     {label:'ปันผล', data:S.values.map(v=>Math.round(v)), backgroundColor:'rgba(0,212,160,.8)', borderRadius:4}])}, options:opts});
   document.getElementById('dv-rcv-note').textContent=_L('ปันผลที่ได้รับจริง (แถว Dividend Payout ใน Asset_Tracker)','Dividends actually received (Dividend Payout rows in Asset_Tracker)');
 }
@@ -5735,10 +5756,11 @@ function renderDvRcvBy(D){
   const tot=rows.reduce((s,r)=>s+r.total,0);
   const opts=chartOpts('baht'); opts.plugins.legend.display=false;
   opts.plugins.tooltip.callbacks={ label:x=>` ${fmt(x.raw)} · ${(x.raw/tot*100).toFixed(1)}% · ${rows[x.dataIndex].n} ${_L('ครั้ง','payments')}` };
+  _dvTicks(opts, rows.map(r=>r.other?r.key:_dvLbl(r.key)), 16);
   _dvChart('dv-rcvby-chart',{type:'bar', data:{labels:rows.map(r=>r.other?r.key:_dvLbl(r.key)), datasets:[
     {label:_L('ปันผลรวม','Total received'), data:rows.map(r=>Math.round(r.total)), backgroundColor:'rgba(59,130,246,.8)', borderRadius:4}]}, options:opts});
   document.getElementById('dv-rcvby-note').textContent=_L(`ปันผลที่ได้รับจริงทั้งหมด ${fmt(tot)} — รวมตัวที่ขายไปแล้ว`,`All dividends received, ${fmt(tot)} — sold holdings included`)
-    +(by==='sectors'?_L(' · อุตสาหกรรมจากช่อง Industry ใน Asset_Tracker',' · industry from the Industry column in Asset_Tracker'):'');
+    +(by==='sectors'?_dvSectorSrc():'');
 }
 // Dividend growth — ปันผลที่ได้รับรายเดือน เทียบ 3 ปีล่าสุด
 function renderDvMonthGrowth(D){
@@ -6858,7 +6880,9 @@ function gsParseLivePrice(rows){
 function gsParseAssetTracker(rows){
   if(!rows.length)return;
   const hArr=rows[0].map(h=>h?String(h).trim():'');
-  const ai=(...ks)=>{for(const k of ks){const i=hArr.indexOf(k);if(i>=0)return i;}return -1;};
+  // v83 — เทียบหัวคอลัมน์แบบหลวม: "Industry " · "industry" · "Transaction Type" ตรงกับชื่อที่แอปใช้ (เดิมต้องตรงเป๊ะ)
+  const _hn=x=>String(x==null?'':x).toLowerCase().replace(/[^a-z0-9]/g,''), hN=hArr.map(_hn);
+  const ai=(...ks)=>{for(const k of ks){const i=hN.indexOf(_hn(k));if(i>=0)return i;}return -1;};
   const AT={date:ai('Date'),txType:ai('Transaction_Type'),ticker:ai('Ticker'),
     assetType:ai('Asset_Type'),industry:ai('Industry'),platform:ai('Platform'),
     fxRate:ai('FX_Rate'),qty:ai('Quantity','Quatity'),price:ai('Price'),
@@ -6871,6 +6895,7 @@ function gsParseAssetTracker(rows){
   const SIGN={'Buy':1,'Split':1,'Recieved':1,'Stake':1,'Sell':-1,'Send':-1,'Used':-1,'Transfer':0,'Dividend Payout':0};
   const IS_COST=new Set(['Buy','Split']);
   const trackerRows2=[],fxAcc={},waccAcc2={},netQtyMap2={};
+  const _nameCol=ai('Name'); let _indFilled=0, _indSameName=0;   // v83
   let lastAtRow=0;                    // v49
   for(let i=1;i<rows.length;i++){
     const r=rows[i]||[];
@@ -6890,6 +6915,7 @@ function gsParseAssetTracker(rows){
     const assetTypeRaw=r[AT.assetType]?String(r[AT.assetType]).trim():'';
     const group=resolveGroup(assetTypeRaw, ticker, platform);
     const industry=r[AT.industry]?String(r[AT.industry]).trim():'—';
+    if(industry!=='—'){ _indFilled++; if(_nameCol>=0 && String(r[_nameCol]==null?'':r[_nameCol]).trim()===industry) _indSameName++; }
     if(fx>1){if(!fxAcc[ticker])fxAcc[ticker]=[];fxAcc[ticker].push(fx);}
     if(IS_COST.has(txType)&&qty>0){
       if(!waccAcc2[ticker])waccAcc2[ticker]={cost:0,qty:0};
@@ -6906,12 +6932,15 @@ function gsParseAssetTracker(rows){
       sheetRow:i+1});     // v49 — เลขแถวจริงในชีต (1-based) ไว้แก้/ลบ
   }
   tracker=trackerRows2;
+  // v83 — ให้หน้าปันผลบอกได้ว่าอุตสาหกรรมมาจากคอลัมน์ไหน และเตือนถ้าค่าเป็นชื่อบริษัท (ตรงกับคอลัมน์ Name)
+  window._atIndustryInfo={ col: AT.industry>=0?txColLetter(AT.industry):null, header: AT.industry>=0?hArr[AT.industry]:null,
+    filled:_indFilled, sameAsName:_indSameName, nameCol: _nameCol>=0?txColLetter(_nameCol):null };
   // v49 — เก็บ layout จริงไว้ให้ฟอร์มเพิ่มรายการลงทุนใช้ (อ่านสดทุก sync)
   atSheetMeta = {
     cols: AT,
     lastRow: lastAtRow + 1,           // เลขแถวจริงในชีต (1-based) · header อยู่แถว 1
     width: hArr.length,
-    formulaCols: (atSheetMeta && atSheetMeta.formulaCols) || null,
+    formulaCols: null, formulaVer: 0,   // v83 — ตรวจใหม่ทุก sync
     gid: atSheetMeta ? atSheetMeta.gid : null
   };
   const _atb = document.getElementById('at-add-btn');
@@ -6949,7 +6978,8 @@ function gsParseAssetTracker(rows){
     const rows2=trackerRows2.filter(r=>r.ticker===ticker);if(!rows2.length)continue;
     const lastRow=rows2[rows2.length-1];
     const group=lastRow.group;
-    const industry=rows2.find(r=>r.industry&&r.industry!=='—')?.industry||'—';
+    const _indRow=rows2.filter(r=>r.industry&&r.industry!=='—').sort((a,b)=>b.date-a.date)[0];   // v83 — แถวล่าสุดที่มีค่า
+    const industry=_indRow?_indRow.industry:'—';
     const platform=platMap[ticker]||lastRow.platform||'Unknown';
     const cur=cpMap[ticker]||0;
     const val=netQty*cur;
@@ -12552,18 +12582,24 @@ document.addEventListener('change', e => {
 // ที่ผู้ใช้เขียนไว้เอง ถ้าเขียนตัวเลขทับลงไปสูตรจะหายทั้งคอลัมน์
 // → ตรวจก่อนว่าคอลัมน์ไหนเป็นสูตร แล้วคัดลอกสูตรจากแถวก่อนหน้าลงมาแทน
 
-// อ่านแถวอ้างอิงแบบดิบ (เห็น = ของสูตร) → คืน {index คอลัมน์: สูตร}
+// อ่านแถวข้อมูลแรก (แถว 2) + แถวอ้างอิงแบบดิบ (เห็น = ของสูตร) → atFormulaKinds() ใน shared.js
+// คืน {index คอลัมน์: สูตรรายแถว (คัดลอกได้) | {spill: สูตร} (กระจายทั้งคอลัมน์ — ห้ามเขียน/คัดลอก)}
 async function atFormulaCols(refRow){
-  const rng = `Asset_Tracker!A${refRow}:Z${refRow}`;
+  const rng = [`Asset_Tracker!A2:Z2`, `Asset_Tracker!A${refRow}:Z${refRow}`];
   const res = await fetch(
     `https://sheets.googleapis.com/v4/spreadsheets/${GS_CONFIG.spreadsheetId}`
-    + `/values/${encodeURIComponent(rng)}?valueRenderOption=FORMULA`,
+    + `/values:batchGet?valueRenderOption=FORMULA&` + rng.map(r => 'ranges='+encodeURIComponent(r)).join('&'),
     {headers:{'Authorization':'Bearer '+gsAccessToken}});
   if(!res.ok) throw new Error('อ่านชีต Asset_Tracker ไม่ได้ (HTTP '+res.status+')');
-  const row = ((await res.json()).values || [])[0] || [];
-  const out = {};
-  row.forEach((v, i) => { if(typeof v === 'string' && v.charAt(0) === '=') out[i] = v; });
-  return out;
+  const vr = (await res.json()).valueRanges || [];
+  return atFormulaKinds(((vr[0] && vr[0].values) || [])[0] || [], ((vr[1] && vr[1].values) || [])[0] || []);
+}
+// v83 — ผลตรวจแบบเก่า (ก่อนรู้จัก ARRAYFORMULA) อาจค้างใน cache → ใช้เฉพาะผลตรวจรุ่น 2
+async function _atFormulas(){
+  if(atSheetMeta.formulaCols && atSheetMeta.formulaVer === 2) return atSheetMeta.formulaCols;
+  const F = await atFormulaCols(atSheetMeta.lastRow);
+  atSheetMeta.formulaCols = F; atSheetMeta.formulaVer = 2;
+  return F;
 }
 
 async function atSheetGid(){
@@ -12614,11 +12650,11 @@ async function atAppendRow(f){
   const C      = atSheetMeta.cols;
   const refRow = atSheetMeta.lastRow;
   const rowNum = await atFindEmptyRow();
-  const F      = atSheetMeta.formulaCols || await atFormulaCols(refRow);
-  atSheetMeta.formulaCols = F;
+  const F      = await _atFormulas();
 
-  // 1) คัดลอกสูตรจากแถวอ้างอิงลงมาก่อน — Sheets ปรับ reference ให้เอง
-  const fCols = Object.keys(F).map(Number);
+  // 1) คัดลอกสูตรรายแถวจากแถวอ้างอิงลงมาก่อน — Sheets ปรับ reference ให้เอง
+  //    (สูตรที่กระจายทั้งคอลัมน์ไม่ต้องคัดลอก — มันเติมแถวใหม่ให้เอง · v83)
+  const fCols = Object.keys(F).map(Number).filter(c => typeof F[c] === 'string');
   if(fCols.length){
     const gid = await atSheetGid();
     const requests = fCols.map(c => ({copyPaste:{
@@ -12664,8 +12700,7 @@ async function atEditRowWrite(rowNum, f, rec){
   if(!gsTokenValid()) throw new Error('Session หมดอายุ — กด Sync เพื่อเข้าสู่ระบบใหม่');
   if(rec) await sheetRowGuard('Asset_Tracker', rowNum, atGuardSpec(rec), 'รายการที่เปิดแก้อยู่');   // v72
   const C = atSheetMeta.cols;
-  const F = atSheetMeta.formulaCols || await atFormulaCols(atSheetMeta.lastRow);
-  atSheetMeta.formulaCols = F;
+  const F = await _atFormulas();
 
   const plan = [
     [C.date, f.date], [C.txType, f.txType], [C.ticker, f.ticker],
@@ -12788,9 +12823,9 @@ function atOpenForm(sheetRow){
   setTimeout(() => { const t = $(rec ? 'at-f-qty' : 'at-f-ticker'); if(t) t.focus(); }, 80);
 
   // ตรวจคอลัมน์สูตรครั้งแรก แล้วซ่อนช่องยอดรวมที่ชีตคำนวณเองอยู่แล้ว
-  if(!atSheetMeta.formulaCols && gsTokenValid()){
-    atFormulaCols(atSheetMeta.lastRow)
-      .then(F => { atSheetMeta.formulaCols = F; atApplyFormulaUI(); })
+  if(!(atSheetMeta.formulaCols && atSheetMeta.formulaVer === 2) && gsTokenValid()){
+    _atFormulas()
+      .then(() => atApplyFormulaUI())
       .catch(e => console.warn('[AT] ตรวจสูตรไม่ได้:', e.message));
   } else atApplyFormulaUI();
 }
@@ -12804,6 +12839,13 @@ function atApplyFormulaUI(){
   const usdIsF = C.amtUS  >= 0 && !!F[C.amtUS];
   const w1 = document.getElementById('at-f-thb-wrap');
   if(w1) w1.style.display = thbIsF ? 'none' : '';
+  // v83 — ช่องที่ชีตคำนวณเอง (เช่น Industry = ARRAYFORMULA(XLOOKUP(…))) → ปิด ไม่ส่งค่าไปทับ
+  [['at-f-asset','assetType'],['at-f-industry','industry'],['at-f-platform','platform'],['at-f-fx','fxRate'],['at-f-comm','commTHB']].forEach(([id,k])=>{
+    const el=document.getElementById(id); if(!el) return;
+    const isF=C[k]>=0 && !!F[C[k]];
+    el.disabled=isF; el.classList.toggle('at-f-formula', isF);
+    el.title=isF?_L(`ชีตคำนวณช่องนี้เองด้วยสูตร (คอลัมน์ ${txColLetter(C[k])}) — แอปจะไม่เขียนทับ`,`The sheet fills this with a formula (column ${txColLetter(C[k])}) — the app won't overwrite it`):'';
+  });
   atCalc(usdIsF);
 }
 

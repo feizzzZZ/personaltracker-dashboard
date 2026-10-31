@@ -16,7 +16,7 @@ window.LOC = window.LOC || 'th-TH-u-ca-gregory';
 //   • XIRR engine
 // กติกา: ไฟล์นี้ห้ามแตะ DOM ของหน้าใดหน้าหนึ่ง — pure data layer เท่านั้น
 // ═══════════════════════════════════════════════════════════════════
-const APP_BUILD = 'v82';
+const APP_BUILD = 'v83';
 console.log('[FinanceTracker shared] build', APP_BUILD);
 window.SHARED_BUILD = APP_BUILD;   // v45 — ให้ index.html ตรวจได้ว่าเวอร์ชันตรงกัน
  
@@ -1071,6 +1071,21 @@ function dividendMonthMatrix(rows, today, nYears){
   rs.forEach(r => { const y = r.date.getFullYear(); if(data[y]) data[y][r.date.getMonth()] += Math.abs(Number(r.amtTHB) || 0); });
   return { years, data };
 }
+// ═══ v83 — คอลัมน์สูตรใน Asset_Tracker (ฟอร์มเพิ่ม/แก้รายการลงทุน) ═════════════
+// สูตรรายแถว (ทุกแถวมีสูตรของตัวเอง) → คัดลอกลงแถวใหม่ · สูตรที่กระจายทั้งคอลัมน์จากแถวบน (ARRAYFORMULA ·
+// FILTER · ช่วงเปิดท้ายอย่าง C2:C ฯลฯ) → ห้ามเขียน/คัดลอกทับ ไม่งั้นทั้งคอลัมน์กลายเป็น #REF!
+// เดิมดูแค่แถวอ้างอิง (แถวสุดท้าย) ซึ่งสำหรับ ARRAYFORMULA เป็น "ค่า" ไม่ใช่สูตร → ฟอร์มเขียน Industry ทับ (เจอในชีตผู้ใช้: F2 = ARRAYFORMULA(XLOOKUP(C2:C, …)))
+// row2 / ref = ค่าแบบ valueRenderOption=FORMULA ของแถวข้อมูลแรก / แถวอ้างอิง · คืน {index: สูตร (รายแถว) | {spill: สูตร}}
+const AT_SPILL_FN = /^=\s*(ARRAYFORMULA|FILTER|SORT|SORTN|UNIQUE|QUERY|MAP|BYROW|BYCOL|SCAN|MAKEARRAY|SEQUENCE|IMPORTRANGE)\s*\(/i;
+const AT_OPEN_RANGE = /(^|[^A-Za-z0-9_])\$?[A-Z]{1,3}\$?\d+\s*:\s*\$?[A-Z]{1,3}(?![A-Za-z0-9$(])/;
+function atFormulaKinds(row2, ref){
+  const out = {}, isF = v => typeof v === 'string' && v.charAt(0) === '=';
+  const spills = v => AT_SPILL_FN.test(v) || AT_OPEN_RANGE.test(v);
+  (row2 || []).forEach((v, i) => { if(isF(v) && spills(v)) out[i] = { spill: v }; });
+  (ref || []).forEach((v, i) => { if(!out[i] && isF(v)) out[i] = spills(v) ? { spill: v } : v; });
+  return out;
+}
+
 // ═══ v66 — REBALANCING (เติมเงิน / ถอนเงิน / ปรับสมดุล) ═══════════════════
 // ตัวคำนวณล้วน (ไม่แตะ DOM) · ทดสอบใน tests/test_rebalance.cjs
 // holdings: [{ticker, group, qty, price(บาท/หน่วย), val, cost}] · targets: {ticker: %}
