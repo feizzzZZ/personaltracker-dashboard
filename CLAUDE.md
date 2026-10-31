@@ -42,10 +42,11 @@ When adding a file, put it in the matching folder — don't add new files at the
 - Transactions (`renderAtTxTable`): dates `YYYY-MM-DD`, type dropdown built from the sheet's actual `Transaction_Type` values (`investTxTypes`), search (`filterInvestTx`), Fee column = `commTHB`.
 
 ### Dividends page (v82 — Snowball-style layout, user request 2026-10-31)
-- Order: received-history cards · Yield / Payout · Passive income diversification · Average annual growth | Future payments · Dividends received (period) | Dividends received (by holding) · Dividend growth · dividend calendar list · payers table. The old 18-month chart and yearly boxes were replaced by "Dividends received".
+- Order: received-history cards · Yield / Payout · Passive income diversification · Average annual growth | Future payments · Dividends received (period) | Dividends received (by holding) · Dividend growth · payers table. The old 18-month chart and yearly boxes were replaced by "Dividends received"; the per-month dividend calendar list was removed at the user's request (too long) — forward numbers live in the Future payments card. `.dvt-logo` CSS stays because Deep Research uses it.
 - All cards share `_dvData(cal)` (calendar from `_dvCal()` computed once per render, held assets, Dividend Payout rows, forward/received payout per ticker). Dropdowns are borderless `.dv-sel` built by `_dvSel()`; choices persist in `finOS_dvUi`.
 - Annual payout per holding = `dividendCalendar().byTicker` forecast, else dividends received in the last 12 months. Yield = ÷ today's value, Yield on cost = ÷ cost; Categories/Sectors divide by the whole group incl. non-payers. Sectors = Asset_Tracker `Industry` (fundamentals.json has no sector).
-- Average annual growth = DPS CAGR via `divGrowthRate` (complete years only, ≤ 5 years); it includes special dividends (COKE/KBANK look extreme) — ask the user before filtering specials. Calculators live in shared.js and are tested in `test_dividends.cjs`.
+- Average annual growth = DPS CAGR via `divGrowthRate` (complete years only, ≤ 5 years). It includes special dividends (COKE/KBANK look extreme) — user decision 2026-10-31: leave it, don't filter specials.
+- Dividends received defaults to the latest year with data (the current year, like Snowball), else the trailing 12 months; a saved choice wins. Calculators live in shared.js and are tested in `test_dividends.cjs`.
 - Render functions run inside try/catch that only `console.warn('[div] …')` — browser checks must watch console warnings, not just page errors (a v82 bug hid there).
 
 ### Debt menu (v77)

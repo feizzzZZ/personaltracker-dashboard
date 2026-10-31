@@ -378,28 +378,8 @@ html [style*="color: #a0c4ff"]{color:#1D4ED8!important}
 .nt-sec-v{display:flex;gap:6px}
 .nt-sec-v input{flex:1;min-width:0;background:var(--bg4);border:1px solid var(--border2);color:var(--text);border-radius:var(--r-sm);padding:7px 9px;font:inherit;font-family:var(--f-mono);font-size:11px}
 
-/* ══ v66 — Dividend tracker ══ */
-.dvt-mh{display:flex;align-items:center;gap:10px;margin:18px 0 8px;font-size:13px;color:var(--muted2)}
-.dvt-sum{font-size:11.5px;background:rgba(16,185,129,.14);color:var(--gain);padding:2px 8px;border-radius:var(--r-sm);font-weight:600}
-.dvt-list{padding:4px 16px}
-.dvt-it{display:grid;grid-template-columns:36px minmax(120px,2fr) 1fr 1fr 100px 1fr 20px;gap:12px;align-items:center;padding:11px 0;border-bottom:1px solid var(--border);font-size:12px}
-.dvt-it:last-child{border-bottom:none}
-.dvt-it .s{font-size:10.5px;color:var(--muted);margin-top:2px}
-.dvt-it .t{color:var(--white);font-weight:600}
-.dvt-nm .t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* v82 รอบ 3 — รายการปฏิทินปันผลถูกลบ · เก็บ .dvt-logo ไว้เพราะหน้า Deep Research ใช้ (กรอบโลโก้ตัวย่อ) */
 .dvt-logo{width:32px;height:32px;border-radius:var(--r-sm);background:var(--bg4);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:var(--accent);letter-spacing:.02em}
-.dvt-dt .dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:5px;vertical-align:1px}
-.dvt-fq span{display:inline-block;font-size:10.5px;padding:3px 8px;border-radius:var(--r-sm);background:rgba(16,185,129,.12);color:var(--gain)}
-.dvt-ck{color:var(--gain);font-weight:700;text-align:right}
-.dvt-it.got{opacity:.8}
-@media(max-width:640px){
-  .dvt-list{padding:2px 12px}
-  .dvt-it{grid-template-columns:32px minmax(0,1fr) auto;gap:4px 10px}
-  .dvt-it>*{min-width:0}
-  .dvt-logo{grid-row:span 2}
-  .dvt-dt{grid-column:2} .dvt-amt{grid-column:3;grid-row:1;text-align:right} .dvt-nm{grid-column:2;grid-row:1}
-  .dvt-fq{grid-column:3;grid-row:2;text-align:right} .dvt-ex,.dvt-ck{display:none}
-}
 
 /* ══ v66 — Deep Research ══ */
 .rs-pick{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
@@ -1662,7 +1642,7 @@ kbd{font-family:var(--f-chip);font-size:10.5px;color:var(--muted);border:1px sol
 .tk{color:var(--fg)}
 
 /* ── ชิป/ป้าย: โค้งเต็ม ตัว mono แบบ Midday ── */
-.tp,.bgt-badge,.an-pill,.nt-st,.ins-status-pill,.dvt-fq span,.tx-badge,.dvt-sum,.doc-tag,.bank-type-badge{border-radius:999px!important;font-family:var(--f-chip);letter-spacing:0}
+.tp,.bgt-badge,.an-pill,.nt-st,.ins-status-pill,.tx-badge,.doc-tag,.bank-type-badge{border-radius:999px!important;font-family:var(--f-chip);letter-spacing:0}
 .gc-pill{border-radius:999px}
 
 /* ── ปุ่มและช่องกรอก ── */
@@ -2966,8 +2946,6 @@ body:has(.gs-modal-overlay.show) .tx-fab{display:none!important}  /* JS ตั�
         <div id="dv-mg-wrap" style="position:relative;height:280px"><canvas id="dv-mg-chart"></canvas></div>
         <div class="dv-yp-note" id="dv-mg-note"></div>
       </div>
-      <div class="sl sl-mt">ปฏิทินปันผล 12 เดือนข้างหน้า</div>
-      <div id="dv-tracker"></div>
       <div class="sl sl-mt">ผู้จ่ายปันผล — เรียงตามยอดรวม</div>
       <div class="tw"><table class="at"><thead><tr>
         <th>Ticker</th><th>ประเภท</th><th class="r">จำนวนครั้ง</th>
@@ -5506,7 +5484,7 @@ function renderEngine(){
 function renderDividends(){
   let cal=null; try{ cal=_dvCal(); }catch(e){ console.warn('[div] calendar:', e.message); }
   const D=_dvData(cal);
-  [['tracker',()=>renderDividendTracker(cal)],['yield/payout',()=>renderDvYield(D)],['diversification',()=>renderDvDiv(D)],
+  [['yield/payout',()=>renderDvYield(D)],['diversification',()=>renderDvDiv(D)],
    ['growth',()=>renderDvGrowth(D)],['future',()=>renderDvFuture(D)],['received',()=>renderDvRcv(D)],
    ['received by',()=>renderDvRcvBy(D)],['month growth',()=>renderDvMonthGrowth(D)]]
     .forEach(([n,f])=>{ try{ f(); }catch(e){ console.warn('[div] '+n+':', e.message); } });
@@ -5562,10 +5540,9 @@ function renderDividends(){
 
 }
 
-/* ══ v66 — Dividend tracker ═══════════════════════════════════════════
+/* ══ v66 — Dividend tracker (v82 รอบ 3: ผู้ใช้ให้ลบรายการปฏิทินรายเดือน — ข้อมูลยาวเกินจำเป็น · ตัวเลขคาดการณ์อยู่ในการ์ด Future payments) ════
    ตัวคำนวณ: dividendCalendar() ใน shared.js · ข้อมูลรายครั้งจาก fundamentals.json (Yahoo events=div)
    เงินที่ได้รับจริง: แถว Dividend Payout ในชีต Asset_Tracker */
-let _dvShowAll=false;
 // ── v82 — หน้าปันผลแบบ Snowball ── ตัวคำนวณอยู่ใน shared.js (dividendYieldView · dividendGrowthView · dividendsReceived* · dividendMonthMatrix)
 const DVUI_KEY='finOS_dvUi';   // ค่าที่เลือกใน dropdown ของหน้าปันผล (เฉพาะเครื่องนี้) {yp, div, gr, rcv, rcvby}
 function _dvUi(k){ try{ return (JSON.parse(localStorage.getItem(DVUI_KEY)||'null')||{})[k]||{}; }catch(e){ return {}; } }
@@ -5730,7 +5707,7 @@ function renderDvRcv(D){
   const p=_dvUi('rcv'), gran=p.gran==='annual'?'annual':'monthly';
   const years=[...new Set(D.divRows.map(r=>r.date.getFullYear()))].sort((a,b)=>b-a).map(String);
   const periods=[['all',_L('ทั้งหมด','All time')],['ytd',_L('ปีนี้ถึงวันนี้','Year to date')],['ttm',_L('12 เดือนล่าสุด','12 trailing months')],...years.map(y=>[y,y])];
-  const period=periods.some(([k])=>k===p.period)?p.period:'ttm';
+  const period=periods.some(([k])=>k===p.period)?p.period:(years[0]||'ttm');   // ค่าเริ่มต้น = ปีล่าสุดที่มีข้อมูล (ปกติคือปีนี้ — เหมือน Snowball)
   const on=()=>{ _dvUiSet('rcv',{period:document.getElementById('dv-rcv-period').value, gran:document.getElementById('dv-rcv-gran').value}); renderDvRcv(); };
   if(!_dvSel('dv-rcv-period', periods, period, _L('ช่วงเวลา','Period'), on)) return;
   _dvSel('dv-rcv-gran', [['monthly',_L('รายเดือน','Monthly')],['annual',_L('รายปี','Annual')]], gran, _L('ความละเอียด','Granularity'), on);
@@ -5776,7 +5753,7 @@ function renderDvMonthGrowth(D){
     +_L(' — ปันผลที่ได้รับจริงแต่ละเดือน (ปีนี้นับถึงวันนี้)',' — dividends received each month (this year to date)');
 }
 
-// v82 — ปฏิทินปันผลคำนวณครั้งเดียวต่อการ render หน้า · ตัวติดตามปันผล + กราฟ Yield/Payout ใช้ร่วม
+// v82 — ปฏิทินปันผล (dividendCalendar) คำนวณครั้งเดียวต่อการ render หน้า · ทุกการ์ดใช้ร่วมผ่าน _dvData
 function _dvCal(){
   const F=loadFundamentals(); const fund=(F&&F.tickers)||{};
   const held=(assets||[]).filter(a=>a.qty>1e-9);
@@ -5787,40 +5764,6 @@ function _dvCal(){
   const holdings=held.map(a=>({ticker:a.ticker,qty:a.qty,name:(fund[a.ticker]?.profile?.name)||a.ticker}));
   const C=dividendCalendar(holdings, fund, received, {USD:usd}, new Date());
   return {fund, held, withHist, C, usd};
-}
-function renderDividendTracker(cal){
-  const el=document.getElementById('dv-tracker'); if(!el) return;
-  const {fund, held, withHist, C}=cal||_dvCal();
-  if(!withHist.length){
-    el.innerHTML=`<div class="cc" style="color:var(--muted2);font-size:12px;line-height:1.8">${_L(
-      '📅 ยังไม่มีประวัติปันผลรายตัวของสินทรัพย์ที่ถืออยู่ — pipeline จะดึงให้ใน <code>fundamentals.json</code> (Actions → Update market data) แล้วหน้านี้จะแสดงปฏิทินปันผลและรายได้ที่คาดการณ์ 12 เดือนข้างหน้า',
-      '📅 No per-holding dividend history yet — the pipeline writes it to <code>fundamentals.json</code> (Actions → Update market data), then this page shows the dividend calendar and 12-month forward income')}</div>`;
-    return;
-  }
-  const ML=k=>monthLabel(k);
-  // รายการแยกเดือน — ตั้งแต่ต้นเดือนก่อนถึง 12 เดือนข้างหน้า
-  const now=new Date(), from=isoLocal(new Date(now.getFullYear(),now.getMonth()-1,1));
-  const list=C.events.filter(e=>e.payDate>=from);
-  const byM={}; list.forEach(e=>{(byM[e.payDate.slice(0,7)]=byM[e.payDate.slice(0,7)]||[]).push(e);});
-  const mKeys=Object.keys(byM).sort();
-  const shown=_dvShowAll?mKeys:mKeys.slice(0,4);
-  const pill={received:['var(--gain)',_L('ได้รับแล้ว','Received')],declared:['var(--accent)',_L('ประกาศแล้ว · รอรับ','Declared')],estimated:['var(--muted)',_L('ประมาณการ','Estimated')]};
-  const initials=t=>escHtml(String(t).replace(/[^A-Za-z0-9]/g,'').slice(0,4)||'?');
-  const fmtD=d=>new Date(d+'T00:00:00').toLocaleDateString(LOC,{day:'numeric',month:'short',year:'2-digit'});
-  const groups=shown.map(k=>{
-    const rows=byM[k], sum=rows.reduce((s,e)=>s+e.amount,0);
-    return `<div class="dvt-mh"><span>${ML(k)}</span><span class="dvt-sum">+${fmt(sum)}</span></div>
-    <div class="cc dvt-list">${rows.map(e=>`<div class="dvt-it${e.status==='received'?' got':''}">
-      <div class="dvt-logo" aria-hidden="true">${initials(e.ticker)}</div>
-      <div class="dvt-nm"><div class="t">${escHtml(e.name)}</div><div class="s">${escHtml(e.ticker)}</div></div>
-      <div class="dvt-dt"><div>${fmtD(e.payDate)}</div><div class="s"><span class="dot" style="background:${pill[e.status][0]}"></span>${pill[e.status][1]}</div></div>
-      <div class="dvt-amt"><div class="t">${fmt(e.amount)}</div><div class="s">${(+e.qty).toLocaleString(LOC,{maximumFractionDigits:4})}×${e.currency==='THB'?'฿':'$'}${(+e.dps).toLocaleString(LOC,{maximumFractionDigits:4})}</div></div>
-      <div class="dvt-fq">${e.freq?`<span>${_L(e.freqTh,e.freq)}</span>`:''}</div>
-      <div class="dvt-ex"><div>${fmtD(e.exDate)}</div><div class="s">${_L('วันขึ้น XD','Ex-dividend date')}</div></div>
-      <div class="dvt-ck">${e.status==='received'?'✓':''}</div></div>`).join('')}</div>`;}).join('');
-  el.innerHTML=`
-    ${groups||`<div class="cc" style="color:var(--muted2)">${_L('ไม่มีรายการใน 12 เดือนข้างหน้า','No payments in the next 12 months')}</div>`}
-    ${mKeys.length>4?`<button type="button" class="act-toggle" style="display:block" onclick="_dvShowAll=!_dvShowAll;renderDividendTracker()">${_dvShowAll?_L('ย่อ ▴','Collapse ▴'):_L(`ดูอีก ${mKeys.length-4} เดือน ▾`,`Show ${mKeys.length-4} more months ▾`)}</button>`:''}`;
 }
 
 /* ══ v67 — การแจ้งเตือน (แทน LINE) ═══════════════════════════════════════
