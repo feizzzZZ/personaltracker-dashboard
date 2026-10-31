@@ -283,7 +283,7 @@ const DICT = {
   'บัญชีผู้ใช้':'Account', 'แจ้งเตือน':'Notifications', 'ล็อก':'Lock', 'ล็อกตอนนี้':'Lock now', 'บัญชีและความปลอดภัย':'Account & security',
   'ตั้งค่า Google Sheets':'Google Sheets settings', 'ออกจากระบบ':'Sign out', 'ธีม':'Theme', 'ภาษา':'Language',
   'ตั้งค่า':'Settings', 'ตั้งค่าการแจ้งเตือน':'Notification settings', 'รหัสผ่านและล็อกอัตโนมัติ':'Password & auto-lock',
-  'คาดการณ์ 12 เดือนข้างหน้า':'Next 12 months (forecast)',
+  'คาดการณ์ 12 เดือนข้างหน้า':'Next 12 months (forecast)', 'ปฏิทินปันผล 12 เดือนข้างหน้า':'Dividend calendar — next 12 months',
   'ผลตอบแทนจริง':'True performance',
   // ── v75 — บอทเทรด ──
   'พอร์ตสด':'Live portfolio', 'กระเป๋า MetaMask':'MetaMask wallets',

@@ -41,9 +41,12 @@ When adding a file, put it in the matching folder — don't add new files at the
 - Holdings: the top "True cost" card became IRR (`irrSummary` + `perfQuote`: whole portfolio incl. sold + dividends, sub-line = current holdings; < 1 year shows the cumulative return, not annualized). The table's True cost column was kept on purpose.
 - Transactions (`renderAtTxTable`): dates `YYYY-MM-DD`, type dropdown built from the sheet's actual `Transaction_Type` values (`investTxTypes`), search (`filterInvestTx`), Fee column = `commTHB`.
 
-### Dividends page (v82 — being reworked toward the user's Snowball screenshots, one item at a time)
-- Yield / Payout card (`renderDvYield` + `dividendYieldView`): two borderless dropdowns — Yield (%) / Annual Payout (THB) × Holdings / Categories (`group`) / Sectors (Asset_Tracker `Industry`; fundamentals.json has no sector). Annual payout per holding = `dividendCalendar().byTicker` forecast (same set as the forward-income card), falling back to dividends received in the last 12 months; Yield = ÷ today's value, Yield on cost tick = ÷ cost; groups divide by the whole group's value incl. non-payers.
-- `_dvCal()` computes the dividend calendar once per render and is shared by `renderDividendTracker` and the chart. The other Snowball sections (diversification donut, annual growth, future payments, dividends received, dividend growth) are not built yet — wait for the user to ask.
+### Dividends page (v82 — Snowball-style layout, user request 2026-10-31)
+- Order: received-history cards · Yield / Payout · Passive income diversification · Average annual growth | Future payments · Dividends received (period) | Dividends received (by holding) · Dividend growth · dividend calendar list · payers table. The old 18-month chart and yearly boxes were replaced by "Dividends received".
+- All cards share `_dvData(cal)` (calendar from `_dvCal()` computed once per render, held assets, Dividend Payout rows, forward/received payout per ticker). Dropdowns are borderless `.dv-sel` built by `_dvSel()`; choices persist in `finOS_dvUi`.
+- Annual payout per holding = `dividendCalendar().byTicker` forecast, else dividends received in the last 12 months. Yield = ÷ today's value, Yield on cost = ÷ cost; Categories/Sectors divide by the whole group incl. non-payers. Sectors = Asset_Tracker `Industry` (fundamentals.json has no sector).
+- Average annual growth = DPS CAGR via `divGrowthRate` (complete years only, ≤ 5 years); it includes special dividends (COKE/KBANK look extreme) — ask the user before filtering specials. Calculators live in shared.js and are tested in `test_dividends.cjs`.
+- Render functions run inside try/catch that only `console.warn('[div] …')` — browser checks must watch console warnings, not just page errors (a v82 bug hid there).
 
 ### Debt menu (v77)
 - Sidebar group `debts`: pages `debts` (overview), `debtsched` (contract schedule), `debt` (the older credit-card/interest page — id kept for existing links). "บัญชี & หนี้" is now just "บัญชี".
