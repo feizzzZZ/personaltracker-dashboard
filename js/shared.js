@@ -16,7 +16,7 @@ window.LOC = window.LOC || 'th-TH-u-ca-gregory';
 //   • XIRR engine
 // กติกา: ไฟล์นี้ห้ามแตะ DOM ของหน้าใดหน้าหนึ่ง — pure data layer เท่านั้น
 // ═══════════════════════════════════════════════════════════════════
-const APP_BUILD = 'v81';
+const APP_BUILD = 'v82';
 console.log('[FinanceTracker shared] build', APP_BUILD);
 window.SHARED_BUILD = APP_BUILD;   // v45 — ให้ index.html ตรวจได้ว่าเวอร์ชันตรงกัน
  
@@ -942,7 +942,45 @@ function dividendCalendar(holdings, fund, received, fx, today){
   const fwd = events.filter(e => e.status !== 'received' && Date.parse(e.payDate) > t0 && Date.parse(e.payDate) <= t0 + 365*DAY);
   const annual = fwd.reduce((s,e)=>s+e.amount, 0);
   const yetToReceive = events.filter(e => e.status === 'declared').reduce((s,e)=>s+e.amount, 0);
-  return { events, months, annual, monthly: annual/12, daily: annual/365, yetToReceive };
+  // v82 — แยกรายตัวจากชุดเดียวกับ annual (ผลรวม byTicker = annual เสมอ) · ใช้ในกราฟ Yield/Payout
+  const byTicker = {};
+  fwd.forEach(e => { byTicker[e.ticker] = (byTicker[e.ticker] || 0) + e.amount; });
+  return { events, months, annual, monthly: annual/12, daily: annual/365, yetToReceive, byTicker };
+}
+
+// ═══ v82 — กราฟ Yield / Payout หน้าปันผล (แบบ Snowball) ═══════════════════
+// ปันผลต่อปีรายตัว = คาดการณ์ 12 เดือนข้างหน้า (dividendCalendar().byTicker) · ตัวที่ไม่มีคาดการณ์ → ที่ได้รับจริง 12 เดือนล่าสุด
+// Yield = ปันผลต่อปี ÷ มูลค่าวันนี้ · Yield on cost = ÷ ต้นทุน (WACC × จำนวนที่ถือ)
+// by: 'holdings' = รายตัว (เฉพาะตัวที่มีปันผล) · 'categories' = group · 'sectors' = Industry จาก Asset_Tracker
+//   กลุ่ม: หารด้วยมูลค่า/ต้นทุน "ทั้งกลุ่ม" รวมตัวที่ไม่จ่าย = yield จริงของเงินก้อนนั้น · แสดงเฉพาะกลุ่มที่มีปันผล
+// sortBy: 'yield' | 'payout' (มาก → น้อย · yield ที่คิดไม่ได้ไว้ท้าย)
+const DIV_NO_SECTOR = '—';
+function dividendYieldView(holdings, fwdByTk, rec12ByTk, by, sortBy){
+  const fwd = fwdByTk || {}, rec = rec12ByTk || {};
+  const per = (holdings || []).filter(h => h && h.ticker).map(h => {
+    const f = Number(fwd[h.ticker]) || 0, r = Number(rec[h.ticker]) || 0;
+    const ind = String(h.industry || '').trim();
+    return { ticker: h.ticker, group: h.group || 'Other', sector: ind && ind !== '—' ? ind : DIV_NO_SECTOR,
+             val: Math.max(0, Number(h.val) || 0), cost: Math.max(0, Number(h.cost) || 0),
+             payout: f > 0 ? f : (r > 0 ? r : 0), basis: f > 0 ? 'forecast' : (r > 0 ? 'received' : null) };
+  });
+  const keyOf = by === 'categories' ? p => p.group : by === 'sectors' ? p => p.sector : p => p.ticker;
+  const m = {};
+  per.forEach(p => {
+    if(by !== 'categories' && by !== 'sectors' && !(p.payout > 0)) return;
+    const k = keyOf(p);
+    const g = m[k] || (m[k] = { key: k, payout: 0, val: 0, cost: 0, forecast: 0, received: 0, tickers: [] });
+    g.val += p.val; g.cost += p.cost; g.payout += p.payout;
+    if(p.basis) { g[p.basis]++; g.tickers.push(p.ticker); }
+  });
+  const rows = Object.values(m).filter(g => g.payout > 0).map(g => ({ ...g,
+    yield: g.val > 0 ? g.payout / g.val : null, yoc: g.cost > 0 ? g.payout / g.cost : null,
+    basis: g.forecast && g.received ? 'mixed' : g.forecast ? 'forecast' : 'received' }));
+  const sk = sortBy === 'payout' ? r => r.payout : r => (r.yield == null ? -Infinity : r.yield);
+  rows.sort((a, b) => sk(b) - sk(a) || b.payout - a.payout || String(a.key).localeCompare(String(b.key)));
+  const payout = per.reduce((s, p) => s + p.payout, 0), val = per.reduce((s, p) => s + p.val, 0), cost = per.reduce((s, p) => s + p.cost, 0);
+  return { rows, total: { payout, val, cost, yield: val > 0 ? payout / val : null, yoc: cost > 0 ? payout / cost : null,
+           payers: per.filter(p => p.payout > 0).length, fromReceived: per.filter(p => p.basis === 'received').length } };
 }
 
 // ═══ v66 — REBALANCING (เติมเงิน / ถอนเงิน / ปรับสมดุล) ═══════════════════

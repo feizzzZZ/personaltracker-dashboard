@@ -774,6 +774,23 @@ select.month-display{text-align-last:center;outline:none}
 /* v61 — คลาสเหล่านี้ถูกสร้างใน JS แต่ไม่เคยมีกฎ CSS
    อาการ: แถบสัดส่วนใต้ Net Worth มองไม่เห็น (span ว่างไม่มีความสูง)
    และข้อความ "หนี้ ฿X = Y% ของสินทรัพย์รวม" ขึ้นฟอนต์ใหญ่ผิดขนาด (เห็นชัดบนมือถือ) */
+.dv-yp{margin:14px 0 4px}   /* v82 — Yield / Payout */
+.dv-yp-hd{display:flex;justify-content:space-between;align-items:center;gap:8px 12px;flex-wrap:wrap;margin-bottom:6px}
+.dv-yp-t{font-family:var(--f-serif);font-size:18px;color:var(--fg)}
+.dv-yp-sels{display:flex;gap:2px;flex-wrap:wrap}
+.dv-selw{position:relative;display:inline-flex;align-items:center}
+.dv-selw::after{content:'';position:absolute;right:7px;top:50%;width:6px;height:6px;margin-top:-5px;border-right:1.5px solid var(--muted2);border-bottom:1.5px solid var(--muted2);transform:rotate(45deg);pointer-events:none}
+.dv-sel{appearance:none;-webkit-appearance:none;background:transparent;border:none;border-radius:0;color:var(--text);font:inherit;font-size:13px;padding:6px 22px 6px 8px;cursor:pointer;max-width:100%}
+.dv-sel{field-sizing:content}   /* กว้างเท่าข้อความที่เลือก (เบราว์เซอร์ที่รองรับ) — ไม่งั้นกว้างเท่าตัวเลือกที่ยาวที่สุด */
+.dv-sel:hover{color:var(--fg)}
+.dv-sel:focus-visible{outline:1px solid var(--fg);outline-offset:1px}
+.dv-sel option{background:var(--bg3);color:var(--text)}
+.dv-yp-sum{display:flex;flex-wrap:wrap;gap:6px 28px;margin:2px 0 12px}
+.dv-yp-sum>div{display:flex;align-items:baseline;gap:8px}
+.dv-yp-sum span{font-size:11px;color:var(--muted2)}
+.dv-yp-sum b{font-size:18px;font-weight:500;color:var(--fg);font-variant-numeric:tabular-nums}
+.dv-yp-sum small{font-size:11px;color:var(--muted2)}
+.dv-yp-note{font-size:11px;color:var(--muted);line-height:1.6;margin-top:8px}
 .at-tx-tools{display:flex;flex-wrap:wrap;gap:8px;padding:12px;border-bottom:1px solid var(--border)}   /* v81 */
 .at-tx-tools select.gs-input{width:auto;min-width:180px;flex:0 0 auto}
 .at-tx-tools input.gs-input{flex:1 1 220px;width:auto;min-width:0}
@@ -2887,6 +2904,15 @@ body:has(.gs-modal-overlay.show) .tx-fab{display:none!important}  /* JS ตั�
           <div class="sc-val" id="dv-yield" style="font-size:22px;color:var(--savings)">—</div>
           <div class="sc-sub">ปันผลที่ได้รับจริง 12 เดือน ÷ มูลค่าพอร์ตปัจจุบัน</div>
         </div>
+      </div>
+      <!-- v82 — Yield / Payout (แบบ Snowball): dropdown ไม่มีกรอบ 2 ตัว (สร้างใน renderDvYield ให้ได้สองภาษา) -->
+      <div class="cc dv-yp">
+        <div class="dv-yp-hd"><div class="dv-yp-t">Yield / Payout</div>
+          <div class="dv-yp-sels"><span class="dv-selw"><select class="dv-sel" id="dv-yp-metric"></select></span>
+            <span class="dv-selw"><select class="dv-sel" id="dv-yp-by"></select></span></div></div>
+        <div class="dv-yp-sum" id="dv-yp-sum"></div>
+        <div id="dv-yp-wrap" style="position:relative;height:280px"><canvas id="dv-yp-chart"></canvas></div>
+        <div class="dv-yp-note" id="dv-yp-note"></div>
       </div>
       <div class="sl sl-mt">ปันผลรายเดือน</div>
       <div class="cw" style="height:280px"><canvas id="dv-chart"></canvas></div>
@@ -5009,7 +5035,7 @@ const VLOG_PURGED_KEY = 'finOS_valueLogPurged_v44';
 //   ฟังก์ชันหาย  → BLOCK  (แอปคำนวณผิดแน่นอน — นี่คือสิ่งที่ guard มีไว้จับ)
 //   เลขไม่ตรง    → WARN   (แค่ลืม bump — log ไว้ ไม่รบกวนผู้ใช้)
 // ฟังก์ชันที่ต้องมีคือสัญญาจริงระหว่างสองไฟล์ ส่วนสตริงเวอร์ชันเป็นแค่ป้าย
-const EXPECTED_SHARED_BUILD = 'v81';
+const EXPECTED_SHARED_BUILD = 'v82';
 const REQUIRED_SHARED_FNS = [
   'resolvePrices', 'pipelinePricesTHB', 'parseReconcileRows',
   'computeReconciliation', 'splitBalances', 'debtVsInvest', 'buildDebtPlan',
@@ -5432,7 +5458,9 @@ function renderEngine(){
 
 // ── DIVIDENDS: passive income ────────────────────────────────────────
 function renderDividends(){
-  try{ renderDividendTracker(); }catch(e){ console.warn('[div] tracker:', e.message); }
+  let cal=null; try{ cal=_dvCal(); }catch(e){ console.warn('[div] calendar:', e.message); }
+  try{ renderDividendTracker(cal); }catch(e){ console.warn('[div] tracker:', e.message); }
+  try{ renderDvYield(cal); }catch(e){ console.warn('[div] yield/payout:', e.message); }
   const rows=tracker.filter(r=>TX_DIV.includes(r.txType) && r.date);
   const setT=(id,v)=>{const e=document.getElementById(id); if(e) e.textContent=v;};
   if(!rows.length){ setT('dv-total','฿0'); setT('dv-total-s','ยังไม่มีรายการปันผล'); return; }
@@ -5515,21 +5543,90 @@ function renderDividends(){
    ตัวคำนวณ: dividendCalendar() ใน shared.js · ข้อมูลรายครั้งจาก fundamentals.json (Yahoo events=div)
    เงินที่ได้รับจริง: แถว Dividend Payout ในชีต Asset_Tracker */
 let _dvShowAll=false;
-function renderDividendTracker(){
-  const el=document.getElementById('dv-tracker'); if(!el) return;
+// ── v82 — Yield / Payout (แบบ Snowball) ── ตัวคำนวณ: dividendYieldView() ใน shared.js
+const DVYP_KEY='finOS_dvYp';   // ค่าที่เลือกใน dropdown (เฉพาะเครื่องนี้)
+function _dvYpPref(){ try{ return JSON.parse(localStorage.getItem(DVYP_KEY)||'null')||{}; }catch(e){ return {}; } }
+function renderDvYield(cal){
+  const sm=document.getElementById('dv-yp-metric'), sb=document.getElementById('dv-yp-by'); if(!sm||!sb) return;
+  const p=_dvYpPref(), metric=p.metric==='payout'?'payout':'yield', by=['holdings','categories','sectors'].includes(p.by)?p.by:'holdings';
+  const opt=(list,v)=>list.map(([k,l])=>`<option value="${k}"${k===v?' selected':''}>${escHtml(l)}</option>`).join('');
+  sm.innerHTML=opt([['yield','Yield (%)'],['payout',_L('Annual Payout (บาท)','Annual Payout (THB)')]], metric);
+  sb.innerHTML=opt([['holdings',_L('รายตัว (Holdings)','Holdings')],['categories',_L('ประเภทสินทรัพย์ (Categories)','Categories')],['sectors',_L('อุตสาหกรรม (Sectors)','Sectors')]], by);
+  sm.setAttribute('aria-label',_L('ค่าที่แสดง','Value shown')); sb.setAttribute('aria-label',_L('จัดกลุ่มตาม','Group by'));
+  if(!sm.dataset.init){
+    sm.dataset.init='1';
+    const on=()=>{ try{ localStorage.setItem(DVYP_KEY, JSON.stringify({metric:sm.value, by:sb.value})); }catch(e){} renderDvYield(); };
+    sm.addEventListener('change',on); sb.addEventListener('change',on);
+  }
+  const c=cal||_dvCal(), fwd=(c&&c.C&&c.C.byTicker)||{};
+  const cut=Date.now()-365*86400e3, rec={};
+  (tracker||[]).filter(r=>TX_DIV.includes(r.txType)&&r.date&&r.date.getTime()>=cut)
+    .forEach(r=>{ rec[r.ticker]=(rec[r.ticker]||0)+Math.abs(r.amtTHB); });
+  const V=dividendYieldView((assets||[]).filter(a=>a.qty>1e-9), fwd, rec, by, metric);
+  const T=V.total, pc=x=>x==null?'—':(x*100).toFixed(2)+'%';
+  document.getElementById('dv-yp-sum').innerHTML=T.payout>0?`
+    <div><span>Yield</span><b>${pc(T.yield)}</b></div>
+    <div><span>Yield on cost</span><b>${pc(T.yoc)}</b></div>
+    <div><span>${_L('ปันผลต่อปี','Annual payout')}</span><b class="gain">${fmt(T.payout)}</b><small>${fmt(T.payout/12)}/${_L('เดือน','mo')}</small></div>`:'';
+  const label=r=>r.key===DIV_NO_SECTOR?_L('ไม่ระบุอุตสาหกรรม','No industry'):String(r.key);
+  const note=document.getElementById('dv-yp-note');
+  if(!V.rows.length){
+    if(charts['dv-yp-chart']){ charts['dv-yp-chart'].destroy(); delete charts['dv-yp-chart']; }
+    document.getElementById('dv-yp-wrap').style.display='none';
+    note.textContent=_L('ยังไม่มีปันผลของสินทรัพย์ที่ถืออยู่ — ไม่มีทั้งคาดการณ์ (fundamentals.json) และยอดที่ได้รับใน 12 เดือนล่าสุด',
+      'No dividends for current holdings yet — neither a forecast (fundamentals.json) nor anything received in the last 12 months');
+    return;
+  }
+  document.getElementById('dv-yp-wrap').style.display='';
+  const ctx=_ctx('dv-yp-chart'); if(!ctx) return;
+  const isY=metric==='yield', rows=V.rows;
+  const opts=chartOpts(isY?'pct':'baht');
+  opts.plugins.legend.display=isY;
+  const basisTxt={forecast:_L('คาดการณ์ 12 เดือนข้างหน้า','12-month forecast'),received:_L('ได้รับจริง 12 เดือนล่าสุด','received, last 12 months'),mixed:_L('คาดการณ์ + ได้รับจริง','forecast + received')};
+  opts.plugins.tooltip.callbacks={
+    label:x=>x.raw==null?null:` ${x.dataset.label}: ${isY?UNIT.pct.tip(x.raw):fmt(x.raw)}`,
+    afterBody:items=>{ const r=rows[items[0].dataIndex]; return [
+      `${_L('ปันผลต่อปี','Annual payout')}: ${fmt(r.payout)} (${basisTxt[r.basis]})`,
+      `${_L('มูลค่า','Value')}: ${fmt(r.val)} · Yield ${pc(r.yield)} · Yield on cost ${pc(r.yoc)}`]
+      .concat(by==='holdings'?[]:[`${r.tickers.length} ${_L('ตัวที่จ่าย','payers')}: ${r.tickers.slice(0,8).join(', ')}${r.tickers.length>8?' …':''}`]); }
+  };
+  const ds=isY ? [
+    {type:'bar', label:'Yield', data:rows.map(r=>r.yield==null?null:+(r.yield*100).toFixed(3)), backgroundColor:'rgba(0,212,160,.8)', borderRadius:4, order:2},
+    {type:'line', label:'Yield on cost', data:rows.map(r=>r.yoc==null?null:+(r.yoc*100).toFixed(3)), showLine:false,
+     pointStyle:'line', pointRadius:14, pointHoverRadius:16, borderWidth:3, borderColor:CT.tick, backgroundColor:CT.tick, order:1}
+  ] : [
+    {type:'bar', label:_L('ปันผลต่อปี','Annual payout'), data:rows.map(r=>Math.round(r.payout)), backgroundColor:'rgba(0,212,160,.8)', borderRadius:4}
+  ];
+  if(charts['dv-yp-chart']) charts['dv-yp-chart'].destroy();
+  charts['dv-yp-chart']=new Chart(ctx,{type:'bar', data:{labels:rows.map(label), datasets:_trDs(ds)}, options:opts});
+  note.textContent=_L(
+    `ปันผลต่อปี = คาดการณ์ 12 เดือนข้างหน้าจากประวัติจ่าย (ก่อนหักภาษี)`+(T.fromReceived?` · ${T.fromReceived} ตัวไม่มีข้อมูลคาดการณ์ ใช้ยอดที่ได้รับจริง 12 เดือนล่าสุด`:'')
+      +` · Yield = ÷ มูลค่าวันนี้ · Yield on cost (ขีด) = ÷ ต้นทุน`+(by==='holdings'?'':' · กลุ่มหารด้วยมูลค่าทั้งกลุ่ม รวมตัวที่ไม่จ่ายปันผล')+(by==='sectors'?' · อุตสาหกรรมมาจากช่อง Industry ใน Asset_Tracker':''),
+    `Annual payout = 12-month forecast from payment history (before withholding tax)`+(T.fromReceived?` · ${T.fromReceived} holding(s) without a forecast use what was received in the last 12 months`:'')
+      +` · Yield = ÷ today's value · Yield on cost (tick) = ÷ cost`+(by==='holdings'?'':' · groups divide by the whole group\'s value, non-payers included')+(by==='sectors'?' · industry comes from the Industry column in Asset_Tracker':''));
+}
+
+// v82 — ปฏิทินปันผลคำนวณครั้งเดียวต่อการ render หน้า · ตัวติดตามปันผล + กราฟ Yield/Payout ใช้ร่วม
+function _dvCal(){
   const F=loadFundamentals(); const fund=(F&&F.tickers)||{};
   const held=(assets||[]).filter(a=>a.qty>1e-9);
   const withHist=held.filter(a=>(fund[a.ticker]?.dividends||[]).length);
+  if(!withHist.length) return {fund, held, withHist, C:null};
+  const usd=(typeof mdNum==='function'&&mdNum('USDTHB'))||(()=>{const v=Object.values(fxMap||{}).filter(x=>x>1);return v.length?v.reduce((a,b)=>a+b,0)/v.length:0;})();
+  const received=(tracker||[]).filter(r=>TX_DIV.includes(r.txType)&&r.date).map(r=>({ticker:r.ticker,date:r.date,amtTHB:r.amtTHB}));
+  const holdings=held.map(a=>({ticker:a.ticker,qty:a.qty,name:(fund[a.ticker]?.profile?.name)||a.ticker}));
+  const C=dividendCalendar(holdings, fund, received, {USD:usd}, new Date());
+  return {fund, held, withHist, C};
+}
+function renderDividendTracker(cal){
+  const el=document.getElementById('dv-tracker'); if(!el) return;
+  const {fund, held, withHist, C}=cal||_dvCal();
   if(!withHist.length){
     el.innerHTML=`<div class="cc" style="color:var(--muted2);font-size:12px;line-height:1.8">${_L(
       '📅 ยังไม่มีประวัติปันผลรายตัวของสินทรัพย์ที่ถืออยู่ — pipeline จะดึงให้ใน <code>fundamentals.json</code> (Actions → Update market data) แล้วหน้านี้จะแสดงปฏิทินปันผลและรายได้ที่คาดการณ์ 12 เดือนข้างหน้า',
       '📅 No per-holding dividend history yet — the pipeline writes it to <code>fundamentals.json</code> (Actions → Update market data), then this page shows the dividend calendar and 12-month forward income')}</div>`;
     return;
   }
-  const usd=(typeof mdNum==='function'&&mdNum('USDTHB'))||(()=>{const v=Object.values(fxMap||{}).filter(x=>x>1);return v.length?v.reduce((a,b)=>a+b,0)/v.length:0;})();
-  const received=(tracker||[]).filter(r=>TX_DIV.includes(r.txType)&&r.date).map(r=>({ticker:r.ticker,date:r.date,amtTHB:r.amtTHB}));
-  const holdings=held.map(a=>({ticker:a.ticker,qty:a.qty,name:(fund[a.ticker]?.profile?.name)||a.ticker}));
-  const C=dividendCalendar(holdings, fund, received, {USD:usd}, new Date());
   const pv=(assets||[]).reduce((s,a)=>s+(a.val||0),0);
   const stale=withHist.filter(a=>{const f=fundOf(a.ticker);return f&&f.stale;}).length;
   const ML=k=>monthLabel(k);
