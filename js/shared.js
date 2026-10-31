@@ -16,7 +16,7 @@ window.LOC = window.LOC || 'th-TH-u-ca-gregory';
 //   • XIRR engine
 // กติกา: ไฟล์นี้ห้ามแตะ DOM ของหน้าใดหน้าหนึ่ง — pure data layer เท่านั้น
 // ═══════════════════════════════════════════════════════════════════
-const APP_BUILD = 'v81';
+const APP_BUILD = 'v82';
 console.log('[FinanceTracker shared] build', APP_BUILD);
 window.SHARED_BUILD = APP_BUILD;   // v45 — ให้ index.html ตรวจได้ว่าเวอร์ชันตรงกัน
  
@@ -942,9 +942,135 @@ function dividendCalendar(holdings, fund, received, fx, today){
   const fwd = events.filter(e => e.status !== 'received' && Date.parse(e.payDate) > t0 && Date.parse(e.payDate) <= t0 + 365*DAY);
   const annual = fwd.reduce((s,e)=>s+e.amount, 0);
   const yetToReceive = events.filter(e => e.status === 'declared').reduce((s,e)=>s+e.amount, 0);
-  return { events, months, annual, monthly: annual/12, daily: annual/365, yetToReceive };
+  // v82 — แยกรายตัวจากชุดเดียวกับ annual (ผลรวม byTicker = annual เสมอ) · ใช้ในกราฟ Yield/Payout
+  const byTicker = {};
+  fwd.forEach(e => { byTicker[e.ticker] = (byTicker[e.ticker] || 0) + e.amount; });
+  return { events, months, annual, monthly: annual/12, daily: annual/365, yetToReceive, byTicker };
 }
 
+// ═══ v82 — กราฟ Yield / Payout หน้าปันผล (แบบ Snowball) ═══════════════════
+// ปันผลต่อปีรายตัว = คาดการณ์ 12 เดือนข้างหน้า (dividendCalendar().byTicker) · ตัวที่ไม่มีคาดการณ์ → ที่ได้รับจริง 12 เดือนล่าสุด
+// Yield = ปันผลต่อปี ÷ มูลค่าวันนี้ · Yield on cost = ÷ ต้นทุน (WACC × จำนวนที่ถือ)
+// by: 'holdings' = รายตัว (เฉพาะตัวที่มีปันผล) · 'categories' = group · 'sectors' = Industry จาก Asset_Tracker
+//   กลุ่ม: หารด้วยมูลค่า/ต้นทุน "ทั้งกลุ่ม" รวมตัวที่ไม่จ่าย = yield จริงของเงินก้อนนั้น · แสดงเฉพาะกลุ่มที่มีปันผล
+// sortBy: 'yield' | 'payout' (มาก → น้อย · yield ที่คิดไม่ได้ไว้ท้าย)
+const DIV_NO_SECTOR = '—';
+const divSectorOf = ind => { const s = String(ind || '').trim(); return s && s !== '—' ? s : DIV_NO_SECTOR; };
+function dividendYieldView(holdings, fwdByTk, rec12ByTk, by, sortBy){
+  const fwd = fwdByTk || {}, rec = rec12ByTk || {};
+  const per = (holdings || []).filter(h => h && h.ticker).map(h => {
+    const f = Number(fwd[h.ticker]) || 0, r = Number(rec[h.ticker]) || 0;
+    return { ticker: h.ticker, group: h.group || 'Other', sector: divSectorOf(h.industry),
+             val: Math.max(0, Number(h.val) || 0), cost: Math.max(0, Number(h.cost) || 0),
+             payout: f > 0 ? f : (r > 0 ? r : 0), basis: f > 0 ? 'forecast' : (r > 0 ? 'received' : null) };
+  });
+  const keyOf = by === 'categories' ? p => p.group : by === 'sectors' ? p => p.sector : p => p.ticker;
+  const m = {};
+  per.forEach(p => {
+    if(by !== 'categories' && by !== 'sectors' && !(p.payout > 0)) return;
+    const k = keyOf(p);
+    const g = m[k] || (m[k] = { key: k, payout: 0, val: 0, cost: 0, forecast: 0, received: 0, tickers: [] });
+    g.val += p.val; g.cost += p.cost; g.payout += p.payout;
+    if(p.basis) { g[p.basis]++; g.tickers.push(p.ticker); }
+  });
+  const rows = Object.values(m).filter(g => g.payout > 0).map(g => ({ ...g,
+    yield: g.val > 0 ? g.payout / g.val : null, yoc: g.cost > 0 ? g.payout / g.cost : null,
+    basis: g.forecast && g.received ? 'mixed' : g.forecast ? 'forecast' : 'received' }));
+  const sk = sortBy === 'payout' ? r => r.payout : r => (r.yield == null ? -Infinity : r.yield);
+  rows.sort((a, b) => sk(b) - sk(a) || b.payout - a.payout || String(a.key).localeCompare(String(b.key)));
+  const payout = per.reduce((s, p) => s + p.payout, 0), val = per.reduce((s, p) => s + p.val, 0), cost = per.reduce((s, p) => s + p.cost, 0);
+  return { rows, total: { payout, val, cost, yield: val > 0 ? payout / val : null, yoc: cost > 0 ? payout / cost : null,
+           payers: per.filter(p => p.payout > 0).length, fromReceived: per.filter(p => p.basis === 'received').length } };
+}
+
+// ═══ v82 รอบ 2 — ส่วนที่เหลือของหน้าปันผลแบบ Snowball ═══════════════════════
+// Average annual growth: ปันผลต่อหุ้น (DPS) โตเฉลี่ยกี่ %/ปี (CAGR) จากประวัติจ่ายใน fundamentals.json
+// ใช้เฉพาะปีที่จ่ายครบ = ก่อนปีนี้ และจำนวนครั้ง ≥ ฐานนิยมของทุกปี (ปีแรกของข้อมูลมักขาดเพราะช่วงที่ Yahoo ให้มา)
+// ย้อนได้สูงสุด 5 ปี · ปีที่ครบไม่ถึง 2 ปี → null (ไม่เดา)
+function divGrowthRate(divs, today){
+  const yNow = (today ? new Date(today) : new Date()).getFullYear();
+  const by = {};
+  (divs || []).forEach(d => {
+    const t = Date.parse(d && d.date), a = Number(d && d.amount);
+    if(!isFinite(t) || !(a > 0)) return;
+    const y = new Date(t).getFullYear(); if(y >= yNow) return;
+    const e = by[y] || (by[y] = { n: 0, sum: 0 }); e.n++; e.sum += a;
+  });
+  const ys = Object.keys(by).map(Number).sort((a, b) => a - b);
+  if(ys.length < 2) return null;
+  const cnt = {}; ys.forEach(y => { cnt[by[y].n] = (cnt[by[y].n] || 0) + 1; });
+  const mode = Number(Object.entries(cnt).sort((a, b) => b[1] - a[1] || b[0] - a[0])[0][0]);
+  const full = ys.filter(y => by[y].n >= mode).slice(-6);
+  if(full.length < 2) return null;
+  const y0 = full[0], y1 = full[full.length - 1], a0 = by[y0].sum, a1 = by[y1].sum;
+  if(!(a0 > 0) || y1 <= y0) return null;
+  return { rate: Math.pow(a1 / a0, 1 / (y1 - y0)) - 1, from: y0, to: y1, years: y1 - y0, dpsFrom: a0, dpsTo: a1 };
+}
+// รายตัว / กลุ่ม — กลุ่ม = เฉลี่ยถ่วงด้วยปันผลต่อปี (payoutByTk) · ไม่มีน้ำหนักเลย → เฉลี่ยธรรมดา
+function dividendGrowthView(holdings, fund, payoutByTk, by, today){
+  const pay = payoutByTk || {}, m = {};
+  let missing = 0;
+  (holdings || []).filter(h => h && h.ticker).forEach(h => {
+    const f = (fund || {})[h.ticker], g = f && f.dividends ? divGrowthRate(f.dividends, today) : null;
+    const w = Math.max(0, Number(pay[h.ticker]) || 0);
+    if(!g){ if(w > 0) missing++; return; }
+    const k = by === 'categories' ? (h.group || 'Other') : by === 'sectors' ? divSectorOf(h.industry) : h.ticker;
+    const x = m[k] || (m[k] = { key: k, ws: 0, wr: 0, sr: 0, n: 0, tickers: [], from: Infinity, to: -Infinity });
+    x.ws += w; x.wr += w * g.rate; x.sr += g.rate; x.n++; x.tickers.push(h.ticker);
+    x.from = Math.min(x.from, g.from); x.to = Math.max(x.to, g.to);
+    if(by !== 'categories' && by !== 'sectors') Object.assign(x, { dpsFrom: g.dpsFrom, dpsTo: g.dpsTo });
+  });
+  const rows = Object.values(m).map(x => ({ ...x, rate: x.ws > 0 ? x.wr / x.ws : x.sr / x.n }))
+    .sort((a, b) => b.rate - a.rate || String(a.key).localeCompare(String(b.key)));
+  return { rows, missing };
+}
+// Dividends received ตามช่วงเวลา — rows = แถว Dividend Payout จาก Asset_Tracker ({date: Date, amtTHB})
+// gran 'annual' = ทุกปีตั้งแต่ปีแรกที่ได้ · 'monthly' + period: 'all' | 'ytd' | 'ttm' (12 เดือนรวมเดือนนี้) | 'YYYY' (ปีปัจจุบันตัดที่เดือนนี้)
+function dividendsReceivedSeries(rows, period, gran, today){
+  const now = today ? new Date(today) : new Date();
+  const rs = (rows || []).filter(r => r && r.date instanceof Date && !isNaN(r.date)).map(r => ({ d: r.date, a: Math.abs(Number(r.amtTHB) || 0) }));
+  const yNow = now.getFullYear(), cur = yNow * 12 + now.getMonth();
+  if(gran === 'annual'){
+    const y0 = rs.length ? Math.min(...rs.map(r => r.d.getFullYear())) : yNow;
+    const keys = []; for(let y = y0; y <= yNow; y++) keys.push(String(y));
+    const v = Object.fromEntries(keys.map(k => [k, 0])); rs.forEach(r => { const k = String(r.d.getFullYear()); if(k in v) v[k] += r.a; });
+    const values = keys.map(k => v[k]);
+    return { keys, values, total: values.reduce((s, x) => s + x, 0) };
+  }
+  const abs = d => d.getFullYear() * 12 + d.getMonth();
+  let a, b = cur;
+  if(period === 'ytd') a = yNow * 12;
+  else if(period === 'ttm') a = cur - 11;
+  else if(/^\d{4}$/.test(String(period))){ a = Number(period) * 12; b = Math.min(a + 11, cur); }
+  else a = rs.length ? Math.min(...rs.map(r => abs(r.d))) : cur;
+  const keys = []; for(let i = a; i <= b; i++) keys.push(`${Math.floor(i / 12)}-${String(i % 12 + 1).padStart(2, '0')}`);
+  const v = Object.fromEntries(keys.map(k => [k, 0]));
+  rs.forEach(r => { const k = `${r.d.getFullYear()}-${String(r.d.getMonth() + 1).padStart(2, '0')}`; if(k in v) v[k] += r.a; });
+  const values = keys.map(k => v[k]);
+  return { keys, values, total: values.reduce((s, x) => s + x, 0) };
+}
+// Dividends received แยกตามรายตัว / ประเภท / อุตสาหกรรม (ทั้งหมดที่เคยได้) · อุตสาหกรรม: Industry ของแถว → ของสินทรัพย์ → ไม่ระบุ
+function dividendsReceivedBy(rows, holdings, by){
+  const ind = {}; (holdings || []).forEach(h => { if(h && h.ticker) ind[h.ticker] = h.industry; });
+  const m = {};
+  (rows || []).forEach(r => {
+    if(!r || !r.ticker) return;
+    const k = by === 'categories' ? (r.group || 'Other')
+      : by === 'sectors' ? (divSectorOf(r.industry) !== DIV_NO_SECTOR ? divSectorOf(r.industry) : divSectorOf(ind[r.ticker])) : r.ticker;
+    const x = m[k] || (m[k] = { key: k, total: 0, n: 0 }); x.total += Math.abs(Number(r.amtTHB) || 0); x.n++;
+  });
+  return Object.values(m).filter(x => x.total > 0).sort((a, b) => b.total - a.total || String(a.key).localeCompare(String(b.key)));
+}
+// Dividend growth: ปันผลที่ได้รับรายเดือน (ม.ค.–ธ.ค.) เทียบกัน 3 ปีล่าสุด (เฉพาะปีที่มีข้อมูลขึ้นไป)
+function dividendMonthMatrix(rows, today, nYears){
+  const yNow = (today ? new Date(today) : new Date()).getFullYear(), n = nYears || 3;
+  const rs = (rows || []).filter(r => r && r.date instanceof Date && !isNaN(r.date));
+  const yMin = rs.length ? Math.min(...rs.map(r => r.date.getFullYear())) : yNow;
+  const years = []; for(let y = Math.max(yMin, yNow - n + 1); y <= yNow; y++) years.push(y);
+  const data = Object.fromEntries(years.map(y => [y, Array(12).fill(0)]));
+  rs.forEach(r => { const y = r.date.getFullYear(); if(data[y]) data[y][r.date.getMonth()] += Math.abs(Number(r.amtTHB) || 0); });
+  return { years, data };
+}
 // ═══ v66 — REBALANCING (เติมเงิน / ถอนเงิน / ปรับสมดุล) ═══════════════════
 // ตัวคำนวณล้วน (ไม่แตะ DOM) · ทดสอบใน tests/test_rebalance.cjs
 // holdings: [{ticker, group, qty, price(บาท/หน่วย), val, cost}] · targets: {ticker: %}
