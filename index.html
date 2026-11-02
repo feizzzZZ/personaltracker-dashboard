@@ -662,6 +662,7 @@ select.month-display{text-align-last:center;outline:none}
 .bank-name{font-size:11px;color:var(--white);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1}
 .bank-val{font-size:18px;font-weight:600;margin:2px 0;letter-spacing:-.02em}
 .bank-type{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bank-recon-warn{font-size:11px;line-height:1.35;color:var(--debt);margin-top:4px;cursor:help}
 .bank-type-badge{font-size:9px;font-weight:700;padding:2px 7px;border-radius:4px;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;flex-shrink:0}
 
 /* ── Tx table ── */
@@ -4564,7 +4565,7 @@ function renderReconciliation(){
     return `<tr>
       <td style="padding:7px 10px">${escHtml(a.name)}
         ${a.note?`<div style="font-size:10px;color:var(--muted2)">${escHtml(a.note)}</div>`:''}</td>
-      <td class="nr" style="padding:7px 10px">${fmt(a.computed)}${a.after?`<div style="font-size:9.5px;color:var(--muted2)">${_L('ณ','as of')} ${escHtml(a.date||'')} · ${_L('หลังจากนั้น','since')} ${fmtSign(a.after)}</div>`:''}</td>
+      <td class="nr" style="padding:7px 10px">${fmt(a.computed)}${a.after?`<div style="font-size:9.5px;color:var(--muted2)">${_L('ณ','as of')} ${escHtml(a.date||'')} · ${_L('หลังจากนั้น','since')} ${fmtSign(a.after)}</div>`:''}${a.sameDayN?`<div style="font-size:9.5px;color:var(--muted2)" title="${escAttr(_L('ยอดจริงตรงกับยอดก่อนกรอกรายการเหล่านี้ จึงถือว่ากรอกหลังจดยอด (ในชีตอยู่ท้ายสุดของวันนั้น)','The bank balance matches the total before these rows, so they were entered after the balance was noted (they are the last rows of that day)'))}">${_L('รวมรายการวันที่ '+escHtml(a.date||'')+' ที่กรอกหลังจดยอด '+a.sameDayN+' รายการ','incl. '+a.sameDayN+' row(s) on '+escHtml(a.date||'')+' entered after the balance was noted')}</div>`:''}</td>
       <td class="nr" style="padding:7px 10px">${fmt(a.actual)}</td>
       <td class="nr" style="padding:7px 10px;color:${dc};font-weight:${a.ok?'400':'600'}">
         ${a.ok?'✓':fmtSign(a.diff)}</td></tr>`;
@@ -4648,6 +4649,9 @@ function renderAccounts(){
   // การ์ดบัญชี: ชื่อธนาคาร + ยอด ต้องการราว 150px
   document.getElementById('acc-bank-grid').style.gridTemplateColumns=`repeat(${capCols(cols,150)},1fr)`;
 
+  /* v84 — ✓ เดิมขึ้นทุกบัญชีที่มีแถวใน Reconcile แม้ยอดจริงไม่ตรงกับชีต → ผู้ใช้เห็น SCB ฿17,735 ✓ ขณะที่ชีตบอก 15,734.53
+     ตอนนี้ ✓ เฉพาะที่ตรง (±1 บาท) · ไม่ตรง → บอกยอดในชีตและผลต่างบนการ์ดเลย */
+  const _rDiff=b=>b.reconDate&&Math.abs(b.reconDiff||0)>1;
   document.getElementById('acc-bank-grid').innerHTML=active.map(b=>{
     const accType=getAccType(b);
     const meta=BANK_ACCENT[accType]||BANK_ACCENT['Bank Account'];
@@ -4659,7 +4663,9 @@ function renderAccounts(){
         <span class="bank-type-badge" style="${meta.badge}">${accType==='Bank Account'?'BANK':accType==='Credit Card'?'CREDIT':accType==='E-Wallet'?'WALLET':accType==='Loan'?'LOAN':'TRAVEL'}</span>
       </div>
       <div class="bank-val" style="color:${valColor}">${fmt(b.balance)}</div>
-      <div class="bank-type" style="color:${meta.color};opacity:.7">${meta.icon} ${accType}${b.reconDate?` · <span title="${escAttr(_L('ยอดจริงจากชีต Reconcile วันที่ ','Bank balance from the Reconcile sheet on ')+b.reconDate)}">✓</span>`:''}</div>
+      <div class="bank-type" style="color:${meta.color};opacity:.7">${meta.icon} ${accType}${b.reconDate&&!_rDiff(b)?` · <span title="${escAttr(_L('ยอดจริงจากชีต Reconcile วันที่ ','Bank balance from the Reconcile sheet on ')+b.reconDate)}">✓</span>`:''}</div>
+      ${_rDiff(b)?`<div class="bank-recon-warn" title="${escAttr(_L('ยอดบนการ์ด = ยอดจริงในชีต Reconcile วันที่ '+b.reconDate+' + รายการหลังจากนั้น · ชีต Transaction (แถว Current Balance) = '+fmt(b.computedBalance)+' · ดูตาราง "เทียบยอด" ด้านล่าง',
+        'Card = bank balance from the Reconcile sheet on '+b.reconDate+' + later transactions · Transaction sheet (Current Balance row) = '+fmt(b.computedBalance)+' · see the reconciliation table below'))}">⚠ <span style="white-space:nowrap">${_L('ชีต','Sheet')} ${fmt(b.computedBalance)}</span> · <span style="white-space:nowrap">${_L('ต่าง','diff')} ${fmtSign(b.reconDiff)}</span></div>`:''}
     </div>`;
   }).join('');
 
@@ -5061,7 +5067,7 @@ const VLOG_PURGED_KEY = 'finOS_valueLogPurged_v44';
 //   ฟังก์ชันหาย  → BLOCK  (แอปคำนวณผิดแน่นอน — นี่คือสิ่งที่ guard มีไว้จับ)
 //   เลขไม่ตรง    → WARN   (แค่ลืม bump — log ไว้ ไม่รบกวนผู้ใช้)
 // ฟังก์ชันที่ต้องมีคือสัญญาจริงระหว่างสองไฟล์ ส่วนสตริงเวอร์ชันเป็นแค่ป้าย
-const EXPECTED_SHARED_BUILD = 'v83';
+const EXPECTED_SHARED_BUILD = 'v84';
 const REQUIRED_SHARED_FNS = [
   'resolvePrices', 'pipelinePricesTHB', 'parseReconcileRows',
   'computeReconciliation', 'splitBalances', 'debtVsInvest', 'buildDebtPlan',
@@ -5078,6 +5084,7 @@ const REQUIRED_SHARED_FNS = [
   'rebalancePlan', 'getRebalTargets', 'getRebalOpts', 'rebalLot',   // v66 — ปรับสมดุล
   'loadFundamentals', 'fetchFundamentals', 'fundOf', 'dividendCalendar', 'divFrequency',   // v66 — research/ปันผล
   'runningCostBasis', 'sellFeeToDeduct', 'movementAfter',   // v68 — ต้นทุนถือครอง · ค่าธรรมเนียมขาย · reconcile
+  'reconMovement',                                       // v84 — รายการวันเดียวกันที่กรอกหลังจดยอดจริง
   'notifyDecrypt', 'mergeNotifications', 'notifUnread', 'notifLocalAdd', 'notifCategory', 'b64ToBytes', 'bytesToB64',   // v67
   'loadBotPaper', 'fetchBotPaper', 'botStatus',   // v59 — หน้าบอทจำลอง
   'parseDocumentRows', 'docSearch', 'docCategoryList', 'docThumbUrl', 'docEmbedUrl', 'docSafeUrl', 'docRowValues',   // v71 — คลังเอกสาร

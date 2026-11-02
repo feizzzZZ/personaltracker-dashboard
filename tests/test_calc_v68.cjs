@@ -119,6 +119,54 @@ console.log('\n═══ #2 Reconcile นับรายการหลังว
   chk('ไม่ส่ง rows → ทำงานแบบเดิม', near(applyReconciliation(bals, rec).bals[0].balance, 50000));
 }
 
+console.log('\n═══ v84 Reconcile: รายการวันเดียวกันที่กรอกหลังจดยอด (บั๊ก SCB 2026-11-02) ═══');
+{
+  // ผู้ใช้จดยอด SCB จากแอปธนาคารตอนเช้า 1 พ.ย. = 17,734.53 แล้วกรอกรายจ่ายวันนั้นผ่านเว็บแอป รวม 2,000
+  // ชีต (Current Balance) = 15,734.53 · เดิมแอปโชว์ 17,734.53 (≈ ฿17,735) เพราะถือว่ายอดจริง = สิ้นวัน
+  const day = [-30, -69, -12, -40, -900, -60, -170, -719];
+  const rows = [{ dateStr: '2026-10-30', acct: { SCB: -500 }, sheetRow: 4710 }]
+    .concat(day.map((v, i) => ({ dateStr: '2026-11-01', acct: { SCB: v }, sheetRow: 4718 + i })));
+  const bals = [{ name: 'SCB', balance: 15734.53, type: 'Account #' }, { name: 'KBank', balance: 4221.47, type: 'Account #' }];
+  const rec = { SCB: { date: '2026-11-01', actual: 17734.53 }, KBank: { date: '2026-11-01', actual: 4221.47 } };
+  const now = Date.now; Date.now = () => Date.parse('2026-11-02T05:00:00Z');
+  const ap = applyReconciliation(bals, rec, null, rows);
+  const cr = computeReconciliation(bals, rec, null, rows);
+  const eff = ap.bals[0], c = cr.accounts[0];
+  chk('ยอดในแอป = ชีต 15,734.53 (เดิม 17,734.53)', near(eff.balance, 15734.53), eff);
+  chk('ไม่มีผลต่างที่ "ยอมรับ" เข้ามา', near(eff.reconDiff, 0) && near(ap.adopted, 0), eff);
+  chk('ตารางเทียบยอด: ตรง · นับ 8 รายการวันเดียวกันเป็นหลังจดยอด', c.ok && near(c.diff, 0) && c.sameDayN === 8 && near(c.after, -2000), c);
+  chk('บัญชีที่ไม่มีรายการวันนั้นไม่เปลี่ยน', near(ap.bals[1].balance, 4221.47) && cr.accounts[1].sameDayN === 0, ap.bals[1]);
+
+  // จดยอดหลังกรอกไปแล้ว 3 แถวแรกของวัน → แถวที่เหลือ 5 แถวเป็น "หลังจดยอด"
+  const rec3 = { SCB: { date: '2026-11-01', actual: 17734.53 - 30 - 69 - 12 } };
+  const c3 = computeReconciliation(bals, rec3, null, rows).accounts[0];
+  chk('จดยอดกลางวัน → 5 แถวท้ายเป็นหลังจดยอด', c3.ok && c3.sameDayN === 5, c3);
+  chk('ยอดในแอปยังเท่าชีต', near(applyReconciliation(bals, rec3, null, rows).bals[0].balance, 15734.53));
+
+  // ลำดับ = เลขแถวในชีต ไม่ใช่ลำดับใน array
+  const c4 = computeReconciliation(bals, rec3, null, rows.slice().reverse()).accounts[0];
+  chk('ใช้ลำดับแถวในชีต (array กลับด้านก็ได้ผลเดิม)', c4.ok && c4.sameDayN === 5, c4);
+
+  // จดยอดสิ้นวัน (ตรงกับยอดคำนวณสิ้นวัน) → เหมือนเดิมทุกอย่าง
+  const recE = { SCB: { date: '2026-11-01', actual: 15734.53 } };
+  const cE = computeReconciliation(bals, recE, null, rows).accounts[0];
+  chk('ยอดสิ้นวันตรง → ไม่ย้ายรายการ', cE.ok && cE.sameDayN === 0 && near(cE.after, 0), cE);
+
+  // ผลต่างจริง (ไม่ตรงกับจุดไหนของวันเลย) ยังฟ้องเท่าเดิม และยอดที่ใช้ = ยอดจริงแบบสิ้นวัน
+  const recX = { SCB: { date: '2026-11-01', actual: 16234.53 } };
+  const cX = computeReconciliation(bals, recX, null, rows).accounts[0];
+  chk('ผลต่างจริง +500 ยังฟ้อง', !cX.ok && near(cX.diff, 500) && cX.sameDayN === 0, cX);
+  chk('ยอดที่ใช้ = ยอดจริง (16,234.53)', near(applyReconciliation(bals, recX, null, rows).bals[0].balance, 16234.53));
+
+  // มีรายการวันถัดไปด้วย: จดเช้า 1 พ.ย. · 1 พ.ย. −1,000 · 2 พ.ย. −200 → ยอดวันนี้ 8,800
+  const rowsN = [{ dateStr: '2026-11-01', acct: { SCB: -1000 }, sheetRow: 30 }, { dateStr: '2026-11-02', acct: { SCB: -200 }, sheetRow: 31 }];
+  const balsN = [{ name: 'SCB', balance: 8800, type: 'Account #' }];
+  const recN = { SCB: { date: '2026-11-01', actual: 10000 } };
+  const eN = applyReconciliation(balsN, recN, null, rowsN).bals[0];
+  chk('รายการวันถัดไปยังนับ + วันเดียวกันที่กรอกหลังจด → 8,800', near(eN.balance, 8800) && eN.reconSameDayN === 1, eN);
+  Date.now = now;
+}
+
 console.log('\n═══ #7 งบ: เงินคืนหักออกจากหมวด ═══');
 {
   const b = budgetSpendMap([

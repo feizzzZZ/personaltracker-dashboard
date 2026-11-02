@@ -16,7 +16,7 @@ window.LOC = window.LOC || 'th-TH-u-ca-gregory';
 //   • XIRR engine
 // กติกา: ไฟล์นี้ห้ามแตะ DOM ของหน้าใดหน้าหนึ่ง — pure data layer เท่านั้น
 // ═══════════════════════════════════════════════════════════════════
-const APP_BUILD = 'v83';
+const APP_BUILD = 'v84';
 console.log('[FinanceTracker shared] build', APP_BUILD);
 window.SHARED_BUILD = APP_BUILD;   // v45 — ให้ index.html ตรวจได้ว่าเวอร์ชันตรงกัน
  
@@ -389,6 +389,30 @@ function movementAfter(rows, name, date){
   }
   return Math.round(s*100)/100;
 }
+// v84 — ยอดจริงในชีต Reconcile ไม่มีเวลา: เดิมถือว่าเป็นยอด "สิ้นวัน" เสมอ → รายการวันเดียวกันไม่ถูกนับ
+//   ผู้ใช้จดยอดจากแอปธนาคารตอนเช้า แล้วกรอกรายจ่ายวันนั้นผ่านเว็บแอปทีหลัง → ยอดในแอปสูงกว่าชีตเท่ากับรายการเหล่านั้น
+//   (แอปโชว์ยอดจริง + รายการหลังวันจด ส่วนชีตลบไปแล้ว — บั๊กที่ผู้ใช้เจอกับบัญชี SCB 2026-11-02)
+// ตอนนี้: ถ้ายอดจริงไม่ตรงกับยอดคำนวณสิ้นวันจด ลองตัดรายการของวันนั้นออกทีละแถวจากท้าย (ลำดับแถวในชีต = ลำดับที่กรอก)
+//   ตรงที่จุดไหน (± tol) → แถวหลังจุดนั้นนับเป็น "กรอกหลังจดยอด" · ไม่ตรงเลย → สิ้นวันเหมือนเดิม (ผลต่างจริงยังฟ้องครบ)
+// balNow = ยอดคำนวณวันนี้ (แถว Current Balance ของชีต) · คืน { after, sameDay, sameDayN }
+const RECON_TOL = 1;
+function reconMovement(rows, name, rec, balNow, tol){
+  const t = tol == null ? RECON_TOL : tol;
+  const out = { after: movementAfter(rows, name, rec && rec.date), sameDay: 0, sameDayN: 0 };
+  if(!rec || !rec.date || !rows || !isFinite(balNow) || !isFinite(rec.actual)) return out;
+  const eod = balNow - out.after;                       // ยอดคำนวณ ณ สิ้นวันจด
+  if(Math.abs(rec.actual - eod) <= t) return out;
+  const day = rows.filter(r => r && r.acct && r.dateStr === rec.date && Number(r.acct[name]))
+    .map((r, i) => ({ v: Number(r.acct[name]), o: r.sheetRow == null ? i : r.sheetRow }))
+    .filter(x => isFinite(x.v)).sort((a, b) => a.o - b.o);
+  let s = 0;
+  for(let k = day.length - 1; k >= 0; k--){
+    s += day[k].v;
+    if(Math.abs(rec.actual - (eod - s)) <= t)
+      return { after: Math.round((out.after + s)*100)/100, sameDay: Math.round(s*100)/100, sameDayN: day.length - k };
+  }
+  return out;
+}
 // เทียบยอดคำนวณ vs ยอดจริง → คืนรายการที่ต่างกัน + สถานะรวม
 // tolerance: ต่างไม่เกิน 1 บาท = ถือว่าตรง (ปัดเศษ/ดอกเบี้ยเล็กน้อย)
 // v68 #2 — เทียบ "ณ วันที่จด": ยอดคำนวณ − รายการหลังวันนั้น · เดิมเทียบกับยอดวันนี้
@@ -402,14 +426,16 @@ function computeReconciliation(bals, reconMap, tolerance, rows){
   (bals||[]).forEach(b=>{
     const rec = map[b.name];
     if(!rec){ accounts.push({name:b.name, computed:b.balance, checked:false}); return; }
-    const after = movementAfter(rows, b.name, rec.date);
+    const mv = reconMovement(rows, b.name, rec, b.balance, tol);   // v84 — รวมรายการวันเดียวกันที่กรอกหลังจดยอด
+    const after = mv.after;
     const computedAt = b.balance - after;         // ยอดคำนวณ ณ วันที่จด
     const diff = rec.actual - computedAt;         // + = มีเงินมากกว่าที่บันทึก
     const ok = Math.abs(diff) <= tol;
     if(!ok){ unmatched++; totalDrift += Math.abs(diff); }
     if(rec.date && (!worstDate || rec.date < worstDate)) worstDate = rec.date;
     accounts.push({name:b.name, computed:computedAt, computedNow:b.balance, after, actual:rec.actual,
-                   diff, ok, checked:true, date:rec.date, note:rec.note});
+                   diff, ok, checked:true, date:rec.date, note:rec.note,
+                   sameDay:mv.sameDay, sameDayN:mv.sameDayN});
   });
  
   // BUGFIX v48 #3 — ชื่อบัญชีในชีต Reconcile ที่สะกดไม่ตรงกับหัวคอลัมน์ใน
@@ -2162,9 +2188,11 @@ function applyReconciliation(bals, reconMap, maxAgeDays, rows){
     if(age != null && age > maxAge){ source[b.name]='stale'; nStale++; return {...b}; }
     if(rec.date && (!newest || rec.date > newest)) newest = rec.date;
     source[b.name]='bank'; nBank++;
-    const bal = Math.round((rec.actual + movementAfter(rows, b.name, rec.date))*100)/100;
+    const mv = reconMovement(rows, b.name, rec, b.balance);   // v84 — รายการวันเดียวกันที่กรอกหลังจดยอด
+    const bal = Math.round((rec.actual + mv.after)*100)/100;
     return {...b, balance: bal, computedBalance: b.balance,
-            reconDate: rec.date||null, reconDiff: bal - b.balance};
+            reconDate: rec.date||null, reconDiff: Math.round((bal - b.balance)*100)/100,
+            reconSameDayN: mv.sameDayN};
   });
  
   return { bals: out, source, nBank, nStale,
