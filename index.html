@@ -5067,7 +5067,7 @@ const VLOG_PURGED_KEY = 'finOS_valueLogPurged_v44';
 //   ฟังก์ชันหาย  → BLOCK  (แอปคำนวณผิดแน่นอน — นี่คือสิ่งที่ guard มีไว้จับ)
 //   เลขไม่ตรง    → WARN   (แค่ลืม bump — log ไว้ ไม่รบกวนผู้ใช้)
 // ฟังก์ชันที่ต้องมีคือสัญญาจริงระหว่างสองไฟล์ ส่วนสตริงเวอร์ชันเป็นแค่ป้าย
-const EXPECTED_SHARED_BUILD = 'v84';
+const EXPECTED_SHARED_BUILD = 'v85';
 const REQUIRED_SHARED_FNS = [
   'resolvePrices', 'pipelinePricesTHB', 'parseReconcileRows',
   'computeReconciliation', 'splitBalances', 'debtVsInvest', 'buildDebtPlan',
@@ -12399,25 +12399,80 @@ async function txFindEmptyRow(){
 }
 
 // ── ฟอร์มเพิ่มรายการ ────────────────────────────────────────────────
+// v85 — บัญชีหนี้ (บัตรเครดิต / สินเชื่อ / ยอดติดลบ) ใช้นิยามเดียวกับหน้าบัญชี (isCreditAccount · Loan · ยอด < 0)
+function txIsLiab(b){
+  const x = (bankBals || []).find(y => y.name === b.name) || {name: b.name};
+  return isCreditAccount(x) || /loan|สินเชื่อ|เงินกู้/i.test(String(x.type || '')) || Number(x.balance) < 0;
+}
+// รายการบัญชีแบบแบ่งกลุ่ม: บัญชีเงินฝาก/e-wallet · บัตรเครดิต/สินเชื่อ (เดิมรวมกันหมด หาบัตรไม่เจอ)
+function txAcctOptions(liabFirst){
+  const banks = (txSheetMeta && txSheetMeta.banks) || [];
+  const opt = b => `<option value="${b.col}">${escHtml(b.name)}</option>`;   // v72 — ชื่อบัญชีมาจากชีต
+  const L = banks.filter(txIsLiab), C = banks.filter(b => !txIsLiab(b));
+  if(!L.length || !C.length) return banks.map(opt).join('');
+  const gC = `<optgroup label="${escAttr(_L('บัญชีเงินฝาก / e-wallet','Bank accounts / e-wallets'))}">${C.map(opt).join('')}</optgroup>`;
+  const gL = `<optgroup label="${escAttr(_L('บัตรเครดิต / สินเชื่อ','Credit cards / loans'))}">${L.map(opt).join('')}</optgroup>`;
+  return liabFirst ? gL + gC : gC + gL;
+}
 function txFillOptions(){
-  const opts = (txSheetMeta && txSheetMeta.banks ? txSheetMeta.banks : [])
-    .map(b => `<option value="${b.col}">${escHtml(b.name)}</option>`).join('');   // v72 — ชื่อบัญชีมาจากชีต
   const a1 = document.getElementById('tx-f-acct');
   const a2 = document.getElementById('tx-f-acct2');
-  if(a1) a1.innerHTML = opts;
-  if(a2) a2.innerHTML = opts;
+  if(a1) a1.innerHTML = txAcctOptions(false);
+  if(a2) a2.dataset.kind = '';          // txFillAcct2 สร้างใหม่ตามประเภทรายการ
   // หมวดที่เคยใช้จริง → autocomplete
   const cats = [...new Set(txRows.map(r => r.category).filter(Boolean))].sort();
   const dl = document.getElementById('tx-cat-list');
   if(dl) dl.innerHTML = cats.map(c => `<option value="${escAttr(c)}">`).join('');
 }
+/* v85 — ช่องบัญชีที่สอง: Transfer = โอนเข้าบัญชี · Debt = ตัดยอดบัตร/สินเชื่อ (เลือก "ไม่ตัดยอด" ได้ เช่นค่างวดที่ไม่มีคอลัมน์ในชีต)
+   want: คอลัมน์ที่ต้องเลือก (เปิดแก้แถว / กดจ่ายจากหน้าหนี้สิน) · null = ค่าตั้งต้น · undefined = ผู้ใช้เปลี่ยนประเภทเอง */
+function txFillAcct2(t, want){
+  const a2 = document.getElementById('tx-f-acct2'); if(!a2) return;
+  const kind = t === 'Debt' ? 'debt' : 'all';
+  if(a2.dataset.kind !== kind){
+    const keep = a2.value;
+    a2.innerHTML = kind === 'debt'
+      ? `<option value="">${escHtml(_L('— ไม่ตัดยอดบัตร/สินเชื่อ (เช่น ค่างวดนอกชีต)','— none (e.g. an installment with no sheet column)'))}</option>` + txAcctOptions(true)
+      : txAcctOptions(false);
+    a2.dataset.kind = kind;
+    // เปลี่ยนเป็น Debt เอง → เริ่มที่ "ไม่ตัดยอด" (ไม่เดาบัตรให้) · Transfer → คงปลายทางเดิมถ้ายังมี
+    a2.value = kind === 'debt' ? '' : ([...a2.options].some(o => o.value === keep) ? keep : (a2.options[0] || {}).value || '');
+  }
+  if(want !== undefined) a2.value = want == null ? (kind === 'debt' ? '' : (a2.options[0] || {}).value || '') : String(want);
+}
+// ตัดยอดบัตร → หมวด/รายละเอียดตามแบบที่ชีตใช้: แท็บ Debts → แถวจ่ายบัตรนี้ครั้งล่าสุด → "Clear Debt <บัตร>"
+// เขียนทับเฉพาะช่องที่ว่าง หรือที่ฟอร์มเติมให้เองก่อนหน้า (ไม่ทับที่ผู้ใช้พิมพ์)
+let txAutoFill = {cat: '', det: ''};
+function txSuggestPay(){
+  const $ = id => document.getElementById(id);
+  if($('tx-f-type').value !== 'Debt') return;
+  const c = $('tx-f-cat'), e = $('tx-f-detail');
+  const col = $('tx-f-acct2').value;
+  const b = col === '' ? null : ((txSheetMeta && txSheetMeta.banks) || []).find(x => String(x.col) === col);
+  const own = (v, k) => !v.trim() || v === txAutoFill[k];
+  if(!b){                                  // กลับเป็น "ไม่ตัดยอด" → ล้างค่าที่ฟอร์มเติมเอง
+    if(txAutoFill.cat && c.value === txAutoFill.cat) c.value = '';
+    if(txAutoFill.det && e.value === txAutoFill.det) e.value = '';
+    txAutoFill = {cat: '', det: ''};
+    return;
+  }
+  const d = (debtList || []).find(x => x.payCat && (x.card || (x.type === 'Credit Card' ? x.name : '')) === b.name);
+  const last = [...(txRows || [])].reverse().find(r => r.type === 'Debt' && Number((r.acct || {})[b.name]) > 0);
+  const cat = d ? d.payCat : last && last.category && last.category !== 'Other' ? last.category : 'Clear Debt ' + b.name;
+  const det = last && last.details ? last.details : b.name;
+  if(own(c.value, 'cat')){ c.value = cat; txAutoFill.cat = cat; }
+  if(own(e.value, 'det')){ e.value = det; txAutoFill.det = det; }
+}
+// แถว Debt ที่ตัดยอดบัตร/สินเชื่อ = ธนาคาร −x · บัญชีหนี้ +x ในแถวเดียว (v77)
+const txIsCardPay = () => document.getElementById('tx-f-type').value === 'Debt' && document.getElementById('tx-f-acct2').value !== '';
 
 // txOpenForm()          → โหมดเพิ่มรายการใหม่
 // txOpenForm(sheetRow)  → โหมดแก้ไขรายการที่แถวนั้นในชีต
 let txEditRow = null;
 /* v77 — จ่ายบัตรเครดิต: ชีตลงเป็น Transactions = Debt · หมวด "Clear Debt <บัตร>" · ธนาคาร −x และบัตร +x ในแถวเดียว
-   เดิมฟอร์มเขียนบัญชีที่สองได้เฉพาะ Transfer → บันทึกแบบนี้ไม่ได้ และเปิดแก้แถวแบบนี้แล้วบันทึก = ช่องบัตรถูกล้าง */
-let txPayCard = false;
+   เดิมฟอร์มเขียนบัญชีที่สองได้เฉพาะ Transfer → บันทึกแบบนี้ไม่ได้ และเปิดแก้แถวแบบนี้แล้วบันทึก = ช่องบัตรถูกล้าง
+   v85 — เดิมช่องบัตรขึ้นเฉพาะตอนกด "จ่าย" จากหน้าหนี้สิน (txPayCard) · เลือกประเภท Debt ในฟอร์มเองไม่มีช่องให้เลือกบัตร
+         ตอนนี้ Debt มีช่อง "ตัดยอดบัตร/สินเชื่อ" เสมอ — สถานะอยู่ที่ค่าของช่องนั้น (txIsCardPay) ไม่ใช่ตัวแปรแยก */
 // เปิดฟอร์มเพิ่มรายการพร้อมค่าตั้งต้น (ใช้จากหน้าหนี้สิน)
 function txOpenPrefill(p){
   txOpenForm();
@@ -12428,24 +12483,23 @@ function txOpenPrefill(p){
   $('tx-f-detail').value = p.detail || '';
   if(p.acctCol != null) $('tx-f-acct').value = p.acctCol;
   if(p.amt) $('tx-f-amt').value = Math.round(p.amt * 100) / 100;
-  txPayCard = p.toCardCol != null;
-  if(txPayCard) $('tx-f-acct2').value = p.toCardCol;
-  txOnTypeChange();
+  txOnTypeChange(p.toCardCol != null ? p.toCardCol : null);
 }
 
 function txOpenForm(sheetRow){
-  if(!txSheetMeta){ alert('กด Sync ก่อน 1 ครั้ง เพื่อให้ระบบอ่านโครงสร้างชีต'); return; }
+  if(!txSheetMeta){ alert(_L('กด Sync ก่อน 1 ครั้ง เพื่อให้ระบบอ่านโครงสร้างชีต','Press Sync once so the app can read the sheet layout')); return; }
   txFillOptions();
   txEditRow = sheetRow || null;
-  txPayCard = false;
+  txAutoFill = {cat: '', det: ''};
   const rec = txEditRow ? (txRows || []).find(r => r.sheetRow === txEditRow) : null;
-  if(txEditRow && !rec){ alert('หารายการนี้ไม่เจอ — กด Sync แล้วลองใหม่'); txEditRow = null; return; }
+  if(txEditRow && !rec){ alert(_L('หารายการนี้ไม่เจอ — กด Sync แล้วลองใหม่','Transaction not found — press Sync and try again')); txEditRow = null; return; }
 
   const $ = id => document.getElementById(id);
-  $('tx-modal-title').textContent = rec ? '✎ แก้ไขรายการ' : '➕ เพิ่มรายการ';
-  $('tx-f-save').textContent      = rec ? 'บันทึกการแก้ไข' : 'บันทึกลงชีต';
+  $('tx-modal-title').textContent = rec ? _L('✎ แก้ไขรายการ','✎ Edit transaction') : _L('➕ เพิ่มรายการ','➕ Add transaction');
+  $('tx-f-save').textContent      = rec ? _L('บันทึกการแก้ไข','Save changes') : _L('บันทึกลงชีต','Save to sheet');
   $('tx-f-del').hidden            = !rec;
 
+  let want2 = null;
   if(rec){
     $('tx-f-date').value   = rec.dateStr;
     $('tx-f-type').value   = rec.type;
@@ -12457,37 +12511,36 @@ function txOpenForm(sheetRow){
     // v77 — แถว Debt ที่มีบัญชีบวก (จ่ายบัตร) ก็มีสองบัญชีเหมือน Transfer
     const dst = rec.type === 'Transfer' || (rec.type === 'Debt' && ent.some(([,v]) => v < 0)) ? ent.find(([,v]) => v > 0) : null;
     const src = (rec.type === 'Transfer' || dst ? ent.find(([,v]) => v < 0) : ent[0]) || ent[0];
-    txPayCard = rec.type === 'Debt' && !!dst;
     if(src && byName[src[0]] != null) $('tx-f-acct').value  = byName[src[0]];
-    if(dst && byName[dst[0]] != null) $('tx-f-acct2').value = byName[dst[0]];
+    if(dst && byName[dst[0]] != null) want2 = byName[dst[0]];
     $('tx-f-amt').value = src ? Math.abs(src[1]) : Math.abs(rec.amount);
-    $('tx-f-status').textContent = 'กำลังแก้แถว ' + txEditRow + ' ในชีต Transaction';
+    $('tx-f-status').textContent = _L('กำลังแก้แถว ','Editing row ') + txEditRow + _L(' ในชีต Transaction',' of the Transaction sheet');
   } else {
     const d = new Date();
     $('tx-f-date').value =
       `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     ['tx-f-amt','tx-f-detail','tx-f-cat'].forEach(id => { const e = $(id); if(e) e.value = ''; });
-    $('tx-f-status').textContent = 'รายการจะถูกเพิ่มต่อท้ายชีต Transaction';
+    $('tx-f-status').textContent = _L('รายการจะถูกเพิ่มต่อท้ายชีต Transaction','The row will be appended to the Transaction sheet');
   }
   $('tx-f-status').style.color = 'var(--muted2)';
-  txOnTypeChange();
+  txOnTypeChange(want2);
   $('tx-modal').classList.add('show');
   setTimeout(() => { const a = $('tx-f-amt'); if(a) a.focus(); }, 80);
 }
 
 function txCloseForm(){
   document.getElementById('tx-modal').classList.remove('show');
-  txPayCard = false;
   txEditRow = null;   // สำคัญ — ไม่งั้นกด + ครั้งต่อไปจะไปเขียนทับแถวที่เพิ่งแก้
 }
 
-function txOnTypeChange(){
+function txOnTypeChange(want2){
   const t = document.getElementById('tx-f-type').value;
-  const card = t === 'Debt' && txPayCard;
-  document.getElementById('tx-f-acct2-wrap').style.display = t === 'Transfer' || card ? 'block' : 'none';
-  document.getElementById('tx-f-acct-lbl').textContent   = t === 'Transfer' ? 'โอนออกจากบัญชี' : card ? _L('จ่ายจากบัญชี','Paid from') : 'บัญชี';
+  txFillAcct2(t, want2);
+  const debt = t === 'Debt';
+  document.getElementById('tx-f-acct2-wrap').style.display = t === 'Transfer' || debt ? 'block' : 'none';
+  document.getElementById('tx-f-acct-lbl').textContent   = t === 'Transfer' ? _L('โอนออกจากบัญชี','Transfer from') : debt ? _L('จ่ายจากบัญชี','Paid from') : _L('บัญชี','Account');
   const l2 = document.getElementById('tx-f-acct2-lbl');
-  if(l2) l2.textContent = card ? _L('ตัดยอดบัญชีหนี้ (บัตร/สินเชื่อ — ช่องนี้เป็นบวก)','Debt account paid down (card/loan column +)') : 'โอนเข้าบัญชี';
+  if(l2) l2.textContent = debt ? _L('ตัดยอดบัตรเครดิต / สินเชื่อ (ช่องนี้เป็นบวก)','Card / loan paid down (this column +)') : _L('โอนเข้าบัญชี','Transfer to');
   txUpdatePreview();
 }
 
@@ -12499,13 +12552,21 @@ function txUpdatePreview(){
   const a1  = document.getElementById('tx-f-acct');
   const n1  = (a1.options[a1.selectedIndex] || {}).text || '—';
   const money = v => v.toLocaleString('en-US',{minimumFractionDigits:2, maximumFractionDigits:2});
-  const signed = mag * (TX_SIGN[t] ?? -1);
-  let out = `${n1}  ${signed < 0 ? '−' : '+'}${money(mag)}`;
-  if(t === 'Transfer' || (t === 'Debt' && txPayCard)){
+  // v85 — เครื่องหมายตามประเภท ไม่ใช่ตามยอด (เดิมยังไม่กรอกยอด รายจ่ายขึ้น "+0.00")
+  let out = `${n1}  ${(TX_SIGN[t] ?? -1) < 0 ? '−' : '+'}${money(mag)}`;
+  const pay = txIsCardPay();
+  if(t === 'Transfer' || pay){
     const a2 = document.getElementById('tx-f-acct2');
-    out += `\n${(a2.options[a2.selectedIndex] || {}).text || '—'}  +${money(mag)}`;
+    const n2 = (a2.options[a2.selectedIndex] || {}).text || '—';
+    out += `\n${n2}  +${money(mag)}`;
+    if(pay){                                     // ยอดบัญชีหนี้ก่อน/หลังบันทึก (ชุดเดียวกับหน้าบัญชี)
+      const cur = (effectiveBals() || []).find(b => b.name === n2);
+      if(cur) out += `\n  ${_L('ยอด','Balance')} ${n2}: ${fmt(cur.balance)} → ${fmt(cur.balance + mag)}`;
+    }
+  } else if(t === 'Debt'){
+    out += `\n${_L('(ไม่ตัดยอดบัตร — ถ้าจ่ายบัตรเครดิต เลือกบัตรในช่อง "ตัดยอดบัตร")','(no card paid down — to pay a credit card, pick it under "Card / loan paid down")')}`;
   }
-  el.textContent = 'จะเขียนลงชีต →\n' + out;
+  el.textContent = _L('จะเขียนลงชีต →','Will write to the sheet →') + '\n' + out;
 }
 
 async function txSubmitForm(){
@@ -12522,13 +12583,13 @@ async function txSubmitForm(){
   const bankCol  = parseInt(document.getElementById('tx-f-acct').value, 10);
   const bankCol2 = parseInt(document.getElementById('tx-f-acct2').value, 10);
 
-  if(!date)          return say('ใส่วันที่ก่อน', 'var(--expense)');
-  if(!category)      return say('ใส่หมวดก่อน', 'var(--expense)');
-  if(!(amount > 0))  return say('จำนวนเงินต้องมากกว่า 0', 'var(--expense)');
-  if(isNaN(bankCol)) return say('เลือกบัญชีก่อน', 'var(--expense)');
-  const toCard = txType === 'Debt' && txPayCard;   // v77
+  if(!date)          return say(_L('ใส่วันที่ก่อน','Enter a date first'), 'var(--expense)');
+  if(!category)      return say(_L('ใส่หมวดก่อน','Enter a category first'), 'var(--expense)');
+  if(!(amount > 0))  return say(_L('จำนวนเงินต้องมากกว่า 0','Amount must be more than 0'), 'var(--expense)');
+  if(isNaN(bankCol)) return say(_L('เลือกบัญชีก่อน','Pick an account first'), 'var(--expense)');
+  const toCard = txType === 'Debt' && !isNaN(bankCol2);   // v77 · v85 — ค่าของช่อง "ตัดยอดบัตร" (ว่าง = ไม่ตัดยอด)
   if((txType === 'Transfer' || toCard) && bankCol === bankCol2)
-    return say('บัญชีต้นทางกับปลายทางต้องคนละบัญชี', 'var(--expense)');
+    return say(_L('บัญชีต้นทางกับปลายทางต้องคนละบัญชี','The two accounts must be different'), 'var(--expense)');
 
   btn.disabled = true; del.disabled = true;
   say('กำลังบันทึก…');
@@ -12580,7 +12641,8 @@ document.addEventListener('input',  e => {
 });
 document.addEventListener('change', e => {
   if(!e.target || !e.target.id) return;
-  if(e.target.id === 'tx-f-type') txOnTypeChange();
+  if(e.target.id === 'tx-f-type'){ txOnTypeChange(); txSuggestPay(); }
+  else if(e.target.id === 'tx-f-acct2'){ txSuggestPay(); txUpdatePreview(); }   // v85
   else if(e.target.id.indexOf('tx-f-') === 0) txUpdatePreview();
 });
 
