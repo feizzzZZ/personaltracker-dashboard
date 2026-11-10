@@ -16,7 +16,7 @@ window.LOC = window.LOC || 'th-TH-u-ca-gregory';
 //   • XIRR engine
 // กติกา: ไฟล์นี้ห้ามแตะ DOM ของหน้าใดหน้าหนึ่ง — pure data layer เท่านั้น
 // ═══════════════════════════════════════════════════════════════════
-const APP_BUILD = 'v86';
+const APP_BUILD = 'v87';
 console.log('[FinanceTracker shared] build', APP_BUILD);
 window.SHARED_BUILD = APP_BUILD;   // v45 — ให้ index.html ตรวจได้ว่าเวอร์ชันตรงกัน
  
@@ -3432,3 +3432,105 @@ function debtSchedule(items, fromYm, months){
     .sort((a, b) => a.ym.localeCompare(b.ym));
   return {rows, events};
 }
+
+// ═══ v87 — ฟอร์มแถวชีตทั่วไป + จดยอดจริงหลายบัญชี ═══════════════════════════════
+// ผู้ใช้จะเลิกแก้ชีตเอง (2026-11-08) → แท็บที่ยังไม่มีฟอร์ม (Asset_Live_Price_Feed · Insurance_Policies · Insurance_Coverage)
+// ใช้ฟอร์มเดียวที่อ่านหัวตารางจริงของแท็บ: ช่องที่เป็นสูตร (รายแถว/กระจายทั้งคอลัมน์ · atFormulaKinds) ไม่ให้กรอกและไม่เขียนทับ
+// ตัวช่วยด้านล่างไม่แตะ DOM/เครือข่าย — ทดสอบใน tests/test_sheet_forms.cjs
+
+// ชนิดช่องจากชื่อหัวคอลัมน์ (ชีตนี้ตั้งชื่อหัวแบบ Snake_Case ภาษาอังกฤษ)
+function srfFieldType(name){
+  const n = String(name || '');
+  if(/date|วันที่/i.test(n)) return 'date';
+  if(/(^|_)(id|name|type|unit|category|status|note|notes|ticker|symbol|provider|platform|industry|sector|currency|source|exchange|benefit)(_|$)/i.test(n)) return 'text';
+  if(/amount|premium|price|value|qty|quantity|rate|fx|surrender|target|thb|usd|cost|yield|dividend|shares|nav|units?$/i.test(n)) return 'number';
+  return 'text';
+}
+// ช่องของฟอร์มจากหัวตาราง + ผลตรวจสูตร (atFormulaKinds) · คอลัมน์ไม่มีหัว = ข้าม
+// คืน [{col, name, type, formula: null | 'row' | 'spill'}]
+function srfColumns(header, kinds){
+  const K = kinds || {};
+  const out = [];
+  (header || []).forEach((h, col) => {
+    const name = h == null ? '' : String(h).trim();
+    if(!name) return;
+    const k = K[col];
+    out.push({ col, name, type: srfFieldType(name), formula: k == null ? null : (typeof k === 'string' ? 'row' : 'spill') });
+  });
+  return out;
+}
+// ค่าในชีต → ค่าที่ใส่ในช่อง input
+function srfCellValue(type, raw){
+  if(raw == null || raw === '') return '';
+  if(type === 'date') return docDateIso(raw);
+  return String(raw);
+}
+// ค่าที่กรอก → ค่าที่ส่งให้ Sheets (USER_ENTERED) · คืน {ok, v} หรือ {ok:false, err}
+//   ตัวเลข: ตัดจุลภาค/ช่องว่าง · วันที่: YYYY-MM-DD · ข้อความ: ขึ้นต้น = + @ หรือเลข 0 นำหน้า (เลขกรมธรรม์) → ใส่ ' ให้เป็นข้อความ
+function srfWriteValue(type, input){
+  const s = input == null ? '' : String(input).trim();
+  if(s === '') return { ok: true, v: '' };
+  if(type === 'number'){
+    const n = Number(s.replace(/[,\s฿]/g, ''));
+    return isFinite(n) ? { ok: true, v: n } : { ok: false, err: 'number' };
+  }
+  if(type === 'date'){
+    const iso = docDateIso(s);
+    return iso ? { ok: true, v: iso } : { ok: false, err: 'date' };
+  }
+  if(/^[=+@]/.test(s) || /^0\d+$/.test(s)) return { ok: true, v: "'" + s };
+  return { ok: true, v: s };
+}
+// แถวข้อมูลสุดท้าย (index 0-based) ที่คอลัมน์กุญแจมีค่า · ไม่มี = hdrIdx
+function srfLastDataRow(values, hdrIdx, keyCols){
+  let last = hdrIdx;
+  for(let i = hdrIdx + 1; i < (values || []).length; i++){
+    const r = values[i] || [];
+    if((keyCols || []).some(c => String(r[c] == null ? '' : r[c]).trim() !== '')) last = i;
+  }
+  return last;
+}
+// หาแถวที่ตรงกับ match {ชื่อหัว: ค่า} ทุกช่อง (ไม่สนตัวพิมพ์/ช่องว่างหัวท้าย) · คืน index 0-based หรือ -1
+function srfFindRow(values, hdrIdx, header, match){
+  const H = (header || []).map(h => String(h == null ? '' : h).trim());
+  const ks = Object.keys(match || {}).filter(k => H.indexOf(k) >= 0);
+  if(!ks.length) return -1;
+  const norm = v => String(v == null ? '' : v).trim().toUpperCase();
+  for(let i = hdrIdx + 1; i < (values || []).length; i++){
+    const r = values[i] || [];
+    if(ks.every(k => norm(r[H.indexOf(k)]) === norm(match[k]))) return i;
+  }
+  return -1;
+}
+
+// จดยอดจริงหลายบัญชีในครั้งเดียว → แถวสำหรับแท็บ Reconcile
+// accounts: [{name, liab}] · inputs: {ชื่อบัญชี: ข้อความที่กรอก}
+// บัญชีหนี้ (บัตรเครดิต/สินเชื่อ) กรอกเป็น "ยอดค้าง" แบบที่แอปธนาคารแสดง → เก็บติดลบ (ชีตเก็บหนี้เป็นค่าลบ) ·
+// กรอกติดลบมา = บัตรมีเงินเกิน (จ่ายเกิน) → เก็บบวก
+// คืน {rows:[{account, actual}], errors:[ชื่อบัญชี]}
+function reconPlanRows(accounts, inputs){
+  const rows = [], errors = [];
+  (accounts || []).forEach(a => {
+    const raw = inputs && inputs[a.name];
+    if(raw == null || String(raw).trim() === '') return;
+    const w = srfWriteValue('number', raw);
+    if(!w.ok){ errors.push(a.name); return; }
+    const actual = Math.round((a.liab ? -w.v : w.v) * 100) / 100;
+    rows.push({ account: a.name, actual: actual === 0 ? 0 : actual });
+  });
+  return { rows, errors };
+}
+// เรียงค่าตามหัวตารางของแท็บ Reconcile (Date · Account · Actual_Balance · Note — ลำดับคอลัมน์ตามชีตจริง)
+function reconRowValues(header, date, account, actual, note){
+  const H = (header || []).map(h => String(h == null ? '' : h).trim().toLowerCase());
+  const at = re => H.findIndex(h => re.test(h));
+  const iD = at(/^date$/), iA = at(/^account$/), iB = at(/^actual_?balance$/), iN = at(/^note$/);
+  if(iA < 0 || iB < 0) return null;
+  const width = Math.max(iD, iA, iB, iN) + 1;
+  const row = new Array(width).fill('');
+  if(iD >= 0) row[iD] = date;
+  row[iA] = account; row[iB] = actual;
+  if(iN >= 0) row[iN] = note || '';
+  return row;
+}
+const RECON_HEADER = ['Date', 'Account', 'Actual_Balance', 'Note'];
