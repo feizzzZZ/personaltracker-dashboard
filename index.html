@@ -243,10 +243,13 @@ body{background:var(--bg);color:var(--text);font-family:var(--f-body);min-height
 /* v66 — มือถือแนวตั้ง: แถบแท็บเลื่อนแนวนอนซ่อน scrollbar → แท็บท้าย ๆ ตกขอบ ผู้ใช้ไม่รู้ว่าเลื่อนได้
    เปลี่ยนเป็นชิปห่อหลายบรรทัด (เห็นทุกแท็บเสมอ) + ติดขอบบนตอนเลื่อน สลับแท็บได้โดยไม่ต้องเลื่อนกลับ */
 @media(max-width:768px){
-  .grp-tabs{flex-wrap:wrap;overflow:visible;gap:6px;border-bottom:none;margin:0;
-    padding:calc(8px + env(safe-area-inset-top,0px)) 14px 8px;position:sticky;top:0;z-index:60;
+  /* v87 — 7 แท็บ (พอร์ต) ห่อเป็น 3 แถว ติดขอบบนกินที่ ~150px ดูลอย · แถวบนสุดชิดแถบสถานะ iPhone จึงเบลอ (ผู้ใช้ 2026-11-10)
+     → แถวเดียวเลื่อนแนวนอน · แท็บที่เลือกเลื่อนมากลางเสมอ (renderGroupTabs) · แท็บที่โผล่ครึ่งตัวบอกว่ายังเลื่อนได้ */
+  .grp-tabs{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;gap:6px;border-bottom:none;margin:0;
+    padding:10px 14px;position:sticky;top:0;z-index:60;scroll-padding-inline:14px;
     background:var(--bg);box-shadow:0 1px 0 var(--border);
     -webkit-mask-image:none!important;mask-image:none!important}
+  .grp-tab{flex:0 0 auto}
   .grp-tab{border:1px solid var(--border);border-radius:999px;padding:6px 12px;margin:0;font-size:12px;
     background:var(--bg3);line-height:1.2}
   .grp-tab.active{border-color:var(--income);color:var(--income);background:var(--bg4)}
@@ -338,7 +341,7 @@ html [style*="color: #a0c4ff"]{color:#1D4ED8!important}
 .notif-dot{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--expense);color:#FFFFFF;
   font-size:10px;font-weight:700;line-height:18px;text-align:center;font-family:var(--f-sans)}
 .notif-dot[hidden]{display:none}
-@media(max-width:768px){ .notif-bell{display:flex} .grp-tabs{padding-right:60px!important} .page .pg-hdr{padding-right:44px} }
+@media(max-width:768px){ .notif-bell{display:flex} .page .pg-hdr{padding-right:44px} }
 .nt-warn{background:var(--warn-bg);border:1px solid rgba(245,158,11,.45);border-radius:var(--r);padding:10px 14px;font-size:12px;color:var(--text);margin-bottom:12px;line-height:1.6}
 .nt-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:12px}
 .nt-cats{display:flex;gap:6px;flex-wrap:wrap}
@@ -1692,7 +1695,9 @@ kbd{font-family:var(--f-chip);font-size:10.5px;color:var(--muted);border:1px sol
   .page{padding:16px;padding-top:calc(16px + env(safe-area-inset-top,0px));padding-bottom:calc(86px + env(safe-area-inset-bottom,0px))}
   /* v76 — กฎ .grp-tabs{padding:0 32px} ด้านบน (นอก media) ทับ padding-top แบบ safe-area ของ v66 → แถวแรกของชิปติดอยู่ใต้
      แถบสถานะ iPhone (เวลา/แบต) มองไม่เห็น · ติดขอบที่ "ใต้แถบสถานะ" แทน (top: safe-area) + พื้นทึบรองแถบสถานะ (#app::before) */
-  .grp-tabs{padding:8px 60px 8px 14px;top:env(safe-area-inset-top,0px)}
+  /* v87 — ที่ว่างให้ปุ่มกระดิ่งเป็น "ขอบขวา" สีพื้น (อยู่นอกพื้นที่เลื่อน) → แท็บไม่ไหลลอดใต้กระดิ่ง · เว้นบนเพิ่มให้พ้นขอบแถบสถานะ */
+  .grp-tabs{padding:12px 14px 10px;border-right:54px solid var(--bg);top:env(safe-area-inset-top,0px)}
+  .notif-bell{width:34px;height:34px;top:calc(env(safe-area-inset-top,0px) + 10px);right:12px}
   #grp-tabs{margin-top:env(safe-area-inset-top,0px)}
   #app::before{content:'';position:fixed;left:0;right:0;top:0;height:env(safe-area-inset-top,0px);background:var(--bg);z-index:95;pointer-events:none}
   .grp-tab{border-radius:999px;padding:6px 12px;margin:0;background:transparent;border-color:var(--border)}
@@ -1882,6 +1887,60 @@ html[data-theme="midnight"] .auth-mark{color:#FAFAFA}
 .dsc-bar i{display:block;height:100%}
 .dsc-tot{text-align:right;font-variant-numeric:tabular-nums;color:var(--fg)}
 .dbf-modal{max-width:560px}
+/* ══ v87 — เมนู + แบ่งกลุ่ม · ฟอร์มแถวชีต · จดยอดจริง ══ */
+.fab-menu{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:8px;gap:6px;box-shadow:var(--pop-shadow,0 12px 32px rgba(0,0,0,.35))}
+.fab-menu .fab-opt{box-shadow:none;padding:9px 12px}
+.fab-grp{font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:6px 6px 0}
+.fab-grp:first-child{padding-top:2px}
+@media(max-width:640px){
+  .fab-menu{display:grid;grid-template-columns:1fr 1fr;width:min(420px,calc(100vw - 32px))}
+  .fab-grp{grid-column:1/-1}
+  .fab-menu .fab-opt{min-width:0;padding:10px}
+  .fab-menu .fab-opt small{display:none}
+  .fab-menu .fab-opt b{font-size:12.5px;line-height:1.25}
+}
+.srf-modal,.rc-modal{max-width:620px}
+#rc-help{margin:-4px 0 12px}
+@media(max-height:520px){   /* มือถือแนวนอน: 9 ปุ่มสองคอลัมน์ พอดีจอไม่ต้องเลื่อน */
+  .fab-menu{display:grid;grid-template-columns:1fr 1fr;width:min(460px,calc(100vw - 32px))}
+  .fab-grp{grid-column:1/-1;padding-top:0}
+  .fab-menu .fab-opt{min-width:0}
+}
+.srf-loading{padding:24px 0;color:var(--muted);font-size:13px}
+.srf-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+.srf-grid .srf-wide{grid-column:1/-1}
+@media(max-width:520px){.srf-grid{grid-template-columns:1fr}}
+.srf-sub{margin-top:14px;padding-top:12px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:6px}
+.srf-subit{display:flex;justify-content:space-between;gap:10px;text-align:left;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm,8px);
+  padding:8px 10px;color:var(--text);font:inherit;font-size:12.5px;cursor:pointer}
+.srf-subit:hover{border-color:var(--fg)}
+.srf-subit b{font-weight:600;white-space:nowrap}
+.srf-del{color:var(--expense)}
+.rc-top{display:grid;grid-template-columns:180px 1fr;gap:0 12px}
+@media(max-width:520px){.rc-top{grid-template-columns:1fr}}
+.rc-body{display:flex;flex-direction:column;gap:6px;max-height:min(52vh,460px);overflow-y:auto;margin:4px 0 10px;padding-right:2px}
+.rc-row{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) 130px 74px;gap:10px;align-items:center;
+  padding:8px 10px;border:1px solid var(--border);border-radius:var(--r-sm,8px);background:var(--bg3)}
+.rc-name b{display:block;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rc-name small,.rc-app small{display:block;font-size:10.5px;color:var(--muted);margin-top:1px}
+.rc-app{font-size:12.5px;text-align:right;font-variant-numeric:tabular-nums}
+.rc-in{margin:0;text-align:right;font-variant-numeric:tabular-nums}
+.rc-diff{font-size:11.5px;text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+.rc-diff.ok{color:var(--income)} .rc-diff.off{color:var(--debt)} .rc-diff.bad{color:var(--expense)}
+@media(max-width:520px){
+  .rc-row{grid-template-columns:minmax(0,1fr) 120px;grid-template-areas:"n i" "a d";row-gap:4px}
+  .rc-name{grid-area:n}.rc-in{grid-area:i}.rc-app{grid-area:a;text-align:left}.rc-diff{grid-area:d}
+  .rc-app small{display:inline;margin-left:4px}
+}
+.at-feedhint{margin-top:6px;font-size:11.5px;line-height:1.55;color:var(--debt);background:var(--warn-bg,rgba(245,158,11,.08));
+  border:1px solid rgba(245,158,11,.35);border-radius:var(--r-sm,8px);padding:8px 10px}
+.at-feedhint[hidden]{display:none}
+.at-feedhint .docs-ibtn{margin-top:6px}
+.ins-addbar{display:flex;gap:8px;flex-wrap:wrap;margin:-4px 0 12px}
+.ip-acts{display:flex;gap:8px;flex-wrap:wrap;padding:8px 0 2px}
+.ip-cov-it.ip-edit{cursor:pointer}
+.ip-cov-it.ip-edit:hover b{text-decoration:underline}
+
 .dbf-help{font-size:10.5px;color:var(--muted);margin-top:4px;line-height:1.5}
 .dbf-g2{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
 .dbf-g2[hidden],#dbf-body [data-f][hidden]{display:none}
@@ -4546,10 +4605,9 @@ function renderReconciliation(){
       ยอดบัญชีที่เห็นทั้งหมดคือ<strong>ผลรวมของธุรกรรมที่กรอกมือ</strong> ไม่ใช่ยอดจริง
       — ยังไม่มีอะไรจับได้ถ้ามีรายการตกหล่น<br>
       <div style="margin-top:8px;color:var(--muted2);font-size:11px">
-        สร้างชีตชื่อ <strong style="color:var(--text)">Reconcile</strong> แล้วใส่หัวคอลัมน์:
-        <code style="background:var(--bg4);padding:2px 6px;border-radius:4px;color:var(--savings)">Date · Account · Actual_Balance · Note</code><br>
-        แล้วสัปดาห์ละครั้ง เปิดแอปธนาคารจดยอดจริงลงไปหนึ่งแถวต่อบัญชี
-        (ชื่อใน <em>Account</em> ต้องตรงกับหัวคอลัมน์บัญชีในชีต Transaction)</div>
+        ${_L('สัปดาห์ละครั้ง เปิดแอปธนาคารแล้วจดยอดจริงของแต่ละบัญชี — แอปสร้างแท็บ Reconcile ในชีตให้เอง',
+             'Once a week, open your banking app and note each account\'s real balance — the app creates the Reconcile tab for you')}</div>
+      <button type="button" class="docs-ibtn" style="margin-top:10px" onclick="rcOpen()">🏦 ${_L('จดยอดจริงจากธนาคาร','Enter bank balances')}</button>
       ${orphanNote}
     </div>`;
     return r;
@@ -4587,6 +4645,7 @@ function renderReconciliation(){
         ${r.stale?`<div style="margin-left:auto;font-size:11px;color:var(--debt);text-align:right">
           ⏰ ถึงเวลา reconcile รอบใหม่<br>
           <span style="color:var(--muted2)">แนะนำสัปดาห์ละครั้ง</span></div>`:''}
+        <button type="button" class="docs-ibtn"${r.stale?'':' style="margin-left:auto"'} onclick="rcOpen()">🏦 ${_L('จดยอดจริง','Enter balances')}</button>
       </div>
       <table style="width:100%;border-collapse:collapse;font-size:12px">
         <thead><tr style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted2)">
@@ -5071,7 +5130,7 @@ const VLOG_PURGED_KEY = 'finOS_valueLogPurged_v44';
 //   ฟังก์ชันหาย  → BLOCK  (แอปคำนวณผิดแน่นอน — นี่คือสิ่งที่ guard มีไว้จับ)
 //   เลขไม่ตรง    → WARN   (แค่ลืม bump — log ไว้ ไม่รบกวนผู้ใช้)
 // ฟังก์ชันที่ต้องมีคือสัญญาจริงระหว่างสองไฟล์ ส่วนสตริงเวอร์ชันเป็นแค่ป้าย
-const EXPECTED_SHARED_BUILD = 'v86';
+const EXPECTED_SHARED_BUILD = 'v87';
 const REQUIRED_SHARED_FNS = [
   'resolvePrices', 'pipelinePricesTHB', 'parseReconcileRows',
   'computeReconciliation', 'splitBalances', 'debtVsInvest', 'buildDebtPlan',
@@ -5089,6 +5148,7 @@ const REQUIRED_SHARED_FNS = [
   'loadFundamentals', 'fetchFundamentals', 'fundOf', 'dividendCalendar', 'divFrequency',   // v66 — research/ปันผล
   'runningCostBasis', 'sellFeeToDeduct', 'movementAfter',   // v68 — ต้นทุนถือครอง · ค่าธรรมเนียมขาย · reconcile
   'reconMovement',                                       // v84 — รายการวันเดียวกันที่กรอกหลังจดยอดจริง
+  'srfColumns', 'srfWriteValue', 'srfFindRow', 'srfLastDataRow', 'reconPlanRows', 'reconRowValues',   // v87 — ฟอร์มแถวชีต · จดยอดจริง
   'notifyDecrypt', 'mergeNotifications', 'notifUnread', 'notifLocalAdd', 'notifCategory', 'b64ToBytes', 'bytesToB64',   // v67
   'loadBotPaper', 'fetchBotPaper', 'botStatus',   // v59 — หน้าบอทจำลอง
   'parseDocumentRows', 'docSearch', 'docCategoryList', 'docThumbUrl', 'docEmbedUrl', 'docSafeUrl', 'docRowValues',   // v71 — คลังเอกสาร
@@ -6872,10 +6932,12 @@ function gsParseLivePrice(rows){
   const hArr=rows[0].map(h=>h?String(h).trim():'');
   const ti=k=>hArr.indexOf(k);
   const activeIdx=ti('Active');
+  const all=new Set();   // v87 — ทุกตัวในรายการราคา (รวม Inactive) → ฟอร์มลงทุนเตือนเมื่อซื้อตัวที่ยังไม่มี
   for(let i=1;i<rows.length;i++){
     const r=rows[i]||[];
     const ticker=r[ti('Ticker')]?String(r[ti('Ticker')]).trim():'';
     if(!ticker)continue;
+    all.add(ticker.toUpperCase());
     // Skip Inactive rows
     if(activeIdx>=0&&r[activeIdx]&&String(r[activeIdx]).trim()==='Inactive')continue;
     // Guard against #N/A formula errors
@@ -6885,6 +6947,7 @@ function gsParseLivePrice(rows){
     if(cur>0)cpMap[ticker]=cur;
   }
   window._gsCurPriceMap=cpMap;
+  if(ti('Ticker')>=0) window._feedTickers=all;
   console.log('[GS] Live prices loaded:', Object.keys(cpMap).length, 'tickers');
 }
 
@@ -11921,6 +11984,9 @@ function renderInsurance(){
   if(!insPolicies.length){
     content.style.display='none';
     noData.style.display='block';
+    // v87 — เพิ่มกรมธรรม์จากแอปได้ (เดิมบอกให้ไปเพิ่มแท็บในไฟล์ Excel)
+    noData.innerHTML=`${_L('ยังไม่มีข้อมูลประกัน','No insurance data yet')}<br>
+      <button type="button" class="docs-ibtn" style="margin-top:12px" onclick="srfOpen('pol')">＋ ${_L('เพิ่มกรมธรรม์','Add a policy')}</button>`;
     return;
   }
   content.style.display='block';
@@ -12151,12 +12217,14 @@ function renderInsPolicyList(){
       <div class="ip-num" data-l="${_L('ต่ออายุ','Renewal')}">${dLbl(r)}</div>
       <div class="ip-num" data-l="${_L('มูลค่าเวนคืน','Cash value')}">${p.surrender>0?fmt(p.surrender):'<span class="ip-mute">—</span>'}</div>
       <div class="ip-chev" aria-hidden="true">${cov.length?'<svg class="ic"><use href="#i-chev"/></svg>':''}</div>
-    </div>${open?`<div class="ip-cov">${cov.length?cov.map(c=>{ const m=insCovMeta(insCovKey(c.covType));
-        return `<div class="ip-cov-it"><span>${m.icon} ${escHtml(m.label)}${c.benefit?` <small>${escHtml(c.benefit)}</small>`:''}</span>
+    </div>${open?`<div class="ip-cov">${cov.length?cov.map((c,ci)=>{ const m=insCovMeta(insCovKey(c.covType));
+        return `<div class="ip-cov-it ip-edit" role="button" tabindex="0" title="${escAttr(_L('แตะเพื่อแก้ไข','Tap to edit'))}" onclick="_srfCovEdit('${escAttr(id)}',${ci})" onkeydown="if(event.key==='Enter')_srfCovEdit('${escAttr(id)}',${ci})"><span>${m.icon} ${escHtml(m.label)}${c.benefit?` <small>${escHtml(c.benefit)}</small>`:''}</span>
           <b>${c.amount>0?fmt(c.amount)+' <small>'+escHtml(INS_UNIT_LABEL[c.unit]||c.unit||'')+'</small>':'—'}</b></div>`; }).join('')
-      :`<div class="ip-mute">${_L('ไม่มีรายการความคุ้มครองของกรมธรรม์นี้ในชีต Insurance_Coverage','No coverage rows for this policy in the Insurance_Coverage sheet')}</div>`}</div>`:''}`;
+      :`<div class="ip-mute">${_L('ไม่มีรายการความคุ้มครองของกรมธรรม์นี้ในชีต Insurance_Coverage','No coverage rows for this policy in the Insurance_Coverage sheet')}</div>`}
+      <div class="ip-acts"><button type="button" class="docs-ibtn" onclick="srfOpen('pol',{match:{Policy_ID:'${escAttr(id)}'}})">✎ ${_L('แก้ไขกรมธรรม์','Edit policy')}</button>
+        <button type="button" class="docs-ibtn" onclick="srfOpen('cov',{preset:{Policy_ID:'${escAttr(id)}'}})">＋ ${_L('เพิ่มความคุ้มครอง','Add coverage')}</button></div></div>`:''}`;
   };
-  el.innerHTML=`<div class="ip-hd"><span>${_L('กรมธรรม์','Policy')}</span><span>${_L('สถานะ','Status')}</span><span class="r">${_L('เบี้ย/ปี','Premium/yr')}</span>
+  el.innerHTML=`<div class="ins-addbar"><button type="button" class="docs-ibtn" onclick="srfOpen('pol')">＋ ${_L('เพิ่มกรมธรรม์','Add a policy')}</button></div><div class="ip-hd"><span>${_L('กรมธรรม์','Policy')}</span><span>${_L('สถานะ','Status')}</span><span class="r">${_L('เบี้ย/ปี','Premium/yr')}</span>
       <span class="r">${_L('ต่ออายุครั้งถัดไป','Next renewal')}</span><span class="r">${_L('มูลค่าเวนคืน','Cash value')}</span><span></span></div>`
     + keys.map(k=>{ const g=groups[k].sort((a,b)=>(b.p.premium||0)-(a.p.premium||0));
       const name=k==='__ended'?_L('ขาดผล / สิ้นสุดแล้ว','Lapsed / ended'):escHtml(k);
@@ -12893,6 +12961,7 @@ function atOpenForm(sheetRow){
   }
   $('at-f-status').style.color = 'var(--muted2)';
   atCalc();
+  atFeedHint();   // v87
   $('at-modal').classList.add('show');
   setTimeout(() => { const t = $(rec ? 'at-f-qty' : 'at-f-ticker'); if(t) t.focus(); }, 80);
 
@@ -12961,17 +13030,24 @@ function atCloseForm(){
    เดิมมีแค่ รายรับ-รายจ่าย กับ รายการลงทุน · ฟอร์มหนี้/เอกสารซ่อนอยู่ในหน้าของมันเอง
    จ่ายบัตร/โอน = ฟอร์มรายการเดิม (Transaction) ตั้งประเภทให้ */
 const FAB_ITEMS = [
+  {g:['เงิน','Money']},
   {k:'tx',   ic:'💵', th:'รายรับ-รายจ่าย',     en:'Income / expense',      sub:'Transaction'},
   {k:'card', ic:'💳', th:'จ่ายบัตรเครดิต',      en:'Pay a credit card',     sub:'Transaction · Debt'},
   {k:'xfer', ic:'🔁', th:'โอนระหว่างบัญชี',     en:'Transfer',              sub:'Transaction · Transfer'},
+  {k:'rc',   ic:'🏦', th:'ยอดจริงจากธนาคาร',    en:'Bank balances',         sub:'Reconcile'},           // v87
+  {g:['ลงทุน','Invest']},
   {k:'at',   ic:'📈', th:'ซื้อ / ขาย / ปันผล',  en:'Buy / sell / dividend', sub:'Asset_Tracker', need:() => !!atSheetMeta},
+  {k:'feed', ic:'🏷', th:'หุ้น / กองทุนตัวใหม่', en:'New ticker / price',    sub:'Asset_Live_Price_Feed'}, // v87
+  {g:['อื่น ๆ','Other']},
   {k:'debt', ic:'🧾', th:'หนี้ / สัญญาผ่อน',    en:'Debt / installment',    sub:'Debts'},
+  {k:'pol',  ic:'🛡', th:'ประกัน',             en:'Insurance',             sub:'Insurance_Policies'},    // v87
   {k:'doc',  ic:'📄', th:'เอกสาร',             en:'Document',              sub:'Documents'},
 ];
 function fabRender(){
   const m = document.getElementById('fab-menu'); if(!m) return;
   m.setAttribute('aria-label', _L('เพิ่มข้อมูล','Add'));
   m.innerHTML = FAB_ITEMS.map(it => {
+    if(it.g) return `<div class="fab-grp" role="presentation">${escHtml(_L(it.g[0], it.g[1]))}</div>`;
     const ok = !it.need || it.need();
     return `<button type="button" class="fab-opt" role="menuitem" data-k="${it.k}" onclick="fabPick('${it.k}')"${ok ? '' : ' disabled'}>
       <span class="fab-opt-ic" aria-hidden="true">${it.ic}</span>
@@ -13008,6 +13084,9 @@ function fabPick(kind){
   if(kind === 'at')   return atOpenForm();
   if(kind === 'debt') return dbfOpen();
   if(kind === 'doc')  return docsOpenForm();
+  if(kind === 'rc')   return rcOpen();          // v87
+  if(kind === 'feed') return srfOpen('feed');
+  if(kind === 'pol')  return srfOpen('pol');
   txOpenForm();
   if(!$('tx-modal').classList.contains('show')) return;
   if(kind === 'card'){
@@ -13021,6 +13100,399 @@ function fabPick(kind){
     txOnTypeChange();
   }
 }
+/* ══ v87 — ฟอร์มแถวชีตทั่วไป: รายการราคา (Asset_Live_Price_Feed) · กรมธรรม์ · ความคุ้มครอง ══════════════
+   ผู้ใช้จะเลิกแก้ชีตเอง (2026-11-08) · ฟอร์มอ่าน "หัวตารางจริง" ของแท็บทุกครั้งที่เปิด (ชีตของผู้ใช้อาจมีคอลัมน์เพิ่ม/สลับ)
+   ช่องที่ชีตคำนวณเอง (สูตรรายแถว/ARRAYFORMULA · atFormulaKinds) ไม่ให้กรอกและไม่เขียนทับ — สูตรรายแถวคัดลอกลงแถวใหม่ให้
+   ตัวช่วยที่ไม่แตะ DOM อยู่ใน shared.js (srfColumns · srfWriteValue · srfFindRow · srfLastDataRow) */
+const SRF_LABELS = {
+  Ticker:['หุ้น / กองทุน (Ticker)','Ticker'], Current_Price_THB:['ราคาปัจจุบัน (บาท)','Current price (THB)'], Active:['สถานะ','Status'],
+  Name:['ชื่อ','Name'], Industry:['อุตสาหกรรม','Industry'], Asset_Type:['ประเภทสินทรัพย์','Asset type'],
+  Status:['สถานะ','Status'], Policy_ID:['เลขกรมธรรม์','Policy no.'], Provider:['บริษัทประกัน','Insurer'], Plan_Name:['ชื่อแผน','Plan name'],
+  Policy_Category:['ประเภทกรมธรรม์','Category'], Annual_Premium:['เบี้ยต่อปี (บาท)','Annual premium (THB)'],
+  Renewal_Date:['วันครบรอบจ่ายเบี้ย','Renewal date'], Policy_Date:['วันเริ่มสัญญา','Start date'], Maturity_Date:['วันครบสัญญา','Maturity date'],
+  Surrender_Value:['มูลค่าเวนคืน (บาท)','Cash value (THB)'], Notes:['หมายเหตุ','Notes'],
+  Coverage_Type:['ประเภทความคุ้มครอง','Coverage type'], Coverage_Amount:['วงเงิน (บาท)','Amount (THB)'], Unit:['หน่วย','Unit'],
+  Benefit_Name:['ชื่อผลประโยชน์','Benefit'], Target_Amount:['เป้าหมาย (บาท)','Target (THB)'],
+};
+const SRF_SPECS = {
+  feed: { tab:'Asset_Live_Price_Feed', hdr:1, key:['Ticker'], unique:true, del:false, upper:['Ticker'], ic:'🏷',
+          th:'หุ้น / กองทุนในรายการราคา', en:'Price list',
+          choices:{ Active:['Active','Inactive'] }, strict:['Active'], defaults:{ Active:'Active' }, useData:['Active'],
+          note:['แอปอ่านราคาจากแท็บนี้ (ตัวที่ Inactive ไม่ถูกนับ) · ชื่อ/อุตสาหกรรมใน Asset_Tracker ดึงจากแท็บนี้',
+                'The app reads prices from this tab (Inactive rows are skipped) · Asset_Tracker looks up names/industries here'] },
+  pol:  { tab:'Insurance_Policies', hdr:2, key:['Policy_ID'], unique:true, del:true, ic:'🛡',
+          th:'กรมธรรม์ประกัน', en:'Insurance policy',
+          header:['Status','Policy_ID','Provider','Plan_Name','Policy_Category','Annual_Premium','Renewal_Date','Policy_Date','Maturity_Date','Surrender_Value','Notes'],
+          choices:{ Status:['In-Force','Lapsed','Matured','Surrendered','Cancelled'] }, defaults:{ Status:'In-Force' }, useData:['Status'] },
+  cov:  { tab:'Insurance_Coverage', hdr:2, key:['Policy_ID','Coverage_Type'], unique:false, del:true, ic:'🩺',
+          th:'ความคุ้มครอง', en:'Coverage',
+          header:['Policy_ID','Coverage_Type','Coverage_Amount','Unit','Benefit_Name','Target_Amount'],
+          choices:{ Unit:Object.keys(INS_UNIT_LABEL), Coverage_Type:Object.keys(INS_COV_META).filter(k => k !== 'Other') },
+          defaults:{ Unit:'Lump Sum' }, strict:['Policy_ID'], choicesFn:{ Policy_ID:() => (insPolicies || []).map(p => p.policyId) } },
+};
+let _srf = null;
+const _srfLbl = n => SRF_LABELS[n] ? _L(SRF_LABELS[n][0], SRF_LABELS[n][1]) : n;
+
+async function srfOpen(kind, opts){
+  opts = opts || {};
+  const spec = SRF_SPECS[kind]; if(!spec) return;
+  const $ = id => document.getElementById(id);
+  if(!GS_CONFIG.spreadsheetId || !gsAccessToken){ alert(_L('กด Sync ก่อน 1 ครั้ง','Press Sync once first')); return; }
+  _srf = {kind, spec, onSaved: opts.onSaved || null};
+  $('srf-title').textContent = spec.ic + ' ' + _L(spec.th, spec.en);
+  $('srf-cancel').textContent = _L('ยกเลิก','Cancel'); $('srf-del').textContent = '🗑 ' + _L('ลบ','Delete');
+  $('srf-body').innerHTML = `<div class="srf-loading">${escHtml(_L('กำลังอ่านแท็บ ','Reading tab ') + spec.tab)}…</div>`;
+  $('srf-msg').textContent = ''; $('srf-status').textContent = '';
+  $('srf-save').disabled = true; $('srf-del').hidden = true;
+  $('srf-modal').classList.add('show');
+  try{
+    await _srfLoad();
+    let rowIdx = null;
+    if(opts.match){
+      const i = srfFindRow(_srf.values, _srf.hdrIdx, _srf.header, opts.match);
+      if(i < 0) throw new Error(_L('หารายการนี้ในแท็บ ','Entry not found in tab ') + spec.tab + _L(' ไม่เจอ — กด Sync แล้วลองใหม่',' — press Sync and try again'));
+      rowIdx = i;
+    }
+    _srfRender(rowIdx, opts.preset || {});
+  }catch(e){
+    $('srf-body').innerHTML = `<div class="auth-msg" style="display:block">${escHtml(e.message)}</div>`;
+  }
+}
+function srfClose(){ document.getElementById('srf-modal').classList.remove('show'); _srf = null; }
+
+// อ่านแท็บสด + ตรวจคอลัมน์สูตร (แถวข้อมูลแรก + แถวสุดท้าย) → _srf.{header, values, hdrIdx, last, keyCols, fields, exists}
+async function _srfLoad(){
+  const S = _srf, spec = S.spec;
+  S.hdrIdx = spec.hdr - 1;
+  let values = [];
+  try{
+    const j = await _docsApi('/values/' + encodeURIComponent(spec.tab + '!A1:Z') + '?valueRenderOption=UNFORMATTED_VALUE&dateTimeRenderOption=SERIAL_NUMBER');
+    values = j.values || []; S.exists = true;
+  }catch(e){
+    if(/HTTP 400/.test(e.message) && spec.header){ S.exists = false; values = []; }   // ยังไม่มีแท็บ → สร้างให้ตอนบันทึก
+    else throw e;
+  }
+  let header = (values[S.hdrIdx] || []).map(h => h == null ? '' : String(h).trim());
+  S.newHeader = false;
+  if(!header.some(Boolean)){
+    if(!spec.header) throw new Error(_L(`แท็บ ${spec.tab} ไม่มีหัวตารางที่แถว ${spec.hdr}`, `The ${spec.tab} tab has no header in row ${spec.hdr}`));
+    if(values.slice(S.hdrIdx + 1).some(r => (r || []).some(c => String(c == null ? '' : c).trim())))
+      throw new Error(_L(`แท็บ ${spec.tab} มีข้อมูลแต่ไม่มีหัวตารางที่แถว ${spec.hdr} — ใส่หัวตารางก่อน`, `The ${spec.tab} tab has data but no header in row ${spec.hdr}`));
+    header = spec.header.slice(); S.newHeader = true;
+  }
+  const keyCols = spec.key.map(k => header.indexOf(k));
+  if(keyCols.some(c => c < 0))
+    throw new Error(_L(`หาคอลัมน์ ${spec.key.join(', ')} ในแท็บ ${spec.tab} ไม่เจอ`, `Column ${spec.key.join(', ')} not found in ${spec.tab}`));
+  S.header = header; S.values = values; S.keyCols = keyCols;
+  S.last = srfLastDataRow(values, S.hdrIdx, keyCols);
+  let kinds = {};
+  S.copySrc = {};
+  if(S.exists && S.last > S.hdrIdx){
+    const r1 = S.hdrIdx + 2, rL = S.last + 1;
+    const j = await _docsApi('/values:batchGet?valueRenderOption=FORMULA&' + [`${spec.tab}!A${r1}:Z${r1}`, `${spec.tab}!A${rL}:Z${rL}`]
+      .map(r => 'ranges=' + encodeURIComponent(r)).join('&'));
+    const vr = j.valueRanges || [];
+    const f1 = ((vr[0] && vr[0].values) || [])[0] || [], fL = ((vr[1] && vr[1].values) || [])[0] || [];
+    kinds = atFormulaKinds(f1, fL);
+    Object.keys(kinds).forEach(c => { if(typeof kinds[c] === 'string') S.copySrc[c] = S.last; });
+    // สูตรรายแถวที่แถวล่าสุดถูกพิมพ์ค่าทับไว้ → ยังนับเป็นคอลัมน์สูตร และคัดลอกจากแถวแรกแทน
+    f1.forEach((v, c) => { if(kinds[c] == null && typeof v === 'string' && v.charAt(0) === '='){ kinds[c] = v; S.copySrc[c] = S.hdrIdx + 1; } });
+  }
+  S.kinds = kinds;
+  S.fields = srfColumns(header, kinds);
+}
+const _srfKeyLbl = (S, r) => S.keyCols.map(c => String((r || [])[c] == null ? '' : r[c]).trim()).filter(Boolean).join(' · ');
+
+function _srfRender(rowIdx, preset){
+  const S = _srf, spec = S.spec, $ = id => document.getElementById(id);
+  S.rowIdx = rowIdx;
+  const row = rowIdx != null ? (S.values[rowIdx] || []) : [];
+  const data = S.values.slice(S.hdrIdx + 1);
+  const distinct = col => { const m = new Map();
+    data.forEach(r => { const v = r && r[col]; if(v == null || v === '') return; const s = String(v).trim(); if(s) m.set(s, (m.get(s) || 0) + 1); });
+    return [...m.entries()].sort((a, b) => b[1] - a[1]).map(e => e[0]); };
+  const rows = []; for(let i = S.hdrIdx + 1; i <= S.last; i++) if(_srfKeyLbl(S, S.values[i])) rows.push(i);
+  let html = `<div class="gs-field"><div class="gs-label">${_L('รายการ','Entry')}</div>
+    <select id="srf-pick" class="gs-input" onchange="_srfRender(this.value===''?null:+this.value,{})">
+      <option value="">${_L('＋ เพิ่มใหม่','＋ Add new')}</option>
+      ${rows.map(i => `<option value="${i}"${i === rowIdx ? ' selected' : ''}>${escHtml(_srfKeyLbl(S, S.values[i]))}</option>`).join('')}</select></div>`;
+  const calc = [];
+  html += '<div class="srf-grid">';
+  S.fields.forEach(f => {
+    if(f.formula){ calc.push(f.name); return; }
+    const id = 'srf-f-' + f.col, req = spec.key.includes(f.name);
+    let val = rowIdx != null ? srfCellValue(f.type, row[f.col]) : (preset[f.name] != null ? String(preset[f.name]) : '');
+    if(rowIdx == null && val === '' && spec.defaults && spec.defaults[f.name] != null)
+      val = (spec.useData || []).includes(f.name) ? (distinct(f.col)[0] || spec.defaults[f.name]) : spec.defaults[f.name];   // หน่วยความคุ้มครองห้ามเดาจากแถวอื่น
+    const fromFn = spec.choicesFn && spec.choicesFn[f.name] ? spec.choicesFn[f.name]() : null;
+    const opts = [...new Set([...(fromFn || []), ...((spec.choices || {})[f.name] || []), ...(f.type === 'text' ? distinct(f.col) : [])].map(String).filter(Boolean))];
+    const wide = /note|name|benefit|plan/i.test(f.name) ? ' srf-wide' : '';
+    const lab = `<div class="gs-label">${escHtml(_srfLbl(f.name))}${req ? ' *' : ''}</div>`;
+    let inp;
+    if((spec.strict || []).includes(f.name)){
+      const list = opts.includes(val) || !val ? opts : [val].concat(opts);
+      inp = `<select id="${id}" class="gs-input">${req && !val ? `<option value="">—</option>` : ''}${list.map(o => `<option${o === val ? ' selected' : ''}>${escHtml(o)}</option>`).join('')}</select>`;
+    } else if(f.type === 'date'){
+      inp = `<input id="${id}" class="gs-input" type="date" value="${escAttr(val)}">`;
+    } else if(f.type === 'number'){
+      inp = `<input id="${id}" class="gs-input" type="text" inputmode="decimal" value="${escAttr(val)}" placeholder="0.00" autocomplete="off">`;
+    } else {
+      const dl = opts.length && opts.length <= 60 ? `<datalist id="${id}-dl">${opts.map(o => `<option value="${escAttr(o)}">`).join('')}</datalist>` : '';
+      inp = `<input id="${id}" class="gs-input" type="text" value="${escAttr(val)}"${dl ? ` list="${id}-dl"` : ''} autocomplete="off"${(spec.upper || []).includes(f.name) ? ' style="text-transform:uppercase"' : ''}>${dl}`;
+    }
+    html += `<div class="gs-field${wide}">${lab}${inp}</div>`;
+  });
+  html += '</div>';
+  if(calc.length) html += `<div class="dbf-help">${_L('ชีตคำนวณเอง (ไม่ต้องกรอก · ไม่เขียนทับ): ','Calculated by the sheet (not editable): ')}${calc.map(escHtml).join(' · ')}</div>`;
+  if(spec.note) html += `<div class="dbf-help">${_L(spec.note[0], spec.note[1])}</div>`;
+  if(!S.exists) html += `<div class="dbf-help">${_L(`ยังไม่มีแท็บ ${spec.tab} — จะสร้างให้ตอนบันทึก`, `No ${spec.tab} tab yet — it will be created on save`)}</div>`;
+  // กรมธรรม์ที่เปิดแก้: ความคุ้มครองของเล่มนี้ (แก้/เพิ่มต่อได้เลย)
+  if(S.kind === 'pol' && rowIdx != null){
+    const pid = String(row[S.header.indexOf('Policy_ID')] == null ? '' : row[S.header.indexOf('Policy_ID')]).trim();
+    const cov = (insCoverage || []).filter(c => c.policyId === pid);
+    html += `<div class="srf-sub"><div class="gs-label">${_L('ความคุ้มครองของเล่มนี้','Coverage of this policy')}</div>
+      ${cov.map((c, i) => `<button type="button" class="srf-subit" data-i="${i}" onclick="_srfCovEdit('${escAttr(pid)}',${i})">${escHtml(insCovMeta(insCovKey(c.covType)).icon + ' ' + c.covType)}${c.benefit ? ' · ' + escHtml(c.benefit) : ''}<b>${c.amount > 0 ? fmt(c.amount) : '—'}</b></button>`).join('')
+        || `<div class="ip-mute">${_L('ยังไม่มี','None yet')}</div>`}
+      <button type="button" class="docs-ibtn" onclick="srfOpen('cov',{preset:{Policy_ID:'${escAttr(pid)}'}})">＋ ${_L('เพิ่มความคุ้มครอง','Add coverage')}</button></div>`;
+  }
+  $('srf-body').innerHTML = html;
+  $('srf-save').disabled = false;
+  $('srf-save').textContent = rowIdx != null ? _L('บันทึกการแก้ไข','Save changes') : _L('บันทึกลงชีต','Save to sheet');
+  $('srf-del').hidden = !(spec.del && rowIdx != null);
+  $('srf-msg').textContent = '';
+  $('srf-status').textContent = rowIdx != null ? _L(`จะเขียนทับแถว ${rowIdx + 1} ในแท็บ ${spec.tab}`, `Overwrites row ${rowIdx + 1} of ${spec.tab}`)
+                                               : _L(`จะเพิ่มต่อท้ายแท็บ ${spec.tab}`, `Appended to the ${spec.tab} tab`);
+  const first = $('srf-body').querySelector(rowIdx != null ? '.srf-grid .gs-input' : '.srf-grid .gs-input');
+  if(first) setTimeout(() => first.focus({preventScroll:true}), 30);
+}
+function _srfCovEdit(pid, i){
+  const c = (insCoverage || []).filter(x => x.policyId === pid)[i]; if(!c) return;
+  srfOpen('cov', {match:{Policy_ID: pid, Coverage_Type: c.covType, Benefit_Name: c.benefit || ''}});
+}
+async function _srfGid(tab){
+  const j = await _docsApi('?fields=' + encodeURIComponent('sheets(properties(sheetId,title))'));
+  const sh = (j.sheets || []).find(s => s.properties && s.properties.title === tab);
+  if(!sh) throw new Error(_L('ไม่พบแท็บ ','Tab not found: ') + tab);
+  return sh.properties.sheetId;
+}
+async function srfSave(){
+  const S = _srf; if(!S || !S.fields) return;
+  const spec = S.spec, $ = id => document.getElementById(id);
+  const say = (m, c) => { const e = $('srf-msg'); e.textContent = m; e.style.color = c || 'var(--expense)'; e.style.display = m ? 'block' : 'none'; };
+  // ค่าที่กรอก (อ้างด้วยชื่อหัวคอลัมน์ — อ่านแท็บซ้ำก่อนเขียน คอลัมน์อาจเลื่อน)
+  const vals = {};
+  for(const f of S.fields){
+    if(f.formula) continue;
+    const el = $('srf-f-' + f.col); if(!el) continue;
+    let raw = el.value; if((spec.upper || []).includes(f.name)) raw = raw.trim().toUpperCase();
+    const w = srfWriteValue(f.type, raw);
+    if(!w.ok) return say(_L(`"${_srfLbl(f.name)}" ต้องเป็น${f.type === 'date' ? 'วันที่' : 'ตัวเลข'}`, `"${_srfLbl(f.name)}" must be a ${f.type}`));
+    vals[f.name] = {v: w.v, raw: String(raw).trim()};
+  }
+  const miss = spec.key.find(k => !vals[k] || !vals[k].raw);
+  if(miss) return say(_L(`ใส่ "${_srfLbl(miss)}" ก่อน`, `Enter "${_srfLbl(miss)}" first`));
+  const btn = $('srf-save'); btn.disabled = true; $('srf-del').disabled = true;
+  say(_L('กำลังบันทึก…','Saving…'), 'var(--muted2)');
+  try{
+    if(!gsTokenValid()) throw new Error(_L('Session หมดอายุ — กด Sync เพื่อเข้าสู่ระบบใหม่','Session expired — press Sync to sign in again'));
+    const editKeys = S.rowIdx != null ? spec.key.map(k => String((S.values[S.rowIdx] || [])[S.header.indexOf(k)] == null ? '' : S.values[S.rowIdx][S.header.indexOf(k)]).trim()) : null;
+    const editIdx = S.rowIdx;
+    await _srfLoad();                                   // อ่านสดอีกรอบ — กันชีตเปลี่ยนระหว่างเปิดฟอร์ม
+    S.rowIdx = editIdx;
+    if(editIdx != null){
+      const now = spec.key.map(k => String((S.values[editIdx] || [])[S.header.indexOf(k)] == null ? '' : S.values[editIdx][S.header.indexOf(k)]).trim());
+      if(now.join('\u0001') !== editKeys.join('\u0001'))
+        throw new Error(_L(`แถว ${editIdx + 1} ในแท็บ ${spec.tab} เปลี่ยนไปแล้ว — ยกเลิกเพื่อไม่ให้เขียนทับรายการอื่น · กด Sync แล้วลองใหม่`,
+                           `Row ${editIdx + 1} of ${spec.tab} changed meanwhile — cancelled · press Sync and try again`));
+    }
+    if(spec.unique){
+      const m = {}; spec.key.forEach(k => { m[k] = vals[k].raw; });
+      const hit = srfFindRow(S.values, S.hdrIdx, S.header, m);
+      if(hit >= 0 && hit !== editIdx)
+        throw new Error(_L(`${spec.key.map(k => vals[k].raw).join(' · ')} มีอยู่แล้ว (แถว ${hit + 1}) — เลือกรายการนั้นในช่อง "รายการ" เพื่อแก้ไข`,
+                           `${spec.key.map(k => vals[k].raw).join(' · ')} already exists (row ${hit + 1}) — pick it under "Entry" to edit`));
+    }
+    // แท็บ/หัวตารางยังไม่มี → สร้าง
+    if(!S.exists){
+      await _docsApi(':batchUpdate', {method:'POST', body:JSON.stringify({requests:[{addSheet:{properties:{title:spec.tab, gridProperties:{frozenRowCount:spec.hdr}}}}]})});
+      S.exists = true; S.newHeader = true;
+    }
+    if(S.newHeader){
+      const rows = []; for(let i = 0; i < spec.hdr - 1; i++) rows.push(i === 0 ? [spec.tab] : ['']);
+      rows.push(S.header);
+      await _docsApi('/values/' + encodeURIComponent(spec.tab + '!A1') + '?valueInputOption=RAW', {method:'PUT', body:JSON.stringify({values:rows})});
+      S.newHeader = false;
+    }
+    const inputCols = S.fields.filter(f => !f.formula);
+    let rowNum;
+    if(editIdx != null) rowNum = editIdx + 1;
+    else {
+      // แถวว่างแรกหลังรายการสุดท้าย (เช็คเฉพาะคอลัมน์ที่กรอก — คอลัมน์สูตรมีค่าลงไปไกลกว่าข้อมูลจริง)
+      let i = S.last + 1;
+      while(i < S.values.length && inputCols.some(f => String((S.values[i] || [])[f.col] == null ? '' : S.values[i][f.col]).trim() !== '')) i++;
+      rowNum = i + 1;
+      const rowF = Object.keys(S.kinds || {}).map(Number).filter(c => typeof S.kinds[c] === 'string');
+      if(rowF.length && S.last > S.hdrIdx){
+        const gid = await _srfGid(spec.tab);
+        await _docsApi(':batchUpdate', {method:'POST', body:JSON.stringify({requests: rowF.map(c => ({copyPaste:{
+          source:{sheetId:gid, startRowIndex:S.copySrc[c], endRowIndex:S.copySrc[c] + 1, startColumnIndex:c, endColumnIndex:c + 1},
+          destination:{sheetId:gid, startRowIndex:rowNum - 1, endRowIndex:rowNum, startColumnIndex:c, endColumnIndex:c + 1},
+          pasteType:'PASTE_FORMULA'}}))})});
+      }
+    }
+    // แก้แถวเดิม: ช่องที่ "แถวนั้น" เป็นสูตรอยู่ ห้ามเขียนทับ แม้คอลัมน์โดยรวมจะดูเป็นช่องกรอก
+    let rowFormula = [];
+    if(editIdx != null){
+      const j = await _docsApi('/values/' + encodeURIComponent(`${spec.tab}!A${rowNum}:Z${rowNum}`) + '?valueRenderOption=FORMULA');
+      rowFormula = ((j.values || [])[0] || []).map(v => typeof v === 'string' && v.charAt(0) === '=');
+    }
+    const data = [];
+    inputCols.forEach(f => {
+      const x = vals[f.name]; if(!x || rowFormula[f.col]) return;
+      if(editIdx == null && x.v === '') return;          // แถวใหม่: ไม่เขียนช่องว่าง
+      data.push({range:`${spec.tab}!${txColLetter(f.col)}${rowNum}`, values:[[x.v]]});
+    });
+    if(data.length) await _docsApi('/values:batchUpdate', {method:'POST', body:JSON.stringify({valueInputOption:'USER_ENTERED', data})});
+    console.log('[srf]', spec.tab, editIdx != null ? 'แก้แถว' : 'เพิ่มแถว', rowNum, '·', data.length, 'ช่อง');
+    say(_L(`บันทึกแถว ${rowNum} แล้ว — กำลังดึงข้อมูลใหม่`, `Saved row ${rowNum} — refreshing`), 'var(--income)');
+    const cb = S.onSaved, saved = {kind:S.kind, row:rowNum, keys:spec.key.map(k => vals[k].raw)};
+    try{ await gsSync(); }catch(e){}
+    srfClose();
+    if(cb) try{ cb(saved); }catch(e){}
+  }catch(e){
+    say(e.message);
+  }
+  btn.disabled = false; $('srf-del').disabled = false;
+}
+async function srfDelete(){
+  const S = _srf; if(!S || S.rowIdx == null || !S.spec.del) return;
+  const spec = S.spec, $ = id => document.getElementById(id);
+  const keys = _srfKeyLbl(S, S.values[S.rowIdx]);
+  if(!confirm(_L(`ลบ "${keys}" ออกจากแท็บ ${spec.tab} ถาวร?\n\nกู้คืนได้ที่ File → Version history ใน Google Sheets`,
+                 `Delete "${keys}" from ${spec.tab}?\n\nRecover via File → Version history in Google Sheets`))) return;
+  const say = (m, c) => { const e = $('srf-msg'); e.textContent = m; e.style.color = c || 'var(--expense)'; e.style.display = 'block'; };
+  $('srf-save').disabled = true; $('srf-del').disabled = true;
+  try{
+    const idx = S.rowIdx, before = keys;
+    await _srfLoad(); S.rowIdx = idx;
+    if(_srfKeyLbl(S, S.values[idx]) !== before) throw new Error(_L('แถวเปลี่ยนไปแล้ว — กด Sync แล้วลองใหม่','The row changed — press Sync and try again'));
+    const gid = await _srfGid(spec.tab);
+    await _docsApi(':batchUpdate', {method:'POST', body:JSON.stringify({requests:[{deleteDimension:{range:{sheetId:gid, dimension:'ROWS', startIndex:idx, endIndex:idx + 1}}}]})});
+    try{ await gsSync(); }catch(e){}
+    srfClose();
+  }catch(e){ say(e.message); }
+  $('srf-save').disabled = false; $('srf-del').disabled = false;
+}
+
+/* ══ v87 — จดยอดจริงจากแอปธนาคาร (แท็บ Reconcile) หลายบัญชีในครั้งเดียว ══════════════════
+   ผู้ใช้จดยอดทุกบัญชีเป็นรอบ (เช่นต้นเดือน) · บัตรเครดิต/สินเชื่อกรอก "ยอดค้าง" แบบที่แอปธนาคารแสดง แล้วเก็บติดลบ (reconPlanRows)
+   "ในแอป" = ยอดในชีต ณ สิ้นวันที่เลือก (Current Balance − รายการหลังวันนั้น) · ต่างเกิน ±1 บาท → ขึ้นสีให้เห็นทันทีก่อนบันทึก */
+function _rcAccts(){
+  return (bankBals || []).map(b => ({name:b.name, bal:b.balance,
+    liab: isCreditAccount(b) || /loan|สินเชื่อ|เงินกู้/i.test(String(b.type || ''))}));
+}
+function rcOpen(){
+  if(!(bankBals || []).length){ alert(_L('กด Sync ก่อน 1 ครั้ง','Press Sync once first')); return; }
+  const $ = id => document.getElementById(id), d = new Date();
+  $('rc-f-date').value = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  $('rc-f-note').value = ''; $('rc-msg').textContent = ''; $('rc-msg').style.display = 'none';
+  $('rc-title').textContent = '🏦 ' + _L('ยอดจริงจากแอปธนาคาร','Bank balances');
+  $('rc-help').textContent = _L('เปิดแอปธนาคารแล้วกรอกยอดของบัญชีที่เช็ค (ไม่ต้องครบทุกบัญชี) · บัตรเครดิต/สินเชื่อกรอก "ยอดค้าง" เป็นบวก · บันทึกลงแท็บ Reconcile',
+    'Open your banking app and enter the balances you checked (any subset) · for cards/loans enter the amount owed as a positive number · saved to the Reconcile tab');
+  $('rc-l-date').textContent = _L('ยอด ณ วันที่','Balance as of'); $('rc-l-note').textContent = _L('หมายเหตุ (ไม่บังคับ)','Note (optional)');
+  $('rc-save').textContent = _L('บันทึกลงชีต','Save to sheet'); $('rc-cancel').textContent = _L('ยกเลิก','Cancel');
+  $('rc-save').disabled = false;
+  _rcRender({});
+  $('rc-modal').classList.add('show');
+  setTimeout(() => { const i = document.querySelector('#rc-body .rc-in'); if(i) i.focus({preventScroll:true}); }, 60);
+}
+function rcClose(){ document.getElementById('rc-modal').classList.remove('show'); }
+function _rcInputs(){
+  const o = {}; document.querySelectorAll('#rc-body .rc-row').forEach(r => { o[r.dataset.n] = r.querySelector('.rc-in').value; }); return o;
+}
+function _rcRender(keep){
+  const date = document.getElementById('rc-f-date').value;
+  document.getElementById('rc-body').innerHTML = _rcAccts().map(a => {
+    const at = Math.round((a.bal - movementAfter(txRows, a.name, date)) * 100) / 100;   // ยอดในชีต ณ สิ้นวันที่เลือก
+    const last = reconMap && reconMap[a.name];
+    const show = a.liab ? -at : at;
+    return `<div class="rc-row" data-n="${escAttr(a.name)}" data-at="${at}" data-liab="${a.liab ? 1 : 0}">
+      <div class="rc-name"><b>${escHtml(a.name)}</b><small>${last ? _L('จดล่าสุด ','last ') + escHtml(last.date || '') : _L('ยังไม่เคยจด','never checked')}</small></div>
+      <div class="rc-app">${fmt(show)}<small>${a.liab ? _L('ยอดค้างในแอป','owed (app)') : _L('ในแอป','in app')}</small></div>
+      <input class="gs-input rc-in" type="text" inputmode="decimal" autocomplete="off" aria-label="${escAttr(a.name)}"
+        placeholder="${escAttr(a.liab ? _L('ยอดค้าง','owed') : _L('ยอดจริง','actual'))}" value="${escAttr((keep || {})[a.name] || '')}" oninput="_rcDiff(this)">
+      <div class="rc-diff"></div></div>`;
+  }).join('');
+  document.querySelectorAll('#rc-body .rc-in').forEach(_rcDiff);
+}
+function _rcDiff(inp){
+  const row = inp.closest('.rc-row'), out = row.querySelector('.rc-diff');
+  const w = srfWriteValue('number', inp.value);
+  if(!inp.value.trim()){ out.textContent = ''; out.className = 'rc-diff'; return; }
+  if(!w.ok){ out.textContent = _L('ตัวเลข?','number?'); out.className = 'rc-diff bad'; return; }
+  const liab = row.dataset.liab === '1', actual = liab ? -w.v : w.v, diff = Math.round((actual - +row.dataset.at) * 100) / 100;
+  const ok = Math.abs(diff) <= 1;
+  // บัตร: ยอดค้างมากกว่าในแอป = ผลต่างติดลบ (เงินจริงน้อยกว่า) — แสดงเป็นมุมเดียวกับตาราง "เทียบยอด"
+  out.textContent = ok ? '✓ ' + _L('ตรง','match') : fmtSign(diff);
+  out.className = 'rc-diff ' + (ok ? 'ok' : 'off');
+}
+async function rcSave(){
+  const $ = id => document.getElementById(id);
+  const say = (m, c) => { const e = $('rc-msg'); e.textContent = m; e.style.color = c || 'var(--expense)'; e.style.display = m ? 'block' : 'none'; };
+  const date = $('rc-f-date').value;
+  if(!date) return say(_L('ใส่วันที่ก่อน','Enter a date first'));
+  const plan = reconPlanRows(_rcAccts(), _rcInputs());
+  if(plan.errors.length) return say(_L('ตัวเลขไม่ถูกต้อง: ','Not a number: ') + plan.errors.join(', '));
+  if(!plan.rows.length) return say(_L('กรอกยอดจริงอย่างน้อย 1 บัญชี','Enter at least one balance'));
+  $('rc-save').disabled = true; say(_L('กำลังบันทึก…','Saving…'), 'var(--muted2)');
+  try{
+    if(!gsTokenValid()) throw new Error(_L('Session หมดอายุ — กด Sync เพื่อเข้าสู่ระบบใหม่','Session expired — press Sync to sign in again'));
+    let header = null;
+    try{ header = ((await _docsApi('/values/' + encodeURIComponent('Reconcile!A1:Z1'))).values || [])[0] || []; }
+    catch(e){
+      if(!/HTTP 400/.test(e.message)) throw e;
+      await _docsApi(':batchUpdate', {method:'POST', body:JSON.stringify({requests:[{addSheet:{properties:{title:'Reconcile', gridProperties:{frozenRowCount:1}}}}]})});
+      header = [];
+    }
+    if(!header.some(h => String(h).trim())){
+      header = RECON_HEADER.slice();
+      await _docsApi('/values/' + encodeURIComponent('Reconcile!A1') + '?valueInputOption=RAW', {method:'PUT', body:JSON.stringify({values:[header]})});
+    }
+    const note = $('rc-f-note').value.trim();
+    const values = plan.rows.map(r => reconRowValues(header, date, r.account, r.actual, note));
+    if(values.some(v => !v)) throw new Error(_L('แท็บ Reconcile ไม่มีคอลัมน์ Account / Actual_Balance ที่แถว 1','The Reconcile tab has no Account / Actual_Balance header in row 1'));
+    await _docsApi('/values/' + encodeURIComponent('Reconcile!A1') + ':append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS',
+      {method:'POST', body:JSON.stringify({values})});
+    say(_L(`บันทึก ${values.length} บัญชีแล้ว — กำลังดึงข้อมูลใหม่`, `Saved ${values.length} account(s) — refreshing`), 'var(--income)');
+    try{ await gsSync(); }catch(e){}
+    rcClose();
+  }catch(e){ say(e.message); }
+  $('rc-save').disabled = false;
+}
+
+/* ══ v87 — ฟอร์มลงทุน: ตัวใหม่ที่ยังไม่อยู่ในรายการราคา ══════════════════════════════
+   Asset_Tracker ดึงชื่อ/อุตสาหกรรมจาก Asset_Live_Price_Feed (XLOOKUP) และแอปดึงราคาจากแท็บเดียวกัน
+   ซื้อตัวใหม่โดยไม่เพิ่มในรายการราคา = ชื่อ/อุตสาหกรรมเป็น #N/A และพอร์ตไม่มีราคาตัวนั้น → เตือน + ปุ่มเพิ่ม (ฟอร์มซ้อนบนฟอร์มลงทุน) */
+function atFeedHint(){
+  const $ = id => document.getElementById(id), el = $('at-f-feedhint'); if(!el) return;
+  const t = ($('at-f-ticker').value || '').trim().toUpperCase();
+  const known = window._feedTickers;
+  if(!t || !known || known.has(t)){ el.hidden = true; el.innerHTML = ''; el.dataset.t = ''; return; }
+  // วาดใหม่เฉพาะเมื่อ ticker เปลี่ยน — กดปุ่มแล้วช่อง ticker เสีย focus → change → ถ้าวาดใหม่ ปุ่มที่กดจะถูกแทนก่อนเกิด click (กดแล้วไม่เกิดอะไร)
+  if(!el.hidden && el.dataset.t === t) return;
+  el.dataset.t = t;
+  el.hidden = false;
+  el.innerHTML = `⚠ ${_L(`<b>${escHtml(t)}</b> ยังไม่อยู่ในรายการราคา (Asset_Live_Price_Feed) — ชื่อ อุตสาหกรรม และราคาจะว่าง`,
+      `<b>${escHtml(t)}</b> is not in the price list (Asset_Live_Price_Feed) — name, industry and price will be blank`)}
+    <button type="button" class="docs-ibtn" onclick="atFeedAdd()">＋ ${_L('เพิ่มในรายการราคา','Add to price list')}</button>`;
+}
+function atFeedAdd(){
+  const $ = id => document.getElementById(id);
+  const t = ($('at-f-ticker').value || '').trim().toUpperCase();
+  // เติมให้แค่ Ticker — ช่องอื่นของฟอร์มลงทุนอาจค้างค่าของตัวที่พิมพ์ก่อนหน้า (เช่น อุตสาหกรรมของ KBANK) → ข้อมูลผิดติดไปในรายการราคา
+  srfOpen('feed', {preset:{Ticker:t}, onSaved: () => { if(window._feedTickers) window._feedTickers.add(t); atFeedHint(); }});
+}
+
 document.addEventListener('keydown', e => { if(e.key === 'Escape') fabClose(); });
 /* v73 — Esc ปิดฟอร์มเพิ่ม/แก้รายการ (ธุรกรรม · ลงทุน) เหมือนฟอร์มเอกสาร
    ไม่ปิดระหว่างกำลังบันทึก (ปุ่มบันทึกถูก disable) — กันผู้ใช้เข้าใจว่ายกเลิกแล้วแต่ชีตยังถูกเขียน */
@@ -13369,8 +13841,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     <div class="gs-field">
       <div class="gs-label">Ticker</div>
-      <input id="at-f-ticker" class="gs-input" list="at-ticker-list" placeholder="เช่น CPALL, AAPL, BTC" autocomplete="off">
+      <input id="at-f-ticker" class="gs-input" list="at-ticker-list" placeholder="เช่น CPALL, AAPL, BTC" autocomplete="off" oninput="atFeedHint()" onchange="atFeedHint()">
       <datalist id="at-ticker-list"></datalist>
+      <div class="at-feedhint" id="at-f-feedhint" role="status" hidden></div>
     </div>
 
     <div class="at-g3">
@@ -13590,6 +14063,40 @@ document.addEventListener('DOMContentLoaded', () => {
     <div class="gs-modal-actions">
       <button class="gs-save-btn" id="doc-f-save" onclick="docsSubmitForm()">บันทึกลงชีต</button>
       <button class="gs-cancel-btn" onclick="docsCloseForm()">ยกเลิก</button>
+    </div>
+  </div>
+</div>
+<!-- v87 — ฟอร์มแถวชีตทั่วไป (รายการราคา · กรมธรรม์ · ความคุ้มครอง) · อยู่หลัง at-modal จึงซ้อนบนฟอร์มลงทุนได้ -->
+<div id="srf-modal" class="gs-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="srf-title">
+  <div class="gs-modal acct-modal srf-modal">
+    <div class="gs-modal-close" onclick="srfClose()" role="button" aria-label="Close">✕</div>
+    <div class="gs-modal-title" id="srf-title"></div>
+    <div id="srf-body"></div>
+    <div class="auth-msg" id="srf-msg" role="alert"></div>
+    <div class="gs-status-row"><span id="srf-status"></span></div>
+    <div class="gs-modal-actions">
+      <button class="gs-save-btn" id="srf-save" onclick="srfSave()"></button>
+      <button class="gs-cancel-btn srf-del" id="srf-del" onclick="srfDelete()" hidden>🗑</button>
+      <button class="gs-cancel-btn" id="srf-cancel" onclick="srfClose()">✕</button>
+    </div>
+  </div>
+</div>
+
+<!-- v87 — จดยอดจริงจากแอปธนาคาร (แท็บ Reconcile) -->
+<div id="rc-modal" class="gs-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="rc-title">
+  <div class="gs-modal acct-modal rc-modal">
+    <div class="gs-modal-close" onclick="rcClose()" role="button" aria-label="Close">✕</div>
+    <div class="gs-modal-title" id="rc-title"></div>
+    <div class="dbf-help" id="rc-help"></div>
+    <div class="rc-top">
+      <div class="gs-field"><div class="gs-label" id="rc-l-date"></div><input id="rc-f-date" class="gs-input" type="date" onchange="_rcRender(_rcInputs())"></div>
+      <div class="gs-field"><div class="gs-label" id="rc-l-note"></div><input id="rc-f-note" class="gs-input" type="text" autocomplete="off"></div>
+    </div>
+    <div id="rc-body" class="rc-body"></div>
+    <div class="auth-msg" id="rc-msg" role="alert"></div>
+    <div class="gs-modal-actions">
+      <button class="gs-save-btn" id="rc-save" onclick="rcSave()"></button>
+      <button class="gs-cancel-btn" id="rc-cancel" onclick="rcClose()"></button>
     </div>
   </div>
 </div>
