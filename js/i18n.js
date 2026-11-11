@@ -282,7 +282,7 @@ const DICT = {
   'พิมพ์ชื่อหน้า หรือคำสั่ง เช่น งบ, หนี้, sync':'Type a page or action, e.g. budget, debt, sync',
   'บัญชีผู้ใช้':'Account', 'แจ้งเตือน':'Notifications', 'ล็อก':'Lock', 'ล็อกตอนนี้':'Lock now', 'บัญชีและความปลอดภัย':'Account & security',
   'ตั้งค่า Google Sheets':'Google Sheets settings', 'ออกจากระบบ':'Sign out', 'ธีม':'Theme', 'ภาษา':'Language',
-  'ตั้งค่า':'Settings', 'ตั้งค่าการแจ้งเตือน':'Notification settings', 'รหัสผ่านและล็อกอัตโนมัติ':'Password & auto-lock',
+  'ตั้งค่า':'Settings', 'ตั้งค่าการแจ้งเตือน':'Notification settings', 'ตั้งค่าแจ้งเตือน':'Notification settings', 'เมนูอื่น ๆ':'More menus', 'รหัสผ่านและล็อกอัตโนมัติ':'Password & auto-lock',
   'คาดการณ์ 12 เดือนข้างหน้า':'Next 12 months (forecast)',
   'ผลตอบแทนจริง':'True performance',
   // ── v75 — บอทเทรด ──

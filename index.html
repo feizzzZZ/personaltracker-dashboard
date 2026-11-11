@@ -1905,6 +1905,10 @@ html[data-theme="midnight"] .auth-mark{color:#FAFAFA}
 }
 .srf-modal,.rc-modal{max-width:620px}
 #rc-help{margin:-4px 0 12px}
+/* v89 — มือถือ: เมนู "อื่น ๆ" แสดงเฉพาะกลุ่มที่ไม่อยู่ในแถบล่าง (ภาพรวม · เงิน · พอร์ต · ตลาด อยู่ในแถบล่างแล้ว) */
+@media(max-width:768px){ .sidebar .sb-dup-bnav{display:none} }
+/* v89 — แถบชวนตั้งรหัสผ่าน (มือถือ: ลอยเหนือแถบล่าง) ทับปุ่มท้ายเมนู "อื่น ๆ" (ตั้งค่าแจ้งเตือน · PDF · Backup) จนกดไม่ได้ → ซ่อนระหว่างเปิดเมนู */
+body:has(.sidebar.open) .lock-nudge{display:none!important}
 .fab-hint{font-size:12px;color:var(--muted);line-height:1.6}
 .fab-hint b{color:var(--fg);font-weight:600}
 .fab-hint .fab-hint-plus{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;
@@ -2238,7 +2242,8 @@ body:has(.gs-modal-overlay.show) .tx-fab{display:none!important}  /* JS ตั�
       <!-- v56 — 19 เมนูเดิมยุบเป็น 9 · เรื่องย่อยของคำถามเดียวกันอยู่เป็นแท็บในหน้า
            (แถบแท็บ #grp-tabs สร้างจาก NAV_GROUPS ใน JS) · badge id เดิมคงไว้ครบ -->
       <div class="sb-section">ภาพรวม</div>
-      <div class="sb-item active" data-group="home" onclick="switchGroup('home')">
+      <!-- v89 — sb-dup-bnav: กลุ่มที่อยู่ในแถบล่างของมือถือแล้ว → ซ่อนในเมนู "อื่น ๆ" (เดสก์ท็อปยังแสดงครบ) -->
+      <div class="sb-item sb-dup-bnav active" data-group="home" onclick="switchGroup('home')">
         <svg class="sb-icon ic" aria-hidden="true"><use href="#i-overview"/></svg>ภาพรวม
       </div>
       <div class="sb-item" data-group="analyst" onclick="switchGroup('analyst')">
@@ -2250,7 +2255,7 @@ body:has(.gs-modal-overlay.show) .tx-fab{display:none!important}  /* JS ตั�
         <span class="sb-badge" id="sb-goals-badge" style="display:none">0</span>
       </div>
       <div class="sb-section">เงิน</div>
-      <div class="sb-item" data-group="money" onclick="switchGroup('money')">
+      <div class="sb-item sb-dup-bnav" data-group="money" onclick="switchGroup('money')">
         <svg class="sb-icon ic" aria-hidden="true"><use href="#i-money"/></svg>เงินเข้า-ออก
         <span class="sb-badge sb-badge-warn" id="sb-budget-badge" style="display:none">0</span>
       </div>
@@ -2265,11 +2270,11 @@ body:has(.gs-modal-overlay.show) .tx-fab{display:none!important}  /* JS ตั�
       <div class="sb-item" data-group="insurance" onclick="switchGroup('insurance')">
         <svg class="sb-icon ic" aria-hidden="true"><use href="#i-insurance"/></svg>ประกัน
       </div>
-      <div class="sb-section">ลงทุน</div>
-      <div class="sb-item" data-group="invest" onclick="switchGroup('invest')">
+      <div class="sb-section sb-dup-bnav">ลงทุน</div>
+      <div class="sb-item sb-dup-bnav" data-group="invest" onclick="switchGroup('invest')">
         <svg class="sb-icon ic" aria-hidden="true"><use href="#i-invest"/></svg>พอร์ตลงทุน
       </div>
-      <div class="sb-item" data-group="markets" onclick="switchGroup('markets')">
+      <div class="sb-item sb-dup-bnav" data-group="markets" onclick="switchGroup('markets')">
         <svg class="sb-icon ic" aria-hidden="true"><use href="#i-markets"/></svg>ตลาด &amp; จังหวะ
       </div>
       <!-- v71 — คลังเอกสาร · เมนูย่อยตามหมวด (#sb-docs-sub) สร้างจากข้อมูลจริงใน renderDocsNav() -->
@@ -2278,11 +2283,7 @@ body:has(.gs-modal-overlay.show) .tx-fab{display:none!important}  /* JS ตั�
         <svg class="sb-icon ic" aria-hidden="true"><use href="#i-docs"/></svg>เอกสาร
       </div>
       <div class="sb-subnav" id="sb-docs-sub" role="group" aria-label="หมวดเอกสาร"></div>
-      <div class="sb-section">ระบบ</div>
-      <div class="sb-item" data-group="notify" onclick="switchGroup('notify')">
-        <svg class="sb-icon ic" aria-hidden="true"><use href="#i-notify"/></svg>การแจ้งเตือน
-        <span class="sb-badge sb-badge-alert" id="notif-badge" style="display:none">0</span>
-      </div>
+      <!-- v89 — "ระบบ › การแจ้งเตือน" ซ้ำกับปุ่ม 🔔 (แถบบนเดสก์ท็อป · ปุ่มลอยมือถือ) → ถอดออก · หน้าเดิมเปิดจาก 🔔 และ ⌘K -->
 
     </div>
     <div class="sb-bottom">
@@ -2306,10 +2307,13 @@ body:has(.gs-modal-overlay.show) .tx-fab{display:none!important}  /* JS ตั�
       <div class="sb-row">
         <button class="sb-btn" onclick="acctOpen()" title="บัญชีและความปลอดภัย">
           <svg class="ic" aria-hidden="true"><use href="#i-user"/></svg><span class="sb-lbl">บัญชีผู้ใช้</span></button>
-        <button class="sb-btn" onclick="ntOpenSetup()" title="ตั้งค่าการแจ้งเตือน">
-          <svg class="ic" aria-hidden="true"><use href="#i-notify"/></svg><span class="sb-lbl">แจ้งเตือน</span></button>
         <button class="sb-btn" id="sb-lock-btn" onclick="authLock()" title="ล็อกตอนนี้" hidden>
           <svg class="ic" aria-hidden="true"><use href="#i-lock"/></svg><span class="sb-lbl">ล็อก</span></button>
+      </div>
+      <!-- v89 — เดิมชื่อ "แจ้งเตือน" ชนกับหน้าการแจ้งเตือน (ปุ่มนี้คือ *ตั้งค่า*) · แยกแถวเพราะชื่อยาวขึ้น -->
+      <div class="sb-row">
+        <button class="sb-btn" onclick="ntOpenSetup()" title="ตั้งค่าการแจ้งเตือน">
+          <svg class="ic" aria-hidden="true"><use href="#i-notify"/></svg><span class="sb-lbl">ตั้งค่าแจ้งเตือน</span></button>
       </div>
       <div class="sb-row">
         <button class="sb-btn" onclick="generateMonthlyPDF()" title="Export PDF">
@@ -3255,7 +3259,7 @@ body:has(.gs-modal-overlay.show) .tx-fab{display:none!important}  /* JS ตั�
       <svg class="bnav-ic ic" aria-hidden="true"><use href="#i-invest"/></svg><span class="bnav-lb">พอร์ต</span></button>
     <button class="bnav-item" data-group="markets" onclick="switchGroup('markets')">
       <svg class="bnav-ic ic" aria-hidden="true"><use href="#i-markets"/></svg><span class="bnav-lb">ตลาด</span></button>
-    <button class="bnav-item" onclick="toggleSidebar()" aria-label="เมนูทั้งหมด">
+    <button class="bnav-item bnav-more" onclick="toggleSidebar()" aria-label="เมนูอื่น ๆ">
       <svg class="bnav-ic ic" aria-hidden="true"><use href="#i-menu"/></svg><span class="bnav-lb">อื่น ๆ</span></button>
   </nav>
   <div class="sb-backdrop" id="sb-backdrop" onclick="toggleSidebar()" aria-hidden="true"></div>
@@ -5134,7 +5138,7 @@ const VLOG_PURGED_KEY = 'finOS_valueLogPurged_v44';
 //   ฟังก์ชันหาย  → BLOCK  (แอปคำนวณผิดแน่นอน — นี่คือสิ่งที่ guard มีไว้จับ)
 //   เลขไม่ตรง    → WARN   (แค่ลืม bump — log ไว้ ไม่รบกวนผู้ใช้)
 // ฟังก์ชันที่ต้องมีคือสัญญาจริงระหว่างสองไฟล์ ส่วนสตริงเวอร์ชันเป็นแค่ป้าย
-const EXPECTED_SHARED_BUILD = 'v88';
+const EXPECTED_SHARED_BUILD = 'v89';
 const REQUIRED_SHARED_FNS = [
   'resolvePrices', 'pipelinePricesTHB', 'parseReconcileRows',
   'computeReconciliation', 'splitBalances', 'debtVsInvest', 'buildDebtPlan',
@@ -5893,8 +5897,7 @@ async function fetchNotifications(){
 }
 function _ntBadge(){
   const n=notifUnread(_nt.items, _ntRead());
-  const b=document.getElementById('notif-badge'), m=document.getElementById('notif-bell-n');
-  if(b){ b.style.display=n?'inline':'none'; b.textContent=n>99?'99+':n; }
+  const m=document.getElementById('notif-bell-n');   // v89 — badge ในเมนูข้างถูกถอดพร้อมเมนู (เหลือ 🔔 ลอยมือถือ + แถบบน)
   if(m){ m.hidden=!n; m.textContent=n>99?'99+':n; }
   const t=document.getElementById('tb-notif-n'); if(t){ t.hidden=!n; t.textContent=n>99?'99+':n; }   // v74 — แถบบน
 }
@@ -10309,6 +10312,8 @@ function switchPage(name){
   document.querySelectorAll('.sb-item').forEach(el=>{el.classList.toggle('active',el.dataset.group===_g.id);});
   // v49/v56 — แถบล่างไฮไลต์ตามกลุ่มที่เปิดอยู่ (ปุ่ม More ไม่มี data-group จึงไม่โดน)
   document.querySelectorAll('.bnav-item[data-group]').forEach(el=>{el.classList.toggle('active',el.dataset.group===_g.id);});
+  // v89 — หน้าที่อยู่ในเมนู "อื่น ๆ" (บัญชี · หนี้สิน · ประกัน · เอกสาร ฯลฯ) → ไฮไลต์ปุ่ม "อื่น ๆ" ให้รู้ว่าอยู่ตรงไหน
+  { const more=document.querySelector('.bnav-more'); if(more) more.classList.toggle('active', !document.querySelector('.bnav-item[data-group="'+_g.id+'"]')); }
   renderGroupTabs(_g, name);
   document.querySelectorAll('.page').forEach(el=>{el.classList.toggle('active',el.id===`page-${name}`);});
   if(typeof liveOnPage==='function') try{ liveOnPage(name==='live'); }catch(e){}   // v78 — เปิด/ปิด WebSocket ราคาสด
