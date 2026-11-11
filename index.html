@@ -1891,6 +1891,10 @@ html[data-theme="midnight"] .auth-mark{color:#FAFAFA}
 .fab-menu{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:8px;gap:6px;box-shadow:var(--pop-shadow,0 12px 32px rgba(0,0,0,.35))}
 .fab-menu .fab-opt{box-shadow:none;padding:9px 12px}
 .fab-grp{font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:6px 6px 0}
+/* v88 — 13 ปุ่ม: สองคอลัมน์ทุกขนาดจอ (คอลัมน์เดียวสูงเกินจอโน้ตบุ๊ก) */
+.fab-menu{display:grid;grid-template-columns:1fr 1fr;width:min(480px,calc(100vw - 32px))}
+.fab-menu .fab-grp{grid-column:1/-1}
+.fab-menu .fab-opt{min-width:0}
 .fab-grp:first-child{padding-top:2px}
 @media(max-width:640px){
   .fab-menu{display:grid;grid-template-columns:1fr 1fr;width:min(420px,calc(100vw - 32px))}
@@ -1901,11 +1905,17 @@ html[data-theme="midnight"] .auth-mark{color:#FAFAFA}
 }
 .srf-modal,.rc-modal{max-width:620px}
 #rc-help{margin:-4px 0 12px}
+.fab-hint{font-size:12px;color:var(--muted);line-height:1.6}
+.fab-hint b{color:var(--fg);font-weight:600}
+.fab-hint .fab-hint-plus{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;
+  background:var(--fg);color:var(--bg);font-size:12px;line-height:1;vertical-align:-3px}
+.fab-hint-row{grid-column:1/-1;padding:14px 4px}
 @media(max-height:520px){   /* มือถือแนวนอน: 9 ปุ่มสองคอลัมน์ พอดีจอไม่ต้องเลื่อน */
   .fab-menu{display:grid;grid-template-columns:1fr 1fr;width:min(460px,calc(100vw - 32px))}
   .fab-grp{grid-column:1/-1;padding-top:0}
   .fab-menu .fab-opt{min-width:0}
 }
+@media(max-height:520px) and (min-width:700px){.fab-menu{grid-template-columns:repeat(3,1fr);width:min(660px,calc(100vw - 32px))}}
 .srf-loading{padding:24px 0;color:var(--muted);font-size:13px}
 .srf-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
 .srf-grid .srf-wide{grid-column:1/-1}
@@ -1936,7 +1946,6 @@ html[data-theme="midnight"] .auth-mark{color:#FAFAFA}
   border:1px solid rgba(245,158,11,.35);border-radius:var(--r-sm,8px);padding:8px 10px}
 .at-feedhint[hidden]{display:none}
 .at-feedhint .docs-ibtn{margin-top:6px}
-.ins-addbar{display:flex;gap:8px;flex-wrap:wrap;margin:-4px 0 12px}
 .ip-acts{display:flex;gap:8px;flex-wrap:wrap;padding:8px 0 2px}
 .ip-cov-it.ip-edit{cursor:pointer}
 .ip-cov-it.ip-edit:hover b{text-decoration:underline}
@@ -2558,8 +2567,7 @@ body:has(.gs-modal-overlay.show) .tx-fab{display:none!important}  /* JS ตั�
     <!-- ══ PORTFOLIO HOLDINGS ══ -->
     <div class="page" id="page-portfolio">
       <div class="pg-hdr"><div><div class="pg-title">Holdings</div><div class="pg-sub">สินทรัพย์ทั้งหมด · WACC · True Cost · P&L</div></div>
-        <button class="at-add-btn" id="at-add-btn" onclick="atOpenForm()" style="display:none">+ เพิ่มรายการลงทุน</button>
-      </div>
+      </div>   <!-- v88 — ปุ่ม "+ เพิ่มรายการลงทุน" ย้ายไปอยู่ในปุ่ม + (ซื้อ / ขาย / ปันผล) ที่เดียว -->
       <div class="sg">
         <div class="sc" style="--g:rgba(124,111,236,.1)"><div class="sc-lbl">Total value</div><div class="sc-val" id="pf-val" style="color:var(--white)">฿0</div><div class="sc-sub" id="pf-assets"></div></div>
         <div class="sc" id="pf-irr-card"><div class="sc-lbl">IRR</div><div class="sc-val" id="pf-irr">—</div><div class="sc-sub" id="pf-irr-sub"></div></div>
@@ -3041,11 +3049,7 @@ body:has(.gs-modal-overlay.show) .tx-fab{display:none!important}  /* JS ตั�
     <div class="page" id="page-goals">
       <div class="pg-hdr">
         <div><div class="pg-title">Financial Goals</div><div class="pg-sub">ตั้งเป้าและติดตามความคืบหน้า</div></div>
-        <div class="pg-controls">
-          <button class="gf-submit" onclick="toggleGoalForm()" style="padding:7px 16px;font-size:12px;display:flex;align-items:center;gap:6px">
-            <span style="font-size:15px;line-height:1">+</span> Add goal
-          </button>
-        </div>
+        <!-- v88 — "Add goal" ย้ายไปอยู่ในปุ่ม + (เป้าหมายการเงิน) -->
       </div>
 
       <!-- v56 — ย้ายมาจาก Overview: เป้า Net Worth + การฉายภาพ -->
@@ -4607,7 +4611,7 @@ function renderReconciliation(){
       <div style="margin-top:8px;color:var(--muted2);font-size:11px">
         ${_L('สัปดาห์ละครั้ง เปิดแอปธนาคารแล้วจดยอดจริงของแต่ละบัญชี — แอปสร้างแท็บ Reconcile ในชีตให้เอง',
              'Once a week, open your banking app and note each account\'s real balance — the app creates the Reconcile tab for you')}</div>
-      <button type="button" class="docs-ibtn" style="margin-top:10px" onclick="rcOpen()">🏦 ${_L('จดยอดจริงจากธนาคาร','Enter bank balances')}</button>
+      <div style="margin-top:10px">${fabHint('ยอดจริงจากธนาคาร','Bank balances')}</div>
       ${orphanNote}
     </div>`;
     return r;
@@ -4645,7 +4649,7 @@ function renderReconciliation(){
         ${r.stale?`<div style="margin-left:auto;font-size:11px;color:var(--debt);text-align:right">
           ⏰ ถึงเวลา reconcile รอบใหม่<br>
           <span style="color:var(--muted2)">แนะนำสัปดาห์ละครั้ง</span></div>`:''}
-        <button type="button" class="docs-ibtn"${r.stale?'':' style="margin-left:auto"'} onclick="rcOpen()">🏦 ${_L('จดยอดจริง','Enter balances')}</button>
+
       </div>
       <table style="width:100%;border-collapse:collapse;font-size:12px">
         <thead><tr style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted2)">
@@ -5130,7 +5134,7 @@ const VLOG_PURGED_KEY = 'finOS_valueLogPurged_v44';
 //   ฟังก์ชันหาย  → BLOCK  (แอปคำนวณผิดแน่นอน — นี่คือสิ่งที่ guard มีไว้จับ)
 //   เลขไม่ตรง    → WARN   (แค่ลืม bump — log ไว้ ไม่รบกวนผู้ใช้)
 // ฟังก์ชันที่ต้องมีคือสัญญาจริงระหว่างสองไฟล์ ส่วนสตริงเวอร์ชันเป็นแค่ป้าย
-const EXPECTED_SHARED_BUILD = 'v87';
+const EXPECTED_SHARED_BUILD = 'v88';
 const REQUIRED_SHARED_FNS = [
   'resolvePrices', 'pipelinePricesTHB', 'parseReconcileRows',
   'computeReconciliation', 'splitBalances', 'debtVsInvest', 'buildDebtPlan',
@@ -7017,8 +7021,6 @@ function gsParseAssetTracker(rows){
     formulaCols: null, formulaVer: 0,   // v83 — ตรวจใหม่ทุก sync
     gid: atSheetMeta ? atSheetMeta.gid : null
   };
-  const _atb = document.getElementById('at-add-btn');
-  if(_atb) _atb.style.display = 'inline-flex';
   console.log('[AT] schema พร้อม — รายการสุดท้ายแถว', atSheetMeta.lastRow);
   fxMap={};for(const[t,v]of Object.entries(fxAcc))fxMap[t]=parseFloat((v.reduce((s,x)=>s+x,0)/v.length).toFixed(2));
   // v68 #1 — ต้นทุนเฉลี่ยของที่ถืออยู่ = running WACC (ชุดเดียวกับ Realized) ไม่ใช่เฉลี่ยยอดซื้อทุกครั้ง
@@ -7945,7 +7947,7 @@ function restoreDataCache(p){
     if(p.txSheetMeta) txSheetMeta = p.txSheetMeta;
     if(p.atSheetMeta) atSheetMeta = p.atSheetMeta;
     if(txSheetMeta){ const f=document.getElementById('tx-fab'); if(f) f.style.display='block'; }
-    if(atSheetMeta){ const b=document.getElementById('at-add-btn'); if(b) b.style.display='inline-flex'; }
+    /* v88 — ปุ่มเพิ่มรายการลงทุนในหน้า Holdings ถูกถอด (อยู่ในปุ่ม + แล้ว) */
     availableMonths=[...new Set(txRows.map(r=>r.month))].sort();
     curMonthIdx=availableMonths.length-1;
     populateMonthSelect();   // v57 — เดิมไม่เติม dropdown ในเส้นทางนี้
@@ -8361,7 +8363,7 @@ function _dbEmpty(){
     <div class="dbs-empty-h">${_L('ยังไม่มีหนี้ในแท็บ Debts','No debts in the Debts tab yet')}</div>
     <div class="dbs-hint">${_L('เพิ่มหนี้แต่ละก้อน (ผ่อนรถ · บัตรเครดิต · ช่วยครอบครัว) — แอปจะสร้างแท็บ Debts ในชีตให้เองตอนบันทึกครั้งแรก แล้วนับงวดที่จ่ายจากชีต Transaction ให้อัตโนมัติ',
       'Add each debt (installments · credit cards · family support) — the app creates the Debts tab on the first save and counts payments from the Transaction sheet automatically')}</div>
-    <button type="button" class="rb-btn primary" onclick="dbfOpen()">+ ${_L('เพิ่มหนี้ก้อนแรก','Add your first debt')}</button></div>`;
+    <div class="dbs-hint">${fabHint('หนี้ / สัญญาผ่อน','Debt / installment')}</div></div>`;
 }
 
 function _dbCard(i){
@@ -8411,7 +8413,7 @@ function renderDebts(){
   const el=document.getElementById('dbs-body'); if(!el) return;
   const hdr=`<div class="pg-hdr dbs-hdr"><div><div class="pg-title">Debts</div>
       <div class="pg-sub">${_L('ผ่อนรถ · บัตรเครดิต · ภาระรายเดือน — ข้อตกลงอยู่ในแท็บ Debts · การจ่ายจริงนับจากชีต Transaction','Installments · credit cards · monthly commitments — terms live in the Debts tab, payments are counted from the Transaction sheet')}</div></div>
-    <button type="button" class="rb-btn primary" onclick="dbfOpen()">+ ${_L('เพิ่มหนี้','Add debt')}</button></div>`;
+    </div>`;   // v88 — "+ เพิ่มหนี้" อยู่ในปุ่ม + แล้ว
   if(!debtList.length){ el.innerHTML=hdr+_dbEmpty(); return; }
   const opts=_debtOpts(), o=debtOverview(debtList, txRows, opts), curYm=opts.today.slice(0,7);
   const ownFixed=o.items.filter(i=>i.own&&i.kind!=='card').reduce((s,i)=>s+(i.owed||0),0);
@@ -9562,10 +9564,7 @@ function renderDocs(){
       <b>${_L('มีเอกสารเก่าเยอะ?','Lots of old documents?')}</b>
       ${_L('จัดไฟล์ในเครื่องเป็นโฟลเดอร์ตามหมวด/ปี (เช่น <code>เอกสาร/Tax/2023</code> · <code>เอกสาร/Salary/2024</code>) ลากทั้งโฟลเดอร์ขึ้น Drive ครั้งเดียว แล้วกด <b>⇪ นำเข้าจาก Drive</b> — แอปเดาหมวด/ปีจากชื่อโฟลเดอร์และชื่อไฟล์ให้ ตรวจแล้วนำเข้าทีเดียวทั้งหมด',
            'Sort local files into folders by category/year (e.g. <code>Docs/Tax/2023</code> · <code>Docs/Salary/2024</code>), drag the whole folder into Drive once, then press <b>⇪ Import from Drive</b> — the app guesses category/year from folder and file names; review and import everything at once')}
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
-        <button type="button" class="docs-ibtn primary" onclick="docsOpenImport()">⇪ ${_L('นำเข้าจาก Drive','Import from Drive')}</button>
-        <button type="button" class="docs-ibtn" onclick="docsOpenForm()">＋ ${_L('เพิ่มทีละรายการ','Add one by one')}</button>
-      </div>
+      <div style="margin-top:14px">${fabHint('นำเข้าเอกสารจาก Drive','Import documents from Drive')} · ${fabHint('เอกสาร','Document')}</div>
     </div>`;
     return;
   }
@@ -9599,8 +9598,6 @@ function renderDocs(){
         title="${escHtml(_L('แบบการ์ด','Grid view'))}" aria-label="${escHtml(_L('แบบการ์ด','Grid view'))}">▦</button>
       <button type="button" class="docs-ibtn${docsView==='list'?' on':''}" onclick="docsSetView('list')" aria-pressed="${docsView==='list'}"
         title="${escHtml(_L('แบบรายการ','List view'))}" aria-label="${escHtml(_L('แบบรายการ','List view'))}">☰</button>
-      <button type="button" class="docs-ibtn" onclick="docsOpenImport()" title="${escHtml(_L('นำเข้าทั้งโฟลเดอร์จาก Google Drive','Import a whole Google Drive folder'))}">⇪ ${_L('นำเข้าจาก Drive','Import from Drive')}</button>
-      <button type="button" class="docs-ibtn primary" onclick="docsOpenForm()">＋ ${_L('เพิ่มเอกสาร','Add document')}</button>
     </div>
     <div class="docs-count" id="docs-count" aria-live="polite"></div>
     <div id="docs-results"></div>`;
@@ -11016,7 +11013,7 @@ async function renderAutoBot(){
         <button type="button" class="gc-btn del" onclick="abDelete('${escAttr(r.id)}')" title="${_L('ลบ','Delete')}" aria-label="${_L('ลบ','Delete')}">✕</button>
       </div>
     </div>`).join('')
-    : `<div class="ab-empty">${_L('ยังไม่มีกฎ — เริ่มจาก "เพิ่มกฎ" เช่น DCA BTC ทุกวันจันทร์ ฿1,000 หรือ ซื้อ PTT เมื่อ RSI ≤ 30','No rules yet — start with "Add rule", e.g. DCA BTC every Monday ฿1,000, or buy PTT when RSI ≤ 30')}</div>`;
+    : `<div class="ab-empty">${_L('ยังไม่มีกฎ — เพิ่มจากปุ่ม ＋ มุมขวาล่าง → "กฎบอทเทรด" เช่น DCA BTC ทุกวันจันทร์ ฿1,000 หรือ ซื้อ PTT เมื่อ RSI ≤ 30','No rules yet — add one from the ＋ button (bottom right) → "Bot rule", e.g. DCA BTC every Monday ฿1,000, or buy PTT when RSI ≤ 30')}</div>`;
 
   const pos=val.rows||[];
   const led=(data.state.ledger||[]).slice(-30).reverse();
@@ -11041,7 +11038,6 @@ async function renderAutoBot(){
         <div class="sc-sub">${data.rules.filter(r=>r.enabled).length}/${data.rules.length} ${_L('กฎเปิดอยู่','rules on')}</div></div>
     </div>
     <div class="ab-bar">
-      <button type="button" class="rb-btn primary" onclick="abEdit(null)">+ ${_L('เพิ่มกฎ','Add rule')}</button>
       <button type="button" class="rb-btn" onclick="abRunNow()" ${_ab.busy?'disabled':''}>${_ab.busy?_L('กำลังตรวจ…','Checking…'):_L('ตรวจเงื่อนไขตอนนี้','Check now')}</button>
       <span class="ab-sp"></span>
       <button type="button" class="rb-btn" onclick="abOpenWorker()">${conn?_L('ตั้งค่า Worker','Worker settings'):_L('เชื่อม Worker','Connect Worker')}</button>
@@ -11736,7 +11732,10 @@ function renderGoals(){
   const content_div=document.getElementById('goals-content');
   const badge=document.getElementById('sb-goals-badge');
   if(badge){badge.style.display=goals.length?'inline':'none';badge.textContent=goals.length;}
-  if(!goals.length){content_div.innerHTML='';empty.style.display='block';summary.style.display='none';return;}
+  if(!goals.length){content_div.innerHTML='';empty.style.display='block';summary.style.display='none';
+    // v88 — ปุ่ม "Add goal" ในหน้าถูกถอด (อยู่ในปุ่ม + แล้ว) → บอกทางแทน
+    empty.innerHTML=`<span aria-hidden="true" style="font-size:13px;">◎</span> ${_L('ยังไม่มีเป้าหมาย','No goals yet')}<div style="margin-top:8px">${fabHint('เป้าหมายการเงิน','Financial goal')}</div>`;
+    return;}
   empty.style.display='none';summary.style.display='grid';
 
   let doneN=0,onN=0,behN=0;
@@ -11789,13 +11788,8 @@ function renderGoals(){
   }
 
   // Add card at bottom
-  html+=`<div class="gc-add-card" onclick="toggleGoalForm()">
-    <div class="gc-add-icon"><span aria-hidden="true" style="font-size:13px;font-size:20px">+</span></div>
-    <div>
-      <div style="font-size:14px;font-weight:600;color:var(--white);font-family:var(--f-sans)">Add new goal</div>
-      <div style="font-size:12px;color:var(--muted2);margin-top:2px">ตั้งเป้าหมายทางการเงินใหม่</div>
-    </div>
-  </div>`;
+  // v88 — การ์ด "Add new goal" ซ้ำกับปุ่ม + → เหลือคำบอกทาง
+  html+=`<div class="fab-hint-row">${fabHint('เป้าหมายการเงิน','Financial goal')}</div>`;
   content_div.innerHTML=html;
 }
 
@@ -11986,7 +11980,7 @@ function renderInsurance(){
     noData.style.display='block';
     // v87 — เพิ่มกรมธรรม์จากแอปได้ (เดิมบอกให้ไปเพิ่มแท็บในไฟล์ Excel)
     noData.innerHTML=`${_L('ยังไม่มีข้อมูลประกัน','No insurance data yet')}<br>
-      <button type="button" class="docs-ibtn" style="margin-top:12px" onclick="srfOpen('pol')">＋ ${_L('เพิ่มกรมธรรม์','Add a policy')}</button>`;
+      <div style="margin-top:12px">${fabHint('กรมธรรม์ประกัน','Insurance policy')}</div>`;
     return;
   }
   content.style.display='block';
@@ -12221,10 +12215,9 @@ function renderInsPolicyList(){
         return `<div class="ip-cov-it ip-edit" role="button" tabindex="0" title="${escAttr(_L('แตะเพื่อแก้ไข','Tap to edit'))}" onclick="_srfCovEdit('${escAttr(id)}',${ci})" onkeydown="if(event.key==='Enter')_srfCovEdit('${escAttr(id)}',${ci})"><span>${m.icon} ${escHtml(m.label)}${c.benefit?` <small>${escHtml(c.benefit)}</small>`:''}</span>
           <b>${c.amount>0?fmt(c.amount)+' <small>'+escHtml(INS_UNIT_LABEL[c.unit]||c.unit||'')+'</small>':'—'}</b></div>`; }).join('')
       :`<div class="ip-mute">${_L('ไม่มีรายการความคุ้มครองของกรมธรรม์นี้ในชีต Insurance_Coverage','No coverage rows for this policy in the Insurance_Coverage sheet')}</div>`}
-      <div class="ip-acts"><button type="button" class="docs-ibtn" onclick="srfOpen('pol',{match:{Policy_ID:'${escAttr(id)}'}})">✎ ${_L('แก้ไขกรมธรรม์','Edit policy')}</button>
-        <button type="button" class="docs-ibtn" onclick="srfOpen('cov',{preset:{Policy_ID:'${escAttr(id)}'}})">＋ ${_L('เพิ่มความคุ้มครอง','Add coverage')}</button></div></div>`:''}`;
+      <div class="ip-acts"><button type="button" class="docs-ibtn" onclick="srfOpen('pol',{match:{Policy_ID:'${escAttr(id)}'}})">✎ ${_L('แก้ไขกรมธรรม์ / ความคุ้มครอง','Edit policy / coverage')}</button></div></div>`:''}`;
   };
-  el.innerHTML=`<div class="ins-addbar"><button type="button" class="docs-ibtn" onclick="srfOpen('pol')">＋ ${_L('เพิ่มกรมธรรม์','Add a policy')}</button></div><div class="ip-hd"><span>${_L('กรมธรรม์','Policy')}</span><span>${_L('สถานะ','Status')}</span><span class="r">${_L('เบี้ย/ปี','Premium/yr')}</span>
+  el.innerHTML=`<div class="ip-hd"><span>${_L('กรมธรรม์','Policy')}</span><span>${_L('สถานะ','Status')}</span><span class="r">${_L('เบี้ย/ปี','Premium/yr')}</span>
       <span class="r">${_L('ต่ออายุครั้งถัดไป','Next renewal')}</span><span class="r">${_L('มูลค่าเวนคืน','Cash value')}</span><span></span></div>`
     + keys.map(k=>{ const g=groups[k].sort((a,b)=>(b.p.premium||0)-(a.p.premium||0));
       const name=k==='__ended'?_L('ขาดผล / สิ้นสุดแล้ว','Lapsed / ended'):escHtml(k);
@@ -13031,27 +13024,38 @@ function atCloseForm(){
    จ่ายบัตร/โอน = ฟอร์มรายการเดิม (Transaction) ตั้งประเภทให้ */
 const FAB_ITEMS = [
   {g:['เงิน','Money']},
-  {k:'tx',   ic:'💵', th:'รายรับ-รายจ่าย',     en:'Income / expense',      sub:'Transaction'},
-  {k:'card', ic:'💳', th:'จ่ายบัตรเครดิต',      en:'Pay a credit card',     sub:'Transaction · Debt'},
-  {k:'xfer', ic:'🔁', th:'โอนระหว่างบัญชี',     en:'Transfer',              sub:'Transaction · Transfer'},
-  {k:'rc',   ic:'🏦', th:'ยอดจริงจากธนาคาร',    en:'Bank balances',         sub:'Reconcile'},           // v87
+  {k:'tx',   ic:'💵', th:'รายรับ-รายจ่าย',          en:'Income / expense',      sub:'Transaction'},
+  {k:'card', ic:'💳', th:'จ่ายบัตรเครดิต',           en:'Pay a credit card',     sub:'Transaction · Debt'},
+  {k:'xfer', ic:'🔁', th:'โอนระหว่างบัญชี',          en:'Transfer',              sub:'Transaction · Transfer'},
+  {k:'rc',   ic:'🏦', th:'ยอดจริงจากธนาคาร',         en:'Bank balances',         sub:'Reconcile'},
   {g:['ลงทุน','Invest']},
-  {k:'at',   ic:'📈', th:'ซื้อ / ขาย / ปันผล',  en:'Buy / sell / dividend', sub:'Asset_Tracker', need:() => !!atSheetMeta},
-  {k:'feed', ic:'🏷', th:'หุ้น / กองทุนตัวใหม่', en:'New ticker / price',    sub:'Asset_Live_Price_Feed'}, // v87
+  {k:'at',   ic:'📈', th:'ซื้อ / ขาย / ปันผล',       en:'Buy / sell / dividend', sub:'Asset_Tracker', need:() => !!atSheetMeta},
+  {k:'feed', ic:'🏷', th:'หุ้น / กองทุนตัวใหม่',      en:'New ticker / price',    sub:'Asset_Live_Price_Feed'},
+  {k:'rule', ic:'🤖', th:'กฎบอทเทรด',               en:'Bot rule',              sub:'Autobot · paper'},                 // v88 — เดิมปุ่มในหน้าบอทเทรด
   {g:['อื่น ๆ','Other']},
-  {k:'debt', ic:'🧾', th:'หนี้ / สัญญาผ่อน',    en:'Debt / installment',    sub:'Debts'},
-  {k:'pol',  ic:'🛡', th:'ประกัน',             en:'Insurance',             sub:'Insurance_Policies'},    // v87
-  {k:'doc',  ic:'📄', th:'เอกสาร',             en:'Document',              sub:'Documents'},
+  {k:'goal', ic:'🎯', th:'เป้าหมายการเงิน',          en:'Financial goal',        sub:'Goals'},                           // v88 — เดิมปุ่มในหน้าเป้าหมาย
+  {k:'debt', ic:'🧾', th:'หนี้ / สัญญาผ่อน',         en:'Debt / installment',    sub:'Debts'},
+  {k:'pol',  ic:'🛡', th:'กรมธรรม์ประกัน',           en:'Insurance policy',      sub:'Insurance_Policies'},
+  {k:'cov',  ic:'🩺', th:'ความคุ้มครองประกัน',       en:'Insurance coverage',    sub:'Insurance_Coverage',               // v88 — เดิมปุ่มในแถวกรมธรรม์
+   need:() => (insPolicies || []).length > 0, why:['เพิ่มกรมธรรม์ก่อน','Add a policy first']},
+  {k:'doc',  ic:'📄', th:'เอกสาร',                  en:'Document',              sub:'Documents'},
+  {k:'docimp', ic:'⇪', th:'นำเข้าเอกสารจาก Drive',  en:'Import documents from Drive', sub:'Google Drive → Documents'},  // v88 — เดิมปุ่มในหน้าเอกสาร
 ];
+/* v88 — ปุ่ม + คือที่เดียวสำหรับ "เพิ่ม" ทุกอย่าง (ผู้ใช้ 2026-11-11: เมนูในหน้าที่ซ้ำกับปุ่ม + ให้ตัดออก · ที่ยังไม่มีให้เพิ่มในปุ่ม +)
+   หน้าต่าง ๆ เหลือแค่การกระทำกับรายการเดิม (✎ แก้ไข · บันทึกจ่าย · แตะแถวเพื่อแก้) · หน้าว่างบอกทางด้วย fabHint() */
+function fabHint(th, en){
+  return `<span class="fab-hint">${_L('กดปุ่ม','Tap')} <b class="fab-hint-plus" aria-hidden="true">＋</b> ${_L('มุมขวาล่าง →','at the bottom right →')} <b>${escHtml(_L(th, en))}</b></span>`;
+}
 function fabRender(){
   const m = document.getElementById('fab-menu'); if(!m) return;
   m.setAttribute('aria-label', _L('เพิ่มข้อมูล','Add'));
   m.innerHTML = FAB_ITEMS.map(it => {
     if(it.g) return `<div class="fab-grp" role="presentation">${escHtml(_L(it.g[0], it.g[1]))}</div>`;
     const ok = !it.need || it.need();
-    return `<button type="button" class="fab-opt" role="menuitem" data-k="${it.k}" onclick="fabPick('${it.k}')"${ok ? '' : ' disabled'}>
+    const why = ok ? '' : (it.why ? _L(it.why[0], it.why[1]) : _L('กด Sync ก่อน','Press Sync first'));
+    return `<button type="button" class="fab-opt" role="menuitem" data-k="${it.k}" onclick="fabPick('${it.k}')"${ok ? '' : ` disabled title="${escAttr(why)}"`}>
       <span class="fab-opt-ic" aria-hidden="true">${it.ic}</span>
-      <span><b>${escHtml(_L(it.th, it.en))}</b><small>${ok ? escHtml(it.sub) : escHtml(_L('กด Sync ก่อน','Press Sync first'))}</small></span></button>`;
+      <span><b>${escHtml(_L(it.th, it.en))}</b><small>${ok ? escHtml(it.sub) : escHtml(it.why ? _L(it.why[0], it.why[1]) : _L('กด Sync ก่อน','Press Sync first'))}</small></span></button>`;
   }).join('');
 }
 function txFabTap(){
@@ -13087,6 +13091,15 @@ function fabPick(kind){
   if(kind === 'rc')   return rcOpen();          // v87
   if(kind === 'feed') return srfOpen('feed');
   if(kind === 'pol')  return srfOpen('pol');
+  if(kind === 'cov')  return srfOpen('cov');      // v88
+  if(kind === 'docimp') return docsOpenImport();
+  if(kind === 'goal'){                           // ฟอร์มเป้าหมายอยู่ในหน้าเป้าหมาย (เก็บในเครื่อง ไม่ใช่ชีต)
+    switchPage('goals');
+    const f = $('goal-form');
+    if(f && f.style.display === 'none') toggleGoalForm(); else if(f) f.scrollIntoView({behavior:'smooth', block:'nearest'});
+    return;
+  }
+  if(kind === 'rule'){ switchPage('autobot'); return abEdit(null); }
   txOpenForm();
   if(!$('tx-modal').classList.contains('show')) return;
   if(kind === 'card'){
