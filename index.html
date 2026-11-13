@@ -1904,6 +1904,28 @@ html[data-theme="midnight"] .auth-mark{color:#FAFAFA}
   .fab-menu .fab-opt b{font-size:12.5px;line-height:1.25}
 }
 .srf-modal,.rc-modal{max-width:620px}
+/* ══ v90 — ฟอร์มบนมือถือ: ช่องทับกัน (ผู้ใช้ 2026-11-12 · iPhone) ══
+   iOS ให้ช่องวันที่ (type=date/month) กว้างขั้นต่ำเท่าข้อความข้างใน ("12 Nov BE 2569" ที่ 16px) และไม่ยอมหดตามคอลัมน์
+   + คอลัมน์ grid แบบ 1fr หดต่ำกว่าเนื้อหาไม่ได้ → ช่องวันที่ล้นไปทับช่องข้าง ๆ (ประเภท) · Chrome หดให้เอง จึงไม่เห็นตอนทดสอบ
+   แก้: คอลัมน์ minmax(0,1fr) · ลูกของ grid และช่องกรอก min-width:0 · ช่องวันที่บนจอสัมผัสถอดหน้าตาแบบ iOS ออก */
+.tx-g2,.gf-row,.dbf-g2,.srf-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.gf-row.full{grid-template-columns:minmax(0,1fr)}
+.at-g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.rc-top{grid-template-columns:180px minmax(0,1fr)}
+@media(max-width:560px){.at-g3{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:520px){.dbf-g2,.srf-grid,.rc-top{grid-template-columns:minmax(0,1fr)}}
+.tx-g2>*,.gf-row>*,.dbf-g2>*,.srf-grid>*,.at-g3>*,.rc-top>*{min-width:0}
+.gs-input,.gf-inp{min-width:0;max-width:100%}
+/* ใช้ทุกอุปกรณ์ (ไม่ผูกกับ media จอสัมผัส — iPad ต่อเมาส์/แทร็กแพดก็ต้องหด) · ช่องวันที่ทุกช่องมีกรอบ/พื้นของแอปเองอยู่แล้ว */
+input.gs-input[type=date],input.gs-input[type=month],input.gf-inp[type=date],input.gf-inp[type=month]{
+  -webkit-appearance:none;appearance:none;display:block;width:100%;min-width:0;
+  min-height:calc(1.2em + 20px);line-height:1.2;text-align:left}
+input[type=date]::-webkit-date-and-time-value,input[type=month]::-webkit-date-and-time-value{text-align:left;margin:0}
+/* มือถือแนวตั้ง: ครึ่งคอลัมน์แคบเกินกว่าจะเห็นวันที่ครบ ("12 Nov BE 2569" ที่ 16px ถูกตัดท้าย) → แถวที่มีช่องวันที่เป็นคอลัมน์เดียว
+   (แถวอื่น เช่น บัญชี + จำนวนเงิน ยังสองคอลัมน์) · เบราว์เซอร์ที่ไม่รู้จัก :has() ยังได้แบบสองคอลัมน์ที่ไม่ทับกัน */
+@media(max-width:480px){
+  .tx-g2:has(input[type=date]),.tx-g2:has(input[type=month]),.gf-row:has(input[type=date]),.gf-row:has(input[type=month]){grid-template-columns:minmax(0,1fr)}
+}
 #rc-help{margin:-4px 0 12px}
 /* v89 — มือถือ: เมนู "อื่น ๆ" แสดงเฉพาะกลุ่มที่ไม่อยู่ในแถบล่าง (ภาพรวม · เงิน · พอร์ต · ตลาด อยู่ในแถบล่างแล้ว) */
 @media(max-width:768px){ .sidebar .sb-dup-bnav{display:none} }
@@ -5138,7 +5160,7 @@ const VLOG_PURGED_KEY = 'finOS_valueLogPurged_v44';
 //   ฟังก์ชันหาย  → BLOCK  (แอปคำนวณผิดแน่นอน — นี่คือสิ่งที่ guard มีไว้จับ)
 //   เลขไม่ตรง    → WARN   (แค่ลืม bump — log ไว้ ไม่รบกวนผู้ใช้)
 // ฟังก์ชันที่ต้องมีคือสัญญาจริงระหว่างสองไฟล์ ส่วนสตริงเวอร์ชันเป็นแค่ป้าย
-const EXPECTED_SHARED_BUILD = 'v89';
+const EXPECTED_SHARED_BUILD = 'v90';
 const REQUIRED_SHARED_FNS = [
   'resolvePrices', 'pipelinePricesTHB', 'parseReconcileRows',
   'computeReconciliation', 'splitBalances', 'debtVsInvest', 'buildDebtPlan',
