@@ -1,14 +1,14 @@
 {
- "generated_at": "2026-11-14T17:15:32.083414+00:00",
+ "generated_at": "2026-11-15T02:52:50.953287+00:00",
  "source": "github-actions pipeline v54 (Yahoo + World Bank TH_CPI)",
  "stats": {
-  "keys_this_run": 17,
+  "keys_this_run": 16,
   "keys_total": 31,
   "sectors": 10,
   "prices_this_run": 29,
   "prices_total": 29,
   "prices_missing": [],
-  "runtime_sec": 1.1,
+  "runtime_sec": 22.1,
   "budget_sec": 480,
   "budget_exhausted": false,
   "host_stats": {
@@ -16,35 +16,37 @@
     "ok": 53
    },
    "api.worldbank.org": {
-    "ok": 1
+    "TimeoutError": 2
    }
   },
   "skipped_for_budget": 0,
-  "warnings": []
+  "warnings": [
+   "TimeoutError: The read operation timed out · https://api.worldbank.org/v2/country/THA/indicator/FP.CPI.TOTL.ZG?format=json&pe"
+  ]
  },
  "data": {
   "US10Y": {
    "value": 5.154,
    "updated": "2026-11-13",
-   "fetched_at": "2026-11-14T17:15:33.299299+00:00",
+   "fetched_at": "2026-11-15T02:53:13.201477+00:00",
    "note": "Yahoo ^TNX"
   },
   "US2Y": {
    "value": 4.775,
    "updated": "2026-11-13",
-   "fetched_at": "2026-11-14T17:15:33.299299+00:00",
+   "fetched_at": "2026-11-15T02:53:13.201477+00:00",
    "note": "Yahoo 2YY=F"
   },
   "VIX": {
    "value": 19.3,
    "updated": "2026-11-13",
-   "fetched_at": "2026-11-14T17:15:32.083414+00:00",
+   "fetched_at": "2026-11-15T02:52:50.953287+00:00",
    "note": "Yahoo ^VIX"
   },
   "US_UNEMP": {
    "value": 4.1,
    "updated": "2026-10-01",
-   "fetched_at": "2026-11-14T17:15:33.299299+00:00",
+   "fetched_at": "2026-11-15T02:53:13.201477+00:00",
    "note": "BLS LNS14000000 · อัตราว่างงาน (ปรับฤดูกาล)"
   },
   "US_REAL10Y": {
@@ -56,7 +58,7 @@
   "OIL_WTI": {
    "value": 88.56,
    "updated": "2026-11-13",
-   "fetched_at": "2026-11-14T17:15:32.083414+00:00",
+   "fetched_at": "2026-11-15T02:52:50.953287+00:00",
    "note": "Yahoo CL=F"
   },
   "US_CPI": {
@@ -73,62 +75,62 @@
   },
   "YIELD_CURVE": {
    "value": 38,
-   "updated": "2026-11-14",
-   "fetched_at": "2026-11-14T17:15:33.299299+00:00",
+   "updated": "2026-11-15",
+   "fetched_at": "2026-11-15T02:53:13.201477+00:00",
    "note": "2s10s = ^TNX − 2YY=F (bps)"
   },
   "SP500": {
    "value": 7562.0,
    "updated": "2026-11-13",
-   "fetched_at": "2026-11-14T17:15:32.083414+00:00",
+   "fetched_at": "2026-11-15T02:52:50.953287+00:00",
    "note": "Yahoo ^GSPC"
   },
   "SP500_CHG": {
    "value": -0.4,
    "updated": "2026-11-13",
-   "fetched_at": "2026-11-14T17:15:32.083414+00:00",
+   "fetched_at": "2026-11-15T02:52:50.953287+00:00",
    "note": "Yahoo ^GSPC daily change"
   },
   "NASDAQ": {
    "value": 25136.0,
    "updated": "2026-11-13",
-   "fetched_at": "2026-11-14T17:15:32.083414+00:00",
+   "fetched_at": "2026-11-15T02:52:50.953287+00:00",
    "note": "Yahoo ^IXIC"
   },
   "SET_INDEX": {
    "value": 1504.88,
    "updated": "2026-11-13",
-   "fetched_at": "2026-11-14T17:15:32.083414+00:00",
+   "fetched_at": "2026-11-15T02:52:50.953287+00:00",
    "note": "Yahoo ^SET.BK"
   },
   "GOLD_XAU": {
    "value": 3886.3,
    "updated": "2026-11-13",
-   "fetched_at": "2026-11-14T17:15:32.083414+00:00",
+   "fetched_at": "2026-11-15T02:52:50.953287+00:00",
    "note": "Yahoo GC=F"
   },
   "USDTHB": {
    "value": 33.85,
    "updated": "2026-11-13",
-   "fetched_at": "2026-11-14T17:15:32.083414+00:00",
+   "fetched_at": "2026-11-15T02:52:50.953287+00:00",
    "note": "Yahoo THB=X"
   },
   "DXY": {
    "value": 103.41,
    "updated": "2026-11-13",
-   "fetched_at": "2026-11-14T17:15:32.083414+00:00",
+   "fetched_at": "2026-11-15T02:52:50.953287+00:00",
    "note": "Yahoo DXY"
   },
   "SP500_RSI": {
    "value": 46.8,
    "updated": "2026-11-13",
-   "fetched_at": "2026-11-14T17:15:32.083414+00:00",
+   "fetched_at": "2026-11-15T02:52:50.953287+00:00",
    "note": "Yahoo ^GSPC RSI(14)"
   },
   "SP500_MA200": {
    "value": "Above",
    "updated": "2026-11-13",
-   "fetched_at": "2026-11-14T17:15:32.083414+00:00",
+   "fetched_at": "2026-11-15T02:52:50.953287+00:00",
    "note": "close 7,562 vs MA200 7,340"
   },
   "SET_RSI": {
@@ -146,31 +148,31 @@
   "NDX_RSI": {
    "value": 42.4,
    "updated": "2026-11-13",
-   "fetched_at": "2026-11-14T17:15:32.083414+00:00",
+   "fetched_at": "2026-11-15T02:52:50.953287+00:00",
    "note": "Yahoo ^IXIC RSI(14)"
   },
   "NDX_MA200": {
    "value": "Below",
    "updated": "2026-11-13",
-   "fetched_at": "2026-11-14T17:15:32.083414+00:00",
+   "fetched_at": "2026-11-15T02:52:50.953287+00:00",
    "note": "close 25,136 vs MA200 25,137"
   },
   "GOLD_GLD": {
    "value": 355.45,
    "updated": "2026-11-13",
-   "fetched_at": "2026-11-14T17:15:32.083414+00:00",
+   "fetched_at": "2026-11-15T02:52:50.953287+00:00",
    "note": "Yahoo GLD"
   },
   "BTCUSD": {
-   "value": 65186.0,
-   "updated": "2026-11-14",
-   "fetched_at": "2026-11-14T17:15:32.083414+00:00",
+   "value": 64772.0,
+   "updated": "2026-11-15",
+   "fetched_at": "2026-11-15T02:52:50.953287+00:00",
    "note": "Yahoo BTC-USD"
   },
   "ETHUSD": {
-   "value": 1819.0,
-   "updated": "2026-11-14",
-   "fetched_at": "2026-11-14T17:15:32.083414+00:00",
+   "value": 1813.0,
+   "updated": "2026-11-15",
+   "fetched_at": "2026-11-15T02:52:50.953287+00:00",
    "note": "Yahoo ETH-USD"
   },
   "TH_CPI": {
@@ -182,31 +184,31 @@
   "US3M": {
    "value": 4.122,
    "updated": "2026-11-13",
-   "fetched_at": "2026-11-14T17:15:33.299299+00:00",
+   "fetched_at": "2026-11-15T02:53:13.201477+00:00",
    "note": "Yahoo ^IRX"
   },
   "US5Y": {
    "value": 4.981,
    "updated": "2026-11-13",
-   "fetched_at": "2026-11-14T17:15:33.299299+00:00",
+   "fetched_at": "2026-11-15T02:53:13.201477+00:00",
    "note": "Yahoo ^FVX"
   },
   "US30Y": {
    "value": 5.481,
    "updated": "2026-11-13",
-   "fetched_at": "2026-11-14T17:15:33.299299+00:00",
+   "fetched_at": "2026-11-15T02:53:13.201477+00:00",
    "note": "Yahoo ^TYX"
   },
   "YIELD_CURVE_3M10Y": {
    "value": 103,
-   "updated": "2026-11-14",
-   "fetched_at": "2026-11-14T17:15:33.299299+00:00",
+   "updated": "2026-11-15",
+   "fetched_at": "2026-11-15T02:53:13.201477+00:00",
    "note": "3m10y = ^TNX − ^IRX (bps) · งานวิจัย Fed ชี้ว่าทำนาย recession แม่นกว่า"
   },
   "CREDIT_STRESS": {
    "value": -0.87,
    "updated": "2026-11-13",
-   "fetched_at": "2026-11-14T17:15:33.299299+00:00",
+   "fetched_at": "2026-11-15T02:53:13.201477+00:00",
    "note": "z-score ของอัตราส่วน HYG/IEF (กลับเครื่องหมาย) · บวก = ความเครียดเครดิตสูงกว่าค่าเฉลี่ย 1 ปี · ไม่ใช่ HY OAS"
   }
  },
@@ -315,8 +317,8 @@
   },
   "SP500": [
    [
-    "2021-11-15",
-    4682.7998
+    "2021-11-16",
+    4700.8999
    ],
    [
     "2021-11-22",
@@ -1361,8 +1363,8 @@
   ],
   "USDTHB": [
    [
-    "2021-11-15",
-    32.716
+    "2021-11-16",
+    32.74
    ],
    [
     "2021-11-22",
@@ -2558,21 +2560,21 @@
    "src": "Yahoo TU.BK"
   },
   "BTC": {
-   "price": 65185.5,
+   "price": 64740.910156,
    "ccy": "USD",
-   "updated": "2026-11-14",
+   "updated": "2026-11-15",
    "src": "Yahoo BTC-USD"
   },
   "BNB": {
-   "price": 585.580017,
+   "price": 592.450012,
    "ccy": "USD",
-   "updated": "2026-11-14",
+   "updated": "2026-11-15",
    "src": "Yahoo BNB-USD"
   },
   "USDT": {
-   "price": 0.99921,
+   "price": 0.99936,
    "ccy": "USD",
-   "updated": "2026-11-14",
+   "updated": "2026-11-15",
    "src": "Yahoo USDT-USD"
   },
   "Gold": {
@@ -2816,35 +2818,35 @@
   },
   "BNB": {
    "sym": "BNB-USD",
-   "price": 585.580017,
-   "updated": "2026-11-14",
+   "price": 592.450012,
+   "updated": "2026-11-15",
    "kind": "holding",
-   "rsi": 21.3,
+   "rsi": 22.0,
    "ma50": "Below",
    "ma200": "Below",
-   "chg1m": -20.73,
-   "chg3m": -19.5,
-   "chg6m": 1.86,
-   "pos52w": 15.8,
-   "drawdown": -26.7,
-   "vol30d": 40.0,
+   "chg1m": -19.8,
+   "chg3m": -18.56,
+   "chg6m": 3.05,
+   "pos52w": 18.5,
+   "drawdown": -25.8,
+   "vol30d": 38.6,
    "mom12_1": 19.13,
-   "vol1y": 33.1,
+   "vol1y": 32.9,
    "gate": "fail",
    "gate_why": "ต่ำกว่า MA200",
-   "rank": 0.578,
+   "rank": 0.581,
    "size": 1.45,
    "size_why": [
-    "RSI 21 — oversold",
-    "ย่อจากจุดสูงสุด 27%"
+    "RSI 22 — oversold",
+    "ย่อจากจุดสูงสุด 26%"
    ],
    "trend": -2,
    "timing": 4,
    "action": "ไม่เข้า — รอเทรนด์กลับ",
    "why": [
     "ต่ำกว่า MA200 — เทรนด์ยาวหักแล้ว",
-    "RSI 21 — oversold",
-    "ต่ำกว่าจุดสูงสุด 1 ปี 27%"
+    "RSI 22 — oversold",
+    "ต่ำกว่าจุดสูงสุด 1 ปี 26%"
    ],
    "spark": [
     573.9483,
@@ -2872,28 +2874,28 @@
     703.3541,
     719.5461,
     690.0752,
-    585.58
+    592.45
    ]
   },
   "BTC": {
    "sym": "BTC-USD",
-   "price": 65185.5,
-   "updated": "2026-11-14",
+   "price": 64740.910156,
+   "updated": "2026-11-15",
    "kind": "holding",
-   "rsi": 21.2,
+   "rsi": 20.8,
    "ma50": "Below",
    "ma200": "Below",
-   "chg1m": -19.32,
-   "chg3m": -15.64,
-   "chg6m": 2.17,
-   "pos52w": 23.6,
-   "drawdown": -24.7,
-   "vol30d": 33.7,
+   "chg1m": -19.87,
+   "chg3m": -16.22,
+   "chg6m": 1.47,
+   "pos52w": 22.0,
+   "drawdown": -25.2,
+   "vol30d": 34.4,
    "mom12_1": 20.09,
-   "vol1y": 32.1,
+   "vol1y": 32.2,
    "gate": "fail",
    "gate_why": "ต่ำกว่า MA200",
-   "rank": 0.626,
+   "rank": 0.624,
    "size": 1.45,
    "size_why": [
     "RSI 21 — oversold",
@@ -2933,7 +2935,7 @@
     77198.2109,
     80405.2891,
     75223.1484,
-    65185.5
+    64740.9102
    ]
   },
   "COKE": {
@@ -4168,32 +4170,32 @@
   },
   "USDT": {
    "sym": "USDT-USD",
-   "price": 0.99921,
-   "updated": "2026-11-14",
+   "price": 0.99936,
+   "updated": "2026-11-15",
    "kind": "stable",
-   "rsi": 55.7,
+   "rsi": 57.4,
    "ma50": "Above",
-   "ma200": "Below",
-   "chg1m": 0.05,
-   "chg3m": -0.06,
-   "chg6m": -0.03,
-   "pos52w": 56.2,
+   "ma200": "Above",
+   "chg1m": 0.07,
+   "chg3m": -0.04,
+   "chg6m": -0.01,
+   "pos52w": 61.7,
    "drawdown": -0.1,
    "vol30d": 0.7,
    "mom12_1": -0.12,
    "vol1y": 0.4,
    "gate": "fail",
-   "gate_why": "ต่ำกว่า MA200 · โมเมนตัม 12-1 เดือน -0.1%",
+   "gate_why": "โมเมนตัม 12-1 เดือน -0.1%",
    "rank": -0.3,
    "size": 0.85,
    "size_why": [
     "อยู่ที่จุดสูงสุดรอบปี"
    ],
-   "trend": -2,
+   "trend": 1,
    "timing": -1,
    "action": "ไม่เข้า — รอเทรนด์กลับ",
    "why": [
-    "ต่ำกว่า MA200 — เทรนด์ยาวหักแล้ว",
+    "เหนือ MA200 — เทรนด์ยาวยังไม่หัก",
     "อยู่ที่จุดสูงสุดรอบปี"
    ],
    "spark": [
@@ -4222,7 +4224,7 @@
     0.9987,
     0.9991,
     0.9987,
-    0.9992
+    0.9994
    ]
   },
   "V": {
@@ -4406,10 +4408,10 @@
   "breadth_sectors": 70.0,
   "breadth_portfolio": 67.9,
   "basis_count": 28,
-  "computed_at": "2026-11-14T17:15:33.299299+00:00"
+  "computed_at": "2026-11-15T02:53:13.201477+00:00"
  },
  "signals_meta": {
-  "generated_at": "2026-11-14T17:15:33.299299+00:00",
+  "generated_at": "2026-11-15T02:53:13.201477+00:00",
   "count": 31,
   "fresh_this_run": 31,
   "carried_over": 0,
@@ -5888,23 +5890,23 @@
   },
   "BTC-USD": {
    "sym": "BTC-USD",
-   "price": 65185.5,
-   "updated": "2026-11-14",
+   "price": 64740.910156,
+   "updated": "2026-11-15",
    "kind": "watch",
-   "rsi": 21.2,
+   "rsi": 20.8,
    "ma50": "Below",
    "ma200": "Below",
-   "chg1m": -19.32,
-   "chg3m": -15.64,
-   "chg6m": 2.17,
-   "pos52w": 23.6,
-   "drawdown": -24.7,
-   "vol30d": 33.7,
+   "chg1m": -19.87,
+   "chg3m": -16.22,
+   "chg6m": 1.47,
+   "pos52w": 22.0,
+   "drawdown": -25.2,
+   "vol30d": 34.4,
    "mom12_1": 20.09,
-   "vol1y": 32.1,
+   "vol1y": 32.2,
    "gate": "fail",
    "gate_why": "ต่ำกว่า MA200",
-   "rank": 0.626,
+   "rank": 0.624,
    "size": 1.45,
    "size_why": [
     "RSI 21 — oversold",
@@ -5944,14 +5946,14 @@
     77198.2109,
     80405.2891,
     75223.1484,
-    65185.5
+    64740.9102
    ],
    "name": "Bitcoin",
    "cat": "crypto"
   }
  },
  "watchlist_meta": {
-  "generated_at": "2026-11-14T17:15:33.299299+00:00",
+  "generated_at": "2026-11-15T02:53:13.201477+00:00",
   "count": 25,
   "fresh_this_run": 25,
   "carried_over": 0,
