@@ -116,7 +116,10 @@ console.log('\n═══ #2 Reconcile นับรายการหลังว
   const cr2 = computeReconciliation(bals, { SCB: { date: recDate, actual: 49800 } }, null, rows).accounts[0];
   chk('ผลต่างจริงยังจับได้ (−200)', near(cr2.diff, -200) && !cr2.ok, cr2);
   // ไม่ส่ง rows (ผู้เรียกเก่า) = พฤติกรรมเดิม ไม่พัง
+  // v91 — ตรึงวันที่ไว้: ยอดจริงเก่าเกิน 45 วันจะไม่ถูกใช้ (RECON_TRUST_DAYS) เทสต์นี้เคยพังเองเมื่อวันจริงเลย 15 พ.ย. 2026
+  Date.now = () => Date.parse('2026-10-08T05:00:00Z');
   chk('ไม่ส่ง rows → ทำงานแบบเดิม', near(applyReconciliation(bals, rec).bals[0].balance, 50000));
+  Date.now = now;
 }
 
 console.log('\n═══ v84 Reconcile: รายการวันเดียวกันที่กรอกหลังจดยอด (บั๊ก SCB 2026-11-02) ═══');

@@ -1927,6 +1927,11 @@ input[type=date]::-webkit-date-and-time-value,input[type=month]::-webkit-date-an
   .tx-g2:has(input[type=date]),.tx-g2:has(input[type=month]),.gf-row:has(input[type=date]),.gf-row:has(input[type=month]){grid-template-columns:minmax(0,1fr)}
 }
 #rc-help{margin:-4px 0 12px}
+#saved-toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translate(-50%,12px);z-index:950;
+  background:var(--fg);color:var(--bg);font-size:13px;font-weight:600;padding:10px 16px;border-radius:999px;box-shadow:var(--pop-shadow);
+  opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;white-space:nowrap}
+#saved-toast.show{opacity:1;transform:translate(-50%,0)}
+@media(max-width:768px){#saved-toast{bottom:calc(84px + env(safe-area-inset-bottom,0px))}}
 /* v89 — มือถือ: เมนู "อื่น ๆ" แสดงเฉพาะกลุ่มที่ไม่อยู่ในแถบล่าง (ภาพรวม · เงิน · พอร์ต · ตลาด อยู่ในแถบล่างแล้ว) */
 @media(max-width:768px){ .sidebar .sb-dup-bnav{display:none} }
 /* v89 — แถบชวนตั้งรหัสผ่าน (มือถือ: ลอยเหนือแถบล่าง) ทับปุ่มท้ายเมนู "อื่น ๆ" (ตั้งค่าแจ้งเตือน · PDF · Backup) จนกดไม่ได้ → ซ่อนระหว่างเปิดเมนู */
@@ -5160,7 +5165,7 @@ const VLOG_PURGED_KEY = 'finOS_valueLogPurged_v44';
 //   ฟังก์ชันหาย  → BLOCK  (แอปคำนวณผิดแน่นอน — นี่คือสิ่งที่ guard มีไว้จับ)
 //   เลขไม่ตรง    → WARN   (แค่ลืม bump — log ไว้ ไม่รบกวนผู้ใช้)
 // ฟังก์ชันที่ต้องมีคือสัญญาจริงระหว่างสองไฟล์ ส่วนสตริงเวอร์ชันเป็นแค่ป้าย
-const EXPECTED_SHARED_BUILD = 'v90';
+const EXPECTED_SHARED_BUILD = 'v91';
 const REQUIRED_SHARED_FNS = [
   'resolvePrices', 'pipelinePricesTHB', 'parseReconcileRows',
   'computeReconciliation', 'splitBalances', 'debtVsInvest', 'buildDebtPlan',
@@ -8634,7 +8639,7 @@ async function dbfSave(){
         {method:'POST', body:JSON.stringify({values:[debtRowValues(meta,f).map(x=>x==null?'':x)]})});
     }
     await debtsReload();
-    dbfClose();
+    dbfClose(); savedToast();
     renderDebts(); renderDebtSched(); try{ updateDebtBadge(); }catch(e){}
   }catch(e){ say(e.message,'var(--expense)'); }
   btn.disabled=false;
@@ -9866,7 +9871,7 @@ async function docsSubmitForm(){
     }
     const wasEdit = docsEditRow;
     await docsReload();
-    docsCloseForm();
+    docsCloseForm(); savedToast();
     if(!wasEdit){ const k = docCategoryOf(f.cat).id; if(docsCat !== 'all' && docsCat !== k) docsCat = k; }
     renderDocs();
     const hit = wasEdit != null ? docsList.find(x => x.row === wasEdit)
@@ -12531,6 +12536,11 @@ function txFillAcct2(t, want){
     a2.value = kind === 'debt' ? '' : ([...a2.options].some(o => o.value === keep) ? keep : (a2.options[0] || {}).value || '');
   }
   if(want !== undefined) a2.value = want == null ? (kind === 'debt' ? '' : (a2.options[0] || {}).value || '') : String(want);
+  // v91 — โอน: ปลายทางเริ่มต้นเคยเป็นบัญชีเดียวกับต้นทาง (SCB → SCB) ต้องแก้ทุกครั้ง → เลือกบัญชีอื่นตัวแรกให้
+  if(kind === 'all' && want == null){
+    const a1 = document.getElementById('tx-f-acct');
+    if(a1 && a2.value === a1.value){ const o = [...a2.options].find(o => o.value !== a1.value); if(o) a2.value = o.value; }
+  }
 }
 // ตัดยอดบัตร → หมวด/รายละเอียดตามแบบที่ชีตใช้: แท็บ Debts → แถวจ่ายบัตรนี้ครั้งล่าสุด → "Clear Debt <บัตร>"
 // เขียนทับเฉพาะช่องที่ว่าง หรือที่ฟอร์มเติมให้เองก่อนหน้า (ไม่ทับที่ผู้ใช้พิมพ์)
@@ -12634,6 +12644,15 @@ function txOnTypeChange(want2){
   document.getElementById('tx-f-acct-lbl').textContent   = t === 'Transfer' ? _L('โอนออกจากบัญชี','Transfer from') : debt ? _L('จ่ายจากบัญชี','Paid from') : _L('บัญชี','Account');
   const l2 = document.getElementById('tx-f-acct2-lbl');
   if(l2) l2.textContent = debt ? _L('ตัดยอดบัตรเครดิต / สินเชื่อ (ช่องนี้เป็นบวก)','Card / loan paid down (this column +)') : _L('โอนเข้าบัญชี','Transfer to');
+  // v91 — ตัวอย่างหมวดตามประเภท (เดิม "เช่น Food, Transport" ทุกประเภท) · โอน: เติมหมวดที่ใช้ครั้งล่าสุดให้ถ้าช่องยังว่าง
+  const cEl = document.getElementById('tx-f-cat');
+  const lastCat = ty => { const r = [...(txRows || [])].reverse().find(x => x.type === ty && x.category && x.category !== 'Other'); return r ? r.category : ''; };
+  cEl.placeholder = _L('เช่น ','e.g. ') + (lastCat(t) || ({Income:'Salary', Transfer:'Transfer', Savings:'Savings', Bills:'Electricity', Debt:'Clear Debt …'}[t] || 'Food, Transport'));
+  if(!txEditRow){
+    if(txAutoFill.xfer && cEl.value === txAutoFill.xfer) cEl.value = '';
+    txAutoFill.xfer = '';
+    if(t === 'Transfer' && !cEl.value.trim()){ const c = lastCat('Transfer'); if(c){ cEl.value = c; txAutoFill.xfer = c; } }
+  }
   txUpdatePreview();
 }
 
@@ -12655,6 +12674,8 @@ function txUpdatePreview(){
     if(pay){                                     // ยอดบัญชีหนี้ก่อน/หลังบันทึก (ชุดเดียวกับหน้าบัญชี)
       const cur = (effectiveBals() || []).find(b => b.name === n2);
       if(cur) out += `\n  ${_L('ยอด','Balance')} ${n2}: ${fmt(cur.balance)} → ${fmt(cur.balance + mag)}`;
+      if(cur && cur.balance < 0 && cur.balance + mag > 0.5 && !txEditRow)   // v91
+        out += `\n  ⚠ ${_L('จ่ายเกินยอดค้าง ','More than the amount owed by ')}${fmt(cur.balance + mag)}`;
     }
   } else if(t === 'Debt'){
     out += `\n${_L('(ไม่ตัดยอดบัตร — ถ้าจ่ายบัตรเครดิต เลือกบัตรในช่อง "ตัดยอดบัตร")','(no card paid down — to pay a credit card, pick it under "Card / loan paid down")')}`;
@@ -12696,7 +12717,7 @@ async function txSubmitForm(){
       say('บันทึกลง Transaction แถว ' + wrote.row + ' — กำลังดึงข้อมูลใหม่', 'var(--income)');
     }
     await gsSync();
-    txCloseForm();
+    txCloseForm(); savedToast();
   }catch(e){
     say(e.message, 'var(--expense)');
   }
@@ -12721,7 +12742,7 @@ async function txDeleteCurrent(){
     await txDeleteRow(txEditRow, rec);
     say('ลบแล้ว — กำลังดึงข้อมูลใหม่', 'var(--income)');
     await gsSync();
-    txCloseForm();
+    txCloseForm(); savedToast('del');
   }catch(e){
     say(e.message, 'var(--expense)');
   }
@@ -12921,15 +12942,21 @@ function atAutofillFromTicker(){
   const tk = document.getElementById('at-f-ticker').value.trim().toUpperCase();
   if(!tk) return;
   const hist = (tracker || []).filter(r => String(r.ticker).toUpperCase() === tk);
-  if(!hist.length) return;
-  const last = hist[hist.length - 1];
-  const set = (id, v) => { const e = document.getElementById(id);
-    if(e && !e.value && v && v !== '—') e.value = v; };
+  /* v91 — เดิมเติมเฉพาะช่องว่าง: พิมพ์ KBANK (ได้ Thai Stock / Streaming) แล้วเปลี่ยนเป็น AAPL ค่าของ KBANK ค้างอยู่ → ลงชีตผิดประเภท
+     ตอนนี้ค่าที่ฟอร์มเติมเอง (data-auto) ถูกแทนเมื่อเปลี่ยน ticker · ค่าที่ผู้ใช้พิมพ์เองไม่แตะ · ticker ไม่มีประวัติ → ล้างค่าที่เติมเอง */
+  const last = hist.length ? hist[hist.length - 1] : {};
+  const set = (id, v) => { const e = document.getElementById(id); if(!e || e.disabled) return;
+    if(e.value && e.value !== e.dataset.auto) return;
+    const nv = v && v !== '—' ? String(v) : '';
+    e.value = nv; e.dataset.auto = nv; };
+  const fx0 = document.getElementById('at-f-fx');
+  if(fx0 && fx0.dataset.auto && fx0.value === fx0.dataset.auto && !(last.fx > 1)){ fx0.value = '1'; fx0.dataset.auto = ''; }
+  if(!hist.length){ ['at-f-asset','at-f-industry','at-f-platform'].forEach(id => set(id, '')); atCalc(); return; }
   set('at-f-asset',    last.assetTypeRaw);
   set('at-f-industry', last.industry);
   set('at-f-platform', last.platform);
   const fx = document.getElementById('at-f-fx');
-  if(fx && (fx.value === '' || fx.value === '1') && last.fx > 1) fx.value = last.fx;
+  if(fx && (fx.value === '' || fx.value === '1' || fx.value === fx.dataset.auto) && last.fx > 1){ fx.value = last.fx; fx.dataset.auto = String(last.fx); }
   atCalc();
 }
 
@@ -13032,6 +13059,12 @@ function atCalc(usdIsFormula){
   let s = `${money(qty)} × ${money(price)}` + (fx > 1 ? ` × ${fx}` : '') + `  =  ฿${money(thb)}`;
   if(comm) s += `\nค่าธรรมเนียม ฿${money(comm)}  →  รวม ฿${money(thb + comm)}`;
   if(fx > 1) s += `\nยอด USD  $${money(gross)}`;
+  // v91 — ขายมากกว่าที่ถืออยู่: เตือน (ไม่ห้าม — อาจกรอกย้อนหลัง)
+  if($('at-f-type').value === 'Sell' && !atEditRow){
+    const tk = ($('at-f-ticker').value || '').trim().toUpperCase();
+    const a = (assets || []).find(x => String(x.ticker).toUpperCase() === tk), held = a ? a.qty : 0;
+    if(tk && qty > held + 1e-9) s += `\n⚠ ${_L('ขายมากกว่าที่ถืออยู่ (ถือ ','Selling more than you hold (holding ')}${held.toLocaleString('en-US',{maximumFractionDigits:8})})`;
+  }
   el.textContent = s;
 
   // เติมยอดรวมให้อัตโนมัติ ถ้าผู้ใช้ยังไม่ได้พิมพ์เอง
@@ -13397,7 +13430,7 @@ async function srfSave(){
     say(_L(`บันทึกแถว ${rowNum} แล้ว — กำลังดึงข้อมูลใหม่`, `Saved row ${rowNum} — refreshing`), 'var(--income)');
     const cb = S.onSaved, saved = {kind:S.kind, row:rowNum, keys:spec.key.map(k => vals[k].raw)};
     try{ await gsSync(); }catch(e){}
-    srfClose();
+    srfClose(); savedToast();
     if(cb) try{ cb(saved); }catch(e){}
   }catch(e){
     say(e.message);
@@ -13419,7 +13452,7 @@ async function srfDelete(){
     const gid = await _srfGid(spec.tab);
     await _docsApi(':batchUpdate', {method:'POST', body:JSON.stringify({requests:[{deleteDimension:{range:{sheetId:gid, dimension:'ROWS', startIndex:idx, endIndex:idx + 1}}}]})});
     try{ await gsSync(); }catch(e){}
-    srfClose();
+    srfClose(); savedToast('del');
   }catch(e){ say(e.message); }
   $('srf-save').disabled = false; $('srf-del').disabled = false;
 }
@@ -13505,7 +13538,7 @@ async function rcSave(){
       {method:'POST', body:JSON.stringify({values})});
     say(_L(`บันทึก ${values.length} บัญชีแล้ว — กำลังดึงข้อมูลใหม่`, `Saved ${values.length} account(s) — refreshing`), 'var(--income)');
     try{ await gsSync(); }catch(e){}
-    rcClose();
+    rcClose(); savedToast();
   }catch(e){ say(e.message); }
   $('rc-save').disabled = false;
 }
@@ -13536,8 +13569,24 @@ function atFeedAdd(){
 document.addEventListener('keydown', e => { if(e.key === 'Escape') fabClose(); });
 /* v73 — Esc ปิดฟอร์มเพิ่ม/แก้รายการ (ธุรกรรม · ลงทุน) เหมือนฟอร์มเอกสาร
    ไม่ปิดระหว่างกำลังบันทึก (ปุ่มบันทึกถูก disable) — กันผู้ใช้เข้าใจว่ายกเลิกแล้วแต่ชีตยังถูกเขียน */
+/* v91 — บันทึกสำเร็จแล้วฟอร์มปิดเงียบ ๆ ผู้ใช้ไม่รู้ว่าลงชีตหรือยัง → ข้อความยืนยันสั้น ๆ 2.5 วินาที */
+function savedToast(kind){
+  let el = document.getElementById('saved-toast');
+  if(!el){ el = document.createElement('div'); el.id = 'saved-toast'; el.setAttribute('role','status'); document.body.appendChild(el); }
+  el.textContent = kind === 'del' ? _L('🗑 ลบออกจากชีตแล้ว','🗑 Deleted from the sheet') : _L('✓ บันทึกลงชีตแล้ว','✓ Saved to the sheet');
+  el.classList.add('show'); clearTimeout(savedToast._t); savedToast._t = setTimeout(() => el.classList.remove('show'), 2500);
+}
 document.addEventListener('keydown', e => {
   if(e.key !== 'Escape') return;
+  // v91 — ฟอร์มใหม่ (รายการราคา/ประกัน · ยอดจริง · หนี้) ปิดด้วย Esc ได้เหมือนฟอร์มอื่น · ฟอร์มที่ซ้อนอยู่บนสุดปิดก่อน · ไม่ปิดระหว่างบันทึก
+  for(const [id, save, close] of [['srf-modal','srf-save',srfClose], ['rc-modal','rc-save',rcClose], ['dbf-modal','dbf-save',dbfClose]]){
+    const m = document.getElementById(id);
+    if(m && m.classList.contains('show')){
+      const b = document.getElementById(save), busy = b && b.disabled && !!document.querySelector('#' + id + ' .gs-input');
+      if(!busy) close();
+      return;
+    }
+  }
   const tm = document.getElementById('tx-modal'), am = document.getElementById('at-modal');
   if(tm && tm.classList.contains('show') && !document.getElementById('tx-f-save')?.disabled){ txCloseForm(); return; }
   if(am && am.classList.contains('show') && !document.getElementById('at-f-save')?.disabled){ atCloseForm(); }
@@ -13583,7 +13632,7 @@ async function atSubmitForm(){
           + ' — กำลังดึงข้อมูลใหม่', 'var(--income)');
     }
     await gsSync();
-    atCloseForm();
+    atCloseForm(); savedToast();
   }catch(e){
     say(e.message, 'var(--expense)');
   }
@@ -13608,7 +13657,7 @@ async function atDeleteCurrent(){
     await atDeleteRowNum(atEditRow, rec);
     say('ลบแล้ว — กำลังดึงข้อมูลใหม่', 'var(--income)');
     await gsSync();
-    atCloseForm();
+    atCloseForm(); savedToast('del');
   }catch(e){
     say(e.message, 'var(--expense)');
   }
