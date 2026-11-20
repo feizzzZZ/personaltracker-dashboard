@@ -17,9 +17,11 @@ data/          JSON written by GitHub Actions: market-data · signal-history · 
 scripts/       pipeline Python (fetch_*.py, bot_paper.py, line_notify.py, notify_store.py, probe_sources.py, make_icons/splash.py)
 tests/         all test_*.cjs / .mjs / .py — run from the repo root
 cloudflare-worker/autobot/   Worker (imports ../../js/autobot.js + liveport.js)
-docs/releases/ release-vNN.md · docs/progress/ PROGRESS-YYYY-MM-DD.md
+docs/releases/ release-vNN.md · docs/progress/ PROGRESS-YYYY-MM-DD.md · docs/system-map.html
 icon/ splash/  PWA images
 ```
+
+`docs/system-map.html` (2026-11-20, English, self-contained HTML with inline SVG) is the user-facing map of the whole system: data flow, the daily schedule, what each + menu item writes, how changes ship, where data and keys live. When a change alters any of those (a new tab, form, schedule, service or secret), update that page in the same PR.
 
 When adding a file, put it in the matching folder — don't add new files at the root. Moving a file means updating every path that names it: `index.html` `<script src>`, `service-worker.js` `SHELL_FILES`, fetches in `js/shared.js`, workflow `git add` lines, script `*_OUT` defaults, `wrangler.toml` `MARKET_URL`, and test default paths.
 
