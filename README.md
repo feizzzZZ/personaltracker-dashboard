@@ -34,6 +34,7 @@ Personal finance tracker and investment dashboard built with HTML/JS.
 | `cloudflare-worker/autobot/` | Worker ของบอทเทรด + พอร์ตสด |
 | `docs/releases/` | บันทึกแต่ละเวอร์ชัน `release-vNN.md` |
 | `docs/progress/` | บันทึกความคืบหน้า `PROGRESS-YYYY-MM-DD.md` |
+| `docs/system-map.html` | แผนผังระบบทั้งหมด (ภาษาอังกฤษ): ใครคุยกับใคร · งานตามเวลา · ปุ่ม + เขียนลงแท็บไหน · ขั้นตอนอัปเดต · ข้อมูลและกุญแจอยู่ที่ไหน — เปิดได้ที่ `https://feizzzzz.github.io/personaltracker-dashboard/docs/system-map.html` |
 | `icon/` · `splash/` | รูปไอคอนและหน้าจอเปิดแอป |
 | `CLAUDE.md` | คู่มือ repo สำหรับ Claude Code |
 

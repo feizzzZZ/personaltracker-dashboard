@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Finance OS System Map</title>
+<meta name="description" content="How the Finance OS app, Google Sheets, GitHub Actions and the Cloudflare Worker work together.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bai+Jamjuree:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one 1080px column, engineering-schematic style · wide diagrams scroll inside their own frame on phones
+   Box border colour = who runs it (your app · Google · GitHub · Cloudflare · markets/crypto) */
+:root{
+  --bg:#f3f5f2; --surface:#ffffff; --sunk:#e9eee9; --fg:#15201b; --muted:#5a6a62; --line:#d2dbd5;
+  --c-app:#1557b0; --c-google:#16803a; --c-gh:#15201b; --c-cf:#b45309; --c-mkt:#9b2c6f;
+  --f-head:"Bai Jamjuree","IBM Plex Sans",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1513; --surface:#161e1b; --sunk:#1c2622; --fg:#e4ebe7; --muted:#95a59d; --line:#2b3732;
+  --c-app:#7fb0f2; --c-google:#5cc47c; --c-gh:#e4ebe7; --c-cf:#eaa45a; --c-mkt:#e486bd; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1513; --surface:#161e1b; --sunk:#1c2622; --fg:#e4ebe7; --muted:#95a59d; --line:#2b3732;
+  --c-app:#7fb0f2; --c-google:#5cc47c; --c-gh:#e4ebe7; --c-cf:#eaa45a; --c-mkt:#e486bd; color-scheme:dark}
+
+*{box-sizing:border-box}
+html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.7 var(--f-body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 56px}
+.wrap{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:44px}
+h1,h2,h3{font-family:var(--f-head);line-height:1.25;text-wrap:balance;margin:0}
+h1{font-size:clamp(28px,4.4vw,40px);font-weight:700;letter-spacing:-.01em}
+h2{font-size:22px;font-weight:700}
+h3{font-size:15.5px;font-weight:600;font-family:var(--f-body)}
+p{margin:0;max-width:68ch}
+code,.mono{font-family:var(--f-mono);font-size:.88em}
+code{background:var(--sunk);padding:1px 6px;border-radius:5px;overflow-wrap:anywhere}
+
+header{display:flex;flex-direction:column;gap:12px}
+.eyebrow{font:500 12px var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.lede{font-size:17px;color:var(--muted)}
+nav{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+nav a{color:var(--fg);text-decoration:none;font-size:13.5px;border:1px solid var(--line);background:var(--surface);
+  padding:5px 12px;border-radius:999px}
+nav a:hover,nav a:focus-visible{border-color:var(--fg);outline:none}
+
+section{display:flex;flex-direction:column;gap:16px;scroll-margin-top:16px}
+.sec-head{display:flex;flex-direction:column;gap:6px}
+.sec-head p{color:var(--muted)}
+
+figure{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px 18px 14px}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.scroll svg{display:block;width:100%;min-width:780px;height:auto;color:var(--fg)}
+figcaption{margin-top:12px;font-size:13.5px;color:var(--muted);max-width:none}
+.swipe{display:none;font-size:12px;color:var(--muted);margin-bottom:6px}
+@media (max-width:820px){.swipe{display:block}}
+
+/* SVG — every colour comes from a token, so it reads in both themes */
+.node rect{fill:var(--surface);stroke-width:1.6}
+.k-app rect{stroke:var(--c-app)} .k-google rect{stroke:var(--c-google)} .k-gh rect{stroke:var(--c-gh)}
+.k-cf rect{stroke:var(--c-cf)} .k-mkt rect{stroke:var(--c-mkt)}
+.app rect{stroke-width:2.4}
+.item rect{fill:var(--sunk);stroke:none}
+.t1{font:600 15px var(--f-head);fill:currentColor}
+.t2{font:12px var(--f-body);fill:var(--muted)}
+.t3{font:10.5px var(--f-mono);fill:var(--muted)}
+.t4{font:600 12.5px var(--f-body);fill:currentColor}
+.edge{stroke:currentColor;stroke-width:1.4;fill:none}
+.el{font:500 11.5px var(--f-body);fill:currentColor}
+.el.mono{font:10.5px var(--f-mono);fill:var(--muted)}
+.el .b{font-family:var(--f-mono);font-weight:500}
+.grid{stroke:var(--line);stroke-width:1}
+.axis{stroke:var(--muted);stroke-width:1.2}
+.lane{stroke:var(--line);stroke-width:1;stroke-dasharray:3 4}
+.tick{font:10.5px var(--f-mono);fill:var(--muted)}
+.lt{font:600 13px var(--f-body);fill:currentColor}
+.ls{font:10.5px var(--f-mono);fill:var(--muted)}
+.ev{stroke:var(--surface);stroke-width:2}
+.ev.k-gh{fill:var(--c-gh)}
+.bot{stroke:var(--c-cf);stroke-width:1.6}
+.band{fill:var(--c-app);fill-opacity:.12;stroke:var(--c-app);stroke-opacity:.5}
+
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:10px;font-size:12.5px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:14px;height:10px;border-radius:3px;border:2px solid;display:inline-block}
+
+/* tables */
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:560px}
+th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:600 12px var(--f-mono);letter-spacing:.04em;text-transform:uppercase;color:var(--muted);background:var(--sunk)}
+tr:last-child td{border-bottom:none}
+td.path{white-space:nowrap;font-weight:600}
+td.when{color:var(--muted);font-size:13px}
+.arrow{color:var(--muted);font-weight:400;padding:0 4px}
+.pill{display:inline-block;font:500 11.5px var(--f-mono);padding:1px 8px;border-radius:999px;border:1px solid var(--line);background:var(--sunk);white-space:nowrap}
+.pill.dev{border-style:dashed}
+
+/* steps (a real sequence, so they are numbered) */
+.steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;counter-reset:s}
+.steps li{counter-increment:s;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px 16px;
+  display:flex;flex-direction:column;gap:6px;min-width:0}
+.steps li::before{content:counter(s);font:600 12px var(--f-mono);color:var(--surface);background:var(--fg);
+  width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center}
+.steps p{font-size:13.5px;color:var(--muted)}
+.note{border-left:3px solid var(--c-cf);background:var(--surface);border-radius:0 10px 10px 0;padding:12px 16px;font-size:14px;
+  display:flex;flex-direction:column;gap:6px}
+.note b{font-weight:600}
+
+/* where things live */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-top:3px solid var(--k);border-radius:12px;padding:14px 16px;
+  display:flex;flex-direction:column;gap:8px;min-width:0}
+.card ul{margin:0;padding-left:18px;font-size:13.5px;display:flex;flex-direction:column;gap:3px}
+.card .who{font:500 11.5px var(--f-mono);color:var(--muted);letter-spacing:.04em}
+footer{font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px}
+@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="eyebrow">Finance OS · v91 · updated 20 Nov 2026</div>
+  <h1>Finance OS System Map</h1>
+  <p class="lede">How the parts of the finance app talk to each other, where the data travels, what runs on a schedule, and what happens when you press Save.</p>
+  <nav aria-label="Contents">
+    <a href="#overview">Overview</a><a href="#day">A day in the system</a><a href="#journey">Open to saved</a>
+    <a href="#forms">What the + menu writes</a><a href="#release">Shipping a change</a><a href="#where">Where things live</a>
+  </nav>
+</header>
+
+<section id="overview">
+  <div class="sec-head">
+    <h2>Overview: who talks to whom</h2>
+    <p>The app has no server of its own. Your phone reads and writes Google Sheets directly. Market data comes from GitHub, which refreshes it on a schedule, and crypto balances come through a Cloudflare Worker.</p>
+  </div>
+  <figure>
+    <div class="swipe">← scroll sideways →</div>
+    <div class="scroll"><svg viewBox="0 0 1000 486" role="img" aria-label="The phone app reads and writes Google Sheets directly, gets its files and market data from GitHub Pages, which GitHub Actions updates twice a day, and talks to a Cloudflare Worker for the paper bot and live balances from Binance and MetaMask">
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker>
+  </defs>
+  <g class="node k-google"><rect x="20" y="140" width="230" height="132" rx="10"/><text class="t1" x="135.0" y="166" text-anchor="middle">Google Sheets</text><text class="t2" x="135.0" y="186" text-anchor="middle">Your source of truth</text><text class="t3" x="135.0" y="204" text-anchor="middle">Transaction · Asset_Tracker</text><text class="t3" x="135.0" y="222" text-anchor="middle">Reconcile · Debts · Insurance · …</text></g>
+  <g class="node k-google"><rect x="20" y="300" width="230" height="64" rx="10"/><text class="t1" x="135.0" y="326" text-anchor="middle">Google Drive</text><text class="t2" x="135.0" y="346" text-anchor="middle">Document files (read-only)</text></g>
+  <g class="node k-google"><rect x="20" y="398" width="230" height="64" rx="10"/><text class="t1" x="135.0" y="424" text-anchor="middle">Google Login</text><text class="t2" x="135.0" y="444" text-anchor="middle">Read/write access to sheets</text></g>
+  <g class="node k-gh"><rect x="385" y="18" width="240" height="82" rx="10"/><text class="t1" x="505.0" y="44" text-anchor="middle">GitHub Pages</text><text class="t2" x="505.0" y="64" text-anchor="middle">Serves the app + data/*.json</text><text class="t3" x="505.0" y="82" text-anchor="middle">…/personaltracker-dashboard/</text></g>
+  <g class="node k-app app"><rect x="385" y="150" width="240" height="326" rx="12"/>
+    <text class="t1" x="505" y="178" text-anchor="middle">Finance OS app</text>
+    <text class="t2" x="505" y="198" text-anchor="middle">iPhone / browser (PWA)</text></g>
+  <g class="item"><rect x="405" y="214" width="200" height="42" rx="7"/><text class="t4" x="417" y="232">Pages · + button</text><text class="t3" x="417" y="248">index.html</text></g>
+  <g class="item"><rect x="405" y="264" width="200" height="42" rx="7"/><text class="t4" x="417" y="282">Calculations</text><text class="t3" x="417" y="298">shared.js · balances · cost</text></g>
+  <g class="item"><rect x="405" y="314" width="200" height="42" rx="7"/><text class="t4" x="417" y="332">Password lock</text><text class="t3" x="417" y="348">vault.js · encrypts on device</text></g>
+  <g class="item"><rect x="405" y="364" width="200" height="42" rx="7"/><text class="t4" x="417" y="382">Live portfolio</text><text class="t3" x="417" y="398">liveport.js</text></g>
+  <g class="item"><rect x="405" y="414" width="200" height="42" rx="7"/><text class="t4" x="417" y="432">Works offline</text><text class="t3" x="417" y="448">service-worker.js</text></g>
+  <g class="node k-mkt"><rect x="760" y="16" width="220" height="56" rx="10"/><text class="t1" x="870.0" y="38" text-anchor="middle">Yahoo Finance</text><text class="t2" x="870.0" y="58" text-anchor="middle">Prices · indices · FX</text></g>
+  <g class="node k-gh"><rect x="760" y="110" width="220" height="112" rx="10"/><text class="t1" x="870.0" y="134" text-anchor="middle">GitHub Actions</text><text class="t2" x="870.0" y="154" text-anchor="middle">Market data 06:30 · 18:30</text><text class="t2" x="870.0" y="172" text-anchor="middle">Alerts 08:00 · 20:00</text><text class="t2" x="870.0" y="190" text-anchor="middle">Weekly · monthly summaries</text></g>
+  <g class="node k-cf"><rect x="760" y="258" width="220" height="98" rx="10"/><text class="t1" x="870.0" y="284" text-anchor="middle">Cloudflare Worker</text><text class="t2" x="870.0" y="304" text-anchor="middle">Paper bot every 15 min</text><text class="t2" x="870.0" y="322" text-anchor="middle">Live balances (read-only)</text></g>
+  <g class="node k-mkt"><rect x="760" y="408" width="106" height="62" rx="10"/><text class="t1" x="813.0" y="432" text-anchor="middle">Binance</text><text class="t2" x="813.0" y="452" text-anchor="middle">Account · prices</text></g>
+  <g class="node k-mkt"><rect x="874" y="408" width="106" height="62" rx="10"/><text class="t1" x="927.0" y="432" text-anchor="middle">MetaMask</text><text class="t2" x="927.0" y="452" text-anchor="middle">via RPC</text></g>
+
+  <g class="edges">
+    <line class="edge" x1="252" y1="200" x2="381" y2="200" marker-end="url(#ah)"/>
+    <text class="el" x="316" y="192" text-anchor="middle">read · Sync</text>
+    <line class="edge" x1="383" y1="228" x2="254" y2="228" marker-end="url(#ah)"/>
+    <text class="el" x="318" y="246" text-anchor="middle">write · + forms</text>
+    <line class="edge" x1="252" y1="332" x2="381" y2="332" marker-end="url(#ah)"/>
+    <text class="el" x="316" y="324" text-anchor="middle">file list</text>
+    <line class="edge" x1="252" y1="430" x2="381" y2="430" marker-end="url(#ah)"/>
+    <text class="el" x="316" y="422" text-anchor="middle">token</text>
+    <line class="edge" x1="505" y1="102" x2="505" y2="146" marker-end="url(#ah)"/>
+    <text class="el" x="497" y="128" text-anchor="end">app files · data/*.json</text>
+    <polyline class="edge" points="758,148 705,148 705,60 629,60" marker-end="url(#ah)"/>
+    <text class="el" x="698" y="96" text-anchor="end">commit</text>
+    <text class="el mono" x="698" y="110" text-anchor="end">data/*.json</text>
+    <line class="edge" x1="870" y1="74" x2="870" y2="106" marker-end="url(#ah)"/>
+    <text class="el" x="878" y="94">prices</text>
+    <polyline class="edge" points="758,200 690,200 690,250 629,250" marker-end="url(#ah)"/>
+    <text class="el" x="684" y="224" text-anchor="end">alerts</text>
+    <text class="el" x="684" y="238" text-anchor="end">Push</text>
+    <line class="edge" x1="629" y1="306" x2="756" y2="306" marker-start="url(#ah)" marker-end="url(#ah)"/>
+    <text class="el" x="692" y="298" text-anchor="middle">rules · balances</text>
+    <text class="el mono" x="692" y="322" text-anchor="middle">Bearer token</text>
+    <line class="edge" x1="812" y1="406" x2="812" y2="360" marker-end="url(#ah)"/>
+    <text class="el" x="820" y="382">balances</text><text class="el" x="820" y="396">trades</text>
+    <line class="edge" x1="927" y1="406" x2="927" y2="360" marker-end="url(#ah)"/>
+    <text class="el" x="934" y="388">balances</text>
+    <line class="edge" x1="758" y1="446" x2="629" y2="446" marker-end="url(#ah)"/>
+    <text class="el" x="694" y="438" text-anchor="middle">live prices</text><text class="el mono" x="694" y="462" text-anchor="middle">WebSocket</text>
+  </g>
+</svg></div>
+    <div class="legend" aria-label="Border colour meaning">
+      <span><i style="border-color:var(--c-app)"></i>App on your device</span>
+      <span><i style="border-color:var(--c-google)"></i>Google</span>
+      <span><i style="border-color:var(--c-gh)"></i>GitHub</span>
+      <span><i style="border-color:var(--c-cf)"></i>Cloudflare</span>
+      <span><i style="border-color:var(--c-mkt)"></i>Markets / crypto</span>
+    </div>
+    <figcaption>Arrows point the way the data travels. The sheet is the original copy of all your financial data; everything else is market data or balances that are only read for display.</figcaption>
+  </figure>
+
+  <div class="tbl">
+    <table>
+      <thead><tr><th>From → to</th><th>What</th><th>When</th></tr></thead>
+      <tbody>
+        <tr><td class="path">Google Sheets <span class="arrow">→</span> app</td><td>3 main tabs (Transaction · Asset_Tracker · Asset_Live_Price_Feed) and 7 optional tabs (Reconcile · Debts · 2 insurance tabs · Documents · Market_Data · Value_Log)</td><td class="when">Opening the app · Sync · after saving a form</td></tr>
+        <tr><td class="path">App <span class="arrow">→</span> Google Sheets</td><td>New, edited or deleted rows from the + menu forms and from tapping a row to edit it</td><td class="when">When you press Save</td></tr>
+        <tr><td class="path">Google Drive <span class="arrow">→</span> app</td><td>The file list of a chosen folder, used to build document entries (stored as links; files are not copied)</td><td class="when">When importing documents</td></tr>
+        <tr><td class="path">GitHub Pages <span class="arrow">→</span> app</td><td>The app files and <code>data/</code> market-data · fundamentals · bot-paper · the encrypted notification inbox</td><td class="when">Opening the app (kept on the device so it opens offline)</td></tr>
+        <tr><td class="path">Yahoo Finance <span class="arrow">→</span> GitHub Actions</td><td>Prices of stocks and funds, indices, FX rates, and company financials (weekly)</td><td class="when">06:30 · 18:30</td></tr>
+        <tr><td class="path">GitHub Actions <span class="arrow">→</span> GitHub Pages</td><td>Commits fresh <code>data/*.json</code> (always merged with the old data, so a failed fetch never wipes anything)</td><td class="when">After each data run</td></tr>
+        <tr><td class="path">GitHub Actions <span class="arrow">→</span> phone</td><td>Push notifications (and LINE if enabled), also saved to the in-app inbox</td><td class="when">08:00 · 20:00 · Mon 08:30 · 1st of month 08:00</td></tr>
+        <tr><td class="path">App <span class="arrow">⇄</span> Cloudflare Worker</td><td>Bot rules and the paper portfolio · live balances · cost basis from Binance trade history</td><td class="when">Trading bot page · Live portfolio page (balances refresh every 60 s)</td></tr>
+        <tr><td class="path">Binance · MetaMask <span class="arrow">→</span> Worker</td><td>Balances and trade history through a read-only key · token balances in your wallets</td><td class="when">When the app asks</td></tr>
+        <tr><td class="path">Binance <span class="arrow">→</span> app</td><td>Live prices over the public WebSocket (no key)</td><td class="when">While the Live portfolio page is open</td></tr>
+        <tr><td class="path">GitHub Pages <span class="arrow">→</span> Worker</td><td>Prices from <code>market-data.json</code> for the paper bot</td><td class="when">Every 15 min</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="day">
+  <div class="sec-head">
+    <h2>A day in the system</h2>
+    <p>Jobs that run on their own, in Thai time. You don't need to press anything.</p>
+  </div>
+  <figure>
+    <div class="swipe">← scroll sideways →</div>
+    <div class="scroll"><svg viewBox="0 0 1000 256" role="img" aria-label="Over 24 hours: market data runs at 06:30 and 18:30, the portfolio summary at 08:00, the price-anomaly check at 20:00, the paper bot every 15 minutes, and the app syncs whenever it is opened">
+  <line class="grid" x1="180.0" y1="18" x2="180.0" y2="226"/><line class="grid" x1="278.8" y1="18" x2="278.8" y2="226"/><line class="grid" x1="377.5" y1="18" x2="377.5" y2="226"/><line class="grid" x1="476.2" y1="18" x2="476.2" y2="226"/><line class="grid" x1="575.0" y1="18" x2="575.0" y2="226"/><line class="grid" x1="673.8" y1="18" x2="673.8" y2="226"/><line class="grid" x1="772.5" y1="18" x2="772.5" y2="226"/><line class="grid" x1="871.2" y1="18" x2="871.2" y2="226"/><line class="grid" x1="970.0" y1="18" x2="970.0" y2="226"/>
+  <line class="axis" x1="180" y1="226" x2="970" y2="226"/>
+  <text class="tick" x="180.0" y="246" text-anchor="middle">00:00</text><text class="tick" x="278.8" y="246" text-anchor="middle">03:00</text><text class="tick" x="377.5" y="246" text-anchor="middle">06:00</text><text class="tick" x="476.2" y="246" text-anchor="middle">09:00</text><text class="tick" x="575.0" y="246" text-anchor="middle">12:00</text><text class="tick" x="673.8" y="246" text-anchor="middle">15:00</text><text class="tick" x="772.5" y="246" text-anchor="middle">18:00</text><text class="tick" x="871.2" y="246" text-anchor="middle">21:00</text><text class="tick" x="970.0" y="246" text-anchor="middle">24:00</text>
+  <text class="lt" x="8" y="40">Market data</text><text class="ls" x="8" y="56">GitHub Actions</text>
+  <line class="lane" x1="180" y1="44" x2="970" y2="44"/>
+  <circle class="ev k-gh" cx="394.0" cy="44" r="6.5"/><text class="el" x="406.0" y="48"><tspan class="b">06:30</tspan> prices · signals · paper bot</text>
+  <circle class="ev k-gh" cx="789.0" cy="44" r="6.5"/><text class="el" x="801.0" y="48"><tspan class="b">18:30</tspan> evening run</text>
+  <text class="lt" x="8" y="96">Alerts</text><text class="ls" x="8" y="112">GitHub Actions</text>
+  <line class="lane" x1="180" y1="100" x2="970" y2="100"/>
+  <circle class="ev k-gh" cx="443.3" cy="100" r="6.5"/><text class="el" x="455.3" y="104"><tspan class="b">08:00</tspan> daily portfolio summary</text>
+  <circle class="ev k-gh" cx="838.3" cy="100" r="6.5"/><text class="el" x="850.3" y="104"><tspan class="b">20:00</tspan> price anomalies</text>
+  <text class="lt" x="8" y="148">Paper bot</text><text class="ls" x="8" y="164">Cloudflare Worker</text>
+  <text class="el" x="180" y="136">every 15 min · checks its rules and trades in the paper portfolio (no real money)</text>
+  <line class="bot" x1="180.0" y1="145" x2="180.0" y2="157"/><line class="bot" x1="188.2" y1="145" x2="188.2" y2="157"/><line class="bot" x1="196.5" y1="145" x2="196.5" y2="157"/><line class="bot" x1="204.7" y1="145" x2="204.7" y2="157"/><line class="bot" x1="212.9" y1="145" x2="212.9" y2="157"/><line class="bot" x1="221.1" y1="145" x2="221.1" y2="157"/><line class="bot" x1="229.4" y1="145" x2="229.4" y2="157"/><line class="bot" x1="237.6" y1="145" x2="237.6" y2="157"/><line class="bot" x1="245.8" y1="145" x2="245.8" y2="157"/><line class="bot" x1="254.1" y1="145" x2="254.1" y2="157"/><line class="bot" x1="262.3" y1="145" x2="262.3" y2="157"/><line class="bot" x1="270.5" y1="145" x2="270.5" y2="157"/><line class="bot" x1="278.8" y1="145" x2="278.8" y2="157"/><line class="bot" x1="287.0" y1="145" x2="287.0" y2="157"/><line class="bot" x1="295.2" y1="145" x2="295.2" y2="157"/><line class="bot" x1="303.4" y1="145" x2="303.4" y2="157"/><line class="bot" x1="311.7" y1="145" x2="311.7" y2="157"/><line class="bot" x1="319.9" y1="145" x2="319.9" y2="157"/><line class="bot" x1="328.1" y1="145" x2="328.1" y2="157"/><line class="bot" x1="336.4" y1="145" x2="336.4" y2="157"/><line class="bot" x1="344.6" y1="145" x2="344.6" y2="157"/><line class="bot" x1="352.8" y1="145" x2="352.8" y2="157"/><line class="bot" x1="361.0" y1="145" x2="361.0" y2="157"/><line class="bot" x1="369.3" y1="145" x2="369.3" y2="157"/><line class="bot" x1="377.5" y1="145" x2="377.5" y2="157"/><line class="bot" x1="385.7" y1="145" x2="385.7" y2="157"/><line class="bot" x1="394.0" y1="145" x2="394.0" y2="157"/><line class="bot" x1="402.2" y1="145" x2="402.2" y2="157"/><line class="bot" x1="410.4" y1="145" x2="410.4" y2="157"/><line class="bot" x1="418.6" y1="145" x2="418.6" y2="157"/><line class="bot" x1="426.9" y1="145" x2="426.9" y2="157"/><line class="bot" x1="435.1" y1="145" x2="435.1" y2="157"/><line class="bot" x1="443.3" y1="145" x2="443.3" y2="157"/><line class="bot" x1="451.6" y1="145" x2="451.6" y2="157"/><line class="bot" x1="459.8" y1="145" x2="459.8" y2="157"/><line class="bot" x1="468.0" y1="145" x2="468.0" y2="157"/><line class="bot" x1="476.2" y1="145" x2="476.2" y2="157"/><line class="bot" x1="484.5" y1="145" x2="484.5" y2="157"/><line class="bot" x1="492.7" y1="145" x2="492.7" y2="157"/><line class="bot" x1="500.9" y1="145" x2="500.9" y2="157"/><line class="bot" x1="509.2" y1="145" x2="509.2" y2="157"/><line class="bot" x1="517.4" y1="145" x2="517.4" y2="157"/><line class="bot" x1="525.6" y1="145" x2="525.6" y2="157"/><line class="bot" x1="533.9" y1="145" x2="533.9" y2="157"/><line class="bot" x1="542.1" y1="145" x2="542.1" y2="157"/><line class="bot" x1="550.3" y1="145" x2="550.3" y2="157"/><line class="bot" x1="558.5" y1="145" x2="558.5" y2="157"/><line class="bot" x1="566.8" y1="145" x2="566.8" y2="157"/><line class="bot" x1="575.0" y1="145" x2="575.0" y2="157"/><line class="bot" x1="583.2" y1="145" x2="583.2" y2="157"/><line class="bot" x1="591.5" y1="145" x2="591.5" y2="157"/><line class="bot" x1="599.7" y1="145" x2="599.7" y2="157"/><line class="bot" x1="607.9" y1="145" x2="607.9" y2="157"/><line class="bot" x1="616.1" y1="145" x2="616.1" y2="157"/><line class="bot" x1="624.4" y1="145" x2="624.4" y2="157"/><line class="bot" x1="632.6" y1="145" x2="632.6" y2="157"/><line class="bot" x1="640.8" y1="145" x2="640.8" y2="157"/><line class="bot" x1="649.1" y1="145" x2="649.1" y2="157"/><line class="bot" x1="657.3" y1="145" x2="657.3" y2="157"/><line class="bot" x1="665.5" y1="145" x2="665.5" y2="157"/><line class="bot" x1="673.8" y1="145" x2="673.8" y2="157"/><line class="bot" x1="682.0" y1="145" x2="682.0" y2="157"/><line class="bot" x1="690.2" y1="145" x2="690.2" y2="157"/><line class="bot" x1="698.4" y1="145" x2="698.4" y2="157"/><line class="bot" x1="706.7" y1="145" x2="706.7" y2="157"/><line class="bot" x1="714.9" y1="145" x2="714.9" y2="157"/><line class="bot" x1="723.1" y1="145" x2="723.1" y2="157"/><line class="bot" x1="731.4" y1="145" x2="731.4" y2="157"/><line class="bot" x1="739.6" y1="145" x2="739.6" y2="157"/><line class="bot" x1="747.8" y1="145" x2="747.8" y2="157"/><line class="bot" x1="756.0" y1="145" x2="756.0" y2="157"/><line class="bot" x1="764.3" y1="145" x2="764.3" y2="157"/><line class="bot" x1="772.5" y1="145" x2="772.5" y2="157"/><line class="bot" x1="780.7" y1="145" x2="780.7" y2="157"/><line class="bot" x1="789.0" y1="145" x2="789.0" y2="157"/><line class="bot" x1="797.2" y1="145" x2="797.2" y2="157"/><line class="bot" x1="805.4" y1="145" x2="805.4" y2="157"/><line class="bot" x1="813.6" y1="145" x2="813.6" y2="157"/><line class="bot" x1="821.9" y1="145" x2="821.9" y2="157"/><line class="bot" x1="830.1" y1="145" x2="830.1" y2="157"/><line class="bot" x1="838.3" y1="145" x2="838.3" y2="157"/><line class="bot" x1="846.6" y1="145" x2="846.6" y2="157"/><line class="bot" x1="854.8" y1="145" x2="854.8" y2="157"/><line class="bot" x1="863.0" y1="145" x2="863.0" y2="157"/><line class="bot" x1="871.2" y1="145" x2="871.2" y2="157"/><line class="bot" x1="879.5" y1="145" x2="879.5" y2="157"/><line class="bot" x1="887.7" y1="145" x2="887.7" y2="157"/><line class="bot" x1="895.9" y1="145" x2="895.9" y2="157"/><line class="bot" x1="904.2" y1="145" x2="904.2" y2="157"/><line class="bot" x1="912.4" y1="145" x2="912.4" y2="157"/><line class="bot" x1="920.6" y1="145" x2="920.6" y2="157"/><line class="bot" x1="928.9" y1="145" x2="928.9" y2="157"/><line class="bot" x1="937.1" y1="145" x2="937.1" y2="157"/><line class="bot" x1="945.3" y1="145" x2="945.3" y2="157"/><line class="bot" x1="953.5" y1="145" x2="953.5" y2="157"/><line class="bot" x1="961.8" y1="145" x2="961.8" y2="157"/>
+  <text class="lt" x="8" y="198">Your app</text><text class="ls" x="8" y="214">any time</text>
+  <rect class="band" x="180" y="186" width="790" height="20" rx="4"/>
+  <text class="el" x="190" y="200">open the app, or come back after 15 min → it syncs the latest sheet data by itself</text>
+</svg></div>
+    <figcaption>Each market-data run has 4 steps in order: fetch prices and macro data → compute trading signals → refresh company financials (weekly) → step the paper bot, then commit to GitHub. Every Monday at 08:30 there is also a weekly summary, and on the 1st of each month at 08:00 a monthly report.</figcaption>
+  </figure>
+</section>
+
+<section id="journey">
+  <div class="sec-head">
+    <h2>From opening the app to a saved entry</h2>
+    <p>What happens between tapping the app icon and a new row appearing in your sheet.</p>
+  </div>
+  <ol class="steps">
+    <li><h3>Open the app</h3><p>The app files load instantly from the copy on your device, then a new version is checked on GitHub Pages in the background.</p></li>
+    <li><h3>Unlock</h3><p>Enter this device's password to decrypt the stored data and your Google token.</p></li>
+    <li><h3>Sync</h3><p>Reads 10 tabs from your sheet and the market-data files from GitHub.</p></li>
+    <li><h3>Calculate</h3><p>Account balances (checked against Reconcile) · average cost and profit · dividends · debts · goals.</p></li>
+    <li><h3>Press +</h3><p>Pick one of 13 forms grouped Money · Invest · Other and fill it in. The form suggests values you use often.</p></li>
+    <li><h3>Save</h3><p>The tab is read again right before writing, so no other row is overwritten and no formula column is touched.</p></li>
+    <li><h3>Confirm</h3><p>The app syncs again straight away and shows “✓ Saved to the sheet”.</p></li>
+  </ol>
+</section>
+
+<section id="forms">
+  <div class="sec-head">
+    <h2>What the + menu writes</h2>
+    <p>The + button is the only place to add new data. Pages only let you edit what is already there.</p>
+  </div>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Menu item</th><th>Stored in</th><th>What is saved</th></tr></thead>
+      <tbody>
+        <tr><td>💵 Income / expense</td><td><span class="pill">Transaction</span></td><td>New row: date · type · category · amount in that account's column (expenses are negative)</td></tr>
+        <tr><td>💳 Pay a credit card</td><td><span class="pill">Transaction</span></td><td>One Debt row: bank −x and card +x</td></tr>
+        <tr><td>🔁 Transfer</td><td><span class="pill">Transaction</span></td><td>One Transfer row: source −x and destination +x</td></tr>
+        <tr><td>🏦 Bank balances</td><td><span class="pill">Reconcile</span></td><td>One row per account (credit cards are entered as the positive amount owed and stored as negative)</td></tr>
+        <tr><td>📈 Buy / sell / dividend</td><td><span class="pill">Asset_Tracker</span></td><td>New row, with per-row formulas copied down (ARRAYFORMULA columns are never touched)</td></tr>
+        <tr><td>🏷 New ticker / price</td><td><span class="pill">Asset_Live_Price_Feed</span></td><td>A new ticker, or edits to an existing one (e.g. set it Inactive)</td></tr>
+        <tr><td>🤖 Bot rule</td><td><span class="pill dev">This device / Worker</span></td><td>Rules for the paper bot (no real-money trading)</td></tr>
+        <tr><td>🎯 Financial goal</td><td><span class="pill dev">This device</span></td><td>An amount target or a savings-rate goal</td></tr>
+        <tr><td>🧾 Debt / installment</td><td><span class="pill">Debts</span></td><td>The terms of each debt (installment · number of payments · due day). Actual payments are counted from Transaction.</td></tr>
+        <tr><td>🛡 Policy · 🩺 Coverage</td><td><span class="pill">Insurance_Policies</span> <span class="pill">Insurance_Coverage</span></td><td>One row per policy, and the coverage lines of each policy</td></tr>
+        <tr><td>📄 Document · ⇪ Import from Drive</td><td><span class="pill">Documents</span></td><td>Title, category, date and a link to the file in Drive</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note"><b>One thing still has to be done in the sheet</b><span>Adding a new bank account or card and its opening balance (header rows 1–5 of the Transaction tab). Settings kept on the device, such as category budgets, goals and debt interest rates, don't go to the sheet; if you use both a phone and a computer, set them on each.</span></div>
+</section>
+
+<section id="release">
+  <div class="sec-head">
+    <h2>Shipping a change</h2>
+    <p>The path every change takes, from asking for it to seeing it on your phone.</p>
+  </div>
+  <ol class="steps">
+    <li><h3>Ask Claude</h3><p>Describe the problem or what you want, with a screenshot if you have one.</p></li>
+    <li><h3>Fix and test</h3><p>Claude changes the code, runs the tests, tries it in a browser against a mock sheet, then opens a pull request.</p></li>
+    <li><h3>You merge</h3><p>Press Merge on the pull request on GitHub.</p></li>
+    <li><h3>Site updates</h3><p>GitHub Pages serves the new code within about 1–2 minutes.</p></li>
+    <li><h3>Reopen the app</h3><p>Close and reopen the app. It sees the new version (e.g. v91) and loads the new files.</p></li>
+  </ol>
+  <div class="note"><b>Two exceptions</b>
+    <span>Worker changes (<code>cloudflare-worker/autobot/</code>): you deploy them yourself after a git pull, with <code>npx wrangler deploy</code> in that folder.</span>
+    <span>Pipeline changes (<code>scripts/</code> · <code>.github/workflows/</code>): they take effect at the next scheduled run, or press Run workflow in the Actions tab.</span></div>
+</section>
+
+<section id="where">
+  <div class="sec-head">
+    <h2>Where data and keys live</h2>
+    <p>There is no central server holding your financial data. Each thing lives only in its own place.</p>
+  </div>
+  <div class="cards">
+    <div class="card" style="--k:var(--c-google)"><div class="who">YOUR GOOGLE SHEETS</div><h3>The original financial data</h3>
+      <ul><li>Income and expenses · portfolio · prices</li><li>Debts · insurance · bank balances</li><li>Document list (links to Drive)</li></ul></div>
+    <div class="card" style="--k:var(--c-app)"><div class="who">THIS DEVICE (PHONE / COMPUTER)</div><h3>Settings and a local copy</h3>
+      <ul><li>Client ID · Spreadsheet ID</li><li>Google token and data copy (encrypted with your password)</li><li>Budgets · goals · theme · language</li></ul></div>
+    <div class="card" style="--k:var(--c-gh)"><div class="who">GITHUB (PUBLIC REPO)</div><h3>Code and market data</h3>
+      <ul><li>App and pipeline code</li><li>Market prices (none of your balances)</li><li>Notification inbox, encrypted with NOTIFY_KEY</li><li>Secrets: NOTIFY_KEY · VAPID · LINE</li></ul></div>
+    <div class="card" style="--k:var(--c-cf)"><div class="who">CLOUDFLARE WORKER</div><h3>Bot and live portfolio</h3>
+      <ul><li>Read-only Binance key · BOT_TOKEN</li><li>Bot rules · paper portfolio</li><li>MetaMask wallet addresses (public; never a seed phrase)</li></ul></div>
+  </div>
+</section>
+
+<footer>Built from v91 of the personaltracker-dashboard repo. When the system changes, ask Claude to update this page (source of truth: <code>docs/system-map.html</code>).</footer>
+</div>
+</body>
+</html>
