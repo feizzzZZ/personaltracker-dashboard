@@ -29,9 +29,9 @@ Personal finance tracker and investment dashboard built with HTML/JS.
 | `index.html` · `manifest.json` · `service-worker.js` | ตัวแอป — ต้องอยู่ root (หน้าแรกของ GitHub Pages · PWA · scope ของ service worker) |
 | `js/` | `shared.js` (data layer) · `i18n.js` · `vault.js` · `autobot.js` · `liveport.js` |
 | `data/` | JSON ที่ GitHub Actions เขียนให้ — `market-data` · `signal-history` · `fundamentals` · `bot-paper` · `notifications.enc` · `notify-state` (ไม่ต้องแก้เอง) |
-| `scripts/` | สคริปต์ Python ของ pipeline (ดึงราคา · สัญญาณ · งบบริษัท · บอทจำลอง · แจ้งเตือน) |
-| `tests/` | เทสต์ทั้งหมด (`.cjs` · `.mjs` · `.py`) — รันจาก root เช่น `node tests/test_shared.cjs js/shared.js` |
-| `cloudflare-worker/autobot/` | Worker ของบอทเทรด + พอร์ตสด |
+| `scripts/` | สคริปต์ Python ของ pipeline (ดึงราคา · สัญญาณ · งบบริษัท · บอทจำลอง · แจ้งเตือน) · `make_system_map.py` สร้างแผนผังระบบ · `apps_script/sheet_backup.gs` สำรองชีตทุกสัปดาห์ (วางในชีตเอง — v92) |
+| `tests/` | เทสต์ทั้งหมด (`.cjs` · `.mjs` · `.py`) — รันทั้งหมด: `bash tests/run_all.sh` (+ `--ui` = เทสต์หน้าจอ `tests/ui/`) · GitHub รันให้เองทุก PR (`.github/workflows/tests.yml`) |
+| `cloudflare-worker/autobot/` | Worker ของบอทเทรด + พอร์ตสด — deploy เองหลัง merge เมื่อตั้ง secret `CLOUDFLARE_API_TOKEN` (`.github/workflows/deploy-worker.yml`) |
 | `docs/releases/` | บันทึกแต่ละเวอร์ชัน `release-vNN.md` |
 | `docs/progress/` | บันทึกความคืบหน้า `PROGRESS-YYYY-MM-DD.md` |
 | `docs/system-map.html` | แผนผังระบบทั้งหมด (ภาษาอังกฤษ): ใครคุยกับใคร · งานตามเวลา · ปุ่ม + เขียนลงแท็บไหน · ขั้นตอนอัปเดต · ข้อมูลและกุญแจอยู่ที่ไหน — เปิดได้ที่ `https://feizzzzz.github.io/personaltracker-dashboard/docs/system-map.html` |
@@ -53,7 +53,8 @@ Personal finance tracker and investment dashboard built with HTML/JS.
 `.github/workflows/market-data.yml` → `scripts/fetch_market_data.py` → `data/market-data.json`
 รัน 06:30 และ 18:30 เวลาไทย · stdlib ล้วน ไม่ต้อง pip install ไม่ต้องใช้ API key
 
-ดึง ~30 keys จาก FRED + Yahoo:
+แหล่งข้อมูล: Yahoo Finance (ราคา · ดัชนี · ค่าเงิน) · SEC (งบบริษัทสหรัฐ) · World Bank · BLS — FRED เลิกใช้แล้ว (บล็อก IP ของ GitHub Actions) ·
+หัวข้อที่เก็บ:
 - **Macro**: Fed rate, CPI/Core CPI, PCE/Core PCE, unemployment, NFP, GDP,
   US2Y/10Y, real 10Y (TIPS), yield curve 2s10s, credit spread (HY OAS), VIX
 - **ราคา**: S&P 500, Nasdaq, SET, USD/THB, ทอง (XAU + GLD), WTI, DXY, BTC, ETH

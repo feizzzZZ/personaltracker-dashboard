@@ -1,0 +1,75 @@
+# v92 — รันเทสต์ทุกครั้งที่เปิด/อัปเดต PR และทุกครั้งที่โค้ดเข้า main
+#
+# ก่อนหน้านี้เทสต์ 30 ชุดรันเฉพาะตอนมีคนสั่งเอง → PR ที่ทำของเดิมพัง merge ได้โดยไม่มีใครเห็น
+# (เคยมีเทสต์ที่พังเองตามวันที่อยู่หลายวัน — test_calc_v68 ก่อน v91)
+#
+# - unit: เทสต์ตัวเลข/โค้ดทั้งหมด (JS + Python) + ตรวจเลขเวอร์ชัน 3 ที่ตรงกัน — ไฟล์เดียวกับที่ใช้ในเครื่อง: tests/run_all.sh
+# - ui:   เปิดแอปจริงใน Chromium กับ Google Sheets จำลอง (tests/ui/test_ui_smoke.cjs) — ไม่ใช้ข้อมูลจริง ไม่ใช้ secret
+#
+# ไม่รันกับ commit ข้อมูลรายวันของบอท (data/** อย่างเดียว) — วันละหลายครั้ง และไม่ได้แตะโค้ด
+name: tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'data/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # ชุดเดียวกับ line-notify.yml · ต้องเป็น `python3 -m pip` (pip ใน PATH อาจเป็นคนละ interpreter — ดูคอมเมนต์ใน line-notify.yml)
+      - name: ติดตั้ง library ที่เทสต์ Python ใช้
+        run: python3 -m pip install --quiet --upgrade google-auth cryptography pywebpush
+
+      # REQUIRE_ALL=1 — เทสต์ที่ข้ามเพราะขาด library นับเป็นไม่ผ่าน (ในเครื่องตัวเองข้ามได้)
+      - name: เทสต์ทั้งหมด
+        run: REQUIRE_ALL=1 bash tests/run_all.sh
+
+  ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # แอปไม่มี npm / package.json โดยตั้งใจ — Playwright ลงเฉพาะในเครื่อง CI ไม่ถูก commit
+      - name: ติดตั้ง Playwright + Chromium
+        run: |
+          npm install --no-save --no-package-lock playwright@1.49.1
+          npx playwright install --with-deps chromium
+
+      - name: เทสต์หน้าจอ (Google Sheets จำลอง)
+        run: node tests/ui/test_ui_smoke.cjs --out tests/ui/out
+
+      - name: เก็บภาพหน้าจอเมื่อไม่ผ่าน
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-screenshots
+          path: tests/ui/out
+          retention-days: 7

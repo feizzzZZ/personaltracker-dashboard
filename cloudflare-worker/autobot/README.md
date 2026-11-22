@@ -23,6 +23,14 @@ npx wrangler deploy                           # ได้ URL เช่น https
 
 `wrangler deploy` จะรวม `../../js/autobot.js` เข้าไปให้เอง — แก้กฎการประเมินที่ไฟล์นั้นที่เดียว แล้ว deploy ใหม่
 
+### deploy อัตโนมัติหลัง merge (v92 · ไม่บังคับ)
+ตั้งครั้งเดียวแล้วไม่ต้องรัน `npx wrangler deploy` เองอีก — GitHub deploy ให้ทุกครั้งที่ `cloudflare-worker/**` · `js/autobot.js` · `js/liveport.js` เปลี่ยนบน main (รันเทสต์ก่อน):
+1. Cloudflare → My Profile → API Tokens → Create Token → template **Edit Cloudflare Workers** → Create → คัดลอก token
+2. GitHub repo → Settings → Secrets and variables → Actions → New repository secret → ชื่อ `CLOUDFLARE_API_TOKEN` (token เข้าถึงหลายบัญชี → เพิ่ม `CLOUDFLARE_ACCOUNT_ID` ด้วย)
+3. ทดสอบ: แท็บ Actions → deploy-worker → Run workflow
+
+secret ของ Worker (`BOT_TOKEN` · `BINANCE_KEY` · `BINANCE_SECRET`) ยังอยู่บน Cloudflare เหมือนเดิม — workflow ไม่แตะ · ยังไม่ตั้ง token = workflow ข้ามเฉย ๆ (deploy เองได้ตามเดิม)
+
 ## พอร์ตสด (v78) — Binance + MetaMask แบบอ่านอย่างเดียว
 
 Worker ตัวเดียวกันนี้ให้ข้อมูลหน้า **พอร์ตลงทุน → พอร์ตสด** ด้วย (ไม่ต้อง deploy แยก)

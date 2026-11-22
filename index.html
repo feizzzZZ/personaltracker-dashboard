@@ -1931,6 +1931,14 @@ input[type=date]::-webkit-date-and-time-value,input[type=month]::-webkit-date-an
   background:var(--fg);color:var(--bg);font-size:13px;font-weight:600;padding:10px 16px;border-radius:999px;box-shadow:var(--pop-shadow);
   opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;white-space:nowrap}
 #saved-toast.show{opacity:1;transform:translate(-50%,0)}
+/* v92 — แถบเข้าสู่ระบบ Google ใหม่ ลอยเหนือฟอร์ม (ฟอร์ม z 200 · toast 950) */
+#reauth-bar{position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top,0px));transform:translate(-50%,-8px);z-index:960;display:none;
+  align-items:center;gap:10px;max-width:calc(100vw - 32px);background:var(--bg2);color:var(--fg);border:1px solid var(--debt);
+  border-radius:12px;padding:8px 8px 8px 14px;font-size:13px;box-shadow:var(--pop-shadow)}
+#reauth-bar.show{display:flex;transform:translate(-50%,0)}
+#reauth-bar button{font:inherit;font-weight:600;border:0;border-radius:8px;padding:7px 12px;background:var(--fg);color:var(--bg);cursor:pointer;white-space:nowrap}
+#reauth-bar .rb-x{background:transparent;color:var(--muted2);padding:6px 8px}
+.rc-name small.rc-old{color:var(--debt)}
 @media(max-width:768px){#saved-toast{bottom:calc(84px + env(safe-area-inset-bottom,0px))}}
 /* v89 — มือถือ: เมนู "อื่น ๆ" แสดงเฉพาะกลุ่มที่ไม่อยู่ในแถบล่าง (ภาพรวม · เงิน · พอร์ต · ตลาด อยู่ในแถบล่างแล้ว) */
 @media(max-width:768px){ .sidebar .sb-dup-bnav{display:none} }
@@ -4224,6 +4232,15 @@ function renderActionNeeded(ef){
       d:'แนะนำสัปดาห์ละครั้ง — ยิ่งทิ้งนาน ยิ่งหาต้นตอของผลต่างยาก',
       go:'accounts'});
   }catch(e){}
+  // v92 — ยอดจริงเก่ากว่า 45 วัน: แอปกลับไปใช้ยอดคำนวณเงียบ ๆ ทั้งเงินสด หนี้ และ Net Worth → บอกให้จดใหม่
+  try{
+    const st = reconStaleList(bankBals, reconMap);
+    if(st.length) items.push({lv:'warn',
+      t:_L(`ยอดจริงจากธนาคารเก่ากว่า ${RECON_TRUST_DAYS} วัน ${st.length} บัญชี`, `${st.length} bank balance(s) older than ${RECON_TRUST_DAYS} days`),
+      d:_L(`${st.map(x=>x.name+' ('+x.ageDays+' วัน)').join(', ')} — ตอนนี้ใช้ยอดคำนวณจากรายการแทน · จดยอดใหม่ที่ปุ่ม + → ยอดจริงจากธนาคาร`,
+           `${st.map(x=>x.name+' ('+x.ageDays+' days)').join(', ')} — the computed balance is used instead · enter new ones from + → Bank balances`),
+      go:'accounts'});
+  }catch(e){}
 
   /* ── ขาดหาย v48 ─────────────────────────────────────────────────────
      "ต้องลงมือ" เดิมตรวจ 5 เรื่อง แต่ทั้ง 3 เรื่องด้านล่างมีข้อมูลอยู่ในแอป
@@ -4750,6 +4767,8 @@ function renderAccounts(){
   /* v84 — ✓ เดิมขึ้นทุกบัญชีที่มีแถวใน Reconcile แม้ยอดจริงไม่ตรงกับชีต → ผู้ใช้เห็น SCB ฿17,735 ✓ ขณะที่ชีตบอก 15,734.53
      ตอนนี้ ✓ เฉพาะที่ตรง (±1 บาท) · ไม่ตรง → บอกยอดในชีตและผลต่างบนการ์ดเลย */
   const _rDiff=b=>b.reconDate&&Math.abs(b.reconDiff||0)>1;
+  // v92 — ยอดจริงเก่ากว่า 45 วัน: แอปกลับไปใช้ยอดคำนวณเงียบ ๆ (เดิมการ์ดไม่บอกอะไรเลย) → บอกวันที่จดและอายุ
+  const _rStale={}; try{ reconStaleList(bankBals, reconMap).forEach(x=>{ _rStale[x.name]=x; }); }catch(e){}
   document.getElementById('acc-bank-grid').innerHTML=active.map(b=>{
     const accType=getAccType(b);
     const meta=BANK_ACCENT[accType]||BANK_ACCENT['Bank Account'];
@@ -4764,6 +4783,8 @@ function renderAccounts(){
       <div class="bank-type" style="color:${meta.color};opacity:.7">${meta.icon} ${accType}${b.reconDate&&!_rDiff(b)?` · <span title="${escAttr(_L('ยอดจริงจากชีต Reconcile วันที่ ','Bank balance from the Reconcile sheet on ')+b.reconDate)}">✓</span>`:''}</div>
       ${_rDiff(b)?`<div class="bank-recon-warn" title="${escAttr(_L('ยอดบนการ์ด = ยอดจริงในชีต Reconcile วันที่ '+b.reconDate+' + รายการหลังจากนั้น · ชีต Transaction (แถว Current Balance) = '+fmt(b.computedBalance)+' · ดูตาราง "เทียบยอด" ด้านล่าง',
         'Card = bank balance from the Reconcile sheet on '+b.reconDate+' + later transactions · Transaction sheet (Current Balance row) = '+fmt(b.computedBalance)+' · see the reconciliation table below'))}">⚠ <span style="white-space:nowrap">${_L('ชีต','Sheet')} ${fmt(b.computedBalance)}</span> · <span style="white-space:nowrap">${_L('ต่าง','diff')} ${fmtSign(b.reconDiff)}</span></div>`:''}
+      ${_rStale[b.name]?`<div class="bank-recon-warn" title="${escAttr(_L('ยอดจริงเก่ากว่า '+RECON_TRUST_DAYS+' วันไม่ถูกใช้แล้ว — ยอดบนการ์ดคือยอดคำนวณจากรายการ · จดยอดใหม่ที่ปุ่ม + → ยอดจริงจากธนาคาร',
+        'Bank balances older than '+RECON_TRUST_DAYS+' days are no longer used — the card shows the computed balance · enter a new one from + → Bank balances'))}">⏳ ${_L('ยอดจริง','Bank balance')} ${escHtml(_rStale[b.name].date)} · ${_L('เก่า '+_rStale[b.name].ageDays+' วัน','is '+_rStale[b.name].ageDays+' days old')}</div>`:''}
     </div>`;
   }).join('');
 
@@ -5165,7 +5186,7 @@ const VLOG_PURGED_KEY = 'finOS_valueLogPurged_v44';
 //   ฟังก์ชันหาย  → BLOCK  (แอปคำนวณผิดแน่นอน — นี่คือสิ่งที่ guard มีไว้จับ)
 //   เลขไม่ตรง    → WARN   (แค่ลืม bump — log ไว้ ไม่รบกวนผู้ใช้)
 // ฟังก์ชันที่ต้องมีคือสัญญาจริงระหว่างสองไฟล์ ส่วนสตริงเวอร์ชันเป็นแค่ป้าย
-const EXPECTED_SHARED_BUILD = 'v91';
+const EXPECTED_SHARED_BUILD = 'v92';
 const REQUIRED_SHARED_FNS = [
   'resolvePrices', 'pipelinePricesTHB', 'parseReconcileRows',
   'computeReconciliation', 'splitBalances', 'debtVsInvest', 'buildDebtPlan',
@@ -5183,6 +5204,7 @@ const REQUIRED_SHARED_FNS = [
   'loadFundamentals', 'fetchFundamentals', 'fundOf', 'dividendCalendar', 'divFrequency',   // v66 — research/ปันผล
   'runningCostBasis', 'sellFeeToDeduct', 'movementAfter',   // v68 — ต้นทุนถือครอง · ค่าธรรมเนียมขาย · reconcile
   'reconMovement',                                       // v84 — รายการวันเดียวกันที่กรอกหลังจดยอดจริง
+  'findDuplicateTx', 'findDuplicateAt', 'reconStaleList', // v92 — เตือนรายการซ้ำ · ยอดจริงเก่าเกินจะใช้
   'srfColumns', 'srfWriteValue', 'srfFindRow', 'srfLastDataRow', 'reconPlanRows', 'reconRowValues',   // v87 — ฟอร์มแถวชีต · จดยอดจริง
   'notifyDecrypt', 'mergeNotifications', 'notifUnread', 'notifLocalAdd', 'notifCategory', 'b64ToBytes', 'bytesToB64',   // v67
   'loadBotPaper', 'fetchBotPaper', 'botStatus',   // v59 — หน้าบอทจำลอง
@@ -6593,6 +6615,54 @@ function gsStartAutoRefresh(){
   }, 4*60000);
 }
 
+/* v92 — ก่อนเขียนชีตทุกครั้ง (ทุกฟอร์ม): token หมด/ใกล้หมด → ต่ออายุเงียบก่อน แล้วบันทึกต่อเลย
+   เดิม: เปิดฟอร์มทิ้งไว้ (หรือสลับแอปไปมา) แล้วกดบันทึก → "Session หมดอายุ — กด Sync" ต้องปิดฟอร์มไปกด Sync = ข้อมูลที่กรอกหาย
+   ต่ออายุเงียบไม่ได้ (Google ให้ยืนยันตัวตนใหม่) → แถบ "เข้าสู่ระบบ Google" ลอยเหนือฟอร์ม · ฟอร์มเปิดค้างพร้อมค่าที่กรอก กดบันทึกซ้ำได้หลังเข้าระบบ
+   เรียก gsWriteAuth() ก่อน await ตัวแรกของปุ่มบันทึก → requestAccessToken ยังอยู่ในจังหวะที่ผู้ใช้เพิ่งกด (เบราว์เซอร์ไม่บล็อกหน้าต่าง Google) */
+function gsEnsureToken(timeoutMs){
+  if(gsTokenValid(3*60000)) return Promise.resolve(true);
+  return new Promise(resolve => {
+    let done = false;
+    const fin = ok => { if(done) return; done = true; resolve(!!ok && gsTokenValid()); };
+    setTimeout(() => fin(false), timeoutMs || 15000);        // Google ไม่ตอบ (เช่น popup ค้าง) → ไม่รอตลอดไป
+    if(gsSilentPending){                                      // มีการต่ออายุค้างอยู่แล้ว (เช่นจากการกลับเข้าแอป) → รอตัวนั้น
+      const t = setInterval(() => { if(!gsSilentPending){ clearInterval(t); fin(true); } }, 250);
+      return;
+    }
+    gsSilentRefresh(fin);
+  });
+}
+async function gsWriteAuth(){
+  if(!GS_CONFIG.spreadsheetId) throw new Error(_L('ยังไม่ได้ตั้งค่า Google Sheets — ไปที่ บัญชีและความปลอดภัย','Google Sheets is not set up — open Account & security'));
+  if(await gsEnsureToken()) return;
+  gsShowReauth();
+  throw new Error('🔑 ' + _L('ต้องเข้าสู่ระบบ Google ใหม่ — กด "เข้าสู่ระบบ Google" ด้านบน แล้วกดบันทึกอีกครั้ง (ข้อมูลที่กรอกยังอยู่)',
+                             'Google sign-in needed — tap "Sign in to Google" above, then save again (your entries are kept)'));
+}
+function gsShowReauth(){
+  let el = document.getElementById('reauth-bar');
+  if(!el){ el = document.createElement('div'); el.id = 'reauth-bar'; el.setAttribute('role', 'alert'); document.body.appendChild(el); }
+  clearTimeout(gsShowReauth._t);
+  el.innerHTML = `<span>🔑 ${_L('Session Google หมดอายุ','Google session expired')}</span>
+    <button type="button" onclick="gsReauthClick()">${_L('เข้าสู่ระบบ Google','Sign in to Google')}</button>
+    <button type="button" class="rb-x" aria-label="${_L('ปิด','Close')}" onclick="gsHideReauth()">✕</button>`;
+  el.classList.add('show');
+}
+function gsReauthClick(){
+  const el = document.getElementById('reauth-bar');
+  if(el) el.innerHTML = `<span>⏳ ${_L('กำลังเปิดหน้าเข้าสู่ระบบ Google…','Opening Google sign-in…')}</span>`;
+  gsConnect();
+  // ปิดหน้าต่าง Google ไปก่อน → ให้กดใหม่ได้
+  gsShowReauth._t = setTimeout(() => { const b = document.getElementById('reauth-bar'); if(b && b.classList.contains('show') && !gsTokenValid()) gsShowReauth(); }, 20000);
+}
+function gsHideReauth(ok){
+  const el = document.getElementById('reauth-bar'); if(!el || !el.classList.contains('show')) return;
+  clearTimeout(gsShowReauth._t);
+  if(!ok){ el.classList.remove('show'); return; }
+  el.innerHTML = `<span>✓ ${_L('เข้าสู่ระบบแล้ว — กดบันทึกอีกครั้งได้เลย','Signed in — press Save again')}</span>`;
+  gsShowReauth._t = setTimeout(() => el.classList.remove('show'), 4000);
+}
+
 function gsInitTokenClient(){
   // ยังไม่ตั้งค่า clientId = สถานะปกติของเครื่องใหม่ — ข้ามเงียบๆ ห้าม throw/alert
   if(!GS_CONFIG.clientId){ console.log('[GS] no clientId configured yet — skip init'); return; }
@@ -6653,6 +6723,7 @@ function gsTokenCallback(resp){
   gsSaveToken();
   gsFetchProfile();
   gsStartAutoRefresh();
+  gsHideReauth(true);   // v92 — ฟอร์มที่ค้างอยู่กดบันทึกซ้ำได้แล้ว
   if(gsSilentPending){ gsSilentPending=false;
     const cb=gsSilentDone; gsSilentDone=null;
     gsSetStatus('✓ ต่ออายุ session สำเร็จ','ok');
@@ -6714,7 +6785,10 @@ function gsSyncOrConnect(){
   }
 }
 
-async function gsSync(){
+/* v92 — opts.light = sync หลังบันทึกฟอร์ม: อ่านชีตอย่างเดียว ไม่ดึง market-data.json / fundamentals ฯลฯ ใหม่ (การบันทึกไม่ได้เปลี่ยนข้อมูลตลาด)
+   และทุกครั้ง: แท็บเสริม 7 แท็บอ่านพร้อมกันกับแท็บหลัก (เดิมอ่านทีละแท็บต่อกัน 8 รอบ ช้ามากบนมือถือ) · ข้อมูลตลาดดึงคู่ขนานไปด้วย */
+async function gsSync(opts){
+  opts = (opts && typeof opts === 'object' && !opts.type) ? opts : {};   // onclick ส่ง Event มาได้ — ไม่ใช่ตัวเลือก
   if(!authDataAllowed()){ console.log('[Auth] ล็อกอยู่ — ไม่ sync'); return; }
   gsUpdateSyncBtn(true);
   gsSetStatus('⏳ กำลัง sync...', 'loading');
@@ -6729,6 +6803,20 @@ async function gsSync(){
        เกิน 5,000 เมื่อไร รายการใหม่หายเงียบๆ — หน้า Cash Flow เดือนปัจจุบันว่าง ทั้งที่ยอดบัญชียังถูก
        แถวเปล่าที่มีแต่สูตรเดือน/ปีท้ายชีตถูกข้ามอยู่แล้ว (ไม่มีวันที่ = ไม่ใช่รายการ) */
     const reqUrl = BASE+'&'+REQ.map(s=>'ranges='+encodeURIComponent(s+'!A1:Z')).join('&');
+    // Optional sheets (skip if missing) — v92 ยิงพร้อมกันตั้งแต่ตอนนี้ (แท็บที่ไม่มีตอบ 400 → ข้าม เหมือนเดิม)
+    // v62 — Reconcile โตครั้งละ 10 แถว (บัญชีละแถว) และ Value_Log วันละแถว — ใช้ช่วงเปิดท้ายทั้งหมด (เพดานตายตัวทำให้แถวล่าสุดหายเงียบ ๆ)
+    const OPT = ['Insurance_Policies','Insurance_Coverage','Market_Data','Value_Log','Reconcile','Documents','Debts'];   // v71 + Documents · v77 + Debts
+    const optP = OPT.map(s => fetch(BASE+'&ranges='+encodeURIComponent(s+'!A1:Z'),{headers:hdrs})
+      .then(async ro => {
+        if(!ro.ok){ console.log('[GS] Optional skipped:',s,ro.status); return null; }
+        const v = ((await ro.json()).valueRanges||[])[0]?.values;
+        return v ? [s, v] : null;
+      })
+      .catch(e => { console.log('[GS] Optional error:',s,e.message); return null; }));
+    // #19 — ดึง market-data.json ใหม่ทุกครั้งที่ sync ไม่งั้นราคา pipeline (Gold, หุ้นไทยที่ IMPORTXML พัง) จะค้างที่ค่าเดิมตลอดไป
+    // v92 — เริ่มคู่ขนานกับการอ่านชีต (เดิมรอชีตเสร็จก่อน) · หลังบันทึกฟอร์มข้าม
+    const feedsP = opts.light ? null
+      : refreshMarketFeeds('sync').catch(e => { console.warn('[feeds] sync:', e.message); return null; });
     const r1 = await fetch(reqUrl, {headers:hdrs});
     if(!r1.ok){
       if(r1.status===401||r1.status===403){
@@ -6758,19 +6846,7 @@ async function gsSync(){
     });
     console.log('[GS] Required:', Object.keys(map));
 
-    // Optional sheets (skip if missing)
-    const OPT = ['Insurance_Policies','Insurance_Coverage','Market_Data','Value_Log','Reconcile','Documents','Debts'];   // v71 + Documents · v77 + Debts
-    for(const s of OPT){
-      try{
-        // v62 — Reconcile โตครั้งละ 10 แถว (บัญชีละแถว) และ Value_Log วันละแถว
-        // เพดานตายตัวทำให้แถวล่าสุดหายเงียบๆ — "verify ล่าสุด" จะค้างที่ของเก่า · ใช้ช่วงเปิดท้ายทั้งหมด
-        const rng = '!A1:Z';
-        const ro=await fetch(BASE+'&ranges='+encodeURIComponent(s+rng),{headers:hdrs});
-        if(ro.ok){const do_=(await ro.json());if(do_.valueRanges?.[0]?.values)map[s]=do_.valueRanges[0].values;
-          console.log('[GS] Optional loaded:',s,map[s].length,'rows');}
-        else console.log('[GS] Optional skipped:',s,ro.status);
-      }catch(e){console.log('[GS] Optional error:',s,e.message);}
-    }
+    (await Promise.all(optP)).forEach(x => { if(!x) return; map[x[0]] = x[1]; console.log('[GS] Optional loaded:',x[0],x[1].length,'rows'); });
 
     /* ══ BUGFIX v48 #5 — ลำดับผิด (บั๊กเงียบที่กระทบ 4 หน้าพร้อมกัน) ══
        เดิม: gsProcessData(map) ถูกเรียกก่อน แล้วค่อย saveMarketData /
@@ -6784,9 +6860,7 @@ async function gsSync(){
          • TWR ขึ้น "⏳ สะสมข้อมูล" ทั้งที่ Value_Log ในชีตมีเป็นร้อยวัน
          • ราคาจากชีต Market_Data ยังไม่เข้า → resolvePrices() ตกไปใช้ cached
        แก้: merge ทุกอย่างให้ครบก่อน แล้วค่อย process + render */
-    // #19 — ดึง market-data.json ใหม่ทุกครั้งที่ sync ไม่งั้นราคา pipeline
-    // (Gold, หุ้นไทยที่ IMPORTXML พัง) จะค้างที่ค่าเดิมตลอดไป
-    await refreshMarketFeeds('sync');
+    if(feedsP) await feedsP;      // ต้องเสร็จก่อน saveMarketData (ลำดับเดิมของ #19)
     saveMarketData(map['Market_Data']);
     if(typeof invalidateMarketCache==='function') invalidateMarketCache();
     mergeValueLogFromSheet(map['Value_Log']);   // ประวัติมูลค่าพอร์ตรายวัน → TWR ไม่มีวันโหว่
@@ -8624,9 +8698,9 @@ async function dbfSave(){
   if(k==='fx'&&!(f.inst>0&&f.term>0)&&!(f.principal>0)) return say(_L('ใส่ค่างวด + จำนวนงวด หรือยอดจัด','Enter installment + term, or a principal'),'var(--expense)');
   if(k==='fs'&&!(f.inst>0)) return say(_L('ใส่ยอดที่จ่ายต่อเดือน','Enter the monthly amount'),'var(--expense)');
   if(has(f.dueDay)) f.dueDay=Math.round(f.dueDay);
-  if(!GS_CONFIG.spreadsheetId||!gsTokenValid()) return say('🔑 '+_L('Session หมดอายุ — กด Sync เพื่อเข้าสู่ระบบใหม่ แล้วลองอีกครั้ง','Session expired — press Sync to sign in, then try again'),'var(--expense)');
   btn.disabled=true; say('⏳ '+_L('กำลังบันทึก...','Saving...'));
   try{
+    await gsWriteAuth();   // v92 — ต่ออายุเงียบก่อน · ไม่ได้ → แถบเข้าสู่ระบบ (ฟอร์มยังเปิดอยู่)
     const meta=await debtsEnsureSheet();
     if(dbfRow){
       const orig=debtList.find(x=>x.row===dbfRow);
@@ -9797,7 +9871,9 @@ async function _docsApi(path, opt){
     Object.assign({headers:{'Authorization':'Bearer '+gsAccessToken, 'Content-Type':'application/json'}}, opt || {}));
   if(!res.ok){
     const body = await res.text().catch(() => '');
-    if(res.status === 401 || res.status === 403)
+    if(res.status === 401){ gsTokenExpiry = 0;   // v92 — token หมดระหว่างทาง → กดบันทึกอีกครั้งจะต่ออายุให้ก่อน
+      throw new Error(_L('Session Google หมดอายุระหว่างบันทึก — กดบันทึกอีกครั้ง (ข้อมูลที่กรอกยังอยู่)','The Google session expired while saving — press Save again (your entries are kept)')); }
+    if(res.status === 403)
       throw new Error(_L('ไม่มีสิทธิ์เขียน — กด Sync เพื่อเข้าสู่ระบบใหม่','No write permission — press Sync to sign in again'));
     throw new Error('HTTP ' + res.status + ' · ' + body.slice(0, 140));
   }
@@ -9846,12 +9922,9 @@ async function docsSubmitForm(){
   const c = docCategoryOf(f.cat);
   if(!c.id.startsWith('x:') && f.cat) f.cat = DOC_CATEGORIES.find(x => x.id === c.id).en;
   if(!f.cat) f.cat = 'Other';
-  if(!GS_CONFIG.spreadsheetId || !gsTokenValid()){
-    st.textContent = '🔑 ' + _L('Session หมดอายุ — กด Sync เพื่อเข้าสู่ระบบใหม่ แล้วลองอีกครั้ง','Session expired — press Sync to sign in, then try again');
-    return;
-  }
   btn.disabled = true; st.textContent = '⏳ ' + _L('กำลังบันทึก...','Saving...');
   try{
+    await gsWriteAuth();   // v92
     const meta = await docsEnsureSheet();
     if(docsEditRow != null){
       const orig = docsList.find(x => x.row === docsEditRow);
@@ -10036,11 +10109,8 @@ async function docsImportCommit(){
   if(_docsImportBusy) return;
   const pick = docsImportRows.filter(r => r.on && r.title);
   if(!pick.length) return;
-  if(!GS_CONFIG.spreadsheetId || !gsTokenValid()){
-    _docsImpStatus('🔑 ' + _L('Session ชีตหมดอายุ — กด Sync เพื่อเข้าสู่ระบบใหม่ แล้วกดนำเข้าอีกครั้ง (รายการที่สแกนยังอยู่)',
-                               'Sheet session expired — press Sync to sign in, then import again (the scan is kept)'));
-    return;
-  }
+  try{ await gsWriteAuth(); }   // v92 — ต่ออายุเงียบก่อน · ไม่ได้ → แถบเข้าสู่ระบบ (รายการที่สแกนยังอยู่)
+  catch(e){ _docsImpStatus(e.message); return; }
   _docsImportBusy = true;
   const go = document.getElementById('doc-imp-go'); go.disabled = true;
   try{
@@ -12315,7 +12385,11 @@ document.addEventListener('visibilitychange', ()=>{
      ทั้งช้าและทำให้หน้าเด้ง — ข้อมูลชุดนี้ไม่ได้เปลี่ยนทุกนาทีอยู่แล้ว
      ปุ่ม Sync ยังกดเองได้ตลอดเมื่ออยากได้ของสดทันที */
   const AUTO_SYNC_GAP = 15*60000;                // 15 นาที
-  if(Date.now()-last < AUTO_SYNC_GAP) return;
+  if(Date.now()-last < AUTO_SYNC_GAP){
+    // v92 — ยังไม่ถึงรอบ sync แต่ token หมด/ใกล้หมด (มือถือหยุด timer ต่ออายุตอนแอปอยู่เบื้องหลัง) → ต่ออายุไว้ก่อน กดบันทึกฟอร์มแล้วไม่ติด
+    if(!gsTokenValid(5*60000) && !gsSilentPending) gsSilentRefresh();
+    return;
+  }
   if(gsTokenValid()) gsSync();
   else gsSilentRefresh(ok=>{ if(ok) gsSync(); });
 });
@@ -12366,8 +12440,10 @@ async function txWriteCells(rowNum, cells){
     });
   if(!res.ok){
     const body = await res.text().catch(()=>'');
-    if(res.status === 401 || res.status === 403)
-      throw new Error('ไม่มีสิทธิ์เขียน — ออกจากระบบแล้วกด Sync เพื่อให้สิทธิ์ read/write ใหม่');
+    if(res.status === 401){ gsTokenExpiry = 0;   // v92
+      throw new Error(_L('Session Google หมดอายุระหว่างบันทึก — กดบันทึกอีกครั้ง (ข้อมูลที่กรอกยังอยู่)','The Google session expired while saving — press Save again (your entries are kept)')); }
+    if(res.status === 403)
+      throw new Error(_L('ไม่มีสิทธิ์เขียน — ออกจากระบบแล้วกด Sync เพื่อให้สิทธิ์ read/write ใหม่','No write permission — sign out, then press Sync to grant read/write again'));
     throw new Error('HTTP '+res.status+' · '+body.slice(0,140));
   }
   console.log('[TX] เขียนแถว', rowNum, '·', data.length, 'ช่อง');
@@ -12375,7 +12451,7 @@ async function txWriteCells(rowNum, cells){
 
 async function txAppendRow(fields){
   if(!txSheetMeta)    throw new Error('ยังไม่รู้โครงสร้างชีต — กด Sync ก่อน 1 ครั้ง');
-  if(!gsTokenValid()) throw new Error('Session หมดอายุ — กด Sync เพื่อเข้าสู่ระบบใหม่');
+  await gsWriteAuth();   // v92
   const rowNum = await txFindEmptyRow();
   await txWriteCells(rowNum, txCellPlan(fields, false));
   return {row: rowNum};
@@ -12412,7 +12488,7 @@ function atGuardSpec(rec){
 
 async function txEditRowWrite(rowNum, fields, rec){
   if(!txSheetMeta)    throw new Error('ยังไม่รู้โครงสร้างชีต — กด Sync ก่อน 1 ครั้ง');
-  if(!gsTokenValid()) throw new Error('Session หมดอายุ — กด Sync เพื่อเข้าสู่ระบบใหม่');
+  await gsWriteAuth();   // v92
   if(rec) await sheetRowGuard('Transaction', rowNum, txGuardSpec(rec), 'รายการที่เปิดแก้อยู่');   // v72
   await txWriteCells(rowNum, txCellPlan(fields, true));
   return {row: rowNum};
@@ -12436,7 +12512,7 @@ async function txSheetGid(){
 }
 
 async function txDeleteRow(rowNum, rec){
-  if(!gsTokenValid()) throw new Error('Session หมดอายุ — กด Sync เพื่อเข้าสู่ระบบใหม่');
+  await gsWriteAuth();   // v92
   if(rec) await sheetRowGuard('Transaction', rowNum, txGuardSpec(rec), 'รายการที่จะลบ');   // v72
   const gid = await txSheetGid();
   const res = await fetch(
@@ -12571,6 +12647,7 @@ const txIsCardPay = () => document.getElementById('tx-f-type').value === 'Debt' 
 // txOpenForm()          → โหมดเพิ่มรายการใหม่
 // txOpenForm(sheetRow)  → โหมดแก้ไขรายการที่แถวนั้นในชีต
 let txEditRow = null;
+let txDupAck = '';   // v92 — รายการซ้ำที่ผู้ใช้กดยืนยันแล้ว (ลายเซ็นของค่าในฟอร์ม)
 /* v77 — จ่ายบัตรเครดิต: ชีตลงเป็น Transactions = Debt · หมวด "Clear Debt <บัตร>" · ธนาคาร −x และบัตร +x ในแถวเดียว
    เดิมฟอร์มเขียนบัญชีที่สองได้เฉพาะ Transfer → บันทึกแบบนี้ไม่ได้ และเปิดแก้แถวแบบนี้แล้วบันทึก = ช่องบัตรถูกล้าง
    v85 — เดิมช่องบัตรขึ้นเฉพาะตอนกด "จ่าย" จากหน้าหนี้สิน (txPayCard) · เลือกประเภท Debt ในฟอร์มเองไม่มีช่องให้เลือกบัตร
@@ -12591,7 +12668,7 @@ function txOpenPrefill(p){
 function txOpenForm(sheetRow){
   if(!txSheetMeta){ alert(_L('กด Sync ก่อน 1 ครั้ง เพื่อให้ระบบอ่านโครงสร้างชีต','Press Sync once so the app can read the sheet layout')); return; }
   txFillOptions();
-  txEditRow = sheetRow || null;
+  txEditRow = sheetRow || null; txDupAck = '';
   txAutoFill = {cat: '', det: ''};
   const rec = txEditRow ? (txRows || []).find(r => r.sheetRow === txEditRow) : null;
   if(txEditRow && !rec){ alert(_L('หารายการนี้ไม่เจอ — กด Sync แล้วลองใหม่','Transaction not found — press Sync and try again')); txEditRow = null; return; }
@@ -12704,6 +12781,18 @@ async function txSubmitForm(){
   const toCard = txType === 'Debt' && !isNaN(bankCol2);   // v77 · v85 — ค่าของช่อง "ตัดยอดบัตร" (ว่าง = ไม่ตัดยอด)
   if((txType === 'Transfer' || toCard) && bankCol === bankCol2)
     return say(_L('บัญชีต้นทางกับปลายทางต้องคนละบัญชี','The two accounts must be different'), 'var(--expense)');
+  // v92 — รายการที่น่าจะซ้ำ (วัน · ประเภท · บัญชี · ยอดเดียวกัน): เตือนครั้งแรก · กดบันทึกอีกครั้ง = ยืนยันว่าเป็นอีกรายการ
+  if(!txEditRow){
+    const b = ((txSheetMeta && txSheetMeta.banks) || []).find(x => x.col === bankCol);
+    const sig = [date, txType, bankCol, amount].join('|');
+    const dup = b ? findDuplicateTx(txRows, {dateStr:date, type:txType, acctName:b.name, amount:Math.abs(amount) * (TX_SIGN[txType] ?? -1)}) : [];
+    if(dup.length && txDupAck !== sig){
+      txDupAck = sig;
+      const r = dup[dup.length - 1], what = [r.category, r.details, fmt(Math.abs(r.acct[b.name]))].filter(Boolean).join(' · ');
+      return say('⚠ ' + _L(`มีรายการนี้ในชีตแล้ว (แถว ${r.sheetRow} · ${what}) — ถ้าเป็นอีกรายการจริง กดบันทึกอีกครั้ง`,
+                           `This looks like row ${r.sheetRow} (${what}) — if it really is another one, press Save again`), 'var(--debt)');
+    }
+  }
 
   btn.disabled = true; del.disabled = true;
   say('กำลังบันทึก…');
@@ -12716,7 +12805,7 @@ async function txSubmitForm(){
       const wrote = await txAppendRow(f);
       say('บันทึกลง Transaction แถว ' + wrote.row + ' — กำลังดึงข้อมูลใหม่', 'var(--income)');
     }
-    await gsSync();
+    await gsSync({light:true});
     txCloseForm(); savedToast();
   }catch(e){
     say(e.message, 'var(--expense)');
@@ -12741,7 +12830,7 @@ async function txDeleteCurrent(){
   try{
     await txDeleteRow(txEditRow, rec);
     say('ลบแล้ว — กำลังดึงข้อมูลใหม่', 'var(--income)');
-    await gsSync();
+    await gsSync({light:true});
     txCloseForm(); savedToast('del');
   }catch(e){
     say(e.message, 'var(--expense)');
@@ -12828,7 +12917,7 @@ async function atFindEmptyRow(){
 
 async function atAppendRow(f){
   if(!atSheetMeta)    throw new Error('ยังไม่รู้โครงสร้างชีต — กด Sync ก่อน 1 ครั้ง');
-  if(!gsTokenValid()) throw new Error('Session หมดอายุ — กด Sync เพื่อเข้าสู่ระบบใหม่');
+  await gsWriteAuth();   // v92
 
   const C      = atSheetMeta.cols;
   const refRow = atSheetMeta.lastRow;
@@ -12869,8 +12958,10 @@ async function atAppendRow(f){
       body: JSON.stringify({valueInputOption:'USER_ENTERED', data})});
   if(!res.ok){
     const body = await res.text().catch(()=>'');
-    if(res.status === 401 || res.status === 403)
-      throw new Error('ไม่มีสิทธิ์เขียน — ออกจากระบบแล้วกด Sync เพื่อให้สิทธิ์ read/write ใหม่');
+    if(res.status === 401){ gsTokenExpiry = 0;   // v92
+      throw new Error(_L('Session Google หมดอายุระหว่างบันทึก — กดบันทึกอีกครั้ง (ข้อมูลที่กรอกยังอยู่)','The Google session expired while saving — press Save again (your entries are kept)')); }
+    if(res.status === 403)
+      throw new Error(_L('ไม่มีสิทธิ์เขียน — ออกจากระบบแล้วกด Sync เพื่อให้สิทธิ์ read/write ใหม่','No write permission — sign out, then press Sync to grant read/write again'));
     throw new Error('HTTP '+res.status+' · '+body.slice(0,140));
   }
   console.log('[AT] เขียนแถว', rowNum, '·', data.length, 'ช่อง');
@@ -12880,7 +12971,7 @@ async function atAppendRow(f){
 // เขียนทับแถวเดิม — คอลัมน์สูตรไม่ต้องแตะ (มันอยู่ของมันอยู่แล้ว)
 async function atEditRowWrite(rowNum, f, rec){
   if(!atSheetMeta)    throw new Error('ยังไม่รู้โครงสร้างชีต — กด Sync ก่อน 1 ครั้ง');
-  if(!gsTokenValid()) throw new Error('Session หมดอายุ — กด Sync เพื่อเข้าสู่ระบบใหม่');
+  await gsWriteAuth();   // v92
   if(rec) await sheetRowGuard('Asset_Tracker', rowNum, atGuardSpec(rec), 'รายการที่เปิดแก้อยู่');   // v72
   const C = atSheetMeta.cols;
   const F = await _atFormulas();
@@ -12900,8 +12991,10 @@ async function atEditRowWrite(rowNum, f, rec){
       body: JSON.stringify({valueInputOption:'USER_ENTERED', data})});
   if(!res.ok){
     const body = await res.text().catch(()=>'');
-    if(res.status === 401 || res.status === 403)
-      throw new Error('ไม่มีสิทธิ์เขียน — ออกจากระบบแล้วกด Sync เพื่อให้สิทธิ์ read/write ใหม่');
+    if(res.status === 401){ gsTokenExpiry = 0;   // v92
+      throw new Error(_L('Session Google หมดอายุระหว่างบันทึก — กดบันทึกอีกครั้ง (ข้อมูลที่กรอกยังอยู่)','The Google session expired while saving — press Save again (your entries are kept)')); }
+    if(res.status === 403)
+      throw new Error(_L('ไม่มีสิทธิ์เขียน — ออกจากระบบแล้วกด Sync เพื่อให้สิทธิ์ read/write ใหม่','No write permission — sign out, then press Sync to grant read/write again'));
     throw new Error('HTTP '+res.status+' · '+body.slice(0,140));
   }
   console.log('[AT] แก้แถว', rowNum, '·', data.length, 'ช่อง');
@@ -12909,7 +13002,7 @@ async function atEditRowWrite(rowNum, f, rec){
 }
 
 async function atDeleteRowNum(rowNum, rec){
-  if(!gsTokenValid()) throw new Error('Session หมดอายุ — กด Sync เพื่อเข้าสู่ระบบใหม่');
+  await gsWriteAuth();   // v92
   if(rec) await sheetRowGuard('Asset_Tracker', rowNum, atGuardSpec(rec), 'รายการที่จะลบ');   // v72
   const gid = await atSheetGid();
   const res = await fetch(
@@ -12963,11 +13056,12 @@ function atAutofillFromTicker(){
 // atOpenForm()         → เพิ่มรายการใหม่
 // atOpenForm(sheetRow) → แก้รายการที่แถวนั้นในชีต Asset_Tracker
 let atEditRow = null;
+let atDupAck = '';   // v92
 
 function atOpenForm(sheetRow){
   if(!atSheetMeta){ alert('กด Sync ก่อน 1 ครั้ง เพื่อให้ระบบอ่านโครงสร้างชีต'); return; }
   atFillOptions();
-  atEditRow = sheetRow || null;
+  atEditRow = sheetRow || null; atDupAck = '';
   const rec = atEditRow ? (tracker || []).find(r => r.sheetRow === atEditRow) : null;
   if(atEditRow && !rec){ alert('หารายการนี้ไม่เจอ — กด Sync แล้วลองใหม่'); atEditRow = null; return; }
 
@@ -13367,7 +13461,7 @@ async function srfSave(){
   const btn = $('srf-save'); btn.disabled = true; $('srf-del').disabled = true;
   say(_L('กำลังบันทึก…','Saving…'), 'var(--muted2)');
   try{
-    if(!gsTokenValid()) throw new Error(_L('Session หมดอายุ — กด Sync เพื่อเข้าสู่ระบบใหม่','Session expired — press Sync to sign in again'));
+    await gsWriteAuth();   // v92
     const editKeys = S.rowIdx != null ? spec.key.map(k => String((S.values[S.rowIdx] || [])[S.header.indexOf(k)] == null ? '' : S.values[S.rowIdx][S.header.indexOf(k)]).trim()) : null;
     const editIdx = S.rowIdx;
     await _srfLoad();                                   // อ่านสดอีกรอบ — กันชีตเปลี่ยนระหว่างเปิดฟอร์ม
@@ -13429,7 +13523,7 @@ async function srfSave(){
     console.log('[srf]', spec.tab, editIdx != null ? 'แก้แถว' : 'เพิ่มแถว', rowNum, '·', data.length, 'ช่อง');
     say(_L(`บันทึกแถว ${rowNum} แล้ว — กำลังดึงข้อมูลใหม่`, `Saved row ${rowNum} — refreshing`), 'var(--income)');
     const cb = S.onSaved, saved = {kind:S.kind, row:rowNum, keys:spec.key.map(k => vals[k].raw)};
-    try{ await gsSync(); }catch(e){}
+    try{ await gsSync({light:true}); }catch(e){}
     srfClose(); savedToast();
     if(cb) try{ cb(saved); }catch(e){}
   }catch(e){
@@ -13446,12 +13540,13 @@ async function srfDelete(){
   const say = (m, c) => { const e = $('srf-msg'); e.textContent = m; e.style.color = c || 'var(--expense)'; e.style.display = 'block'; };
   $('srf-save').disabled = true; $('srf-del').disabled = true;
   try{
+    await gsWriteAuth();   // v92
     const idx = S.rowIdx, before = keys;
     await _srfLoad(); S.rowIdx = idx;
     if(_srfKeyLbl(S, S.values[idx]) !== before) throw new Error(_L('แถวเปลี่ยนไปแล้ว — กด Sync แล้วลองใหม่','The row changed — press Sync and try again'));
     const gid = await _srfGid(spec.tab);
     await _docsApi(':batchUpdate', {method:'POST', body:JSON.stringify({requests:[{deleteDimension:{range:{sheetId:gid, dimension:'ROWS', startIndex:idx, endIndex:idx + 1}}}]})});
-    try{ await gsSync(); }catch(e){}
+    try{ await gsSync({light:true}); }catch(e){}
     srfClose(); savedToast('del');
   }catch(e){ say(e.message); }
   $('srf-save').disabled = false; $('srf-del').disabled = false;
@@ -13489,8 +13584,10 @@ function _rcRender(keep){
     const at = Math.round((a.bal - movementAfter(txRows, a.name, date)) * 100) / 100;   // ยอดในชีต ณ สิ้นวันที่เลือก
     const last = reconMap && reconMap[a.name];
     const show = a.liab ? -at : at;
+    const age = last && last.date ? Math.floor((Date.now() - Date.parse(last.date + 'T00:00:00Z')) / 864e5) : null;   // v92
+    const old = age != null && age > RECON_TRUST_DAYS;
     return `<div class="rc-row" data-n="${escAttr(a.name)}" data-at="${at}" data-liab="${a.liab ? 1 : 0}">
-      <div class="rc-name"><b>${escHtml(a.name)}</b><small>${last ? _L('จดล่าสุด ','last ') + escHtml(last.date || '') : _L('ยังไม่เคยจด','never checked')}</small></div>
+      <div class="rc-name"><b>${escHtml(a.name)}</b><small${old ? ' class="rc-old"' : ''}>${last ? _L('จดล่าสุด ','last ') + escHtml(last.date || '') + (old ? _L(' · เก่า '+age+' วัน',' · '+age+' days old') : '') : _L('ยังไม่เคยจด','never checked')}</small></div>
       <div class="rc-app">${fmt(show)}<small>${a.liab ? _L('ยอดค้างในแอป','owed (app)') : _L('ในแอป','in app')}</small></div>
       <input class="gs-input rc-in" type="text" inputmode="decimal" autocomplete="off" aria-label="${escAttr(a.name)}"
         placeholder="${escAttr(a.liab ? _L('ยอดค้าง','owed') : _L('ยอดจริง','actual'))}" value="${escAttr((keep || {})[a.name] || '')}" oninput="_rcDiff(this)">
@@ -13519,7 +13616,7 @@ async function rcSave(){
   if(!plan.rows.length) return say(_L('กรอกยอดจริงอย่างน้อย 1 บัญชี','Enter at least one balance'));
   $('rc-save').disabled = true; say(_L('กำลังบันทึก…','Saving…'), 'var(--muted2)');
   try{
-    if(!gsTokenValid()) throw new Error(_L('Session หมดอายุ — กด Sync เพื่อเข้าสู่ระบบใหม่','Session expired — press Sync to sign in again'));
+    await gsWriteAuth();   // v92
     let header = null;
     try{ header = ((await _docsApi('/values/' + encodeURIComponent('Reconcile!A1:Z1'))).values || [])[0] || []; }
     catch(e){
@@ -13537,7 +13634,7 @@ async function rcSave(){
     await _docsApi('/values/' + encodeURIComponent('Reconcile!A1') + ':append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS',
       {method:'POST', body:JSON.stringify({values})});
     say(_L(`บันทึก ${values.length} บัญชีแล้ว — กำลังดึงข้อมูลใหม่`, `Saved ${values.length} account(s) — refreshing`), 'var(--income)');
-    try{ await gsSync(); }catch(e){}
+    try{ await gsSync({light:true}); }catch(e){}
     rcClose(); savedToast();
   }catch(e){ say(e.message); }
   $('rc-save').disabled = false;
@@ -13618,6 +13715,17 @@ async function atSubmitForm(){
   if(!f.ticker)        return say('ใส่ Ticker ก่อน', 'var(--expense)');
   if(!(f.qty > 0))     return say('จำนวนต้องมากกว่า 0', 'var(--expense)');
   if(!(f.price >= 0))  return say('ใส่ราคาต่อหน่วย', 'var(--expense)');
+  // v92 — รายการที่น่าจะซ้ำ (วัน · ticker · ประเภท · จำนวน · ราคาเดียวกัน): เตือนครั้งแรก · กดบันทึกอีกครั้ง = ยืนยัน
+  if(!atEditRow){
+    const sig = [f.date, f.txType, f.ticker, f.qty, f.price].join('|');
+    const dup = findDuplicateAt(tracker, {date:f.date, ticker:f.ticker, txType:f.txType, qty:f.qty, price:f.price});
+    if(dup.length && atDupAck !== sig){
+      atDupAck = sig;
+      const r = dup[dup.length - 1];
+      return say('⚠ ' + _L(`มีรายการนี้ในชีตแล้ว (แถว ${r.sheetRow} · ${r.txType} ${r.ticker} ${r.qty}) — ถ้าเป็นอีกรายการจริง กดบันทึกอีกครั้ง`,
+                           `This looks like row ${r.sheetRow} (${r.txType} ${r.ticker} ${r.qty}) — if it really is another one, press Save again`), 'var(--debt)');
+    }
+  }
 
   btn.disabled = true; del.disabled = true;
   say('กำลังบันทึก…');
@@ -13631,7 +13739,7 @@ async function atSubmitForm(){
           + (w.formulaCols ? ` (คัดลอกสูตร ${w.formulaCols} คอลัมน์)` : '')
           + ' — กำลังดึงข้อมูลใหม่', 'var(--income)');
     }
-    await gsSync();
+    await gsSync({light:true});
     atCloseForm(); savedToast();
   }catch(e){
     say(e.message, 'var(--expense)');
@@ -13656,7 +13764,7 @@ async function atDeleteCurrent(){
   try{
     await atDeleteRowNum(atEditRow, rec);
     say('ลบแล้ว — กำลังดึงข้อมูลใหม่', 'var(--income)');
-    await gsSync();
+    await gsSync({light:true});
     atCloseForm(); savedToast('del');
   }catch(e){
     say(e.message, 'var(--expense)');

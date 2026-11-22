@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Finance OS System Map</title>
+<meta name="description" content="How the Finance OS app, Google Sheets, GitHub Actions and the Cloudflare Worker work together.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bai+Jamjuree:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one 1080px column, engineering-schematic style · wide diagrams scroll inside their own frame on phones
+   Box border colour = who runs it (your app · Google · GitHub · Cloudflare · markets/crypto) */
+:root{
+  --bg:#f3f5f2; --surface:#ffffff; --sunk:#e9eee9; --fg:#15201b; --muted:#5a6a62; --line:#d2dbd5;
+  --c-app:#1557b0; --c-google:#16803a; --c-gh:#15201b; --c-cf:#b45309; --c-mkt:#9b2c6f;
+  --f-head:"Bai Jamjuree","IBM Plex Sans",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1513; --surface:#161e1b; --sunk:#1c2622; --fg:#e4ebe7; --muted:#95a59d; --line:#2b3732;
+  --c-app:#7fb0f2; --c-google:#5cc47c; --c-gh:#e4ebe7; --c-cf:#eaa45a; --c-mkt:#e486bd; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1513; --surface:#161e1b; --sunk:#1c2622; --fg:#e4ebe7; --muted:#95a59d; --line:#2b3732;
+  --c-app:#7fb0f2; --c-google:#5cc47c; --c-gh:#e4ebe7; --c-cf:#eaa45a; --c-mkt:#e486bd; color-scheme:dark}
+
+*{box-sizing:border-box}
+html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.7 var(--f-body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 56px}
+.wrap{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:44px}
+h1,h2,h3{font-family:var(--f-head);line-height:1.25;text-wrap:balance;margin:0}
+h1{font-size:clamp(28px,4.4vw,40px);font-weight:700;letter-spacing:-.01em}
+h2{font-size:22px;font-weight:700}
+h3{font-size:15.5px;font-weight:600;font-family:var(--f-body)}
+p{margin:0;max-width:68ch}
+code,.mono{font-family:var(--f-mono);font-size:.88em}
+code{background:var(--sunk);padding:1px 6px;border-radius:5px;overflow-wrap:anywhere}
+
+header{display:flex;flex-direction:column;gap:12px}
+.eyebrow{font:500 12px var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.lede{font-size:17px;color:var(--muted)}
+nav{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+nav a{color:var(--fg);text-decoration:none;font-size:13.5px;border:1px solid var(--line);background:var(--surface);
+  padding:5px 12px;border-radius:999px}
+nav a:hover,nav a:focus-visible{border-color:var(--fg);outline:none}
+
+section{display:flex;flex-direction:column;gap:16px;scroll-margin-top:16px}
+.sec-head{display:flex;flex-direction:column;gap:6px}
+.sec-head p{color:var(--muted)}
+
+figure{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px 18px 14px}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.scroll svg{display:block;width:100%;min-width:780px;height:auto;color:var(--fg)}
+figcaption{margin-top:12px;font-size:13.5px;color:var(--muted);max-width:none}
+.swipe{display:none;font-size:12px;color:var(--muted);margin-bottom:6px}
+@media (max-width:820px){.swipe{display:block}}
+
+/* SVG — every colour comes from a token, so it reads in both themes */
+.node rect{fill:var(--surface);stroke-width:1.6}
+.k-app rect{stroke:var(--c-app)} .k-google rect{stroke:var(--c-google)} .k-gh rect{stroke:var(--c-gh)}
+.k-cf rect{stroke:var(--c-cf)} .k-mkt rect{stroke:var(--c-mkt)}
+.app rect{stroke-width:2.4}
+.item rect{fill:var(--sunk);stroke:none}
+.t1{font:600 15px var(--f-head);fill:currentColor}
+.t2{font:12px var(--f-body);fill:var(--muted)}
+.t3{font:10.5px var(--f-mono);fill:var(--muted)}
+.t4{font:600 12.5px var(--f-body);fill:currentColor}
+.edge{stroke:currentColor;stroke-width:1.4;fill:none}
+.el{font:500 11.5px var(--f-body);fill:currentColor}
+.el.mono{font:10.5px var(--f-mono);fill:var(--muted)}
+.el .b{font-family:var(--f-mono);font-weight:500}
+.grid{stroke:var(--line);stroke-width:1}
+.axis{stroke:var(--muted);stroke-width:1.2}
+.lane{stroke:var(--line);stroke-width:1;stroke-dasharray:3 4}
+.tick{font:10.5px var(--f-mono);fill:var(--muted)}
+.lt{font:600 13px var(--f-body);fill:currentColor}
+.ls{font:10.5px var(--f-mono);fill:var(--muted)}
+.ev{stroke:var(--surface);stroke-width:2}
+.ev.k-gh{fill:var(--c-gh)}
+.bot{stroke:var(--c-cf);stroke-width:1.6}
+.band{fill:var(--c-app);fill-opacity:.12;stroke:var(--c-app);stroke-opacity:.5}
+
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:10px;font-size:12.5px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:14px;height:10px;border-radius:3px;border:2px solid;display:inline-block}
+
+/* tables */
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:560px}
+th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:600 12px var(--f-mono);letter-spacing:.04em;text-transform:uppercase;color:var(--muted);background:var(--sunk)}
+tr:last-child td{border-bottom:none}
+td.path{white-space:nowrap;font-weight:600}
+td.when{color:var(--muted);font-size:13px}
+.arrow{color:var(--muted);font-weight:400;padding:0 4px}
+.pill{display:inline-block;font:500 11.5px var(--f-mono);padding:1px 8px;border-radius:999px;border:1px solid var(--line);background:var(--sunk);white-space:nowrap}
+.pill.dev{border-style:dashed}
+
+/* steps (a real sequence, so they are numbered) */
+.steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;counter-reset:s}
+.steps li{counter-increment:s;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px 16px;
+  display:flex;flex-direction:column;gap:6px;min-width:0}
+.steps li::before{content:counter(s);font:600 12px var(--f-mono);color:var(--surface);background:var(--fg);
+  width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center}
+.steps p{font-size:13.5px;color:var(--muted)}
+.note{border-left:3px solid var(--c-cf);background:var(--surface);border-radius:0 10px 10px 0;padding:12px 16px;font-size:14px;
+  display:flex;flex-direction:column;gap:6px}
+.note b{font-weight:600}
+
+/* where things live */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-top:3px solid var(--k);border-radius:12px;padding:14px 16px;
+  display:flex;flex-direction:column;gap:8px;min-width:0}
+.card ul{margin:0;padding-left:18px;font-size:13.5px;display:flex;flex-direction:column;gap:3px}
+.card .who{font:500 11.5px var(--f-mono);color:var(--muted);letter-spacing:.04em}
+footer{font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px}
+@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="eyebrow">Finance OS · v92 · updated 22 Nov 2026</div>
+  <h1>Finance OS System Map</h1>
+  <p class="lede">How the parts of the finance app talk to each other, where the data travels, what runs on a schedule, and what happens when you press Save.</p>
+  <nav aria-label="Contents">
+    <a href="#overview">Overview</a><a href="#day">A day in the system</a><a href="#journey">Open to saved</a>
+    <a href="#forms">What the + menu writes</a><a href="#release">Shipping a change</a><a href="#where">Where things live</a>
+  </nav>
+</header>
+
+<section id="overview">
+  <div class="sec-head">
+    <h2>Overview: who talks to whom</h2>
+    <p>The app has no server of its own. Your phone reads and writes Google Sheets directly. Market data comes from GitHub, which refreshes it on a schedule (and also reads your sheet, read-only, to write the alert summaries). Crypto balances come through a Cloudflare Worker.</p>
+  </div>
+  <figure>
+    <div class="swipe">← scroll sideways →</div>
+    <div class="scroll">%%ARCH%%</div>
+    <div class="legend" aria-label="Border colour meaning">
+      <span><i style="border-color:var(--c-app)"></i>App on your device</span>
+      <span><i style="border-color:var(--c-google)"></i>Google</span>
+      <span><i style="border-color:var(--c-gh)"></i>GitHub</span>
+      <span><i style="border-color:var(--c-cf)"></i>Cloudflare</span>
+      <span><i style="border-color:var(--c-mkt)"></i>Markets / crypto</span>
+    </div>
+    <figcaption>Arrows point the way the data travels. The sheet is the original copy of all your financial data; everything else is market data or balances that are only read for display.</figcaption>
+  </figure>
+
+  <div class="tbl">
+    <table>
+      <thead><tr><th>From → to</th><th>What</th><th>When</th></tr></thead>
+      <tbody>
+        <tr><td class="path">Google Sheets <span class="arrow">→</span> app</td><td>3 main tabs (Transaction · Asset_Tracker · Asset_Live_Price_Feed) and 7 optional tabs (Reconcile · Debts · 2 insurance tabs · Documents · Market_Data · Value_Log)</td><td class="when">Opening the app · Sync · after saving a form</td></tr>
+        <tr><td class="path">App <span class="arrow">→</span> Google Sheets</td><td>New, edited or deleted rows from the + menu forms and from tapping a row to edit it</td><td class="when">When you press Save</td></tr>
+        <tr><td class="path">Google Drive <span class="arrow">→</span> app</td><td>The file list of a chosen folder, used to build document entries (stored as links; files are not copied)</td><td class="when">When importing documents</td></tr>
+        <tr><td class="path">GitHub Pages <span class="arrow">→</span> app</td><td>The app files and <code>data/</code> market-data · fundamentals · bot-paper · the encrypted notification inbox</td><td class="when">Opening the app (kept on the device so it opens offline)</td></tr>
+        <tr><td class="path">Yahoo · SEC · World Bank · BLS <span class="arrow">→</span> GitHub Actions</td><td>Prices of stocks and funds, indices and FX rates (Yahoo) · US company financials (SEC, refreshed weekly) · macro figures such as inflation (World Bank · BLS)</td><td class="when">06:30 · 18:30</td></tr>
+        <tr><td class="path">Google Sheets <span class="arrow">→</span> GitHub Actions</td><td>Read-only, with a Google service account (secrets <code>GOOGLE_SA_KEY</code> · <code>GS_SHEET_ID</code>): portfolio and balances for the summaries, and last month's transactions for the monthly report. It never writes to the sheet.</td><td class="when">Each alert run</td></tr>
+        <tr><td class="path">GitHub Actions <span class="arrow">→</span> GitHub Pages</td><td>Commits fresh <code>data/*.json</code> (always merged with the old data, so a failed fetch never wipes anything)</td><td class="when">After each data run</td></tr>
+        <tr><td class="path">GitHub Actions <span class="arrow">→</span> phone</td><td>Push notifications (and LINE if enabled), also saved to the in-app inbox</td><td class="when">08:00 · 20:00 · Mon 08:30 · 1st of month 08:00</td></tr>
+        <tr><td class="path">App <span class="arrow">⇄</span> Cloudflare Worker</td><td>Bot rules and the paper portfolio · live balances · cost basis from Binance trade history</td><td class="when">Trading bot page · Live portfolio page (balances refresh every 60 s)</td></tr>
+        <tr><td class="path">Binance · MetaMask <span class="arrow">→</span> Worker</td><td>Balances and trade history through a read-only key · token balances in your wallets</td><td class="when">When the app asks</td></tr>
+        <tr><td class="path">Binance <span class="arrow">→</span> app</td><td>Live prices over the public WebSocket (no key)</td><td class="when">While the Live portfolio page is open</td></tr>
+        <tr><td class="path">GitHub Pages <span class="arrow">→</span> Worker</td><td>Prices from <code>market-data.json</code> for the paper bot</td><td class="when">Every 15 min</td></tr>
+        <tr><td class="path">GitHub Actions <span class="arrow">→</span> Worker</td><td>Deploys the Worker when its code (<code>cloudflare-worker/</code> · <code>autobot.js</code> · <code>liveport.js</code>) changes on main, after its tests pass. Needs the <code>CLOUDFLARE_API_TOKEN</code> secret; skipped until it is set.</td><td class="when">After a merge</td></tr>
+        <tr><td class="path">Google Sheets <span class="arrow">→</span> Google Drive</td><td>A full copy of the sheet into the Drive folder “Finance OS backups”, newest 12 kept (optional Apps Script you install in the sheet: <code>scripts/apps_script/sheet_backup.gs</code>)</td><td class="when">Sundays about 03:00</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="day">
+  <div class="sec-head">
+    <h2>A day in the system</h2>
+    <p>Jobs that run on their own, in Thai time. You don't need to press anything.</p>
+  </div>
+  <figure>
+    <div class="swipe">← scroll sideways →</div>
+    <div class="scroll">%%TIMELINE%%</div>
+    <figcaption>Each market-data run has 4 steps in order: fetch prices and macro data → compute trading signals → refresh company financials (weekly) → step the paper bot, then commit to GitHub. Every Monday at 08:30 there is also a weekly summary, and on the 1st of each month at 08:00 a monthly report. If you installed the backup script, your sheet is copied to Drive every Sunday at about 03:00.</figcaption>
+  </figure>
+</section>
+
+<section id="journey">
+  <div class="sec-head">
+    <h2>From opening the app to a saved entry</h2>
+    <p>What happens between tapping the app icon and a new row appearing in your sheet.</p>
+  </div>
+  <ol class="steps">
+    <li><h3>Open the app</h3><p>The app files load instantly from the copy on your device, then a new version is checked on GitHub Pages in the background.</p></li>
+    <li><h3>Unlock</h3><p>Enter this device's password to decrypt the stored data and your Google token.</p></li>
+    <li><h3>Sync</h3><p>Reads 10 tabs from your sheet at the same time, and the market-data files from GitHub.</p></li>
+    <li><h3>Calculate</h3><p>Account balances (checked against Reconcile) · average cost and profit · dividends · debts · goals.</p></li>
+    <li><h3>Press +</h3><p>Pick one of 13 forms grouped Money · Invest · Other and fill it in. The form suggests values you use often.</p></li>
+    <li><h3>Save</h3><p>If the same entry is already in the sheet you are asked to press Save again. An expiring Google session is renewed first, and your entries stay in the form. The tab is read again right before writing, so no other row or formula column is touched.</p></li>
+    <li><h3>Confirm</h3><p>The app re-reads your sheet (market data is left as is) and shows “✓ Saved to the sheet”.</p></li>
+  </ol>
+</section>
+
+<section id="forms">
+  <div class="sec-head">
+    <h2>What the + menu writes</h2>
+    <p>The + button is the only place to add new data. Pages only let you edit what is already there.</p>
+  </div>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Menu item</th><th>Stored in</th><th>What is saved</th></tr></thead>
+      <tbody>
+        <tr><td>💵 Income / expense</td><td><span class="pill">Transaction</span></td><td>New row: date · type · category · amount in that account's column (expenses are negative)</td></tr>
+        <tr><td>💳 Pay a credit card</td><td><span class="pill">Transaction</span></td><td>One Debt row: bank −x and card +x</td></tr>
+        <tr><td>🔁 Transfer</td><td><span class="pill">Transaction</span></td><td>One Transfer row: source −x and destination +x</td></tr>
+        <tr><td>🏦 Bank balances</td><td><span class="pill">Reconcile</span></td><td>One row per account (credit cards are entered as the positive amount owed and stored as negative)</td></tr>
+        <tr><td>📈 Buy / sell / dividend</td><td><span class="pill">Asset_Tracker</span></td><td>New row, with per-row formulas copied down (ARRAYFORMULA columns are never touched)</td></tr>
+        <tr><td>🏷 New ticker / price</td><td><span class="pill">Asset_Live_Price_Feed</span></td><td>A new ticker, or edits to an existing one (e.g. set it Inactive)</td></tr>
+        <tr><td>🤖 Bot rule</td><td><span class="pill dev">This device / Worker</span></td><td>Rules for the paper bot (no real-money trading)</td></tr>
+        <tr><td>🎯 Financial goal</td><td><span class="pill dev">This device</span></td><td>An amount target or a savings-rate goal</td></tr>
+        <tr><td>🧾 Debt / installment</td><td><span class="pill">Debts</span></td><td>The terms of each debt (installment · number of payments · due day). Actual payments are counted from Transaction.</td></tr>
+        <tr><td>🛡 Policy · 🩺 Coverage</td><td><span class="pill">Insurance_Policies</span> <span class="pill">Insurance_Coverage</span></td><td>One row per policy, and the coverage lines of each policy</td></tr>
+        <tr><td>📄 Document · ⇪ Import from Drive</td><td><span class="pill">Documents</span></td><td>Title, category, date and a link to the file in Drive</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note"><b>One thing still has to be done in the sheet</b><span>Adding a new bank account or card and its opening balance (header rows 1–5 of the Transaction tab). Settings kept on the device, such as category budgets, goals and debt interest rates, don't go to the sheet; if you use both a phone and a computer, set them on each.</span></div>
+</section>
+
+<section id="release">
+  <div class="sec-head">
+    <h2>Shipping a change</h2>
+    <p>The path every change takes, from asking for it to seeing it on your phone.</p>
+  </div>
+  <ol class="steps">
+    <li><h3>Ask Claude</h3><p>Describe the problem or what you want, with a screenshot if you have one.</p></li>
+    <li><h3>Fix and test</h3><p>Claude changes the code, runs the tests, tries it in a browser against a mock sheet, then opens a pull request. GitHub runs every test again on the pull request.</p></li>
+    <li><h3>You merge</h3><p>Press Merge on the pull request once its checks are green.</p></li>
+    <li><h3>Site updates</h3><p>GitHub Pages serves the new code within about 1–2 minutes.</p></li>
+    <li><h3>Reopen the app</h3><p>Close and reopen the app. It sees the new version (e.g. v92) and loads the new files.</p></li>
+  </ol>
+  <div class="note"><b>Two exceptions</b>
+    <span>Worker changes (<code>cloudflare-worker/autobot/</code>, <code>js/autobot.js</code>, <code>js/liveport.js</code>): deployed by GitHub after the merge once the <code>CLOUDFLARE_API_TOKEN</code> secret is set. Until then, deploy them yourself with <code>npx wrangler deploy</code> in that folder.</span>
+    <span>Pipeline changes (<code>scripts/</code> · <code>.github/workflows/</code>): they take effect at the next scheduled run, or press Run workflow in the Actions tab.</span></div>
+</section>
+
+<section id="where">
+  <div class="sec-head">
+    <h2>Where data and keys live</h2>
+    <p>There is no central server holding your financial data. Each thing lives only in its own place.</p>
+  </div>
+  <div class="cards">
+    <div class="card" style="--k:var(--c-google)"><div class="who">YOUR GOOGLE SHEETS</div><h3>The original financial data</h3>
+      <ul><li>Income and expenses · portfolio · prices</li><li>Debts · insurance · bank balances</li><li>Document list (links to Drive)</li><li>Weekly backup copies in your Drive (optional)</li></ul></div>
+    <div class="card" style="--k:var(--c-app)"><div class="who">THIS DEVICE (PHONE / COMPUTER)</div><h3>Settings and a local copy</h3>
+      <ul><li>Client ID · Spreadsheet ID</li><li>Google token and data copy (encrypted with your password)</li><li>Budgets · goals · theme · language</li></ul></div>
+    <div class="card" style="--k:var(--c-gh)"><div class="who">GITHUB (PUBLIC REPO)</div><h3>Code and market data</h3>
+      <ul><li>App and pipeline code</li><li>Market prices (none of your balances)</li><li>Notification inbox, encrypted with NOTIFY_KEY</li><li>Secrets: GOOGLE_SA_KEY · GS_SHEET_ID · NOTIFY_KEY · VAPID · PUSH_SUBSCRIPTIONS · LINE · SEC_USER_AGENT · CLOUDFLARE_API_TOKEN (Worker deploy)</li></ul></div>
+    <div class="card" style="--k:var(--c-cf)"><div class="who">CLOUDFLARE WORKER</div><h3>Bot and live portfolio</h3>
+      <ul><li>Read-only Binance key · BOT_TOKEN</li><li>Bot rules · paper portfolio</li><li>MetaMask wallet addresses (public; never a seed phrase)</li></ul></div>
+  </div>
+</section>
+
+<footer>Built from v92 of the personaltracker-dashboard repo by <code>scripts/make_system_map.py</code>. When the system changes, ask Claude to update this page.</footer>
+</div>
+</body>
+</html>

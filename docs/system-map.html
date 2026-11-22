@@ -121,7 +121,7 @@ footer{font-size:13px;color:var(--muted);border-top:1px solid var(--line);paddin
 <body>
 <div class="wrap">
 <header>
-  <div class="eyebrow">Finance OS · v91 · updated 20 Nov 2026</div>
+  <div class="eyebrow">Finance OS · v92 · updated 22 Nov 2026</div>
   <h1>Finance OS System Map</h1>
   <p class="lede">How the parts of the finance app talk to each other, where the data travels, what runs on a schedule, and what happens when you press Save.</p>
   <nav aria-label="Contents">
@@ -133,11 +133,11 @@ footer{font-size:13px;color:var(--muted);border-top:1px solid var(--line);paddin
 <section id="overview">
   <div class="sec-head">
     <h2>Overview: who talks to whom</h2>
-    <p>The app has no server of its own. Your phone reads and writes Google Sheets directly. Market data comes from GitHub, which refreshes it on a schedule, and crypto balances come through a Cloudflare Worker.</p>
+    <p>The app has no server of its own. Your phone reads and writes Google Sheets directly. Market data comes from GitHub, which refreshes it on a schedule (and also reads your sheet, read-only, to write the alert summaries). Crypto balances come through a Cloudflare Worker.</p>
   </div>
   <figure>
     <div class="swipe">← scroll sideways →</div>
-    <div class="scroll"><svg viewBox="0 0 1000 486" role="img" aria-label="The phone app reads and writes Google Sheets directly, gets its files and market data from GitHub Pages, which GitHub Actions updates twice a day, and talks to a Cloudflare Worker for the paper bot and live balances from Binance and MetaMask">
+    <div class="scroll"><svg viewBox="0 -36 1000 522" role="img" aria-label="The phone app reads and writes Google Sheets directly, gets its files and market data from GitHub Pages, which GitHub Actions updates twice a day from Yahoo, SEC, World Bank and BLS. GitHub Actions also reads the sheet read-only for alert summaries and deploys the Cloudflare Worker, which runs the paper bot and reads live balances from Binance and MetaMask">
   <defs>
     <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker>
@@ -154,13 +154,15 @@ footer{font-size:13px;color:var(--muted);border-top:1px solid var(--line);paddin
   <g class="item"><rect x="405" y="314" width="200" height="42" rx="7"/><text class="t4" x="417" y="332">Password lock</text><text class="t3" x="417" y="348">vault.js · encrypts on device</text></g>
   <g class="item"><rect x="405" y="364" width="200" height="42" rx="7"/><text class="t4" x="417" y="382">Live portfolio</text><text class="t3" x="417" y="398">liveport.js</text></g>
   <g class="item"><rect x="405" y="414" width="200" height="42" rx="7"/><text class="t4" x="417" y="432">Works offline</text><text class="t3" x="417" y="448">service-worker.js</text></g>
-  <g class="node k-mkt"><rect x="760" y="16" width="220" height="56" rx="10"/><text class="t1" x="870.0" y="38" text-anchor="middle">Yahoo Finance</text><text class="t2" x="870.0" y="58" text-anchor="middle">Prices · indices · FX</text></g>
-  <g class="node k-gh"><rect x="760" y="110" width="220" height="112" rx="10"/><text class="t1" x="870.0" y="134" text-anchor="middle">GitHub Actions</text><text class="t2" x="870.0" y="154" text-anchor="middle">Market data 06:30 · 18:30</text><text class="t2" x="870.0" y="172" text-anchor="middle">Alerts 08:00 · 20:00</text><text class="t2" x="870.0" y="190" text-anchor="middle">Weekly · monthly summaries</text></g>
-  <g class="node k-cf"><rect x="760" y="258" width="220" height="98" rx="10"/><text class="t1" x="870.0" y="284" text-anchor="middle">Cloudflare Worker</text><text class="t2" x="870.0" y="304" text-anchor="middle">Paper bot every 15 min</text><text class="t2" x="870.0" y="322" text-anchor="middle">Live balances (read-only)</text></g>
+  <g class="node k-mkt"><rect x="760" y="16" width="220" height="56" rx="10"/><text class="t1" x="870.0" y="38" text-anchor="middle">Market data sources</text><text class="t2" x="870.0" y="58" text-anchor="middle">Yahoo · SEC · World Bank · BLS</text></g>
+  <g class="node k-gh"><rect x="760" y="110" width="220" height="130" rx="10"/><text class="t1" x="870.0" y="134" text-anchor="middle">GitHub Actions</text><text class="t2" x="870.0" y="154" text-anchor="middle">Market data 06:30 · 18:30</text><text class="t2" x="870.0" y="172" text-anchor="middle">Alerts 08:00 · 20:00</text><text class="t2" x="870.0" y="190" text-anchor="middle">Weekly · monthly summaries</text><text class="t2" x="870.0" y="208" text-anchor="middle">Tests on PRs · Worker deploy</text></g>
+  <g class="node k-cf"><rect x="760" y="270" width="220" height="98" rx="10"/><text class="t1" x="870.0" y="296" text-anchor="middle">Cloudflare Worker</text><text class="t2" x="870.0" y="316" text-anchor="middle">Paper bot every 15 min</text><text class="t2" x="870.0" y="334" text-anchor="middle">Live balances (read-only)</text></g>
   <g class="node k-mkt"><rect x="760" y="408" width="106" height="62" rx="10"/><text class="t1" x="813.0" y="432" text-anchor="middle">Binance</text><text class="t2" x="813.0" y="452" text-anchor="middle">Account · prices</text></g>
   <g class="node k-mkt"><rect x="874" y="408" width="106" height="62" rx="10"/><text class="t1" x="927.0" y="432" text-anchor="middle">MetaMask</text><text class="t2" x="927.0" y="452" text-anchor="middle">via RPC</text></g>
 
   <g class="edges">
+    <polyline class="edge" points="135,138 135,-14 740,-14 740,124 756,124" marker-end="url(#ah)"/>
+    <text class="el" x="437" y="-21" text-anchor="middle">read-only · service account · balances for the alert summaries</text>
     <line class="edge" x1="252" y1="200" x2="381" y2="200" marker-end="url(#ah)"/>
     <text class="el" x="316" y="192" text-anchor="middle">read · Sync</text>
     <line class="edge" x1="383" y1="228" x2="254" y2="228" marker-end="url(#ah)"/>
@@ -175,17 +177,19 @@ footer{font-size:13px;color:var(--muted);border-top:1px solid var(--line);paddin
     <text class="el" x="698" y="96" text-anchor="end">commit</text>
     <text class="el mono" x="698" y="110" text-anchor="end">data/*.json</text>
     <line class="edge" x1="870" y1="74" x2="870" y2="106" marker-end="url(#ah)"/>
-    <text class="el" x="878" y="94">prices</text>
+    <text class="el" x="878" y="94">prices · macro</text>
     <polyline class="edge" points="758,200 690,200 690,250 629,250" marker-end="url(#ah)"/>
     <text class="el" x="684" y="224" text-anchor="end">alerts</text>
     <text class="el" x="684" y="238" text-anchor="end">Push</text>
-    <line class="edge" x1="629" y1="306" x2="756" y2="306" marker-start="url(#ah)" marker-end="url(#ah)"/>
-    <text class="el" x="692" y="298" text-anchor="middle">rules · balances</text>
-    <text class="el mono" x="692" y="322" text-anchor="middle">Bearer token</text>
-    <line class="edge" x1="812" y1="406" x2="812" y2="360" marker-end="url(#ah)"/>
-    <text class="el" x="820" y="382">balances</text><text class="el" x="820" y="396">trades</text>
-    <line class="edge" x1="927" y1="406" x2="927" y2="360" marker-end="url(#ah)"/>
-    <text class="el" x="934" y="388">balances</text>
+    <line class="edge" x1="870" y1="242" x2="870" y2="266" marker-end="url(#ah)"/>
+    <text class="el" x="878" y="259">deploy on merge</text>
+    <line class="edge" x1="629" y1="318" x2="756" y2="318" marker-start="url(#ah)" marker-end="url(#ah)"/>
+    <text class="el" x="692" y="310" text-anchor="middle">rules · balances</text>
+    <text class="el mono" x="692" y="334" text-anchor="middle">Bearer token</text>
+    <line class="edge" x1="812" y1="406" x2="812" y2="372" marker-end="url(#ah)"/>
+    <text class="el" x="820" y="386">balances</text><text class="el" x="820" y="400">trades</text>
+    <line class="edge" x1="927" y1="406" x2="927" y2="372" marker-end="url(#ah)"/>
+    <text class="el" x="934" y="393">balances</text>
     <line class="edge" x1="758" y1="446" x2="629" y2="446" marker-end="url(#ah)"/>
     <text class="el" x="694" y="438" text-anchor="middle">live prices</text><text class="el mono" x="694" y="462" text-anchor="middle">WebSocket</text>
   </g>
@@ -208,13 +212,16 @@ footer{font-size:13px;color:var(--muted);border-top:1px solid var(--line);paddin
         <tr><td class="path">App <span class="arrow">→</span> Google Sheets</td><td>New, edited or deleted rows from the + menu forms and from tapping a row to edit it</td><td class="when">When you press Save</td></tr>
         <tr><td class="path">Google Drive <span class="arrow">→</span> app</td><td>The file list of a chosen folder, used to build document entries (stored as links; files are not copied)</td><td class="when">When importing documents</td></tr>
         <tr><td class="path">GitHub Pages <span class="arrow">→</span> app</td><td>The app files and <code>data/</code> market-data · fundamentals · bot-paper · the encrypted notification inbox</td><td class="when">Opening the app (kept on the device so it opens offline)</td></tr>
-        <tr><td class="path">Yahoo Finance <span class="arrow">→</span> GitHub Actions</td><td>Prices of stocks and funds, indices, FX rates, and company financials (weekly)</td><td class="when">06:30 · 18:30</td></tr>
+        <tr><td class="path">Yahoo · SEC · World Bank · BLS <span class="arrow">→</span> GitHub Actions</td><td>Prices of stocks and funds, indices and FX rates (Yahoo) · US company financials (SEC, refreshed weekly) · macro figures such as inflation (World Bank · BLS)</td><td class="when">06:30 · 18:30</td></tr>
+        <tr><td class="path">Google Sheets <span class="arrow">→</span> GitHub Actions</td><td>Read-only, with a Google service account (secrets <code>GOOGLE_SA_KEY</code> · <code>GS_SHEET_ID</code>): portfolio and balances for the summaries, and last month's transactions for the monthly report. It never writes to the sheet.</td><td class="when">Each alert run</td></tr>
         <tr><td class="path">GitHub Actions <span class="arrow">→</span> GitHub Pages</td><td>Commits fresh <code>data/*.json</code> (always merged with the old data, so a failed fetch never wipes anything)</td><td class="when">After each data run</td></tr>
         <tr><td class="path">GitHub Actions <span class="arrow">→</span> phone</td><td>Push notifications (and LINE if enabled), also saved to the in-app inbox</td><td class="when">08:00 · 20:00 · Mon 08:30 · 1st of month 08:00</td></tr>
         <tr><td class="path">App <span class="arrow">⇄</span> Cloudflare Worker</td><td>Bot rules and the paper portfolio · live balances · cost basis from Binance trade history</td><td class="when">Trading bot page · Live portfolio page (balances refresh every 60 s)</td></tr>
         <tr><td class="path">Binance · MetaMask <span class="arrow">→</span> Worker</td><td>Balances and trade history through a read-only key · token balances in your wallets</td><td class="when">When the app asks</td></tr>
         <tr><td class="path">Binance <span class="arrow">→</span> app</td><td>Live prices over the public WebSocket (no key)</td><td class="when">While the Live portfolio page is open</td></tr>
         <tr><td class="path">GitHub Pages <span class="arrow">→</span> Worker</td><td>Prices from <code>market-data.json</code> for the paper bot</td><td class="when">Every 15 min</td></tr>
+        <tr><td class="path">GitHub Actions <span class="arrow">→</span> Worker</td><td>Deploys the Worker when its code (<code>cloudflare-worker/</code> · <code>autobot.js</code> · <code>liveport.js</code>) changes on main, after its tests pass. Needs the <code>CLOUDFLARE_API_TOKEN</code> secret; skipped until it is set.</td><td class="when">After a merge</td></tr>
+        <tr><td class="path">Google Sheets <span class="arrow">→</span> Google Drive</td><td>A full copy of the sheet into the Drive folder “Finance OS backups”, newest 12 kept (optional Apps Script you install in the sheet: <code>scripts/apps_script/sheet_backup.gs</code>)</td><td class="when">Sundays about 03:00</td></tr>
       </tbody>
     </table>
   </div>
@@ -246,7 +253,7 @@ footer{font-size:13px;color:var(--muted);border-top:1px solid var(--line);paddin
   <rect class="band" x="180" y="186" width="790" height="20" rx="4"/>
   <text class="el" x="190" y="200">open the app, or come back after 15 min → it syncs the latest sheet data by itself</text>
 </svg></div>
-    <figcaption>Each market-data run has 4 steps in order: fetch prices and macro data → compute trading signals → refresh company financials (weekly) → step the paper bot, then commit to GitHub. Every Monday at 08:30 there is also a weekly summary, and on the 1st of each month at 08:00 a monthly report.</figcaption>
+    <figcaption>Each market-data run has 4 steps in order: fetch prices and macro data → compute trading signals → refresh company financials (weekly) → step the paper bot, then commit to GitHub. Every Monday at 08:30 there is also a weekly summary, and on the 1st of each month at 08:00 a monthly report. If you installed the backup script, your sheet is copied to Drive every Sunday at about 03:00.</figcaption>
   </figure>
 </section>
 
@@ -258,11 +265,11 @@ footer{font-size:13px;color:var(--muted);border-top:1px solid var(--line);paddin
   <ol class="steps">
     <li><h3>Open the app</h3><p>The app files load instantly from the copy on your device, then a new version is checked on GitHub Pages in the background.</p></li>
     <li><h3>Unlock</h3><p>Enter this device's password to decrypt the stored data and your Google token.</p></li>
-    <li><h3>Sync</h3><p>Reads 10 tabs from your sheet and the market-data files from GitHub.</p></li>
+    <li><h3>Sync</h3><p>Reads 10 tabs from your sheet at the same time, and the market-data files from GitHub.</p></li>
     <li><h3>Calculate</h3><p>Account balances (checked against Reconcile) · average cost and profit · dividends · debts · goals.</p></li>
     <li><h3>Press +</h3><p>Pick one of 13 forms grouped Money · Invest · Other and fill it in. The form suggests values you use often.</p></li>
-    <li><h3>Save</h3><p>The tab is read again right before writing, so no other row is overwritten and no formula column is touched.</p></li>
-    <li><h3>Confirm</h3><p>The app syncs again straight away and shows “✓ Saved to the sheet”.</p></li>
+    <li><h3>Save</h3><p>If the same entry is already in the sheet you are asked to press Save again. An expiring Google session is renewed first, and your entries stay in the form. The tab is read again right before writing, so no other row or formula column is touched.</p></li>
+    <li><h3>Confirm</h3><p>The app re-reads your sheet (market data is left as is) and shows “✓ Saved to the sheet”.</p></li>
   </ol>
 </section>
 
@@ -299,13 +306,13 @@ footer{font-size:13px;color:var(--muted);border-top:1px solid var(--line);paddin
   </div>
   <ol class="steps">
     <li><h3>Ask Claude</h3><p>Describe the problem or what you want, with a screenshot if you have one.</p></li>
-    <li><h3>Fix and test</h3><p>Claude changes the code, runs the tests, tries it in a browser against a mock sheet, then opens a pull request.</p></li>
-    <li><h3>You merge</h3><p>Press Merge on the pull request on GitHub.</p></li>
+    <li><h3>Fix and test</h3><p>Claude changes the code, runs the tests, tries it in a browser against a mock sheet, then opens a pull request. GitHub runs every test again on the pull request.</p></li>
+    <li><h3>You merge</h3><p>Press Merge on the pull request once its checks are green.</p></li>
     <li><h3>Site updates</h3><p>GitHub Pages serves the new code within about 1–2 minutes.</p></li>
-    <li><h3>Reopen the app</h3><p>Close and reopen the app. It sees the new version (e.g. v91) and loads the new files.</p></li>
+    <li><h3>Reopen the app</h3><p>Close and reopen the app. It sees the new version (e.g. v92) and loads the new files.</p></li>
   </ol>
   <div class="note"><b>Two exceptions</b>
-    <span>Worker changes (<code>cloudflare-worker/autobot/</code>): you deploy them yourself after a git pull, with <code>npx wrangler deploy</code> in that folder.</span>
+    <span>Worker changes (<code>cloudflare-worker/autobot/</code>, <code>js/autobot.js</code>, <code>js/liveport.js</code>): deployed by GitHub after the merge once the <code>CLOUDFLARE_API_TOKEN</code> secret is set. Until then, deploy them yourself with <code>npx wrangler deploy</code> in that folder.</span>
     <span>Pipeline changes (<code>scripts/</code> · <code>.github/workflows/</code>): they take effect at the next scheduled run, or press Run workflow in the Actions tab.</span></div>
 </section>
 
@@ -316,17 +323,17 @@ footer{font-size:13px;color:var(--muted);border-top:1px solid var(--line);paddin
   </div>
   <div class="cards">
     <div class="card" style="--k:var(--c-google)"><div class="who">YOUR GOOGLE SHEETS</div><h3>The original financial data</h3>
-      <ul><li>Income and expenses · portfolio · prices</li><li>Debts · insurance · bank balances</li><li>Document list (links to Drive)</li></ul></div>
+      <ul><li>Income and expenses · portfolio · prices</li><li>Debts · insurance · bank balances</li><li>Document list (links to Drive)</li><li>Weekly backup copies in your Drive (optional)</li></ul></div>
     <div class="card" style="--k:var(--c-app)"><div class="who">THIS DEVICE (PHONE / COMPUTER)</div><h3>Settings and a local copy</h3>
       <ul><li>Client ID · Spreadsheet ID</li><li>Google token and data copy (encrypted with your password)</li><li>Budgets · goals · theme · language</li></ul></div>
     <div class="card" style="--k:var(--c-gh)"><div class="who">GITHUB (PUBLIC REPO)</div><h3>Code and market data</h3>
-      <ul><li>App and pipeline code</li><li>Market prices (none of your balances)</li><li>Notification inbox, encrypted with NOTIFY_KEY</li><li>Secrets: NOTIFY_KEY · VAPID · LINE</li></ul></div>
+      <ul><li>App and pipeline code</li><li>Market prices (none of your balances)</li><li>Notification inbox, encrypted with NOTIFY_KEY</li><li>Secrets: GOOGLE_SA_KEY · GS_SHEET_ID · NOTIFY_KEY · VAPID · PUSH_SUBSCRIPTIONS · LINE · SEC_USER_AGENT · CLOUDFLARE_API_TOKEN (Worker deploy)</li></ul></div>
     <div class="card" style="--k:var(--c-cf)"><div class="who">CLOUDFLARE WORKER</div><h3>Bot and live portfolio</h3>
       <ul><li>Read-only Binance key · BOT_TOKEN</li><li>Bot rules · paper portfolio</li><li>MetaMask wallet addresses (public; never a seed phrase)</li></ul></div>
   </div>
 </section>
 
-<footer>Built from v91 of the personaltracker-dashboard repo. When the system changes, ask Claude to update this page (source of truth: <code>docs/system-map.html</code>).</footer>
+<footer>Built from v92 of the personaltracker-dashboard repo by <code>scripts/make_system_map.py</code>. When the system changes, ask Claude to update this page.</footer>
 </div>
 </body>
 </html>

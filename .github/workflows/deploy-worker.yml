@@ -1,0 +1,66 @@
+# v92 — deploy Cloudflare Worker (บอทจำลอง + พอร์ตสด) อัตโนมัติเมื่อโค้ดของมันเข้า main
+#
+# เดิมต้องรัน `npx wrangler deploy` เองหลัง merge ทุกครั้ง — ลืมเมื่อไร Worker บน Cloudflare ยังใช้ autobot.js / liveport.js
+# รุ่นเก่า ขณะที่แอปใช้รุ่นใหม่ (กฎบอทประเมินไม่ตรงกับที่หน้าแอปแสดง) โดยไม่มีอะไรเตือน
+#
+# ตั้งค่าครั้งเดียว (Settings → Secrets and variables → Actions → New repository secret):
+#   CLOUDFLARE_API_TOKEN   — Cloudflare → My Profile → API Tokens → Create Token → template "Edit Cloudflare Workers"
+#   CLOUDFLARE_ACCOUNT_ID  — (ไม่บังคับ) ใส่เมื่อ token เข้าถึงได้หลายบัญชี · ดูได้ที่หน้า Workers & Pages ด้านขวา
+# ยังไม่ได้ใส่ token → workflow ขึ้นข้อความแจ้งแล้วจบแบบสำเร็จ (ไม่ทำให้ไอคอนแดง) — deploy เองแบบเดิมได้เหมือนเดิม
+#
+# ไม่แตะ secret ของ Worker (BOT_TOKEN · BINANCE_KEY · BINANCE_SECRET) — `wrangler deploy` คงค่าที่ตั้งไว้แล้วบน Cloudflare
+# KV id / MARKET_URL / ALLOWED_ORIGIN มาจาก wrangler.toml ใน repo (ชุดเดียวกับที่ deploy เองจากเครื่อง)
+name: deploy-worker
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'cloudflare-worker/**'
+      - 'js/autobot.js'
+      - 'js/liveport.js'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-worker
+  cancel-in-progress: false      # deploy ที่เริ่มแล้วให้จบ — ไม่ตัดกลางทาง
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      HAS_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
+    steps:
+      - name: ยังไม่ได้ตั้ง CLOUDFLARE_API_TOKEN → ข้าม
+        if: env.HAS_TOKEN != 'true'
+        run: echo "::notice title=deploy-worker::ยังไม่ได้ตั้ง secret CLOUDFLARE_API_TOKEN — ข้ามการ deploy (ดูวิธีตั้งที่หัวไฟล์ .github/workflows/deploy-worker.yml)"
+
+      - uses: actions/checkout@v4
+        if: env.HAS_TOKEN == 'true'
+
+      - uses: actions/setup-node@v4
+        if: env.HAS_TOKEN == 'true'
+        with:
+          node-version: '22'
+
+      # ห้าม deploy โค้ดที่เทสต์ไม่ผ่าน — ชุดนี้รวมเทสต์ "Worker ไม่มี endpoint ส่งคำสั่งซื้อขาย/ถอน"
+      - name: เทสต์ autobot · liveport · Worker
+        if: env.HAS_TOKEN == 'true'
+        run: |
+          node tests/test_autobot.cjs js/autobot.js
+          node tests/test_liveport.cjs js/liveport.js
+          node tests/test_autobot_worker.mjs
+
+      - name: wrangler deploy
+        if: env.HAS_TOKEN == 'true'
+        working-directory: cloudflare-worker/autobot
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          [ -n "$CLOUDFLARE_ACCOUNT_ID" ] || unset CLOUDFLARE_ACCOUNT_ID
+          npx --yes wrangler@4 deploy

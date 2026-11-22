@@ -16,7 +16,7 @@ window.LOC = window.LOC || 'th-TH-u-ca-gregory';
 //   • XIRR engine
 // กติกา: ไฟล์นี้ห้ามแตะ DOM ของหน้าใดหน้าหนึ่ง — pure data layer เท่านั้น
 // ═══════════════════════════════════════════════════════════════════
-const APP_BUILD = 'v91';
+const APP_BUILD = 'v92';
 console.log('[FinanceTracker shared] build', APP_BUILD);
 window.SHARED_BUILD = APP_BUILD;   // v45 — ให้ index.html ตรวจได้ว่าเวอร์ชันตรงกัน
  
@@ -3534,3 +3534,44 @@ function reconRowValues(header, date, account, actual, note){
   return row;
 }
 const RECON_HEADER = ['Date', 'Account', 'Actual_Balance', 'Note'];
+
+/* ══ v92 — ตรวจก่อนบันทึก: รายการที่น่าจะซ้ำ · ยอดจริงที่เก่าเกินจะใช้ ══════════════════════════════
+   ตั้งแต่ v86 ทุกรายการเข้าทางแอป → เผลอกดบันทึกซ้ำ (หรือกรอกรายการเดิมอีกรอบ) ลงชีตไปเลยโดยไม่มีใครเห็น
+   เป็นคำเตือน ไม่ใช่การห้าม: ซื้อของราคาเท่ากันสองครั้งในวันเดียวเกิดขึ้นได้จริง → ฟอร์มให้กดบันทึกซ้ำเพื่อยืนยัน */
+
+// rows = txRows · q = {dateStr, type, acctName, amount (ยอดที่จะเข้าบัญชีนั้น มีเครื่องหมาย), skipRow}
+// ซ้ำ = วันเดียวกัน · ประเภทเดียวกัน · ยอดในบัญชีเดียวกันเท่ากัน (±0.005)
+function findDuplicateTx(rows, q){
+  if(!q || !q.dateStr || !q.acctName || !isFinite(q.amount)) return [];
+  return (rows || []).filter(r => r && r.dateStr === q.dateStr && r.type === q.type && r.acct
+    && (q.skipRow == null || r.sheetRow !== q.skipRow)
+    && Math.abs((Number(r.acct[q.acctName]) || 0) - q.amount) < 0.005);
+}
+
+// rows = tracker · q = {date (YYYY-MM-DD), ticker, txType, qty, price, skipRow}
+// ซ้ำ = วันเดียวกัน · ticker เดียวกัน · ประเภทเดียวกัน · จำนวนเท่ากัน · ราคาเท่ากัน (ถ้ามีราคาทั้งสองฝั่ง)
+function findDuplicateAt(rows, q){
+  if(!q || !q.date || !q.ticker || !(q.qty > 0)) return [];
+  const iso = d => d instanceof Date
+    ? `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` : String(d || '').slice(0, 10);
+  const tk = String(q.ticker).trim().toUpperCase();
+  return (rows || []).filter(r => r && iso(r.date) === q.date && String(r.ticker || '').toUpperCase() === tk
+    && r.txType === q.txType && (q.skipRow == null || r.sheetRow !== q.skipRow)
+    && Math.abs((Number(r.qty) || 0) - q.qty) < 1e-9
+    && (!(q.price > 0) || !(Number(r.price) > 0) || Math.abs(Number(r.price) - q.price) < 1e-6));
+}
+
+// บัญชีที่มียอดจริงในแท็บ Reconcile แต่เก่ากว่า RECON_TRUST_DAYS → applyReconciliation กลับไปใช้ยอดคำนวณเงียบ ๆ
+// คืน [{name, date, ageDays}] เรียงจากเก่าสุด · now (ms) ให้เทสต์กำหนดได้
+function reconStaleList(bals, reconMap, maxAgeDays, now){
+  const maxAge = maxAgeDays == null ? RECON_TRUST_DAYS : maxAgeDays;
+  const t = now == null ? Date.now() : now;
+  const out = [];
+  (bals || []).forEach(b => {
+    const rec = (reconMap || {})[b.name];
+    if(!rec || !rec.date || !isFinite(rec.actual)) return;
+    const age = Math.floor((t - Date.parse(rec.date + 'T00:00:00Z')) / 864e5);
+    if(age > maxAge) out.push({ name: b.name, date: rec.date, ageDays: age });
+  });
+  return out.sort((a, b) => b.ageDays - a.ageDays);
+}
